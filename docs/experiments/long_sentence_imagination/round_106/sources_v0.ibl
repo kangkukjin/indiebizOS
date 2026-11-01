@@ -1,0 +1,7 @@
+#!ibl edition=2
+$sources=$urls >> [table:each] {
+ [try] { $r=[sense:crawl]{url:$it.url}; return {id:$it.id,url:$it.url,ok:true,text:$r.text}; }
+ [catch] { return {id:$it.id,url:$it.url,ok:false,error:$error.message}; }
+};
+$w=[self:write]{path:$output,content:json($sources)};
+return {sources:$sources,path:$w.path}

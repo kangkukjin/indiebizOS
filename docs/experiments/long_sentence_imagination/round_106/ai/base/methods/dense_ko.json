@@ -1,0 +1,1 @@
+{"name":"dense_ko","kind":"dense","model":"jhgan/ko-sroberta-multitask","local_files_only":true,"normalize":true,"similarity":"cosine","max_seq_length":"model default","note":"의미 검색: 로컬 캐시 모델만 사용(HF_HUB_OFFLINE=1). 문서 단위에서는 모델 최대 길이를 넘는 뒷부분이 잘려 인코딩되지 않는다."}

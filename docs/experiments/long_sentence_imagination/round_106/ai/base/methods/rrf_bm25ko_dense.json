@@ -1,0 +1,1 @@
+{"name":"rrf_bm25ko_dense","kind":"rrf","components":["bm25_ko","dense_ko"],"k":60,"note":"혼합: Cormack et al. 2009의 RRF, k=60 원문값 그대로. 각 구성 방법의 같은 단위 문서 순위를 결합."}

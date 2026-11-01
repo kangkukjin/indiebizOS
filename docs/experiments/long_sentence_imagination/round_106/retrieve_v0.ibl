@@ -1,0 +1,11 @@
+#!ibl edition=2
+$manifest=[self:read]{path:$manifest_path};
+$queries=[self:read]{path:$queries_path};
+$documents=$manifest.data.items >> [table:each] {
+ $r=[self:read]{path:f"${$docs_path}/${$it.file}"};
+ return {id:$it.id,text:$r.text};
+};
+$script=[self:write]{path:"~turn/ls106_retrieval.py",content:$retrieval_source};
+$ranked=[self:script]{path:$script.path,args:{documents:$documents,queries:$queries.data.items}};
+$save=[self:write]{path:$retrieval_output,content:json($ranked)};
+return {path:$save.path,rows:$ranked.items,settings:$ranked.settings,chunks:$ranked.chunks}

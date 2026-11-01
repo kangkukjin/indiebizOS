@@ -1,0 +1,110 @@
+[
+  {
+    "id": "Q01",
+    "type": "exact",
+    "question": "RESULT_MISSING은 어떤 조건에서 발생하는가?",
+    "required_docs": [
+      "D05"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "Q02",
+    "type": "paraphrase",
+    "question": "프로그램이 오류 없이 끝났다는 표시만으로 맡긴 일이 제대로 됐다고 해도 되는가?",
+    "required_docs": [
+      "D05",
+      "D04"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "Q03",
+    "type": "multihop",
+    "question": "연구를 다음 대화에서 이어가려면 전체 계획과 질문별 근거를 각각 어디에 어떻게 남겨야 하는가?",
+    "required_docs": [
+      "D01",
+      "D02"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "Q04",
+    "type": "version",
+    "question": "2026년 11월 현재 푸른숲 랩의 수집 원문 보관 기간은 며칠인가?",
+    "required_docs": [
+      "S01"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "Q05",
+    "type": "condition",
+    "question": "푸른숲 랩은 외부 원문 획득을 허용하는가 금지하는가?",
+    "required_docs": [
+      "S03"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "Q06",
+    "type": "absent",
+    "question": "푸른숲 랩의 월 클라우드 비용은 얼마인가?",
+    "required_docs": [],
+    "answerable": false
+  },
+  {
+    "id": "H01",
+    "type": "exact",
+    "question": "expected_revision으로 질문을 고칠 때 지정하지 않은 필드는 어떻게 되는가?",
+    "required_docs": [
+      "D02"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "H02",
+    "type": "paraphrase",
+    "question": "컴퓨터에서 찾는 내용이 없다고 말하려면 실제로 뒤진 범위와 검색 방법을 왜 밝혀야 하는가?",
+    "required_docs": [
+      "D06"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "H03",
+    "type": "multihop",
+    "question": "임시 파이썬 실행 결과를 다음 IBL 단계로 전달할 때 어떤 결과 파일 규약과 값 연결 방식을 사용해야 하는가?",
+    "required_docs": [
+      "D05",
+      "D03"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "H04",
+    "type": "version",
+    "question": "푸른숲 랩 문서에 90일과 30일이 함께 보이면 어느 기준을 현재 원문 폐기에 적용해야 하는가?",
+    "required_docs": [
+      "S01",
+      "S02"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "H05",
+    "type": "condition",
+    "question": "온라인 조사 모드가 공개 웹 수집을 허용하면 개인 문서를 외부로 올려도 되는가?",
+    "required_docs": [
+      "S03"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "H06",
+    "type": "absent",
+    "question": "푸른숲 랩이 쓰는 임베딩 모델의 정확한 이름과 차원은 무엇인가?",
+    "required_docs": [],
+    "answerable": false
+  }
+]

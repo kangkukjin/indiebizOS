@@ -1,0 +1,24 @@
+{
+  "edition": 2,
+  "origin": "training",
+  "project_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "ticket": "3a92a4150c7845efa9fbf5a275717015",
+  "code": "#!ibl edition=2\n$sources=$urls >> [table:each] {\n [try] { $r=[sense:crawl]{url:$it.url}; return {id:$it.id,url:$it.url,ok:true,text:$r.text}; }\n [catch] { return {id:$it.id,url:$it.url,ok:false,error:$error.message}; }\n};\n$w=[self:write]{path:$output,content:json($sources)};\nreturn {sources:$sources,path:$w.path}\n",
+  "inputs": {
+    "urls": [
+      {
+        "id": "BEIR",
+        "url": "https://arxiv.org/abs/2104.08663"
+      },
+      {
+        "id": "TFIDF",
+        "url": "https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html"
+      },
+      {
+        "id": "RRF",
+        "url": "https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf"
+      }
+    ],
+    "output": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/trainer/sources.json"
+  }
+}

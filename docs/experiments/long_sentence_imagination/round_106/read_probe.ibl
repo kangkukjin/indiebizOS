@@ -1,0 +1,4 @@
+#!ibl edition=2
+$manifest=[self:read]{path:$manifest_path};
+$queries=[self:read]{path:$queries_path};
+return {manifest:$manifest.data,queries:$queries.data}

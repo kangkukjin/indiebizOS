@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Q01",
+    "question": "RESULT_MISSING은 어떤 조건에서 발생하는가?",
+    "type": "exact"
+  },
+  {
+    "id": "Q02",
+    "question": "프로그램이 오류 없이 끝났다는 표시만으로 맡긴 일이 제대로 됐다고 해도 되는가?",
+    "type": "paraphrase"
+  },
+  {
+    "id": "Q03",
+    "question": "연구를 다음 대화에서 이어가려면 전체 계획과 질문별 근거를 각각 어디에 어떻게 남겨야 하는가?",
+    "type": "multihop"
+  },
+  {
+    "id": "Q04",
+    "question": "2026년 11월 현재 푸른숲 랩의 수집 원문 보관 기간은 며칠인가?",
+    "type": "version"
+  },
+  {
+    "id": "Q05",
+    "question": "푸른숲 랩은 외부 원문 획득을 허용하는가 금지하는가?",
+    "type": "condition"
+  },
+  {
+    "id": "Q06",
+    "question": "푸른숲 랩의 월 클라우드 비용은 얼마인가?",
+    "type": "absent"
+  }
+]

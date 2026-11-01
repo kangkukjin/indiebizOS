@@ -1,0 +1,15 @@
+{
+  "start": "2026-11-01T14:50:36+09:00",
+  "deadline": "2026-11-01T15:50:36+09:00",
+  "head": "9d7900f4a29bfa60b00c043a0130dce0a01c4910",
+  "origin": "training",
+  "corpus_documents": 12,
+  "development_queries": 6,
+  "heldout_queries": 6,
+  "top_k": 3,
+  "source_hashes": {
+    "data/guides/deep_research.md": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+    "backend/cognition/research_planning.py": "2f8df7e9c60d012ff76aa64088618320a15cbcd994fe27e972548ca817902ad4",
+    "data/common_prompts/consciousness_prompt.md": "c602a81ca6a01bd46a953b7e916fc6cd8d7f220a6328e2ad7458917c34f77471"
+  }
+}

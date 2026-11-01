@@ -1,0 +1,1 @@
+{"units":["doc","paragraph"],"paragraph_split":"빈 줄 기준 분할, 30자 미만 조각(제목 등)은 다음 조각 앞에 붙임","doc_score_from_paragraph":"max","top_k":3,"note":"doc=문서 전체 1벡터/1BM25 문서, paragraph=문단마다 색인 후 문서 점수=문단 최고점"}

@@ -1,0 +1,1467 @@
+{
+  "start": {
+    "start": "2026-11-01T14:50:36+09:00",
+    "deadline": "2026-11-01T15:50:36+09:00",
+    "head": "9d7900f4a29bfa60b00c043a0130dce0a01c4910",
+    "origin": "training",
+    "corpus_documents": 12,
+    "development_queries": 6,
+    "heldout_queries": 6,
+    "top_k": 3,
+    "source_hashes": {
+      "data/guides/deep_research.md": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+      "backend/cognition/research_planning.py": "2f8df7e9c60d012ff76aa64088618320a15cbcd994fe27e972548ca817902ad4",
+      "data/common_prompts/consciousness_prompt.md": "c602a81ca6a01bd46a953b7e916fc6cd8d7f220a6328e2ad7458917c34f77471"
+    }
+  },
+  "episodes": [
+    {
+      "id": 5670,
+      "started": "2026-11-01T14:53:07.985080",
+      "ended": "2026-11-01T15:00:46.141376",
+      "total_ms": 458156,
+      "task_id": "task_sysai_953d8ce2",
+      "terminal_state": "succeeded",
+      "http_seconds": 458.79907989501953,
+      "guide_events": [
+        {
+          "timestamp": "2026-11-01T14:53:42.698109",
+          "recipient": "consciousness",
+          "sha256": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd"
+        }
+      ],
+      "plans": [
+        {
+          "timestamp": "2026-11-01T14:54:55.559056",
+          "author": "consciousness",
+          "guide_sha256": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/outputs/research_plans/5d92d2b9e2e04b66ba485341ae5e76d3/research_plan.md",
+          "previous_path": null,
+          "saved_at": "2026-11-01T05:54:55.557827+00:00",
+          "sha256": "480d81a0756d5d13d267e15e18d21d0db70d225e0c8e35e3abc57727596f4619",
+          "task_id": "task_sysai_953d8ce2"
+        }
+      ],
+      "usage": [
+        {
+          "accounting": "billable_usage",
+          "cache_create": 25805,
+          "cache_read": 30788,
+          "call_id": "76faf1c0266846ab83acd9823ff8a2d8",
+          "event": "usage",
+          "input": 56595,
+          "latency_ms": 31323,
+          "model": "opus",
+          "output": 3212,
+          "parent_call_id": null,
+          "phase": "plan",
+          "provider": "ClaudeCode",
+          "reasoning": 223,
+          "role": "consciousness",
+          "round_index": 1,
+          "source": "execution_instance",
+          "tier": "고급"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 66692,
+          "cache_read": 658,
+          "call_id": "3785485b79d648abb9081404b1c83205",
+          "event": "usage",
+          "input": 67352,
+          "latency_ms": 72541,
+          "model": "opus",
+          "output": 8478,
+          "parent_call_id": null,
+          "phase": "plan_completion",
+          "provider": "ClaudeCode",
+          "reasoning": 629,
+          "role": "consciousness",
+          "round_index": 1,
+          "source": "execution_instance",
+          "tier": "고급"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 147129,
+          "cache_read": 1685390,
+          "call_id": "7d3938866ea64e89a0b47f6f640ab8d7",
+          "event": "usage",
+          "input": 1832551,
+          "latency_ms": 323936,
+          "model": "opus",
+          "output": 29183,
+          "parent_call_id": null,
+          "phase": "execute",
+          "provider": "ClaudeCode",
+          "reasoning": 4348,
+          "role": "execution",
+          "round_index": 16,
+          "source": "gear:최대|실행→고급",
+          "tier": "고급"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 0,
+          "cache_read": 1024,
+          "call_id": "0219d78375354128984f0e433a5a3891",
+          "event": "usage",
+          "input": 4211,
+          "latency_ms": 1193,
+          "model": "deepseek-flash",
+          "output": 80,
+          "parent_call_id": null,
+          "phase": "capability_guard",
+          "provider": "DeepSeekProvider",
+          "role": "oneshot:classify",
+          "round_index": 1,
+          "source": "gear:최대|분류→경량",
+          "tier": "경량"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 78219,
+          "cache_read": 658,
+          "call_id": "a074755e934d47c6852c63fe2049bc70",
+          "event": "usage",
+          "input": 78879,
+          "latency_ms": 24017,
+          "model": "opus",
+          "output": 2166,
+          "parent_call_id": null,
+          "phase": "evaluate",
+          "provider": "ClaudeCode",
+          "reasoning": 1138,
+          "role": "oneshot:evaluate",
+          "round_index": 1,
+          "source": "gear:최대|평가→고급",
+          "tier": "고급"
+        }
+      ],
+      "usage_sum": {
+        "input": 2039588,
+        "output": 43119,
+        "cache_read": 1718518,
+        "cache_create": 317845
+      },
+      "cost_summary": {
+        "check_rejections": 0,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000544,
+        "evaluation_model_s": 24.326,
+        "evaluation_prepare_s": 0.055793,
+        "evaluation_visual_s": 0.00149,
+        "evaluation_wait_s": 0.000478,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/bfc0de343cf848438b10d2f159eb3fff/events.jsonl",
+        "execution_calls": 18,
+        "execution_failures": 0,
+        "execution_tool_s": 41.543000000000006,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "supervisor_cache_read": 31446,
+        "supervisor_calls": 2,
+        "supervisor_input": 123947,
+        "supervisor_model_s": 105.335,
+        "supervisor_output": 11690,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 457.609
+      },
+      "evaluation": {
+        "status": "APPROVED",
+        "goal_status": "ACHIEVED",
+        "goal_reason": "이번 첫 작업 범위의 요구를 모두 충족했고, 하지 못한 부분은 미확인으로 정직하게 남겼다. 근거는 다음과 같다. (1) 계획을 기존 연구계획 경로에 저장했고(14:54), 그 경로를 보고했으며, 15:08에 진행 상태를 갱신했다. 약 14분 안에 마쳤다. (2) 원문 5편을 실제로 크롤했다. 4편은 초록만, RRF는 1쪽 1절과 표 1~3을 읽었다고 범위를 표시했다. BM25 정식 문헌은 읽지 않았다고 적었다. (3) 방법 4개를 문서 단위와 빈 줄 기준 문단 단위(223개)로 실제 실행했다. 실행 전에 자기 판정 qrels를 기록하고 해시를 남겼다. (4) 예상과 다른 결과가 나오자 토큰과 점수를 직접 확인해 원인을 밝혔다. Q02의 우연 일치, Q01의 틀 낱말 압도, Q04의 부정문 일치가 그것이다. 이에 따라 문단 순위 지표를 추가하는 등 판단을 고쳤다. (5) 검색만으로는 해결되지 않는 문제를 Q03~Q06으로 판정했다. 답변 단계는 시험하지 않았으므로 미확인으로 남겼다. (6) run_experiment.py의 인터페이스, results 형식(question_id/method/top_docs≤3/answer=null), 설정 해시 불변을 처음 보는 질문으로 시험 실행해 확인했다. (7) 적용 한계와 확인하지 못한 것을 명시했고, 일반적인 성능 우위로 확대하지 않았다.",
+        "goal_evidence": [
+          "research_plan.md 저장 시각 05:54:55Z, 8절 갱신 15:08",
+          "sense:crawl ×5 (arXiv 2104.08663, 2004.04906, 2212.10496, 2307.03172, RRF PDF)",
+          "e4 qrels sha256 f83dc6c8… 검색 실행 전 기록",
+          "seq114 results_base.json 48건, config_unchanged true",
+          "e9·e10 토큰·점수·문단 순위 분석",
+          "seq135 smoke_results 16건, top_docs 최대 3개, answer null",
+          "seq149 max_seq_length 128 확인, methods 해시 OK",
+          "REPORT.md의 원문 열람 범위표, 적용 한계, 확인하지 못한 것"
+        ],
+        "remaining": [
+          "답변 단계(판본 판정, 기권, 조건부 답, 종합) 실제 시험: 미확인으로 남김",
+          "RRF 후보 깊이와 재순위화, 식별자 가중, 두 번째 임베딩 모델, 형태소 BM25: 후속 과제로 기록"
+        ]
+      },
+      "tool_input_audit": [
+        {
+          "seq": 22,
+          "name": "Bash",
+          "time": 1793512503.255647,
+          "input_sha256": "20285df416c3f64fe18d92d42b50625dddc9cb67e9ed04c1d87b9af546448e73",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 29,
+          "name": "Bash",
+          "time": 1793512509.036268,
+          "input_sha256": "a1d7da54d36fe7a255e1816150d1b8a5194c56a28905f7211161450c7e9cc898",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 36,
+          "name": "Bash",
+          "time": 1793512513.7896051,
+          "input_sha256": "e7bfb5e347a3f1c5977a89267d3ad9d722bb3c39cb2c2d2b5d9a25c8d281840f",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 43,
+          "name": "Bash",
+          "time": 1793512517.9756649,
+          "input_sha256": "3607f197633884fc945ee2dc29c1e9ccea2908aac23cde2263f8fc38e70ab746",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 50,
+          "name": "Bash",
+          "time": 1793512542.67721,
+          "input_sha256": "aa6298f0e3886c9164c6805a0d1e607a376f91ea4598386e408e8fd9f3b9a251",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 57,
+          "name": "execute_ibl",
+          "time": 1793512549.9423869,
+          "input_sha256": "defe4c9076e74a817cfac1fd7872764296b9d09be7316c6f18866d64de4f4cc7",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 94,
+          "name": "Bash",
+          "time": 1793512575.17261,
+          "input_sha256": "58c985e7ff344e134d6f46fcf79e125893e00cb737982ba376c01348a7519b7d",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 101,
+          "name": "Write",
+          "time": 1793512608.421824,
+          "input_sha256": "4edd7628d07987b45a771f9ecdaa5db2ccfc2f2e5beac68307dd63730b0d1312",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 108,
+          "name": "Bash",
+          "time": 1793512613.897002,
+          "input_sha256": "1eb0291fe4867150030ca473be0a32d911fbd916e12a1ec9639e2a540104ddc2",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 115,
+          "name": "Bash",
+          "time": 1793512643.688415,
+          "input_sha256": "097df54deed83f52584e6c958a41c7cf85be364f12cd9e81bfd0bc7dc87dc736",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 122,
+          "name": "Bash",
+          "time": 1793512669.180367,
+          "input_sha256": "86f5e0aca3a63c8ba92575bee996882eb5462e8306459ed42fca5d316fed0da3",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 129,
+          "name": "Bash",
+          "time": 1793512689.392032,
+          "input_sha256": "0ea2817d0d09cd60c0f1a497f2af46f900fde0390de4063a5547c093b8816511",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 136,
+          "name": "Write",
+          "time": 1793512756.030032,
+          "input_sha256": "b7b7bcc4573e73fe99108fab3e604fcd9f06a15f09174a009a95ff57c7c01057",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 143,
+          "name": "Bash",
+          "time": 1793512762.115103,
+          "input_sha256": "18422d00204ad28ccdcaddeaa29599c8899c99466c7383583df8d0b224aa5d6d",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 150,
+          "name": "execute_ibl",
+          "time": 1793512765.918443,
+          "input_sha256": "a02ca779f77db854fe0fb1e19fc9819883c9702f9f896732e1d8deb344fbcd82",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 161,
+          "name": "Bash",
+          "time": 1793512785.219015,
+          "input_sha256": "f8cd34ecfe480e5a1aafede13b22018696856c2c99eaa8c68061c97245027eba",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 168,
+          "name": "Edit",
+          "time": 1793512791.282898,
+          "input_sha256": "53657102d767c10e6381097400af2a4889e70292becd1159eeb2404e97e7b071",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 175,
+          "name": "Bash",
+          "time": 1793512792.9568949,
+          "input_sha256": "ad7d4e7f620f7bbffd621fae53d715145befff7fb2f061a834dfb632cf18313c",
+          "complete": true,
+          "restricted_markers": []
+        }
+      ],
+      "tool_errors": []
+    },
+    {
+      "id": 5671,
+      "started": "2026-11-01T15:02:08.826051",
+      "ended": "2026-11-01T15:07:43.232356",
+      "total_ms": 334406,
+      "task_id": "task_sysai_8f1af00b",
+      "terminal_state": "succeeded",
+      "http_seconds": 334.763799905777,
+      "guide_events": [
+        {
+          "timestamp": "2026-11-01T15:02:51.343514",
+          "recipient": "consciousness",
+          "sha256": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd"
+        }
+      ],
+      "plans": [
+        {
+          "timestamp": "2026-11-01T15:03:59.947194",
+          "author": "consciousness",
+          "guide_sha256": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/outputs/research_plans/88d0bf35d1da4753bd69929953eee8e0/research_plan.md",
+          "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/outputs/research_plans/5d92d2b9e2e04b66ba485341ae5e76d3/research_plan.md",
+          "saved_at": "2026-11-01T06:03:59.946369+00:00",
+          "sha256": "daf0bd6b6a9c1db75d2e46b01b9f189eaf831861931cd8820b20b342bbee274d",
+          "task_id": "task_sysai_8f1af00b"
+        }
+      ],
+      "usage": [
+        {
+          "accounting": "billable_usage",
+          "cache_create": 27493,
+          "cache_read": 30788,
+          "call_id": "0e5ebc781077462da122eb83909cee06",
+          "event": "usage",
+          "input": 58283,
+          "latency_ms": 37971,
+          "model": "opus",
+          "output": 3878,
+          "parent_call_id": null,
+          "phase": "plan",
+          "provider": "ClaudeCode",
+          "reasoning": 460,
+          "role": "consciousness",
+          "round_index": 1,
+          "source": "execution_instance",
+          "tier": "고급"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 46367,
+          "cache_read": 28222,
+          "call_id": "12fadeaefc0040e5a7f611d3b2f650dc",
+          "event": "usage",
+          "input": 74591,
+          "latency_ms": 68318,
+          "model": "opus",
+          "output": 7667,
+          "parent_call_id": null,
+          "phase": "plan_completion",
+          "provider": "ClaudeCode",
+          "reasoning": 281,
+          "role": "consciousness",
+          "round_index": 1,
+          "source": "execution_instance",
+          "tier": "고급"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 124803,
+          "cache_read": 1830762,
+          "call_id": "1a0c2c10fb3f4e72b34e9014fb6fe654",
+          "event": "usage",
+          "input": 1955603,
+          "latency_ms": 201246,
+          "model": "opus",
+          "output": 19587,
+          "parent_call_id": null,
+          "phase": "execute",
+          "provider": "ClaudeCode",
+          "reasoning": 2229,
+          "role": "execution",
+          "round_index": 19,
+          "source": "gear:최대|실행→고급",
+          "tier": "고급"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 0,
+          "cache_read": 1152,
+          "call_id": "f2a63129078b48aaa31174f3b2ac0b3b",
+          "event": "usage",
+          "input": 5496,
+          "latency_ms": 1319,
+          "model": "deepseek-flash",
+          "output": 139,
+          "parent_call_id": null,
+          "phase": "capability_guard",
+          "provider": "DeepSeekProvider",
+          "role": "oneshot:classify",
+          "round_index": 1,
+          "source": "gear:최대|분류→경량",
+          "tier": "경량"
+        },
+        {
+          "accounting": "billable_usage",
+          "cache_create": 76724,
+          "cache_read": 6896,
+          "call_id": "22910b93a07949d08b688759902efc2c",
+          "event": "usage",
+          "input": 83622,
+          "latency_ms": 19510,
+          "model": "opus",
+          "output": 1651,
+          "parent_call_id": null,
+          "phase": "evaluate",
+          "provider": "ClaudeCode",
+          "reasoning": 947,
+          "role": "oneshot:evaluate",
+          "round_index": 1,
+          "source": "gear:최대|평가→고급",
+          "tier": "고급"
+        }
+      ],
+      "usage_sum": {
+        "input": 2177595,
+        "output": 32922,
+        "cache_read": 1897820,
+        "cache_create": 275387
+      },
+      "cost_summary": {
+        "check_rejections": 0,
+        "evaluation_calls": 1,
+        "evaluation_checkpoint_s": 0.000346,
+        "evaluation_model_s": 19.842,
+        "evaluation_prepare_s": 0.02581,
+        "evaluation_visual_s": 0.000838,
+        "evaluation_wait_s": 0.000351,
+        "events_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/spill/supervision/1927f6b2559e4c34bd031e53d009dcb5/events.jsonl",
+        "execution_calls": 18,
+        "execution_failures": 3,
+        "execution_tool_s": 22.154999999999998,
+        "internal_tool_failures": 0,
+        "request_intent": "task",
+        "source_failures": 0,
+        "supervisor_cache_read": 59010,
+        "supervisor_calls": 2,
+        "supervisor_input": 132874,
+        "supervisor_model_s": 107.362,
+        "supervisor_output": 11545,
+        "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+        "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록",
+        "wall_s": 333.876
+      },
+      "evaluation": {
+        "status": "APPROVED",
+        "goal_status": "ACHIEVED",
+        "goal_reason": "모든 기준을 충족했다. 기본 프로그램과 methods를 고치지 않고 variant 자료로 48건을 다시 실행했다(건너뜀 0, config_unchanged:true). 실행 뒤 base 해시가 그대로임을 확인했고, 사본을 만들지 않은 이유도 적었다. 판정 파일(qrels·anchors·answers_variant)은 재실행 전에 해시로 고정했다. 실제 답은 검색 적중과 따로 명시했다. 답이 달라진 질문은 Q04이며 30일에서 14일로 바뀌었고, 근거는 S01 판본 3이다. 여전히 알 수 없는 질문은 Q06이며 '클라우드'는 0건이다. 바뀐 실행 11건, Q04의 '11' 토큰 일치, S02가 1위인 실행 3건, Q05 dense 순위 1→2 같은 수치는 compare_base_variant.json과 맞는다. 검색 방식을 계속 쓸 수 있는지에 대해서는 '방법 유지, 판정 갱신'으로 판단했다. 연구계획 8절에는 현재 상태, 바뀐 판단, 남은 질문을 갱신했다.",
+        "goal_evidence": [
+          "run_experiment 결과: n_results 48, skipped [], config_unchanged true (호출 [9])",
+          "base 해시 재확인: methods·qrels OK, 프로그램 해시 bba09c58/d0b02390 유지 (호출 [13],[18])",
+          "judgments.sha256 고정 15:04:41, 재실행 시작 15:05:03 (호출 [7],[13])",
+          "answers_variant.json: Q04 14일 changed:true, Q06 알 수 없음",
+          "compare_base_variant.json: same:false 11건, Q04 variant의 S02 1위 3건",
+          "research_plan.md 8절 현재 상태와 남은 질문 갱신"
+        ],
+        "remaining": []
+      },
+      "tool_input_audit": [
+        {
+          "seq": 22,
+          "name": "Bash",
+          "time": 1793513044.6549718,
+          "input_sha256": "114bdb293d2809d6b734b77ac55a89b8151e4cacf2efd65d1044f9f59e3b1176",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 29,
+          "name": "Bash",
+          "time": 1793513047.7294762,
+          "input_sha256": "16e19116227e2ff31330a8b3acfe645da25a968c946cb36877c74f8ed4e4201f",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 36,
+          "name": "Bash",
+          "time": 1793513050.802996,
+          "input_sha256": "a6fc1fb2bf6f51229f6872e652e9bf01bc162138ebf609e382c3d54781f0ce34",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 43,
+          "name": "Bash",
+          "time": 1793513054.872562,
+          "input_sha256": "cda835368576fcf2c206179c77ff09508f7c793b2aba74b7f3020b752591736c",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 50,
+          "name": "Bash",
+          "time": 1793513061.534982,
+          "input_sha256": "a105d9959c64f8d0d07355dc1b1d5ab0727b2a4e1b22ab72aec83dc5ab1c16f1",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 57,
+          "name": "Bash",
+          "time": 1793513064.596452,
+          "input_sha256": "38d3bac3d27b8bf6d699ffda237b832755ecf4a022d1a17cfdb1bee90ea11113",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 63,
+          "name": "Bash",
+          "time": 1793513081.512522,
+          "input_sha256": "a43e90f43f1e2d2be83a1d462789220e7efcda6ee5208f30f823acb969c47f71",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 70,
+          "name": "Bash",
+          "time": 1793513085.0901592,
+          "input_sha256": "1740e33bdf6dc143f0bdeecbfb173111b596efff95e65c877f7fa63b63e2b061",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 77,
+          "name": "Bash",
+          "time": 1793513097.816897,
+          "input_sha256": "61dc528cf970e9845f8c5821bb65858c0c2cc6a8a5929bffd406e24a8b39b04b",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 84,
+          "name": "Bash",
+          "time": 1793513119.229991,
+          "input_sha256": "48813d16fcef45087af04453991ed7645e34c06e59fe155ba69c7168d5e0ff06",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 91,
+          "name": "Bash",
+          "time": 1793513129.724105,
+          "input_sha256": "c7682857f857dd0938631bff75b7382aae30a59102eda2a707f3b16084bb9628",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 98,
+          "name": "Bash",
+          "time": 1793513134.357667,
+          "input_sha256": "51b8fb4c3fd2be8849827627574032010dadbb12f855b18200fa6aba07fa5827",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 105,
+          "name": "Bash",
+          "time": 1793513142.8869739,
+          "input_sha256": "fd26ed5068a933e9acfa61d0644269e4a47a6efd83e96165dbbe679b94bdd56c",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 112,
+          "name": "Write",
+          "time": 1793513193.96834,
+          "input_sha256": "b099e6eb6726cf6cccf6ba31fb22d0554a63e8b35e6b2363f0900432611148be",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 119,
+          "name": "Bash",
+          "time": 1793513199.4942012,
+          "input_sha256": "cc0fb314e6661fb6ea3db32f0304eff90fcd8b8cdb0cb53b2ac633d49b4bcd9c",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 126,
+          "name": "Bash",
+          "time": 1793513210.929419,
+          "input_sha256": "8d3489e497028e0ea9577e3427f4a62861f6bf2fbd9de625f6c39603cc3ff227",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 133,
+          "name": "Bash",
+          "time": 1793513215.6739159,
+          "input_sha256": "14a7f20d62785c6ee10e0efe1c16c9328e5a68ec1d1ca624cd6b012929e6e2ae",
+          "complete": true,
+          "restricted_markers": []
+        },
+        {
+          "seq": 140,
+          "name": "Bash",
+          "time": 1793513219.182581,
+          "input_sha256": "849d5b996c0d6afe99d0b6ba20347b696417ebd6b94349bc8e4b62b3b6439dde",
+          "complete": true,
+          "restricted_markers": []
+        }
+      ],
+      "tool_errors": [
+        {
+          "seq": 35,
+          "kind": "tool.finished",
+          "role": "execution",
+          "phase": "execute",
+          "time": 1793513047.860385,
+          "task_id": "task_sysai_8f1af00b",
+          "call_id": "1a0c2c10fb3f4e72b34e9014fb6fe654",
+          "parent_call_id": null,
+          "id": "0b9b486f893e4859bb7eee9bf604d13b",
+          "name": "Bash",
+          "evidence": {
+            "id": "549ef6df4b7dbb791b00e085bf8159c59d429fc5ee2391c2b18cc8362324b8ff",
+            "chars": 1085,
+            "excerpt": "Exit code 1\n62c62\n<     \"sha256\": \"0a68d880a8e2e932b0c3d6cf468d854bb9c6b5906e26e56cd7952ed52e29f954\"\n---\n>     \"sha256\": \"02bc3253d0f0554b37af9dbd87a34b5fba478e5b2c814485f497f250bf8eb4bb\"\n74c74\n<     \"sha256\": \"48d5a5d4bac3a06c7525ab167198c7cebe480b7cfadc00464c5cb5e382cfc9e3\"\n---\n>     \"sha256\": \"87dc7f236d4b38d1539eecb6ebd1a9a615a73cbc3b52898ca3f00932e11103c3\"\n2,3c2,3\n< 문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n< 원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.\n---\n> 문서 ID S01. 판본 3. 시행일 2026-11-01. 현행. 판본 2와 판본 1을 대체한다.\n> 원문 보관 기간은 수집일부터 14일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.\n2,3c2,3\n< 문서 ID S03. 판본 1. 현행.\n< 자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.\n---\n> 문서 ID S03. 판본 2. 시행일 2026-11-01. 현행.\n> 자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 온라인",
+            "integrity": "verified"
+          },
+          "is_error": true,
+          "observation": "",
+          "internal_tool_failures": 0,
+          "operation_outcomes": [],
+          "source_failures": 0,
+          "check_rejected": false,
+          "elapsed_s": 0.132,
+          "operation_failures": 0
+        },
+        {
+          "seq": 56,
+          "kind": "tool.finished",
+          "role": "execution",
+          "phase": "execute",
+          "time": 1793513061.6637871,
+          "task_id": "task_sysai_8f1af00b",
+          "call_id": "1a0c2c10fb3f4e72b34e9014fb6fe654",
+          "parent_call_id": null,
+          "id": "e3a6e3fae7e749a69a8a1a41473edfa0",
+          "name": "Bash",
+          "evidence": {
+            "id": "9991f5640d7f350645551a1a395219841301fb2282e6d50550cac024bc6cf0a4",
+            "chars": 1385,
+            "excerpt": "Exit code 1\nrun_experiment.py:2:\"\"\"개인 문서 검색 비교 실험 (106회차 base).\nrun_experiment.py:5:      [--methods <설정폴더>] [--qrels <qrels.json>] [--no-dense]\nrun_experiment.py:14:import argparse, glob, hashlib, json, math, os, re, sys, time\nrun_experiment.py:171:    ap = argparse.ArgumentParser()\nrun_experiment.py:172:    ap.add_argument(\"--input\", required=True)\nrun_experiment.py:173:    ap.add_argument(\"--queries\", required=True)\nrun_experiment.py:174:    ap.add_argument(\"--output\", required=True)\nrun_experiment.py:175:    ap.add_argument(\"--methods\", default=os.path.join(HERE, \"methods\"))\nrun_experiment.py:176:    ap.add_argument(\"--qrels\", default=None, help=\"선택: 있으면 hit@3 를 덧붙인다\")\nrun_experiment.py:177:    ap.add_argument(\"--no-dense\", action=\"store_true\")\nrun_experiment.py:233:    if a.qrels and os.path.exists(a.qrels):\nrun_experiment.py:234:        qr = json.load(open(a.qrels, encoding=\"utf-8\"))[\"qrels\"]\nrun_experiment.py:247:        out[\"evaluation_against_self_qrels\"] = ev\nanalyze_passages",
+            "integrity": "verified"
+          },
+          "is_error": true,
+          "observation": "",
+          "internal_tool_failures": 0,
+          "operation_outcomes": [],
+          "source_failures": 0,
+          "check_rejected": false,
+          "elapsed_s": 0.129,
+          "operation_failures": 0
+        },
+        {
+          "seq": 83,
+          "kind": "tool.finished",
+          "role": "execution",
+          "phase": "execute",
+          "time": 1793513109.169106,
+          "task_id": "task_sysai_8f1af00b",
+          "call_id": "1a0c2c10fb3f4e72b34e9014fb6fe654",
+          "parent_call_id": null,
+          "id": "e3b521bca21b4a38815c178a233ea499",
+          "name": "Bash",
+          "evidence": {
+            "id": "0e3a87349709f6cff0ac1a4da282df4f57bb66c37245cc717f8c18cd216e2728",
+            "chars": 1485,
+            "excerpt": "Exit code 1\n{\"output\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/ai/variant/runs/results_variant.json\", \"n_results\": 48, \"skipped\": [], \"config_unchanged\": true}\n\rLoading weights:   0%|          | 0/199 [00:00<?, ?it/s]\rLoading weights: 100%|██████████| 199/199 [00:00<00:00, 19836.64it/s]\n{\"n_paragraphs\": 223, \"rows\": [{\"question_id\": \"Q01\", \"doc\": \"D05\", \"anchor\": \"결과 파일 없음은 `RESULT_MISSING`\", \"anchor_paragraphs\": 1, \"bm25_ws\": 131, \"bm25_ko\": 3, \"dense_ko\": 205, \"rrf_bm25ko_dense\": 22}, {\"question_id\": \"Q02\", \"doc\": \"D05\", \"anchor\": \"실제 작업의 합격과 다를 수 있다\", \"anchor_paragraphs\": 1, \"bm25_ws\": 128, \"bm25_ko\": 105, \"dense_ko\": 2, \"rrf_bm25ko_dense\": 18}, {\"question_id\": \"Q02\", \"doc\": \"D03\", \"anchor\": \"실행 성공과 업무 완료를 구분한다\", \"anchor_paragraphs\": 1, \"bm25_ws\": 8, \"bm25_ko\": 48, \"dense_ko\": 1, \"rrf_bm25ko_dense\": 6}, {\"question_id\": \"Q03\", \"doc\": \"D01\", \"anchor\": \"outputs/research_plans\", \"anchor_paragraphs\": 1, \"bm25_ws\": 3, \"bm25_ko\": 9, \"dens",
+            "integrity": "verified"
+          },
+          "is_error": true,
+          "observation": "",
+          "internal_tool_failures": 0,
+          "operation_outcomes": [],
+          "source_failures": 0,
+          "check_rejected": false,
+          "elapsed_s": 11.353,
+          "operation_failures": 0
+        }
+      ]
+    }
+  ],
+  "ibl_runs": [
+    {
+      "label": "answer_heldout",
+      "started": 1793512739.752974,
+      "ended": 1793512768.589013,
+      "check": false,
+      "seconds": 28.836039066314697,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 16234,
+        "output": 3215,
+        "cache_read": 2240,
+        "cache_create": 13992,
+        "reasoning": 660,
+        "calls": [
+          {
+            "call_id": "19232b254d394fda90b1080b77b4fb12",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 28012,
+            "input": 16234,
+            "output": 3215,
+            "cache_read": 2240,
+            "cache_create": 13992,
+            "reasoning": 660
+          }
+        ]
+      },
+      "run_id": "73bc6467607e4cd68a0308ceec191de9",
+      "request_sha256": "9470ae52b324ac9011b3ff39246d66fe75114a048e5a9fc231babf44585f0528"
+    },
+    {
+      "label": "answer_v0",
+      "started": 1793512605.667563,
+      "ended": 1793512641.747809,
+      "check": false,
+      "seconds": 36.08024597167969,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 15955,
+        "output": 3944,
+        "cache_read": 658,
+        "cache_create": 15295,
+        "reasoning": 835,
+        "calls": [
+          {
+            "call_id": "67cf4fc420aa40fd9c015365d8d7fb84",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 34981,
+            "input": 15955,
+            "output": 3944,
+            "cache_read": 658,
+            "cache_create": 15295,
+            "reasoning": 835
+          }
+        ]
+      },
+      "run_id": "ef4fc49b060a458ab784e3ae6c8883b0",
+      "request_sha256": "4c82cd3a4b63dd66a9de7c724c9dc503eb3efc8b15b89edd6fbdf348138250ad"
+    },
+    {
+      "label": "answer_v0_check",
+      "started": 1793512605.289988,
+      "ended": 1793512605.666579,
+      "check": true,
+      "seconds": 0.37659192085266113,
+      "success": null,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": null,
+      "request_sha256": "548f206671cc7abfeb06337f304936a432b0dbb6af221094e9606f9fb759b292"
+    },
+    {
+      "label": "answer_variant",
+      "started": 1793512768.5920231,
+      "ended": 1793512807.9390662,
+      "check": false,
+      "seconds": 39.34704375267029,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 16228,
+        "output": 4629,
+        "cache_read": 2240,
+        "cache_create": 13986,
+        "reasoning": 1192,
+        "calls": [
+          {
+            "call_id": "7f766de51b0e415280e36a6986940f68",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 38359,
+            "input": 16228,
+            "output": 4629,
+            "cache_read": 2240,
+            "cache_create": 13986,
+            "reasoning": 1192
+          }
+        ]
+      },
+      "run_id": "9d6b6721f08249309fbff38b5047e010",
+      "request_sha256": "bc30cb4040f6948c110e320b38a4afdb5ce23d7b62ca0bc63c49ad5b90e6c485"
+    },
+    {
+      "label": "followup_heldout_v3",
+      "started": 1793512956.488331,
+      "ended": 1793513022.0471098,
+      "check": false,
+      "seconds": 65.55877876281738,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": {
+        "requests": 3,
+        "measured_requests": 3,
+        "unmeasured_requests": 0,
+        "input": 103337,
+        "output": 6025,
+        "cache_read": 6558,
+        "cache_create": 96773,
+        "reasoning": 1113,
+        "calls": [
+          {
+            "call_id": "b144b4d342e84f8b949118049e90c457",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 23322,
+            "input": 40148,
+            "output": 2096,
+            "cache_read": 2186,
+            "cache_create": 37960,
+            "reasoning": 422
+          },
+          {
+            "call_id": "8d5312015c9c44139db09d128d2c3fc1",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 27707,
+            "input": 27844,
+            "output": 3051,
+            "cache_read": 2186,
+            "cache_create": 25656,
+            "reasoning": 550
+          },
+          {
+            "call_id": "1bf2eca461ae46778e696da5fae6289c",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 12580,
+            "input": 35345,
+            "output": 878,
+            "cache_read": 2186,
+            "cache_create": 33157,
+            "reasoning": 141
+          }
+        ]
+      },
+      "run_id": "f3b25d2582be4cba8c343ff4e1ee60c9",
+      "request_sha256": "1ad9b690898b9390b9291d705c3cb30ba3a275aa2b45bd948a910584b6f527c9"
+    },
+    {
+      "label": "followup_v0",
+      "started": 1793512741.3263092,
+      "ended": 1793512741.822853,
+      "check": false,
+      "seconds": 0.49654459953308105,
+      "success": false,
+      "issues": [],
+      "error": "문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.",
+      "diagnostic": {
+        "code": "TEXT_REQUIRED",
+        "kind": "partial",
+        "message": "문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.",
+        "frames": [],
+        "has_partial": true,
+        "partial": [],
+        "evidence": [
+          58
+        ],
+        "details": {
+          "row_index": 0,
+          "operation": "filter",
+          "coverage": [
+            "failed",
+            "pending"
+          ],
+          "successful_indices": [],
+          "errors": {
+            "0": {
+              "code": "TEXT_REQUIRED",
+              "kind": "runtime",
+              "message": "문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.",
+              "frames": [],
+              "has_partial": false,
+              "partial": null,
+              "evidence": [
+                53
+              ],
+              "details": {
+                "row_index": 0,
+                "operation": "filter"
+              },
+              "source_span": {
+                "source_hash": "c2ad1e8ba9fff7585d211a9f443b8bfb700c4b22ee6f4850e49e78f4bf9ed048",
+                "start": 294,
+                "end": 328,
+                "line": 7,
+                "column": 52
+              }
+            }
+          }
+        },
+        "source_span": {
+          "source_hash": "c2ad1e8ba9fff7585d211a9f443b8bfb700c4b22ee6f4850e49e78f4bf9ed048",
+          "start": 294,
+          "end": 328,
+          "line": 7,
+          "column": 52
+        }
+      },
+      "model": null,
+      "run_id": "a140d34db6434aae8f8f660ba0ceadca",
+      "request_sha256": "e7e7ecf922f040144703ba8422b30819afc598f69e693821a988c0696218d99d"
+    },
+    {
+      "label": "followup_v0_check",
+      "started": 1793512740.9377909,
+      "ended": 1793512741.32513,
+      "check": true,
+      "seconds": 0.38734006881713867,
+      "success": null,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": null,
+      "request_sha256": "7861e7d51cde09cb676169547e8881c71f43cc210fb09dd44b15b51dfb888f1c"
+    },
+    {
+      "label": "followup_v1",
+      "started": 1793512754.412734,
+      "ended": 1793512793.811855,
+      "check": false,
+      "seconds": 39.39912176132202,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": {
+        "requests": 2,
+        "measured_requests": 2,
+        "unmeasured_requests": 0,
+        "input": 34893,
+        "output": 3491,
+        "cache_read": 2844,
+        "cache_create": 32045,
+        "reasoning": 652,
+        "calls": [
+          {
+            "call_id": "2ab4cc22f2144e529fde4948941efdff",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 27718,
+            "input": 31001,
+            "output": 2922,
+            "cache_read": 658,
+            "cache_create": 30341,
+            "reasoning": 580
+          },
+          {
+            "call_id": "093523e2d7864278ac93874fa1ebe363",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 10144,
+            "input": 3892,
+            "output": 569,
+            "cache_read": 2186,
+            "cache_create": 1704,
+            "reasoning": 72
+          }
+        ]
+      },
+      "run_id": "2cdf8e570ec04bb6b583ad9e05582af2",
+      "request_sha256": "30b8d8c3f3533e0d6896052983a4972429de94ddf2d805bdda913d5a8929c5e5"
+    },
+    {
+      "label": "followup_v1_check",
+      "started": 1793512753.819335,
+      "ended": 1793512754.4117708,
+      "check": true,
+      "seconds": 0.5924370288848877,
+      "success": null,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": null,
+      "request_sha256": "efaf8629542721ff1b5c2e94433ee699b1826f4ee412f18f74f5fbe4562b7a5c"
+    },
+    {
+      "label": "followup_v2_check",
+      "started": 1793512901.009322,
+      "ended": 1793512901.5436869,
+      "check": true,
+      "seconds": 0.5343658924102783,
+      "success": false,
+      "issues": [
+        {
+          "code": "SYNTAX",
+          "kind": "compile",
+          "message": "':'가 필요합니다: {",
+          "frames": [],
+          "has_partial": false,
+          "partial": null,
+          "evidence": [],
+          "details": {},
+          "source_span": {
+            "source_hash": "530f65731e1f9b08fd9f54bc0278c25a91ceb05db833f2bf2a4e6177198f81fc",
+            "start": 699,
+            "end": 700,
+            "line": 14,
+            "column": 10
+          },
+          "rule": "SYNTAX",
+          "severity": "error",
+          "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+          "location": {
+            "source_hash": "530f65731e1f9b08fd9f54bc0278c25a91ceb05db833f2bf2a4e6177198f81fc",
+            "start": 699,
+            "end": 700,
+            "line": 14,
+            "column": 10,
+            "source": "<program>",
+            "uri": "ibl://program",
+            "end_line": 14,
+            "end_column": 11,
+            "offset_encoding": "unicode-codepoints"
+          }
+        }
+      ],
+      "error": "':'가 필요합니다: {",
+      "diagnostic": {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "':'가 필요합니다: {",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "530f65731e1f9b08fd9f54bc0278c25a91ceb05db833f2bf2a4e6177198f81fc",
+          "start": 699,
+          "end": 700,
+          "line": 14,
+          "column": 10
+        },
+        "rule": "SYNTAX",
+        "severity": "error",
+        "hint": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+        "location": {
+          "source_hash": "530f65731e1f9b08fd9f54bc0278c25a91ceb05db833f2bf2a4e6177198f81fc",
+          "start": 699,
+          "end": 700,
+          "line": 14,
+          "column": 10,
+          "source": "<program>",
+          "uri": "ibl://program",
+          "end_line": 14,
+          "end_column": 11,
+          "offset_encoding": "unicode-codepoints"
+        }
+      },
+      "model": null,
+      "run_id": null,
+      "request_sha256": "96ee86165d4ac3a260ade0a171cefd22de284e094aec68c332f42477ee4d4dad"
+    },
+    {
+      "label": "followup_v3_check",
+      "started": 1793512946.491324,
+      "ended": 1793512947.2152581,
+      "check": true,
+      "seconds": 0.7239348888397217,
+      "success": null,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": null,
+      "request_sha256": "40f4e66ccafd5910d050910b0299585917fd0c866581e85b614a33b1845f4b2d"
+    },
+    {
+      "label": "followup_variant_v3",
+      "started": 1793512947.216038,
+      "ended": 1793512956.485597,
+      "check": false,
+      "seconds": 9.269558906555176,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": {
+        "requests": 1,
+        "measured_requests": 1,
+        "unmeasured_requests": 0,
+        "input": 3909,
+        "output": 493,
+        "cache_read": 2186,
+        "cache_create": 1721,
+        "reasoning": 122,
+        "calls": [
+          {
+            "call_id": "3288088e615f47b38cdb9997aee6983c",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "ClaudeCode",
+            "model": "opus",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|실행→고급",
+            "measured": true,
+            "elapsed_ms": 8044,
+            "input": 3909,
+            "output": 493,
+            "cache_read": 2186,
+            "cache_create": 1721,
+            "reasoning": 122
+          }
+        ]
+      },
+      "run_id": "a37e6933d23741759cdb817119a15ffb",
+      "request_sha256": "4b9467a8d9a1a5bf93f1f55c01136a5d23cb2e69d9dd65671ce9382f2f4a6d95"
+    },
+    {
+      "label": "read_probe",
+      "started": 1793512470.921113,
+      "ended": 1793512471.407328,
+      "check": false,
+      "seconds": 0.48621606826782227,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": "fa327c7789d74c8cb38a259277ae0c57",
+      "request_sha256": "578993ee6e39269c93cecfe0403d3def4ef42f0ab1326c465a878264678deaac"
+    },
+    {
+      "label": "retrieve_heldout",
+      "started": 1793512679.3428822,
+      "ended": 1793512682.893615,
+      "check": false,
+      "seconds": 3.5507328510284424,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": "e65f23c6315940c1a923d05f8c350ad8",
+      "request_sha256": "8d142f9ff62c54b0797ef2722deb911e9ccdd2e7c397f1899b0f597fbf49d53b"
+    },
+    {
+      "label": "retrieve_v0",
+      "started": 1793512520.8477728,
+      "ended": 1793512545.950936,
+      "check": false,
+      "seconds": 25.103163242340088,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": "2a5a1d37271c4461a4967143b08e6f43",
+      "request_sha256": "44838eb3422e6aa4de20b4fbd3a606f7cb6c14f18a85c746a609f1cc482ddce0"
+    },
+    {
+      "label": "retrieve_v0_check",
+      "started": 1793512520.2931101,
+      "ended": 1793512520.846703,
+      "check": true,
+      "seconds": 0.5535941123962402,
+      "success": null,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": null,
+      "request_sha256": "7d3e69aef45f77c5d46c7cec816587ada7f89bc9311032587672ae555a5287f8"
+    },
+    {
+      "label": "retrieve_variant",
+      "started": 1793512682.895593,
+      "ended": 1793512686.6135511,
+      "check": false,
+      "seconds": 3.71795916557312,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": "257b38e37b1946e3b25169039f6fa385",
+      "request_sha256": "a27e9ac4a8876eae80bdd27ab1f89296c9ed2265bc12cb2070e3cf40da5c7d69"
+    },
+    {
+      "label": "sources_v0",
+      "started": 1793512482.072774,
+      "ended": 1793512486.3037848,
+      "check": false,
+      "seconds": 4.231010913848877,
+      "success": true,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": "8b39a1cd87fb413fa8589f5ec303506c",
+      "request_sha256": "7ec5b6eb1a2468efae09cf148e534d8290e2aaa33eb4f7b6b3b020b1a8c3aede"
+    },
+    {
+      "label": "sources_v0_check",
+      "started": 1793512477.136522,
+      "ended": 1793512477.479847,
+      "check": true,
+      "seconds": 0.3433248996734619,
+      "success": null,
+      "issues": [],
+      "error": null,
+      "diagnostic": null,
+      "model": null,
+      "run_id": null,
+      "request_sha256": "ed4c122ce25ba2d4bccf34e0f5cf75d1b8c32ed293cd26c22510cd7da8228e04"
+    }
+  ],
+  "source_hashes_after": {
+    "data/guides/deep_research.md": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+    "backend/cognition/research_planning.py": "2f8df7e9c60d012ff76aa64088618320a15cbcd994fe27e972548ca817902ad4",
+    "data/common_prompts/consciousness_prompt.md": "c602a81ca6a01bd46a953b7e916fc6cd8d7f220a6328e2ad7458917c34f77471"
+  },
+  "ai_base_frozen": {
+    "at": 1793512907.98405,
+    "files": {
+      "sources.json": "b9a2d9cbab7f908098e9bc8a88c8f56379bb4fc3dbd0c5cbea00eb0558db095d",
+      "analyze_passages.py": "d0b023903f38c4643b4ee1cb5f601e1552142e462be306527587c07f99544397",
+      "qrels.sha256": "a0b985310d389098a79736c0ae9f127c1c283efb0ae772fe52858f3c292ff089",
+      "anchors.json": "3142a4f7a51a11cf78a9144fad7c0346c5e47e34c8354207bfa31b4eff044b30",
+      "REPORT.md": "2559d4e09a866c481d92af4ebaf2b993c909f6b53edfd80d827dc833178d3d54",
+      "run_experiment.py": "bba09c589eda5c564639b5e2797c23f483906da1d99ceab72a3f6a7a819f4686",
+      "methods.sha256": "62f0d33ad94e5f53656a36b9f4ebec788dc6969ffa5d94434446575a34584fca",
+      "qrels.json": "f83dc6c8bb441d3f8bfbaf204c776ef9a3ae8d0243e50b2625b968d1322d7715",
+      "methods/dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+      "methods/units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29",
+      "methods/bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+      "methods/rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+      "methods/bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+      "runs/results_base.json": "4c3ee07e11e1381dc237362d6947fe177b40b6d7295ee5b55235c383e85d10bc",
+      "runs/passage_ranks.json": "4ef2fd31b0ad379482c2063ba185430b656201c70219c2bfa323bfdc95dd3046",
+      "runs/smoke_results.json": "1517be69a6517355121137acdad5acbaa43322b9e4b450fd5bef28a53e4a15a3",
+      "runs/smoke_queries.json": "d7ae1c53d2c3648222e3526385325e355f2e399d067efb2e38480f64bacbf9b8"
+    }
+  },
+  "ai_base_changed": [],
+  "retriever_frozen": {
+    "at": 1793512605.2524621,
+    "sha256": "5258dcf119622272795f8d053bc98a7c7261c4d01c68c9858315311f1430a04b",
+    "settings": {
+      "bm25": {
+        "k1": 1.5,
+        "b": 0.75
+      },
+      "char": {
+        "analyzer": "char_wb",
+        "ngram_range": [
+          2,
+          4
+        ],
+        "sublinear_tf": true
+      },
+      "rrf_k": 60,
+      "top_k": 3,
+      "unit": "paragraph/max700/stride600",
+      "document_score": "max_chunk",
+      "rrf_context": "char_chunk_when_available"
+    },
+    "no_tuning_after_dev": true
+  },
+  "trainer_model_sum": {
+    "requests": 9,
+    "measured_requests": 9,
+    "unmeasured_requests": 0,
+    "input": 190556,
+    "output": 21797,
+    "cache_read": 16726,
+    "cache_create": 173812
+  },
+  "comparison_original_sha256": "eae169bfeaec6c49d4dc28d855b4a63d21657fb1aa479a3f25783a42747d06f8",
+  "L106_1": {
+    "actual_output": {
+      "question_id": "Q01",
+      "method": "rrf_bm25ko_dense@paragraph",
+      "top_docs": [
+        "D02",
+        "D03",
+        "D05"
+      ],
+      "answer": null,
+      "scores": [
+        0.0328,
+        0.0318,
+        0.0317
+      ],
+      "top_passages": [
+        "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_",
+        "## 반복으로 목록 누적하기\n반복으로 제목을 모을 때도 `+`는 목록 연결이며, 숫자 계산으로 바뀌지 않는다.\nwhile의 `$i`는 지금 실행할 회차의 0 기반 번호다. until은 본문에서 만든 값을 조건에서 읽을 수 있다.\n횟수 식은 반복 진입 전에 평가하고, 안쪽 반복을 마치면 바깥 `$i`가 복원된다.\n반복하는 함수를 저장하면 입력·콜백에 따른 상태와 결과 관계도 인터페이스에 남는다. 상위 호출은\n하위 본문 없이 검사",
+        "**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.\nstdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면\n부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다."
+      ]
+    },
+    "auxiliary_analysis": {
+      "question_id": "Q01",
+      "doc": "D05",
+      "anchor": "결과 파일 없음은 `RESULT_MISSING`",
+      "anchor_paragraphs": 1,
+      "bm25_ws": 131,
+      "bm25_ko": 3,
+      "dense_ko": 205,
+      "rrf_bm25ko_dense": 22
+    },
+    "interpretation": "주 프로그램: 문단 점수→문서별 최대값→문서 RRF→문서별 대표 문단. 보조 분석: 전체 문단 순위→문단 RRF. 보조 순위 계산은 유효하나 실제 반환 근거의 실패 판정과 동일하지 않다."
+  },
+  "L106_2": {
+    "ai_heldout_results": {
+      "rows": 24,
+      "skipped": [
+        {
+          "method": "dense_ko@doc",
+          "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+        },
+        {
+          "method": "rrf_bm25ko_dense@doc",
+          "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+        },
+        {
+          "method": "dense_ko@paragraph",
+          "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+        },
+        {
+          "method": "rrf_bm25ko_dense@paragraph",
+          "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+        }
+      ],
+      "config_unchanged": true
+    },
+    "ai_heldout_matched_runtime": {
+      "rows": 48,
+      "skipped": [],
+      "config_unchanged": true
+    }
+  }
+}

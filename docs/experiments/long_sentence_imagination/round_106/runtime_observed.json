@@ -1,0 +1,17 @@
+{
+  "observed_after_runs": true,
+  "python": "3.13.5 (main, Jun 11 2025, 15:36:57) [Clang 17.0.0 (clang-1700.0.13.3)]",
+  "executable": "/Users/kangkukjin/Desktop/AI/indiebizOS/.venv/bin/python3",
+  "default_python": "Python 3.12.4",
+  "versions": {
+    "numpy": "2.5.2",
+    "scipy": "1.18.0",
+    "scikit-learn": "1.9.0",
+    "sentence-transformers": "5.7.0",
+    "transformers": "5.14.1",
+    "torch": "2.13.0"
+  },
+  "cached_model": "jhgan/ko-sroberta-multitask",
+  "cache_main_at_audit": "8fca7c9c98c26599be0e14b9916b11a756a26f19",
+  "caveat": "실행 당시 모델 revision 영수증은 없으며 감사 시점 캐시 참조만 확인함"
+}

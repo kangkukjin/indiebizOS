@@ -1,0 +1,383 @@
+{
+ "run": {
+  "started": "2026-11-01T14:58:16",
+  "elapsed_s": 6.66,
+  "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/base",
+  "queries": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/ai/base/runs/smoke_queries.json",
+  "n_docs": 12,
+  "n_queries": 2,
+  "doc_sha256": {
+   "D01": "ce6015fe7cd8f79e8b315f2ed44ed351032b7a8673505e982ca8606f37836a52",
+   "D02": "f54eafad8c001c9e1757b76bab37f12710ca6937aae696b1d152c098e16c208a",
+   "D03": "04d112f6dc410ad5ac1435d039a40cc2e3403cb531f1d15f083d57c908972360",
+   "D04": "27e3fd16d4f977843e70250ddfdaaa80ff4206c14c8e4703210c142e091eed94",
+   "D05": "3f24114161ac1ab36a5e6ce2a7b79fd4a0d43bd836dc408f4b4f400b87b710c4",
+   "D06": "096c4710884be5dcb2d74ef9218e84e88c4a031b5074de53a73cfd75e60eb771",
+   "D07": "a209c96261023848a369c586608e2cce200094629171cbab7341964a82b661b7",
+   "D08": "9aa21fe8d48b07aff7cdc9a63c860a225b8d8376c9aa692700e159e350515d5b",
+   "S01": "0a68d880a8e2e932b0c3d6cf468d854bb9c6b5906e26e56cd7952ed52e29f954",
+   "S02": "2791f7c4ac744a4c942cb8c3946c847646b756033e43f89c06fab265fecb0e08",
+   "S03": "48d5a5d4bac3a06c7525ab167198c7cebe480b7cfadc00464c5cb5e382cfc9e3",
+   "S04": "f0c9793426527ccb3e11371f388e79a10fc36ed58083e98554587fff0e6fee90"
+  },
+  "answer_policy": "검색만 시험 → answer=null"
+ },
+ "method_configs": {
+  "bm25_ko": {
+   "name": "bm25_ko",
+   "kind": "bm25",
+   "tokenizer": "hangul_char_bigram+ascii_word",
+   "lowercase": true,
+   "strip_punct": true,
+   "k1": 1.2,
+   "b": 0.75,
+   "note": "키워드 개선: 한글 연속열은 문자 bigram(1글자 어절은 unigram), 영문·숫자·밑줄 식별자는 단어 토큰. 형태소 분석기 미사용(설치 확인 생략, 시간)."
+  },
+  "bm25_ws": {
+   "name": "bm25_ws",
+   "kind": "bm25",
+   "tokenizer": "whitespace",
+   "lowercase": true,
+   "strip_punct": true,
+   "k1": 1.2,
+   "b": 0.75,
+   "note": "기준선: 공백 토큰 BM25(사용자가 말하는 일반 키워드 검색에 해당). 조사·어미가 붙은 어절이 그대로 토큰이 된다."
+  },
+  "dense_ko": {
+   "name": "dense_ko",
+   "kind": "dense",
+   "model": "jhgan/ko-sroberta-multitask",
+   "local_files_only": true,
+   "normalize": true,
+   "similarity": "cosine",
+   "max_seq_length": "model default",
+   "note": "의미 검색: 로컬 캐시 모델만 사용(HF_HUB_OFFLINE=1). 문서 단위에서는 모델 최대 길이를 넘는 뒷부분이 잘려 인코딩되지 않는다."
+  },
+  "rrf_bm25ko_dense": {
+   "name": "rrf_bm25ko_dense",
+   "kind": "rrf",
+   "components": [
+    "bm25_ko",
+    "dense_ko"
+   ],
+   "k": 60,
+   "note": "혼합: Cormack et al. 2009의 RRF, k=60 원문값 그대로. 각 구성 방법의 같은 단위 문서 순위를 결합."
+  }
+ },
+ "units": {
+  "units": [
+   "doc",
+   "paragraph"
+  ],
+  "paragraph_split": "빈 줄 기준 분할, 30자 미만 조각(제목 등)은 다음 조각 앞에 붙임",
+  "doc_score_from_paragraph": "max",
+  "top_k": 3,
+  "note": "doc=문서 전체 1벡터/1BM25 문서, paragraph=문단마다 색인 후 문서 점수=문단 최고점"
+ },
+ "config_sha256_before": {
+  "bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+  "bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+  "dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+  "rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+  "units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29"
+ },
+ "config_sha256_after": {
+  "bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+  "bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+  "dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+  "rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+  "units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29"
+ },
+ "config_unchanged": true,
+ "skipped": [],
+ "results": [
+  {
+   "question_id": "N01",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D01",
+    "D02",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N02",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D06",
+    "D08",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    4.2589,
+    4.1817,
+    1.6746
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N01",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D02",
+    "D06",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    2.9325,
+    2.4896,
+    2.0484
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N02",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D08",
+    "D06",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    7.9757,
+    5.7448,
+    5.451
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N01",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "D04",
+    "D05",
+    "D08"
+   ],
+   "answer": null,
+   "scores": [
+    0.396,
+    0.3864,
+    0.3801
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N02",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "D07",
+    "D08",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    0.5656,
+    0.5466,
+    0.5135
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N01",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "D05",
+    "D03",
+    "D04"
+   ],
+   "answer": null,
+   "scores": [
+    0.032,
+    0.0312,
+    0.0311
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N02",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "D08",
+    "D07",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0323,
+    0.0312
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "N01",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D01",
+    "D02",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "top_passages": [
+    "# 연구 프로젝트\n런처 → 새 프로젝트 → 유형 **연구 프로젝트** → 이름을 입력한다. 여러 연구 프로젝트를\n만들 수 있으며 각 대화에 독립 자료실이 붙는다. 프로젝트 안에서 새 대화를 만들고,\n다시 열어 같은 주제를 이어간다. 대화마다 질문·사용자의 관점 문서를 관리하고 AI는 현재 대화에 연결된 자료만 검색·참조한다.\n연구 창은 일반 프로젝트의 `ChatView` 자체를 재사용하며 같은 베이지색 화면·주황색 주요 버튼을",
+    "# 연구 질문을 이어가기\n연구 대화의 **연구 질문** 화면에서 계속 조사할 질문, 잠정 답변, 지지·반박 근거,\n남은 확인, 다음 조사를 본다. 같은 대화를 다시 열면 이어지며 다른 대화와 자동 공유하지 않는다.\n질문 기록과 사용자의 관점(notes)은 별개다. 자료가 사실을 입증하는지는 사람이거나 실행 모델이 판단한다.",
+    "# IBL 조합 — 값·함수로 큰 작업 만들기\n정해진 흐름은 프로그램으로 표현하고 판단·검수는 유지한다.\n문법 전문: `data/common_prompts/fragments/12_ibl_only.md`.\n도구 결합·문서 읽기·결과 미리보기·중단 뒤 이어가기: `read_guide(query=\"ibl_composition_tools.md\")`."
+   ]
+  },
+  {
+   "question_id": "N02",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D08",
+    "D06",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    9.4827,
+    5.3925,
+    2.8312
+   ],
+   "top_passages": [
+    "관용구는 이름을 붙여 익히고 재사용하는 IBL 표현이다. 명시 인자의 함수 문법으로 정의하고 이름으로 부른다.\n관용구는 모델이 큰 프로그램을 조합할 때도, 앱·스케줄이 정해진 절차를 실행할 때도 사용한다.\n다시 만들 비용이 크고 입력·반환·완료 조건이 분명한 절차를 저장한다.",
+    "- **파일 찾기는 `file_find` 하나** — 메타(search_term/kind/크기)든 glob 패턴이든. 내용은 `grep`. 헷갈리면: \"무슨 파일인지\"는 file_find, \"그 안에 무슨 말이 있는지\"는 grep.\n- 비색인 경로(외장·특수 위치)는 라이브 walk 폴백이 돈다 — 되지만 느리다.",
+    "- **register**: 실존 파일만, **`data/scripts/` 안에 있어야 한다**(밖이면 거절+안내).\n  id 생략 시 파일명. **interpreter 는 생략하는 게 정답**(아래 \"어디서나 도는 원장\").\n  같은 id 재등록 = 갱신(수리 후 재등록이 유지보수 루프). timeout 기본 300초 —\n  **재등록 시 생략하면 기존 값을 승계**한다(안 그러면 2400초짜리가 조용히 300으로 깎인다)."
+   ]
+  },
+  {
+   "question_id": "N01",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D02",
+    "D05",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    6.1641,
+    5.8369,
+    5.1205
+   ],
+   "top_passages": [
+    "## 종결·재개·이력\n열린 상태가 기본이다. 충분한 판단이 생기면 resolution에 disposition과 rationale을 쓴다.\nanswered는 잠정 답변·지지 근거·빈 gaps가 필요하며 모든 반박에\nobjections:[{evidence_id,rationale}]로 검토 판단을 남겨야 한다. 답의 참을 인증하는 verified는 없다.\nwithdrawn은 철회, out_of_scope는 범위 밖이다. 반박이나 확",
+    "**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.\nstdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면\n부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다.",
+    "> 실행 에이전트가 턴 종료 후 덧붙인다.\n- 2026-09-03 실측: 포식 기억을 쓰는 지점은 backend 전체에서 증류의 note_map 호출뿐(주인모델 쪽은 2026-09-18 은퇴) — 디스크 열거가 아니라 대화 턴 종료 후 경량 모델이 user_message[:300]+ai_response[:1400]만 보고 최대 6건 증류한다(폴더를 훑어서 생기지 않음).\n- 2026-09-03 실측: 실측 누적 속도: 74일간"
+   ]
+  },
+  {
+   "question_id": "N02",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D08",
+    "D06",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    15.2963,
+    8.7012,
+    5.83
+   ],
+   "top_passages": [
+    "관용구는 이름을 붙여 익히고 재사용하는 IBL 표현이다. 명시 인자의 함수 문법으로 정의하고 이름으로 부른다.\n관용구는 모델이 큰 프로그램을 조합할 때도, 앱·스케줄이 정해진 절차를 실행할 때도 사용한다.\n다시 만들 비용이 크고 입력·반환·완료 조건이 분명한 절차를 저장한다.",
+    "## 1b. 자주 뒤지는 폴더는 미리 조사하라 — 폴더 조사(투자) → 회상(어휘)\n- 냄새지도가 비어 있는 폴더를 자주 뒤진다면, 조금씩 쌓이길 기다리지 말고 **한 번 조사해 두는 게 싸다**. 사용자가 폴더를 지명하면 가이드 **`폴더 조사`(folder_survey)** 를 `read_guide` 로 읽고 그대로 한다 — 무엇을 어떻게 볼지, 무엇을 남길지(단언 + 문서, 자료에 따른 목록)는 **네가 정한다**. 정해",
+    "`args`는 JSON 객체 하나다. 결과 파일에는 JSON 값 하나를 쓴다. `null`도 값이다.\n`args`는 JSON 객체이며 Python은 `json.load(sys.stdin)`으로 읽는다. 위치 인자 목록·`sys.argv[1]` 계약이 아니다. 파일 저장만 하는 프로그램도 아래처럼 반환 JSON을 써야 한다."
+   ]
+  },
+  {
+   "question_id": "N01",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "D03",
+    "D02",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.4813,
+    0.4606,
+    0.4547
+   ],
+   "top_passages": [
+    "<!-- example:exact_key_groups -->\n```ibl\n#!ibl edition=2\n[def:원문ID로묶기]($rows) {\n  $index={}\n  [repeat:len($rows)] {\n    $row=$rows[$i];$key=$row.id\n    $index={**$index,**from_entries([[$key,get($index,$key,[])+[$row]]])}\n  }\n  return $inde",
+    "```ibl\n[self:project]{op:\"thread_messages\",project_ref:$project,thread_ref:$thread,\n  questions_only:true,question_id:$question}\n```",
+    "```ibl\n#!ibl edition=2\n$r=[self:script]{id:\"수집\",args:{}}\n$r.items >> [table:sort]{by:\"mb\",descending:true} >> [table:take]{n:5}\n```"
+   ]
+  },
+  {
+   "question_id": "N02",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "D08",
+    "D07",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    0.6735,
+    0.626,
+    0.611
+   ],
+   "top_passages": [
+    "## 중단과 재개\n현재 실행은 `resume:{run_id}`와 동일한 코드·inputs·주체·프로젝트로 재개한다.\n완료한 호출은 재사용하고 결과 불명 외부 작업은 자동 반복하지 않는다.\n자세한 조합·실패 처리는 `ibl_composition.md`, 재개는 `ibl_composition_tools.md`를 따른다.\n기존 무표기 저장본의 해석은 `docs/compatibility/ibl_workflow_legacy.md`에 보",
+    "연결이 끊겼다면 같은 코드·입력과 기존 `resume` 영수증으로 상태를 회수한다.\n`resume`은 확인된 실패도 복원하므로 실패한 검사를 몰래 재실행하지 않는다.\n관용구·스크립트가 이미 반영됐고 후속 검사만 보완할 때에는 `op:\"status\",plan:$준비.plan`으로\n먼저 대조한다. 이어 `op:\"verify\",plan:$준비.plan,probes:[다시 실행할 검사]`가 반환한 `program`을\n실행한다. 이 경",
+    "원문 보존 실패는 조사를 실패 처리하고 추가 도구 획득을 차단한다. 디스크 공간·권한을\n복구한 뒤 새 메시지로 이어간다. 추출·색인 실패는 자료를 삭제하지 않으므로 원문을 유지한\n채 재시도한다. 삭제된 색인 DB는 다음 자료실 접근에서 재생성한다. 백엔드 재시작 때 남은\n실행은 중단 상태로 보존하며 새 질문으로 계속할 수 있다. 진행 중인 대화는 먼저 중단한 뒤\n프로젝트 이름 변경·복제·휴지통·삭제를 한다."
+   ]
+  },
+  {
+   "question_id": "N01",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "D02",
+    "D05",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.032,
+    0.0318
+   ],
+   "top_passages": [
+    "## 종결·재개·이력\n열린 상태가 기본이다. 충분한 판단이 생기면 resolution에 disposition과 rationale을 쓴다.\nanswered는 잠정 답변·지지 근거·빈 gaps가 필요하며 모든 반박에\nobjections:[{evidence_id,rationale}]로 검토 판단을 남겨야 한다. 답의 참을 인증하는 verified는 없다.\nwithdrawn은 철회, out_of_scope는 범위 밖이다. 반박이나 확",
+    "**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.\nstdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면\n부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다.",
+    "## 문자열 동등성과 레코드 조회 키를 구별하기\n문자열 `==`와 `unique`는 NFC/NFD를 같은 값으로 보지만, 레코드의\n`get/has/[]`·`from_entries`·`**`는 **원문 키**를 보존하고 그대로 조회한다.\n`\"부산\" == \"부산\"`이어도 `get({부산:1},\"부산\",0)`은 0이다.\n`==`·`unique`는 대소문자·공백·숫자 표기도 관측 동등성으로 합칠 수 있다.\n`groupby`"
+   ]
+  },
+  {
+   "question_id": "N02",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "D08",
+    "D07",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.0328,
+    0.0318,
+    0.0315
+   ],
+   "top_passages": [
+    "관용구는 이름을 붙여 익히고 재사용하는 IBL 표현이다. 명시 인자의 함수 문법으로 정의하고 이름으로 부른다.\n관용구는 모델이 큰 프로그램을 조합할 때도, 앱·스케줄이 정해진 절차를 실행할 때도 사용한다.\n다시 만들 비용이 크고 입력·반환·완료 조건이 분명한 절차를 저장한다.",
+    "## 계획 조회·부분 재개·묶음\n계획만 받으려면 다음처럼 쓴다. `plan`은 새 상태 DB가 아니라 기존 실행 기록의 반환값이다.",
+    "`args`는 JSON 객체 하나다. 결과 파일에는 JSON 값 하나를 쓴다. `null`도 값이다.\n`args`는 JSON 객체이며 Python은 `json.load(sys.stdin)`으로 읽는다. 위치 인자 목록·`sys.argv[1]` 계약이 아니다. 파일 저장만 하는 프로그램도 아래처럼 반환 JSON을 써야 한다."
+   ]
+  }
+ ]
+}

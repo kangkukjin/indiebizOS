@@ -1,0 +1,82 @@
+[
+  {
+    "id": "D01",
+    "file": "D01_research_project.md",
+    "kind": "real",
+    "source": "data/guides/research_project.md",
+    "sha256": "ce6015fe7cd8f79e8b315f2ed44ed351032b7a8673505e982ca8606f37836a52"
+  },
+  {
+    "id": "D02",
+    "file": "D02_research_questions.md",
+    "kind": "real",
+    "source": "data/guides/research_questions.md",
+    "sha256": "f54eafad8c001c9e1757b76bab37f12710ca6937aae696b1d152c098e16c208a"
+  },
+  {
+    "id": "D03",
+    "file": "D03_ibl_composition.md",
+    "kind": "real",
+    "source": "data/guides/ibl_composition.md",
+    "sha256": "04d112f6dc410ad5ac1435d039a40cc2e3403cb531f1d15f083d57c908972360"
+  },
+  {
+    "id": "D04",
+    "file": "D04_result_quality.md",
+    "kind": "real",
+    "source": "data/guides/result_quality.md",
+    "sha256": "27e3fd16d4f977843e70250ddfdaaa80ff4206c14c8e4703210c142e091eed94"
+  },
+  {
+    "id": "D05",
+    "file": "D05_script.md",
+    "kind": "real",
+    "source": "data/guides/script.md",
+    "sha256": "3f24114161ac1ab36a5e6ce2a7b79fd4a0d43bd836dc408f4b4f400b87b710c4"
+  },
+  {
+    "id": "D06",
+    "file": "D06_disk_search.md",
+    "kind": "real",
+    "source": "data/guides/disk_search.md",
+    "sha256": "096c4710884be5dcb2d74ef9218e84e88c4a031b5074de53a73cfd75e60eb771"
+  },
+  {
+    "id": "D07",
+    "file": "D07_capability_change.md",
+    "kind": "real",
+    "source": "data/guides/capability_change.md",
+    "sha256": "a209c96261023848a369c586608e2cce200094629171cbab7341964a82b661b7"
+  },
+  {
+    "id": "D08",
+    "file": "D08_workflow.md",
+    "kind": "real",
+    "source": "data/guides/workflow.md",
+    "sha256": "9aa21fe8d48b07aff7cdc9a63c860a225b8d8376c9aa692700e159e350515d5b"
+  },
+  {
+    "id": "S01",
+    "file": "S01_policy_current.md",
+    "kind": "synthetic",
+    "sha256": "02bc3253d0f0554b37af9dbd87a34b5fba478e5b2c814485f497f250bf8eb4bb"
+  },
+  {
+    "id": "S02",
+    "file": "S02_policy_old.md",
+    "kind": "synthetic",
+    "sha256": "2791f7c4ac744a4c942cb8c3946c847646b756033e43f89c06fab265fecb0e08"
+  },
+  {
+    "id": "S03",
+    "file": "S03_modes.md",
+    "kind": "synthetic",
+    "sha256": "87dc7f236d4b38d1539eecb6ebd1a9a615a73cbc3b52898ca3f00932e11103c3"
+  },
+  {
+    "id": "S04",
+    "file": "S04_index.md",
+    "kind": "synthetic",
+    "sha256": "f0c9793426527ccb3e11371f388e79a10fc36ed58083e98554587fff0e6fee90"
+  }
+]

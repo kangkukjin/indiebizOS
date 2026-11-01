@@ -1,0 +1,87 @@
+{
+ "_note": "variant 판본 기준 자기 판정(정답표 아님). base qrels.json(f83dc6c8…)을 복사해 Q04·Q05·Q06만 갱신. 재실행 결과를 보기 전 2026-11-01 작성. 근거=inputs/base↔variant diff(S01·S03만 변경).",
+ "criteria": "문서 단위 hit@3 = relevance 2 문서가 top-3 안에 있음. multihop은 필요한 모든 문서가 top-3에 있어야 완전 적중(all_required). absent는 relevance 문서가 없으므로 검색 적중 개념이 없고, 정답 행동은 '없음' 판정이다.",
+ "qrels": {
+  "Q01": {
+   "relevant": {
+    "D05": 2
+   },
+   "anchor": {
+    "D05": "종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`"
+   },
+   "answerable": true,
+   "expected_answer": "Script가 종료 코드 0으로 끝났는데 결과 파일(INDIEBIZ_SCRIPT_RESULT)이 없을 때"
+  },
+  "Q02": {
+   "relevant": {
+    "D05": 2,
+    "D03": 1,
+    "D04": 1
+   },
+   "anchor": {
+    "D05": "종료 코드 0·IBL `success:true`는 실제 작업의 합격과 다를 수 있다",
+    "D03": "실행 성공과 업무 완료를 구분한다"
+   },
+   "answerable": true,
+   "expected_answer": "아니다. 종료 코드 0/success:true는 작업 합격과 다를 수 있고 operation_outcome 등 별도 판정이 필요하다",
+   "note": "질문에 '종료 코드','success' 같은 문서 용어가 없음(어휘 불일치 유도)"
+  },
+  "Q03": {
+   "relevant": {
+    "D01": 2,
+    "D02": 2
+   },
+   "all_required": [
+    "D01",
+    "D02"
+   ],
+   "anchor": {
+    "D01": "조사 근거·잠정 답은 연구 질문 기록에, 전체 진행과 다음 행동은 계획 파일에 반영한다 / outputs/research_plans/<판본>/",
+    "D02": "thread_update questions 기록"
+   },
+   "answerable": true,
+   "expected_answer": "전체 계획·진행은 outputs/research_plans/<판본>/ 계획 파일(연결은 conversations.db research_plans), 질문별 근거·잠정답은 연구 질문 기록(thread_update questions)"
+  },
+  "Q04": {
+   "relevant": {
+    "S01": 2
+   },
+   "distractors": [
+    "S02",
+    "S04"
+   ],
+   "anchor": {
+    "S01": "원문 보관 기간은 수집일부터 14일이다 (판본 3, 시행 2026-11-01, 판본 2·1 대체)"
+   },
+   "answerable": true,
+   "expected_answer": "14일 (S01 판본 3, 2026-11-01 시행 — 2026년 11월 현재 적용). base 답 30일(판본 2)은 대체됨. S02의 90일은 판본 1로 효력 없음",
+   "changed_from_base": "30일 → 14일",
+   "note": "S01 문서 ID·제목·문장 구조는 그대로이고 숫자와 판본 표기만 바뀜. S02 본문은 여전히 '판본 2로 대체'라고만 적혀 있어 판본 3 존재를 모름(낡은 메타데이터)"
+  },
+  "Q05": {
+   "relevant": {
+    "S03": 2
+   },
+   "distractors": [
+    "D01"
+   ],
+   "anchor": {
+    "S03": "자료열람 모드 ... 금지 / 온라인 조사 모드 ... 허용"
+   },
+   "answerable": true,
+   "expected_answer": "조건부(base와 동일): 자료열람 모드는 외부 네트워크 획득 금지, 온라인 조사 모드는 공개 웹 원문 획득 허용(개인 문서 외부 업로드 금지). 판본 2에서 '온라인 조사로 얻은 자료도 획득 일시와 출처 주소를 기록' 의무가 추가됐으나 허용/금지 판정은 불변",
+   "changed_from_base": "답의 허용/금지 판정 불변, 부가 의무 1개 추가"
+  },
+  "Q06": {
+   "relevant": {},
+   "distractors": [
+    "S01",
+    "S02",
+    "S03",
+    "S04"
+   ],
+   "answerable": false,
+   "expected_answer": "알 수 없음 — variant 12개 문서 어디에도 '클라우드' 또는 월 비용 진술이 없음(grep 확인). 갱신된 S01·S03에도 비용 언급 없음"
+  }
+ }
+}

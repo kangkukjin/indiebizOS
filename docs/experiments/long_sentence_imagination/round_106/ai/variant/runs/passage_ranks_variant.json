@@ -1,0 +1,75 @@
+{
+ "n_paragraphs": 223,
+ "rows": [
+  {
+   "question_id": "Q01",
+   "doc": "D05",
+   "anchor": "결과 파일 없음은 `RESULT_MISSING`",
+   "anchor_paragraphs": 1,
+   "bm25_ws": 131,
+   "bm25_ko": 3,
+   "dense_ko": 205,
+   "rrf_bm25ko_dense": 22
+  },
+  {
+   "question_id": "Q02",
+   "doc": "D05",
+   "anchor": "실제 작업의 합격과 다를 수 있다",
+   "anchor_paragraphs": 1,
+   "bm25_ws": 128,
+   "bm25_ko": 105,
+   "dense_ko": 2,
+   "rrf_bm25ko_dense": 18
+  },
+  {
+   "question_id": "Q02",
+   "doc": "D03",
+   "anchor": "실행 성공과 업무 완료를 구분한다",
+   "anchor_paragraphs": 1,
+   "bm25_ws": 8,
+   "bm25_ko": 48,
+   "dense_ko": 1,
+   "rrf_bm25ko_dense": 6
+  },
+  {
+   "question_id": "Q03",
+   "doc": "D01",
+   "anchor": "outputs/research_plans",
+   "anchor_paragraphs": 1,
+   "bm25_ws": 3,
+   "bm25_ko": 9,
+   "dense_ko": 5,
+   "rrf_bm25ko_dense": 7
+  },
+  {
+   "question_id": "Q03",
+   "doc": "D02",
+   "anchor": "thread_update",
+   "anchor_paragraphs": 2,
+   "bm25_ws": 1,
+   "bm25_ko": 5,
+   "dense_ko": 8,
+   "rrf_bm25ko_dense": 6
+  },
+  {
+   "question_id": "Q04",
+   "doc": "S01",
+   "anchor": "14일",
+   "anchor_paragraphs": 1,
+   "bm25_ws": 2,
+   "bm25_ko": 2,
+   "dense_ko": 1,
+   "rrf_bm25ko_dense": 2
+  },
+  {
+   "question_id": "Q05",
+   "doc": "S03",
+   "anchor": "온라인 조사 모드",
+   "anchor_paragraphs": 1,
+   "bm25_ws": 1,
+   "bm25_ko": 1,
+   "dense_ko": 2,
+   "rrf_bm25ko_dense": 1
+  }
+ ]
+}

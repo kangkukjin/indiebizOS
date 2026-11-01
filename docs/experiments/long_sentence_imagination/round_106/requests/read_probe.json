@@ -1,0 +1,11 @@
+{
+  "edition": 2,
+  "origin": "training",
+  "project_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "ticket": "51580be8b2e24359ad15e22fed37ecde",
+  "code": "#!ibl edition=2\n$manifest=[self:read]{path:$manifest_path};\n$queries=[self:read]{path:$queries_path};\nreturn {manifest:$manifest.data,queries:$queries.data}\n",
+  "inputs": {
+    "manifest_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/base/manifest.json",
+    "queries_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/base/queries.json"
+  }
+}

@@ -1,0 +1,8 @@
+tok_ko base S01_policy_current len 76 ['2026', '간은', '기간', '른숲', '보관', '수집', '원문', '푸른']
+tok_ko base S02_policy_old len 55 ['2026', '간은', '기간', '른숲', '보관', '수집', '원문', '푸른', '현재']
+tok_ko variant S01_policy_current len 79 ['11', '2026', '간은', '기간', '른숲', '보관', '수집', '원문', '푸른']
+tok_ko variant S02_policy_old len 55 ['2026', '간은', '기간', '른숲', '보관', '수집', '원문', '푸른', '현재']
+tok_whitespace base S01_policy_current len 43 ['기간은', '보관', '원문', '푸른숲']
+tok_whitespace base S02_policy_old len 29 ['기간은', '보관', '원문', '푸른숲', '현재']
+tok_whitespace variant S01_policy_current len 45 ['기간은', '보관', '원문', '푸른숲']
+tok_whitespace variant S02_policy_old len 29 ['기간은', '보관', '원문', '푸른숲', '현재']

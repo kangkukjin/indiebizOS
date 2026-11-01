@@ -1,0 +1,1 @@
+{"name":"bm25_ko","kind":"bm25","tokenizer":"hangul_char_bigram+ascii_word","lowercase":true,"strip_punct":true,"k1":1.2,"b":0.75,"note":"키워드 개선: 한글 연속열은 문자 bigram(1글자 어절은 unigram), 영문·숫자·밑줄 식별자는 단어 토큰. 형태소 분석기 미사용(설치 확인 생략, 시간)."}

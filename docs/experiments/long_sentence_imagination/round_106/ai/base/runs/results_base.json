@@ -1,0 +1,1453 @@
+{
+ "run": {
+  "started": "2026-11-01T14:57:00",
+  "elapsed_s": 6.56,
+  "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/base",
+  "queries": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/base/queries.json",
+  "n_docs": 12,
+  "n_queries": 6,
+  "doc_sha256": {
+   "D01": "ce6015fe7cd8f79e8b315f2ed44ed351032b7a8673505e982ca8606f37836a52",
+   "D02": "f54eafad8c001c9e1757b76bab37f12710ca6937aae696b1d152c098e16c208a",
+   "D03": "04d112f6dc410ad5ac1435d039a40cc2e3403cb531f1d15f083d57c908972360",
+   "D04": "27e3fd16d4f977843e70250ddfdaaa80ff4206c14c8e4703210c142e091eed94",
+   "D05": "3f24114161ac1ab36a5e6ce2a7b79fd4a0d43bd836dc408f4b4f400b87b710c4",
+   "D06": "096c4710884be5dcb2d74ef9218e84e88c4a031b5074de53a73cfd75e60eb771",
+   "D07": "a209c96261023848a369c586608e2cce200094629171cbab7341964a82b661b7",
+   "D08": "9aa21fe8d48b07aff7cdc9a63c860a225b8d8376c9aa692700e159e350515d5b",
+   "S01": "0a68d880a8e2e932b0c3d6cf468d854bb9c6b5906e26e56cd7952ed52e29f954",
+   "S02": "2791f7c4ac744a4c942cb8c3946c847646b756033e43f89c06fab265fecb0e08",
+   "S03": "48d5a5d4bac3a06c7525ab167198c7cebe480b7cfadc00464c5cb5e382cfc9e3",
+   "S04": "f0c9793426527ccb3e11371f388e79a10fc36ed58083e98554587fff0e6fee90"
+  },
+  "answer_policy": "검색만 시험 → answer=null"
+ },
+ "method_configs": {
+  "bm25_ko": {
+   "name": "bm25_ko",
+   "kind": "bm25",
+   "tokenizer": "hangul_char_bigram+ascii_word",
+   "lowercase": true,
+   "strip_punct": true,
+   "k1": 1.2,
+   "b": 0.75,
+   "note": "키워드 개선: 한글 연속열은 문자 bigram(1글자 어절은 unigram), 영문·숫자·밑줄 식별자는 단어 토큰. 형태소 분석기 미사용(설치 확인 생략, 시간)."
+  },
+  "bm25_ws": {
+   "name": "bm25_ws",
+   "kind": "bm25",
+   "tokenizer": "whitespace",
+   "lowercase": true,
+   "strip_punct": true,
+   "k1": 1.2,
+   "b": 0.75,
+   "note": "기준선: 공백 토큰 BM25(사용자가 말하는 일반 키워드 검색에 해당). 조사·어미가 붙은 어절이 그대로 토큰이 된다."
+  },
+  "dense_ko": {
+   "name": "dense_ko",
+   "kind": "dense",
+   "model": "jhgan/ko-sroberta-multitask",
+   "local_files_only": true,
+   "normalize": true,
+   "similarity": "cosine",
+   "max_seq_length": "model default",
+   "note": "의미 검색: 로컬 캐시 모델만 사용(HF_HUB_OFFLINE=1). 문서 단위에서는 모델 최대 길이를 넘는 뒷부분이 잘려 인코딩되지 않는다."
+  },
+  "rrf_bm25ko_dense": {
+   "name": "rrf_bm25ko_dense",
+   "kind": "rrf",
+   "components": [
+    "bm25_ko",
+    "dense_ko"
+   ],
+   "k": 60,
+   "note": "혼합: Cormack et al. 2009의 RRF, k=60 원문값 그대로. 각 구성 방법의 같은 단위 문서 순위를 결합."
+  }
+ },
+ "units": {
+  "units": [
+   "doc",
+   "paragraph"
+  ],
+  "paragraph_split": "빈 줄 기준 분할, 30자 미만 조각(제목 등)은 다음 조각 앞에 붙임",
+  "doc_score_from_paragraph": "max",
+  "top_k": 3,
+  "note": "doc=문서 전체 1벡터/1BM25 문서, paragraph=문단마다 색인 후 문서 점수=문단 최고점"
+ },
+ "config_sha256_before": {
+  "bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+  "bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+  "dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+  "rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+  "units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29"
+ },
+ "config_sha256_after": {
+  "bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+  "bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+  "dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+  "rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+  "units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29"
+ },
+ "config_unchanged": true,
+ "skipped": [],
+ "results": [
+  {
+   "question_id": "Q01",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D02",
+    "D03",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    2.0599,
+    0.8243,
+    0.0
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D03",
+    "D01",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    2.723,
+    2.5815,
+    1.6174
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    6.9025,
+    6.3197,
+    4.7923
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S04"
+   ],
+   "answer": null,
+   "scores": [
+    7.2942,
+    6.5721,
+    3.8517
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "S03",
+    "D01",
+    "S01"
+   ],
+   "answer": null,
+   "scores": [
+    6.2164,
+    2.9765,
+    2.1373
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "S02",
+    "S04",
+    "S03"
+   ],
+   "answer": null,
+   "scores": [
+    1.7551,
+    1.7497,
+    1.7377
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q01",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D02",
+    "D05",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    10.2994,
+    5.8424,
+    4.9214
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D05",
+    "D03",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    17.025,
+    14.4339,
+    12.3586
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    24.2955,
+    21.0849,
+    18.4563
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S04"
+   ],
+   "answer": null,
+   "scores": [
+    11.7489,
+    10.6562,
+    6.4347
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "S03",
+    "D01",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    17.6756,
+    10.0957,
+    8.1379
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D01",
+    "S02",
+    "S04"
+   ],
+   "answer": null,
+   "scores": [
+    4.8296,
+    3.5137,
+    3.5109
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q01",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "D03",
+    "D02",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.4281,
+    0.4271,
+    0.3865
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q02",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "D03",
+    "D07",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.4426,
+    0.4339,
+    0.4031
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q03",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "D02",
+    "D01",
+    "S01"
+   ],
+   "answer": null,
+   "scores": [
+    0.6719,
+    0.5752,
+    0.4852
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q04",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "S01",
+    "S02",
+    "S03"
+   ],
+   "answer": null,
+   "scores": [
+    0.4789,
+    0.4412,
+    0.3801
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q05",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "S03",
+    "S01",
+    "S02"
+   ],
+   "answer": null,
+   "scores": [
+    0.5473,
+    0.5363,
+    0.5018
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q06",
+   "method": "dense_ko@doc",
+   "top_docs": [
+    "D01",
+    "S01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    0.2992,
+    0.2966,
+    0.2539
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q01",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "D02",
+    "D03",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0323,
+    0.032
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q02",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "D03",
+    "D05",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0323,
+    0.032
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q03",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    0.0328,
+    0.0323,
+    0.031
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q04",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "S01",
+    "S02",
+    "S04"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0325,
+    0.0315
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q05",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "S03",
+    "D02",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    0.0328,
+    0.0312,
+    0.0311
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q06",
+   "method": "rrf_bm25ko_dense@doc",
+   "top_docs": [
+    "D01",
+    "S01",
+    "S02"
+   ],
+   "answer": null,
+   "scores": [
+    0.0328,
+    0.0318,
+    0.0318
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "Q01",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D02",
+    "D03",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    5.9493,
+    3.3638,
+    0.0
+   ],
+   "top_passages": [
+    "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_",
+    "## 반복으로 목록 누적하기\n반복으로 제목을 모을 때도 `+`는 목록 연결이며, 숫자 계산으로 바뀌지 않는다.\nwhile의 `$i`는 지금 실행할 회차의 0 기반 번호다. until은 본문에서 만든 값을 조건에서 읽을 수 있다.\n횟수 식은 반복 진입 전에 평가하고, 안쪽 반복을 마치면 바깥 `$i`가 복원된다.\n반복하는 함수를 저장하면 입력·콜백에 따른 상태와 결과 관계도 인터페이스에 남는다. 상위 호출은\n하위 본문 없이 검사",
+    "# 연구 프로젝트\n런처 → 새 프로젝트 → 유형 **연구 프로젝트** → 이름을 입력한다. 여러 연구 프로젝트를\n만들 수 있으며 각 대화에 독립 자료실이 붙는다. 프로젝트 안에서 새 대화를 만들고,\n다시 열어 같은 주제를 이어간다. 대화마다 질문·사용자의 관점 문서를 관리하고 AI는 현재 대화에 연결된 자료만 검색·참조한다.\n연구 창은 일반 프로젝트의 `ChatView` 자체를 재사용하며 같은 베이지색 화면·주황색 주요 버튼을"
+   ]
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D01",
+    "D05",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    4.7663,
+    4.3694,
+    4.0188
+   ],
+   "top_passages": [
+    "일반 에이전트의 회상·인지·감독·영속 증류 경로를 그대로 사용하므로 해마·심층·포식기억도\n같은 정책에 따라 작동한다. 원문 자료실은 대화별이며, 포식기억 같은 기존 공통 기억은 일반\n프로젝트와 동일한 범위·정책을 따른다. 새 대화나 대화 전환만으로 모델을 호출하지 않는다.\n선택한 대화에 보낸 요청만 실행하고 다른 에이전트에게 위임하지 않는다. 이미 맡긴 작업은\n대화 전환으로 취소하지 않으며 해당 대화의 중단 버튼으로 멈춘다.",
+    "**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.\nstdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면\n부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다.",
+    "오류 전체에 `json($error)`를 적용하면 `partial`의 Unit·함수 때문에 보고서 작성도 실패할 수 있다.\nJSON 보고용 필드는 **catch 안에서** 선택한다(try 성공값과 오류의 합타입을 바깥에서 투영하지 않는다).\n부분값 생략은 명시하고, 원형 오류도 필요하면 아래처럼 별도 값으로 반환해 실행 응답의\n`value_wire`·결과 참조로 보존한다. Unit을 null이나 성공값으로 바꾸지 않는다."
+   ]
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    7.3852,
+    6.3128,
+    5.9832
+   ],
+   "top_passages": [
+    "한 질문의 근거를 모아 지지·반박 목록을 한 번에 저장한다. `thread_update`가 돌려주는\nquestion_id·revision·supporting·contradicting은 저장 영수증이다. 충돌·누락이 없으면\n확인만을 위한 재조회나 근거별 판본 갱신을 반복하지 않는다. 기존 질문을 고칠 때는 전체\n기록을 읽고 기존 근거를 보존한다. notes의 판본과 사용자 발언 ID는 제공된 연구 배경에 있다.",
+    "read의 `max_chars`는 반환 본문의 문자 수(인용 표식 포함)로 1~12,000의 정수이며 기본은 12,000이다.\n여러 자료를 table:ai 등에 묶어 전달할 때 자료별 분량을 줄이고 필요한 부분을 이어 읽을 수 있다.\n`total_chars`는 전체 길이, `next_cursor`는 다음 문자 위치다. 다음 요청에는 같은 `version_ref`와\n반환된 `extraction_revision`, `next_cu",
+    "`같은표기`는 NFC 길이와 대소문자를 구별하는 부분 일치를 함께 검사하여 NFC/NFD만 합친다.\n두 부산 표기는 번호 0, A와 a는 각각 1과 2다. 입력 전체에서 한 번 대응표를 만들고\n행 처리에서는 `get($색인.aliases,$원문)`으로 조회한다. 등록하지 않은 원문을 0으로 대체하지 않는다.\n복합 번호를 레코드 키로 쓸 때는 `json([$sku_key,$warehouse_key])`처럼 경계를 보존한다.\n이 "
+   ]
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S04"
+   ],
+   "answer": null,
+   "scores": [
+    19.8456,
+    16.0798,
+    11.5839
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 전시실 색인\n문서 ID S04. 현행. 전시 안내용이다.\n색인은 그림 옆의 전시 번호를 뜻한다. 검색 시스템의 역색인과는 관련이 없다. 작품은 7일 동안 전시하며 보관 창고의 원문 폐기 기간을 정하지 않는다."
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "S03",
+    "S02",
+    "S01"
+   ],
+   "answer": null,
+   "scores": [
+    15.646,
+    7.4216,
+    7.36
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다."
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "S02",
+    "S04",
+    "S03"
+   ],
+   "answer": null,
+   "scores": [
+    4.6392,
+    4.4558,
+    4.0918
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 전시실 색인\n문서 ID S04. 현행. 전시 안내용이다.\n색인은 그림 옆의 전시 번호를 뜻한다. 검색 시스템의 역색인과는 관련이 없다. 작품은 7일 동안 전시하며 보관 창고의 원문 폐기 기간을 정하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다."
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D02",
+    "D03",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    20.2798,
+    9.36,
+    7.5509
+   ],
+   "top_passages": [
+    "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_",
+    "## 반복으로 목록 누적하기\n반복으로 제목을 모을 때도 `+`는 목록 연결이며, 숫자 계산으로 바뀌지 않는다.\nwhile의 `$i`는 지금 실행할 회차의 0 기반 번호다. until은 본문에서 만든 값을 조건에서 읽을 수 있다.\n횟수 식은 반복 진입 전에 평가하고, 안쪽 반복을 마치면 바깥 `$i`가 복원된다.\n반복하는 함수를 저장하면 입력·콜백에 따른 상태와 결과 관계도 인터페이스에 남는다. 상위 호출은\n하위 본문 없이 검사",
+    "**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.\nstdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면\n부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다."
+   ]
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D05",
+    "D03",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    13.9585,
+    12.1808,
+    12.1153
+   ],
+   "top_passages": [
+    "run 실패 시 `success:false + exit_code + stderr_tail + log 경로`를 정직하게 반환하고 원장\nlast_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 확인 → `[self:edit]` 로 파일 수정 →\n`[self:script]` 로 다시 실행해 확인(셸·run_command 가 없어도 된다) → 같은 id 그대로 (파일이 같으면 재등록도 불필요). 등록 파일이\n사라지면 ",
+    "첫안은 합계 110·예산이내 false, 둘째안은 80·true다. 실제 외부 입력은 `inputs`로 받고\n지역 함수에 명시적으로 전달한다. 다음 실행은 이전 실행의 지역 정의·변수를 자동 상속하지 않는다.\n같은 프로그램에서 저장 없이 반복 호출한다.",
+    "일반 에이전트의 회상·인지·감독·영속 증류 경로를 그대로 사용하므로 해마·심층·포식기억도\n같은 정책에 따라 작동한다. 원문 자료실은 대화별이며, 포식기억 같은 기존 공통 기억은 일반\n프로젝트와 동일한 범위·정책을 따른다. 새 대화나 대화 전환만으로 모델을 호출하지 않는다.\n선택한 대화에 보낸 요청만 실행하고 다른 에이전트에게 위임하지 않는다. 이미 맡긴 작업은\n대화 전환으로 취소하지 않으며 해당 대화의 중단 버튼으로 멈춘다."
+   ]
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    28.4317,
+    24.9874,
+    12.4597
+   ],
+   "top_passages": [
+    "# 연구 질문을 이어가기\n연구 대화의 **연구 질문** 화면에서 계속 조사할 질문, 잠정 답변, 지지·반박 근거,\n남은 확인, 다음 조사를 본다. 같은 대화를 다시 열면 이어지며 다른 대화와 자동 공유하지 않는다.\n질문 기록과 사용자의 관점(notes)은 별개다. 자료가 사실을 입증하는지는 사람이거나 실행 모델이 판단한다.",
+    "첫 대화에서는 기존 심층연구 가이드를 의식이 읽고 계획을 작성한다. 주제가 모호하면 관심사와\n미확인 개념을 좁히기 위한 잠정 탐색 계획으로 시작한다. 질문마다 새 연구로 초기화하지 않으며,\n하위 질문·추가 조건·반론을 전체 연구 안에 연결한다. 목적·범위·방법이 달라질 때는 의식이\n같은 계획을 새 판본으로 수정하고 변경 이유와 이전 근거를 보존한다. 변화가 없으면 계획을\n재사용하므로 교재 재독·계획 작성 호출·새 파일을 반복하",
+    "## 계획 조회·부분 재개·묶음\n계획만 받으려면 다음처럼 쓴다. `plan`은 새 상태 DB가 아니라 기존 실행 기록의 반환값이다."
+   ]
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S04"
+   ],
+   "answer": null,
+   "scores": [
+    36.3278,
+    29.0272,
+    19.8774
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 전시실 색인\n문서 ID S04. 현행. 전시 안내용이다.\n색인은 그림 옆의 전시 번호를 뜻한다. 검색 시스템의 역색인과는 관련이 없다. 작품은 7일 동안 전시하며 보관 창고의 원문 폐기 기간을 정하지 않는다."
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "S03",
+    "S02",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    37.9209,
+    11.9483,
+    11.5419
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "**인터프리터는 '몸의 명사'다** — \"지금 무슨 파이썬으로 도는가\"는 그 몸의 런타임만 아는 사실이지\n원장에 적어 다른 몸에 부칠 데이터가 아니다(\"명사의 자리\" 헌법). 그래서:"
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "S02",
+    "S04",
+    "S01"
+   ],
+   "answer": null,
+   "scores": [
+    9.3995,
+    9.3017,
+    8.4645
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 전시실 색인\n문서 ID S04. 현행. 전시 안내용이다.\n색인은 그림 옆의 전시 번호를 뜻한다. 검색 시스템의 역색인과는 관련이 없다. 작품은 7일 동안 전시하며 보관 창고의 원문 폐기 기간을 정하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다."
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "D02",
+    "D06",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.5056,
+    0.4943,
+    0.4939
+   ],
+   "top_passages": [
+    "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_",
+    "## 4. \"정말 없나\"는 단정하지 말고 측정하라\n- 디스크는 열거 가능하므로 음성-단언을 **측정**할 수 있다.\n- **`[self:script]{op:\"run\", id:\"잔여추정\", args:{mode:\"sample\", q·path, seen:[이미 본 경로]}}`** → 미관측 더미의 균일 무작위 표본을 열어 보고, **`args:{relevant·sampled·unseen}`** (기본 mode=estimate) 로 ",
+    "### 왜 `data/scripts/` 인가 (2026-08-16 개정)"
+   ]
+  },
+  {
+   "question_id": "Q02",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "D03",
+    "D05",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    0.5945,
+    0.5828,
+    0.5816
+   ],
+   "top_passages": [
+    "실행 성공과 업무 완료를 구분한다. PC·Android 제어 함수는 실패도 정상 값으로 반환할 수 있으므로\n`status`·`verified`·검증 범위를 확인한다. pending·unknown은 원 영수증으로 조회하고 변경을\n재전송하지 않는다. Safari·Chrome 스크립트의 실패는 catch로 전달된다. 함수를 감싸서 오류를\n값으로 바꿀 때는 `$error.details.error_code`·failure·recover",
+    "### 실행 성공과 작업 판정\n종료 코드 0·IBL `success:true`는 실제 작업의 합격과 다를 수 있다. 검증 스크립트는 명시\n`operation_outcome:{status:\"passed\"|\"failed\",message:\"판정 근거\"}`를 실행 봉투에 선언한다.\n`registered-json/1`은 stdout 최상위, `ibl-script/2`는 `protocol`·`ok`·`value`와 같은 층이다.\ntype",
+    "`self:patch`가 적용을 예약하면 `complete:false`와 원래 영수증을 반환하고 턴을 닫는다.\n기존 외부 제어자가 재기동 뒤 이어 간다. 이 프로그램 안에서 기다리거나 후보 사본의 성공을\n정본 활성화 성공으로 바꾸지 않는다. 적용 직후에는 빌드 후보의 어휘 지문도 대조한다."
+   ]
+  },
+  {
+   "question_id": "Q03",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "D01",
+    "D02",
+    "S01"
+   ],
+   "answer": null,
+   "scores": [
+    0.6827,
+    0.6569,
+    0.4852
+   ],
+   "top_passages": [
+    "## 대화와 함께 발전하는 연구계획\n같은 주제 대화는 하나의 연구계획을 계속 유지한다. ‘심층연구’라는 말을 따로 하지 않아도\n의식이 현재 계획·연구 질문·사용자의 관점·자료 배경을 읽고 이번 발언이 연구에서 맡는 역할을\n판단한다. 최초 숙고 설정이 꺼져 있어도 연구 대화의 계획 판단은 수행한다. 일반 프로젝트의\n라우팅은 바꾸지 않는다. 의식 모델이 준비되지 않았거나 계획 저장·회수가 실패하면 조사를\n시작하지 않고 실패를 알린",
+    "# 연구 질문을 이어가기\n연구 대화의 **연구 질문** 화면에서 계속 조사할 질문, 잠정 답변, 지지·반박 근거,\n남은 확인, 다음 조사를 본다. 같은 대화를 다시 열면 이어지며 다른 대화와 자동 공유하지 않는다.\n질문 기록과 사용자의 관점(notes)은 별개다. 자료가 사실을 입증하는지는 사람이거나 실행 모델이 판단한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다."
+   ]
+  },
+  {
+   "question_id": "Q04",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "S01",
+    "S02",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.4789,
+    0.4412,
+    0.4138
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "### 왜 `data/scripts/` 인가 (2026-08-16 개정)"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "S03",
+    "S01",
+    "S02"
+   ],
+   "answer": null,
+   "scores": [
+    0.5473,
+    0.5363,
+    0.5018
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다."
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "dense_ko@paragraph",
+   "top_docs": [
+    "D05",
+    "D01",
+    "S01"
+   ],
+   "answer": null,
+   "scores": [
+    0.3114,
+    0.2992,
+    0.2966
+   ],
+   "top_passages": [
+    "## 스케줄에 거는 법 (라이브 실증됨)\n스케줄러 태스크 `action: \"run_pipeline\"` + `action_params.pipeline` 에 IBL 한 줄:\n```\nPOST /scheduler/tasks {\"name\": \"월간 정산\", \"time\": \"09:00\", \"repeat\": \"monthly\", \"day\": 1,\n  \"action\": \"run_pipeline\", \"action_params\": {\"pipeli",
+    "# 연구 프로젝트\n런처 → 새 프로젝트 → 유형 **연구 프로젝트** → 이름을 입력한다. 여러 연구 프로젝트를\n만들 수 있으며 각 대화에 독립 자료실이 붙는다. 프로젝트 안에서 새 대화를 만들고,\n다시 열어 같은 주제를 이어간다. 대화마다 질문·사용자의 관점 문서를 관리하고 AI는 현재 대화에 연결된 자료만 검색·참조한다.\n연구 창은 일반 프로젝트의 `ChatView` 자체를 재사용하며 같은 베이지색 화면·주황색 주요 버튼을",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다."
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "D02",
+    "D03",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.0328,
+    0.0318,
+    0.0317
+   ],
+   "top_passages": [
+    "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_",
+    "## 반복으로 목록 누적하기\n반복으로 제목을 모을 때도 `+`는 목록 연결이며, 숫자 계산으로 바뀌지 않는다.\nwhile의 `$i`는 지금 실행할 회차의 0 기반 번호다. until은 본문에서 만든 값을 조건에서 읽을 수 있다.\n횟수 식은 반복 진입 전에 평가하고, 안쪽 반복을 마치면 바깥 `$i`가 복원된다.\n반복하는 함수를 저장하면 입력·콜백에 따른 상태와 결과 관계도 인터페이스에 남는다. 상위 호출은\n하위 본문 없이 검사",
+    "**종료 코드 0 + 결과 파일 없음은 `RESULT_MISSING`**, 잘못된 JSON은 `RESULT_INVALID`다.\nstdout으로 되돌아가 값을 찾지 않는다. 종료 코드 비0·시간 초과는 실패이며 결과를 이미 썼다면\n부분 값으로 보존한다. 오류 원문은 stderr 파일, 표시되는 꼬리는 비밀값 마스킹을 거친다."
+   ]
+  },
+  {
+   "question_id": "Q02",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "D03",
+    "D05",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0325,
+    0.0313
+   ],
+   "top_passages": [
+    "첫안은 합계 110·예산이내 false, 둘째안은 80·true다. 실제 외부 입력은 `inputs`로 받고\n지역 함수에 명시적으로 전달한다. 다음 실행은 이전 실행의 지역 정의·변수를 자동 상속하지 않는다.\n같은 프로그램에서 저장 없이 반복 호출한다.",
+    "run 실패 시 `success:false + exit_code + stderr_tail + log 경로`를 정직하게 반환하고 원장\nlast_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 확인 → `[self:edit]` 로 파일 수정 →\n`[self:script]` 로 다시 실행해 확인(셸·run_command 가 없어도 된다) → 같은 id 그대로 (파일이 같으면 재등록도 불필요). 등록 파일이\n사라지면 ",
+    "# 어휘·스크립트·관용구 변경\n반복되는 변경 절차는 `[fn:능력변경완료]{요청:{...}}`로 묶는다. 본문과 검증할 동작은\n작성자가 지정하며, 계획·충돌 확인·공식 관리 연산·새 호출 검사·필요한 각인을 연결한다.\n새 어휘를 추가하지 않는다. 등록 스크립트 `능력변경`이 보통 IBL 프로그램을 만들고\n기존 `self:workflow`, `self:script`, `self:patch`, `self:body`가 자기 쓰기를 "
+   ]
+  },
+  {
+   "question_id": "Q03",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "D01",
+    "D02",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0325,
+    0.0313
+   ],
+   "top_passages": [
+    "첫 대화에서는 기존 심층연구 가이드를 의식이 읽고 계획을 작성한다. 주제가 모호하면 관심사와\n미확인 개념을 좁히기 위한 잠정 탐색 계획으로 시작한다. 질문마다 새 연구로 초기화하지 않으며,\n하위 질문·추가 조건·반론을 전체 연구 안에 연결한다. 목적·범위·방법이 달라질 때는 의식이\n같은 계획을 새 판본으로 수정하고 변경 이유와 이전 근거를 보존한다. 변화가 없으면 계획을\n재사용하므로 교재 재독·계획 작성 호출·새 파일을 반복하",
+    "# 연구 질문을 이어가기\n연구 대화의 **연구 질문** 화면에서 계속 조사할 질문, 잠정 답변, 지지·반박 근거,\n남은 확인, 다음 조사를 본다. 같은 대화를 다시 열면 이어지며 다른 대화와 자동 공유하지 않는다.\n질문 기록과 사용자의 관점(notes)은 별개다. 자료가 사실을 입증하는지는 사람이거나 실행 모델이 판단한다.",
+    "## 계획 조회·부분 재개·묶음\n계획만 받으려면 다음처럼 쓴다. `plan`은 새 상태 DB가 아니라 기존 실행 기록의 반환값이다."
+   ]
+  },
+  {
+   "question_id": "Q04",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "S01",
+    "S02",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.0325,
+    0.0325,
+    0.0315
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "### 왜 `data/scripts/` 인가 (2026-08-16 개정)"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "S03",
+    "S02",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    0.0328,
+    0.032,
+    0.0315
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "**인터프리터는 '몸의 명사'다** — \"지금 무슨 파이썬으로 도는가\"는 그 몸의 런타임만 아는 사실이지\n원장에 적어 다른 몸에 부칠 데이터가 아니다(\"명사의 자리\" 헌법). 그래서:"
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "top_docs": [
+    "D05",
+    "S01",
+    "S02"
+   ],
+   "answer": null,
+   "scores": [
+    0.0318,
+    0.0317,
+    0.0315
+   ],
+   "top_passages": [
+    "### 왜 `data/scripts/` 인가 (2026-08-16 개정)",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다."
+   ]
+  }
+ ],
+ "evaluation_against_self_qrels": [
+  {
+   "question_id": "Q01",
+   "method": "bm25_ws@doc",
+   "hit@3": false,
+   "relevant_ranks": {
+    "D05": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ws@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3,
+    "D03": 1,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ws@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 2,
+    "D02": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ws@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 2
+   },
+   "distractors_in_top3": [
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ws@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": [
+    "D01"
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ws@doc",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S02",
+    "S03",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "bm25_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 2
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 1,
+    "D03": 2,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 2,
+    "D02": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 2
+   },
+   "distractors_in_top3": [
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": [
+    "D01"
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ko@doc",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "dense_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "dense_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3,
+    "D03": 1,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "dense_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 2,
+    "D02": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "dense_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 1
+   },
+   "distractors_in_top3": [
+    "S02"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "dense_ko@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q06",
+   "method": "dense_ko@doc",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S01"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "rrf_bm25ko_dense@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "rrf_bm25ko_dense@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 2,
+    "D03": 1,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "rrf_bm25ko_dense@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 2,
+    "D02": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "rrf_bm25ko_dense@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 1
+   },
+   "distractors_in_top3": [
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "rrf_bm25ko_dense@doc",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": [
+    "D01"
+   ]
+  },
+  {
+   "question_id": "Q06",
+   "method": "rrf_bm25ko_dense@doc",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S01",
+    "S02"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "bm25_ws@paragraph",
+   "hit@3": false,
+   "relevant_ranks": {
+    "D05": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ws@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 2,
+    "D03": 3,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ws@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 2,
+    "D02": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ws@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 2
+   },
+   "distractors_in_top3": [
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ws@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ws@paragraph",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S02",
+    "S03",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "bm25_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "bm25_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 1,
+    "D03": 2,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "bm25_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 2,
+    "D02": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "bm25_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 2
+   },
+   "distractors_in_top3": [
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "bm25_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q06",
+   "method": "bm25_ko@paragraph",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S01",
+    "S02",
+    "S04"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "dense_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "dense_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 2,
+    "D03": 1,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "dense_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 1,
+    "D02": 2
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "dense_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 1
+   },
+   "distractors_in_top3": [
+    "S02"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "dense_ko@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q06",
+   "method": "dense_ko@paragraph",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S01"
+   ]
+  },
+  {
+   "question_id": "Q01",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 3
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q02",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D05": 2,
+    "D03": 1,
+    "D04": null
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q03",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "D01": 1,
+    "D02": 2
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q04",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S01": 1
+   },
+   "distractors_in_top3": [
+    "S02"
+   ]
+  },
+  {
+   "question_id": "Q05",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "hit@3": true,
+   "relevant_ranks": {
+    "S03": 1
+   },
+   "distractors_in_top3": []
+  },
+  {
+   "question_id": "Q06",
+   "method": "rrf_bm25ko_dense@paragraph",
+   "hit@3": null,
+   "relevant_ranks": {},
+   "distractors_in_top3": [
+    "S01",
+    "S02"
+   ]
+  }
+ ]
+}

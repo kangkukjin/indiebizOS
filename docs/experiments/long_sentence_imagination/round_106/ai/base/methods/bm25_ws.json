@@ -1,0 +1,1 @@
+{"name":"bm25_ws","kind":"bm25","tokenizer":"whitespace","lowercase":true,"strip_punct":true,"k1":1.2,"b":0.75,"note":"기준선: 공백 토큰 BM25(사용자가 말하는 일반 키워드 검색에 해당). 조사·어미가 붙은 어절이 그대로 토큰이 된다."}

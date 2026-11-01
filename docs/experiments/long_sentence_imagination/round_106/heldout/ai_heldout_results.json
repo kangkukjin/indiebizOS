@@ -1,0 +1,544 @@
+{
+ "run": {
+  "started": "2026-11-01T15:01:53",
+  "elapsed_s": 5.79,
+  "input": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/base",
+  "queries": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_106회차/inputs/heldout_queries.json",
+  "n_docs": 12,
+  "n_queries": 6,
+  "doc_sha256": {
+   "D01": "ce6015fe7cd8f79e8b315f2ed44ed351032b7a8673505e982ca8606f37836a52",
+   "D02": "f54eafad8c001c9e1757b76bab37f12710ca6937aae696b1d152c098e16c208a",
+   "D03": "04d112f6dc410ad5ac1435d039a40cc2e3403cb531f1d15f083d57c908972360",
+   "D04": "27e3fd16d4f977843e70250ddfdaaa80ff4206c14c8e4703210c142e091eed94",
+   "D05": "3f24114161ac1ab36a5e6ce2a7b79fd4a0d43bd836dc408f4b4f400b87b710c4",
+   "D06": "096c4710884be5dcb2d74ef9218e84e88c4a031b5074de53a73cfd75e60eb771",
+   "D07": "a209c96261023848a369c586608e2cce200094629171cbab7341964a82b661b7",
+   "D08": "9aa21fe8d48b07aff7cdc9a63c860a225b8d8376c9aa692700e159e350515d5b",
+   "S01": "0a68d880a8e2e932b0c3d6cf468d854bb9c6b5906e26e56cd7952ed52e29f954",
+   "S02": "2791f7c4ac744a4c942cb8c3946c847646b756033e43f89c06fab265fecb0e08",
+   "S03": "48d5a5d4bac3a06c7525ab167198c7cebe480b7cfadc00464c5cb5e382cfc9e3",
+   "S04": "f0c9793426527ccb3e11371f388e79a10fc36ed58083e98554587fff0e6fee90"
+  },
+  "answer_policy": "검색만 시험 → answer=null"
+ },
+ "method_configs": {
+  "bm25_ko": {
+   "name": "bm25_ko",
+   "kind": "bm25",
+   "tokenizer": "hangul_char_bigram+ascii_word",
+   "lowercase": true,
+   "strip_punct": true,
+   "k1": 1.2,
+   "b": 0.75,
+   "note": "키워드 개선: 한글 연속열은 문자 bigram(1글자 어절은 unigram), 영문·숫자·밑줄 식별자는 단어 토큰. 형태소 분석기 미사용(설치 확인 생략, 시간)."
+  },
+  "bm25_ws": {
+   "name": "bm25_ws",
+   "kind": "bm25",
+   "tokenizer": "whitespace",
+   "lowercase": true,
+   "strip_punct": true,
+   "k1": 1.2,
+   "b": 0.75,
+   "note": "기준선: 공백 토큰 BM25(사용자가 말하는 일반 키워드 검색에 해당). 조사·어미가 붙은 어절이 그대로 토큰이 된다."
+  },
+  "dense_ko": {
+   "name": "dense_ko",
+   "kind": "dense",
+   "model": "jhgan/ko-sroberta-multitask",
+   "local_files_only": true,
+   "normalize": true,
+   "similarity": "cosine",
+   "max_seq_length": "model default",
+   "note": "의미 검색: 로컬 캐시 모델만 사용(HF_HUB_OFFLINE=1). 문서 단위에서는 모델 최대 길이를 넘는 뒷부분이 잘려 인코딩되지 않는다."
+  },
+  "rrf_bm25ko_dense": {
+   "name": "rrf_bm25ko_dense",
+   "kind": "rrf",
+   "components": [
+    "bm25_ko",
+    "dense_ko"
+   ],
+   "k": 60,
+   "note": "혼합: Cormack et al. 2009의 RRF, k=60 원문값 그대로. 각 구성 방법의 같은 단위 문서 순위를 결합."
+  }
+ },
+ "units": {
+  "units": [
+   "doc",
+   "paragraph"
+  ],
+  "paragraph_split": "빈 줄 기준 분할, 30자 미만 조각(제목 등)은 다음 조각 앞에 붙임",
+  "doc_score_from_paragraph": "max",
+  "top_k": 3,
+  "note": "doc=문서 전체 1벡터/1BM25 문서, paragraph=문단마다 색인 후 문서 점수=문단 최고점"
+ },
+ "config_sha256_before": {
+  "bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+  "bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+  "dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+  "rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+  "units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29"
+ },
+ "config_sha256_after": {
+  "bm25_ko.json": "d59218019ba4ce348ee05073fa4bdd26ecc256b8240d34c87a754f9bac547d3e",
+  "bm25_ws.json": "0a22c4bcc002c74d636a5897d894f68b34f018177ed25579427974b5b82db335",
+  "dense_ko.json": "69f78ba681bf91453b2271a9ce7bfa61a7cc6b48ab46015402ed1eea2669b1e7",
+  "rrf_bm25ko_dense.json": "198920577d2dcb12d59ac8e759a163271361166a99495794822eee1362a4053e",
+  "units.json": "c4134c2e99a682b8fc87c65395aa36b04075394e6d4c7106b4d41b1a17c56c29"
+ },
+ "config_unchanged": true,
+ "skipped": [
+  {
+   "method": "dense_ko@doc",
+   "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+  },
+  {
+   "method": "rrf_bm25ko_dense@doc",
+   "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+  },
+  {
+   "method": "dense_ko@paragraph",
+   "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+  },
+  {
+   "method": "rrf_bm25ko_dense@paragraph",
+   "reason": "ModuleNotFoundError: Could not import module 'Trainer'. Are this object's requirements defined correctly?"
+  }
+ ],
+ "results": [
+  {
+   "question_id": "H01",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    12.8488,
+    4.6678,
+    3.0316
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H02",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D06",
+    "D01",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    6.1397,
+    2.7701,
+    2.7614
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H03",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D05",
+    "D03",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    13.747,
+    11.2794,
+    10.0502
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H04",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S03"
+   ],
+   "answer": null,
+   "scores": [
+    4.9824,
+    4.285,
+    4.2369
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H05",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "S03",
+    "D06",
+    "D01"
+   ],
+   "answer": null,
+   "scores": [
+    16.7742,
+    5.7902,
+    5.7697
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H06",
+   "method": "bm25_ws@doc",
+   "top_docs": [
+    "D03",
+    "D08",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    3.0253,
+    2.4907,
+    2.3096
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H01",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    18.7294,
+    8.0595,
+    8.0557
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H02",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D06",
+    "D02",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    17.684,
+    11.502,
+    10.9018
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H03",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D05",
+    "D03",
+    "D02"
+   ],
+   "answer": null,
+   "scores": [
+    21.0955,
+    19.3293,
+    16.3744
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H04",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D03",
+    "S02",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    13.7737,
+    11.9846,
+    10.99
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H05",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "S03",
+    "D01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    22.2615,
+    14.1333,
+    9.6984
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H06",
+   "method": "bm25_ko@doc",
+   "top_docs": [
+    "D03",
+    "D05",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    6.9468,
+    6.5626,
+    6.2332
+   ],
+   "top_passages": null
+  },
+  {
+   "question_id": "H01",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D02",
+    "D01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    16.2856,
+    5.999,
+    4.0059
+   ],
+   "top_passages": [
+    "갱신은 questions:[{question_id:$question,expected_revision:현재판본,바꿀필드:값}]이다.\n지정하지 않은 필드는 보존하며 목록 필드를 지정하면 그 질문의 해당 목록 전체를 교체한다.\n여러 질문을 한 묶음에 넣으면 모두 성공하거나 모두 취소된다. notes/title/mode와 질문 저장은 별도로 호출한다.\n질문 문장을 바꾸어도 ID는 유지된다. 같은 문장·범위의 열린 질문은 duplica",
+    "대화 하나는 고유 신원을 가진 독립 에이전트다. 에이전트 표시 이름과 주행기록 이름은 대화 제목을 사용한다. 제목을 바꿔도 기존 이력·기억 신원은 유지한다. 역할·실행 기어의 기본값은 프로젝트 agents.yaml의 첫 에이전트에서 상속한다.\n그 에이전트의 역할에 연구 지침을 추가하고, 모델은 일반 프로젝트와 동일하게 중앙 핀을\n우선 적용한 뒤 모델 기어의 실행 축을 상속한다. 매 질문을 시작할 때 설정을 다시 읽는다.",
+    "## 1b. 자주 뒤지는 폴더는 미리 조사하라 — 폴더 조사(투자) → 회상(어휘)\n- 냄새지도가 비어 있는 폴더를 자주 뒤진다면, 조금씩 쌓이길 기다리지 말고 **한 번 조사해 두는 게 싸다**. 사용자가 폴더를 지명하면 가이드 **`폴더 조사`(folder_survey)** 를 `read_guide` 로 읽고 그대로 한다 — 무엇을 어떻게 볼지, 무엇을 남길지(단언 + 문서, 자료에 따른 목록)는 **네가 정한다**. 정해"
+   ]
+  },
+  {
+   "question_id": "H02",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D06",
+    "D05",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    7.9199,
+    7.8931,
+    4.7802
+   ],
+   "top_passages": [
+    "## 5. 판단 원칙\n- **\"없다\"고 단정하지 마라** — 못 찾은 것이지 없는 것이 아닐 수 있다(§4로 측정).\n- **검색 루트를 바꿔 재시도** — 홈 전체가 안 되면 외장·특정 폴더로, 이름이 안 되면 내용(grep)으로.\n- **동명·모호**하면 종류(kind)·확장자·크기·경로로 좁혀라.",
+    "### 왜 `data/scripts/` 인가 (2026-08-16 개정)",
+    "## 근거 발췌와 짧은 산출물\n문서를 발췌해 판단 모델에 넘길 때는 줄 번호뿐 아니라 절 제목과 생략 범위도 보존한다.\n키워드 주변 몇 줄에 제목이 없다고 원문에 절이 없다고 판단할 수는 없다. 판정에 필요한\n문맥이 빠졌으면 그 범위만 보완하며, 기본값·기능 유무·구현·실기 검증을 같은 주장으로 합치지 않는다.\n짧은 산출물을 요청받았다면 핵심 결론·근거·미확인을 유지하면서 설명 중복을 줄인다.\n변형의 원본 보존은 기존 파일과 "
+   ]
+  },
+  {
+   "question_id": "H03",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D05",
+    "D01",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    11.3131,
+    9.6677,
+    7.7354
+   ],
+   "top_passages": [
+    "## 설계선 — 파일 실행과 IBL 연결 (2026-10-01 개정)",
+    "read의 `max_chars`는 반환 본문의 문자 수(인용 표식 포함)로 1~12,000의 정수이며 기본은 12,000이다.\n여러 자료를 table:ai 등에 묶어 전달할 때 자료별 분량을 줄이고 필요한 부분을 이어 읽을 수 있다.\n`total_chars`는 전체 길이, `next_cursor`는 다음 문자 위치다. 다음 요청에는 같은 `version_ref`와\n반환된 `extraction_revision`, `next_cu",
+    "결과는 `[7,3]`이다. 한 원소 목록도 `[abs]`, `[true]`, `[null]`처럼 쓴다.\n레코드·목록·함수 반환의 Callable도 `$ops.f(-2)`, `$ops[0](-2)`, `[fn:선택]{}(-2)`로\n직접 호출한다. 입력·반환 계약은 전달 뒤에도 보존한다. `-2 >> abs()`는 `abs(-2)`,\n`값 >> $f(다른값)`은 `$f(값,다른값)`이며 명명 도구 인자는 선언된 파이프 자리를 쓴다"
+   ]
+  },
+  {
+   "question_id": "H04",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S03"
+   ],
+   "answer": null,
+   "scores": [
+    14.8069,
+    11.6757,
+    10.9007
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다."
+   ]
+  },
+  {
+   "question_id": "H05",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "S03",
+    "D01",
+    "D06"
+   ],
+   "answer": null,
+   "scores": [
+    27.662,
+    6.1848,
+    4.9397
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.",
+    "원문 전체를 매번 보내지는 않는다. 최근 사용자 발언 최대 20개·16000자를 문서와 함께 전달하고,\n더 오래된 발언은 대화 기록으로 읽는다. 새 발언이 없는 단순 요청에서는 문서를 다시 쓰지 않는다.\n저장 자료만 모드에서도 관점 문서 갱신은 가능하지만 외부 획득과 조사 모드 변경은 허용하지 않는다.\n자동 정리는 실행 에이전트의 도구 사용으로 이뤄지므로 중단·실패하거나 저장을 수행하지 않은 턴에서는\n직전 문서가 유지된다. 이",
+    "## 실측 기록 (자동 누적)\n- 2026-09-03 실측: 같은 상위 폴더의 형제 폴더라도 AppleDouble(`._`) 유무가 다르다 — `24.5.22`에는 있었고 `24.6.19`에는 0개였다. 파일 개수는 폴더마다 `._` 제외 여부를 따로 실측해야 하고, 이름 규칙(`아티스트 - 제목` vs `아티스트-트랙번호-제목`)도 형제 간에 달랐다.\n- 2026-09-03 실측: 파일명 교집합 0 = 고유 자산이 아니다 —"
+   ]
+  },
+  {
+   "question_id": "H06",
+   "method": "bm25_ws@paragraph",
+   "top_docs": [
+    "D05",
+    "D03",
+    "S02"
+   ],
+   "answer": null,
+   "scores": [
+    6.0053,
+    4.704,
+    4.6392
+   ],
+   "top_passages": [
+    "모델의 `describe:[\"self:script\"]` 응답에는 `authoring_examples`가 포함된다. 경로 실행은\nstdin 객체→결과 파일, `registered-json/1` 등록 실행은 stdin 객체→stdout JSON의\n최소 동작 예제가 각각 나온다. 등록 ID는 먼저 `op:list`에서 해당 계약을 확인한다.",
+    "## 평면 기록의 내용 동일성과 정확한 ID로 묶기\n같은 실행·과금 ID의 중복과 충돌을 가를 때 먼저 업무의 동일성 기준을 정한다.\n`json(레코드)`의 문자열만 비교하면 필드 순서가 다른 같은 기록도 충돌이 된다.\n반대로 `unique`·관계 키의 동등성은 원문 대소문자·숫자 표기를 합칠 수 있으므로\n정확한 ID나 원문 내용의 동일성을 대신하지 않는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다."
+   ]
+  },
+  {
+   "question_id": "H01",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D02",
+    "D03",
+    "D07"
+   ],
+   "answer": null,
+   "scores": [
+    29.0455,
+    11.6964,
+    11.6047
+   ],
+   "top_passages": [
+    "갱신은 questions:[{question_id:$question,expected_revision:현재판본,바꿀필드:값}]이다.\n지정하지 않은 필드는 보존하며 목록 필드를 지정하면 그 질문의 해당 목록 전체를 교체한다.\n여러 질문을 한 묶음에 넣으면 모두 성공하거나 모두 취소된다. notes/title/mode와 질문 저장은 별도로 호출한다.\n질문 문장을 바꾸어도 ID는 유지된다. 같은 문장·범위의 열린 질문은 duplica",
+    "`sort`의 기준 필드가 비어 있지 않은 입력의 모든 행에 없으면 `MISSING_FIELD`로 실패한다.\n열 이름을 바꾼 뒤에는 정렬 기준도 새 이름으로 지정한다. 일부 행의 필드 부재·null은\n기존 규칙대로 뒤에 놓으며, 빈 목록은 정상 빈 목록으로 유지한다. 기준이 없는 자료를\n원래 순서대로 돌려주어 후속 `take`가 잘못된 추천을 만들지 않는다.",
+    "개정은 `operation:\"update\"`와 새 `code`, 은퇴는 `operation:\"remove\"`와 `target`이다.\n`expected_revision`을 지정하면 조회한 판본과 달라졌을 때 계획부터 거절한다.\n생략해도 계획 당시 판본이 실제 저장·삭제의 조건이 된다. 호출자를 깨뜨리는 변경은\n기존 원장의 소비자 검사에서 거절한다. 함수 원장 변경에는 빌드·Git·재기동이 붙지 않는다.\n배포 `.ibl`까지 바꾸"
+   ]
+  },
+  {
+   "question_id": "H02",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D06",
+    "S04",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    21.938,
+    13.0959,
+    12.6256
+   ],
+   "top_passages": [
+    "내 컴퓨터(로컬 디스크)에서 파일·자료를 찾을 때의 방법과 지도. 웹 검색과 다르다 — 디스크는 **열거 가능한 공간**이라, \"어디 있나\"뿐 아니라 **\"정말 없나\"를 측정**할 수 있다.",
+    "# 합성 시험자료 푸른숲 전시실 색인\n문서 ID S04. 현행. 전시 안내용이다.\n색인은 그림 옆의 전시 번호를 뜻한다. 검색 시스템의 역색인과는 관련이 없다. 작품은 7일 동안 전시하며 보관 창고의 원문 폐기 기간을 정하지 않는다.",
+    "## 근거 발췌와 짧은 산출물\n문서를 발췌해 판단 모델에 넘길 때는 줄 번호뿐 아니라 절 제목과 생략 범위도 보존한다.\n키워드 주변 몇 줄에 제목이 없다고 원문에 절이 없다고 판단할 수는 없다. 판정에 필요한\n문맥이 빠졌으면 그 범위만 보완하며, 기본값·기능 유무·구현·실기 검증을 같은 주장으로 합치지 않는다.\n짧은 산출물을 요청받았다면 핵심 결론·근거·미확인을 유지하면서 설명 중복을 줄인다.\n변형의 원본 보존은 기존 파일과 "
+   ]
+  },
+  {
+   "question_id": "H03",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D02",
+    "D08",
+    "D05"
+   ],
+   "answer": null,
+   "scores": [
+    19.9227,
+    16.5429,
+    16.4803
+   ],
+   "top_passages": [
+    "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_",
+    "관용구의 본문은 실행 엔진이 관리하는 정의이며, 이를 개정하는 일은 엔진 구현의 코드 수리와 다르다.\n수리 권한이 있는 턴도 같은 관리 원장을 사용한다. `detail`의 `revision`을 읽고 `save`에\n`expected_revision`으로 전달한다. 저장은 컴파일·호출자 검사·판본 충돌 검사를 통과해야 한다.\n반환된 `function_ref`와 새 `detail`의 판본을 대조하고 **새 IBL 호출**로 원래 실",
+    "**실행은 파일을 기준으로 하고, IBL은 입력과 결과를 연결한다.** 코드 문자열을 실행기에\n끼워 넣어 traceback을 재작성하지 않는다. Python 실행부(`backend/base/file_script.py`)는\nIBL 파서·값·오류 객체에 의존하지 않는다. IBL 어댑터와 재현 CLI가 같은 실행부를 쓴다."
+   ]
+  },
+  {
+   "question_id": "H04",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "S02",
+    "S01",
+    "S03"
+   ],
+   "answer": null,
+   "scores": [
+    32.3911,
+    27.033,
+    21.3821
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정\n문서 ID S01. 판본 2. 시행일 2026-10-01. 현행. 판본 1을 대체한다.\n원문 보관 기간은 수집일부터 30일이다. 요약과 원문은 별도이며 요약만 남은 상태를 원문 확보로 기록하지 않는다. 과거 결과 재검토를 위해 삭제 전에 검토 시점 판본과 인용 위치를 기록한다.",
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다."
+   ]
+  },
+  {
+   "question_id": "H05",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "S03",
+    "D01",
+    "D02"
+   ],
+   "answer": null,
+   "scores": [
+    48.2336,
+    19.8804,
+    8.7274
+   ],
+   "top_passages": [
+    "# 합성 시험자료 푸른숲 랩 자료 모드\n문서 ID S03. 판본 1. 현행.\n자료열람 모드에서는 보존된 문서만 열람하며 외부 네트워크 획득을 금지한다. 온라인 조사 모드에서는 공개 웹 원문 획득을 허용하지만 개인 문서 외부 업로드는 금지한다. 두 규칙은 적용 모드가 다르므로 서로 충돌하지 않는다.",
+    "원문 전체를 매번 보내지는 않는다. 최근 사용자 발언 최대 20개·16000자를 문서와 함께 전달하고,\n더 오래된 발언은 대화 기록으로 읽는다. 새 발언이 없는 단순 요청에서는 문서를 다시 쓰지 않는다.\n저장 자료만 모드에서도 관점 문서 갱신은 가능하지만 외부 획득과 조사 모드 변경은 허용하지 않는다.\n자동 정리는 실행 에이전트의 도구 사용으로 이뤄지므로 중단·실패하거나 저장을 수행하지 않은 턴에서는\n직전 문서가 유지된다. 이",
+    "## 기록하고 수정하기\n```ibl\n[self:project]{op:\"thread_update\",project_ref:$project,thread_ref:$thread,\n  questions:[{expected_revision:0,text:\"어떤 조건에서 효과가 있는가?\",scope:\"이번에 수집한 연구\",\n    provisional_answer:\"아직 판단하지 못함\",gaps:[\"반대 결과를 보고한 연구 확인\"],next_"
+   ]
+  },
+  {
+   "question_id": "H06",
+   "method": "bm25_ko@paragraph",
+   "top_docs": [
+    "D01",
+    "S02",
+    "D03"
+   ],
+   "answer": null,
+   "scores": [
+    13.8878,
+    9.3995,
+    9.3529
+   ],
+   "top_passages": [
+    "대화 하나는 고유 신원을 가진 독립 에이전트다. 에이전트 표시 이름과 주행기록 이름은 대화 제목을 사용한다. 제목을 바꿔도 기존 이력·기억 신원은 유지한다. 역할·실행 기어의 기본값은 프로젝트 agents.yaml의 첫 에이전트에서 상속한다.\n그 에이전트의 역할에 연구 지침을 추가하고, 모델은 일반 프로젝트와 동일하게 중앙 핀을\n우선 적용한 뒤 모델 기어의 실행 축을 상속한다. 매 질문을 시작할 때 설정을 다시 읽는다.",
+    "# 합성 시험자료 푸른숲 랩 운영규정 과거판\n문서 ID S02. 판본 1. 시행일 2026-01-01. 2026-10-01 판본 2로 대체되어 현재 효력이 없다.\n원문 보관 기간은 수집일부터 90일이다. 요약과 원문은 별도로 보관한다.",
+    "## 평면 기록의 내용 동일성과 정확한 ID로 묶기\n같은 실행·과금 ID의 중복과 충돌을 가를 때 먼저 업무의 동일성 기준을 정한다.\n`json(레코드)`의 문자열만 비교하면 필드 순서가 다른 같은 기록도 충돌이 된다.\n반대로 `unique`·관계 키의 동등성은 원문 대소문자·숫자 표기를 합칠 수 있으므로\n정확한 ID나 원문 내용의 동일성을 대신하지 않는다."
+   ]
+  }
+ ]
+}

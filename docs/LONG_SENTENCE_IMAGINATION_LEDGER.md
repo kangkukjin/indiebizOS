@@ -4,6 +4,12 @@
 이 문서는 git에 남는 누적 기록이다. `outputs/long_sentence_imagination/`의 원자료·로그·
 산출물은 로컬 실행 증거이며 이 원장의 요약과 판정 근거를 대신하지 않는다.
 
+## 106회차 — 문서 검색의 심층연구·반례·판본 갱신 (2026-11-01, 훈련 완료·연구 품질 부분 달성)
+
+14:50:36~15:13:15 KST, 22분 39초(보고·증거 보존 포함, 60분 상한 안). 실제 가이드8개+합성4개, 개발6문항·보류6문항. 시스템 AI ep5670/5671: 의식 가이드→계획 저장→실제 비교→평가 경로와 이전 계획 연결 확인. 4방법×2단위×6질문 48행씩, 설정 고정 보류 재실행48행. 30일→14일·미확인 유지·새 기록 의무 반영. #think 강제·기존 rehearsal 이력 가능, 자동 분류·새 대화 독립성·자동 답 생성기는 미검증.
+**L106-1** 주 프로그램의 문서 집계 후 RRF와 보조 분석의 문단 RRF가 다른데 근거 실패 해석의 연결 부족(Q01 실제 세 번째 반환 문단은 정답, 보조 순위22). 평가 두 번 승인에도 잔여. **L106-2** 재현 환경 미명시: 기본 Python은24행/4방법 skipped, 실제 .venv는48행/skipped0. 훈련자 IBL 검사6/7·실행11/12, 서로 다른 작성 오류2주기 복구. 기본·보류·변형54답변행과 원문 재독 보완, 변형 Q03 판단 재사용·Q06 새 판단 확인. Q02 설명 불완전 잔여. 제품 수리·등록·시딩0.
+AI 전체 역할 입력4,217,183·출력76,041(캐시 포함 입력), 훈련자 IBL 모델9회 입력190,556·출력21,797. Codex 자체 비용 미상·절감 비교 없음. 기본 산출물17개 SHA 불변. [보고서](experiments/long_sentence_imagination/round_106/report.md) · [과제](experiments/long_sentence_imagination/round_106/task.md) · [증거](experiments/long_sentence_imagination/round_106/evidence.json) · [재현](experiments/long_sentence_imagination/round_106/reproduce.md).
+
 ## 105회차 — 업무 중 관용구·스크립트·어휘 등록 절차 (2026-11-01, 훈련 완료·어휘 경로 부분 확인)
 
 14:18~14:46 KST, 약 28분. 격리된 실제 실행 모델+IBL 관리 경로에서 관용구의 통합 절차 발견·등록·개정·새 세션 재발견을 확인했다. 훈련자/AI 기본600행·변형600행·차량80행 및 등록 스크립트 소비600행 전건 대조 일치. 사용 중 삭제 차단·검사 실패 후 같은 판본 verify 복구·호출자 우선 퇴역 확인. 스크립트 동작 검증 성공, 소스 각인은 시험 몸 Git 부재로 미완료. 어휘 후보 핸들러5/5·실제 빌드 성공, 격리 환경의 선택기/파일 관문 때문에 정식 반영·활성·새 호출 미완료. 초기 등록부 키 오류 시도는 보존하고 새 몸/새 세션으로 다시 평가했다. 운영 HTTP 전체·실제 운영 적용·수리 전후 비용 절감은 미검증. 제품 코드 수정 없음. [보고서](experiments/long_sentence_imagination/round_105/report.md) · [과제](experiments/long_sentence_imagination/round_105/task.md) · [증거](experiments/long_sentence_imagination/round_105/evidence.json).

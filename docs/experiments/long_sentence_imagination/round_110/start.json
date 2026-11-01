@@ -1,0 +1,22 @@
+{
+  "budget_start": "2026-11-01T19:19:57+09:00",
+  "deadline": "2026-11-01T20:19:57+09:00",
+  "head": "0aca5502f683859adf81d43aacf081ed4df16d47",
+  "source_sha256": {
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "data/common_prompts/consciousness_prompt.md": "8e7a689782c6333c970370167fefb5a9124464615f99a53f63c67df1a98771ba",
+    "data/guides/deep_research.md": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e"
+  },
+  "cases_sha256": "3c0a5650aa884f70e0c9a2d205286864b717a86f03f5c6d0366fe90533c01b18",
+  "prior_sha256": "03a6294dc2ced46cb5434adb6ec13353c59e1f67d1ebdb348f02f181e5e4614b",
+  "candidate_sha256": "9cd31a783e9e8d29e4ed126bba93cd78e0b33fbba5b868e084517215c86dfe61",
+  "frozen_files": {
+    "task.md": "96561b4d8746d225e292b303a1712dfeb33b60c0d1454422aa22a7748dde0827",
+    "cases.json": "3c0a5650aa884f70e0c9a2d205286864b717a86f03f5c6d0366fe90533c01b18",
+    "audit_system.txt": "2dec0da4ebc3fb736f7e312faad8eaf09300c791d355f7c8ab93c96cd71e2418",
+    "repair_instruction.txt": "97acc850cda302649e72608a2eae2c66039ec66ff30524e9f46042c34c320d90",
+    "five_principle_gate.py": "9cd31a783e9e8d29e4ed126bba93cd78e0b33fbba5b868e084517215c86dfe61",
+    "baseline_research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "run_experiment.py": "fc9c556d6b96e1dcc692ef0a069bfc7149af7341c262c95e7c0d0a3f8f825fae"
+  }
+}

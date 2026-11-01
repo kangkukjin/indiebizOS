@@ -1,0 +1,142 @@
+{
+  "cases": [
+    {
+      "case": "K1",
+      "A": {
+        "tokens": 118084,
+        "seconds": 151.74306416511536,
+        "wall_seconds": 151.8624610900879
+      },
+      "R": {
+        "tokens": 137704,
+        "seconds": 180.21773529052734,
+        "wall_seconds": 180.34204506874084
+      },
+      "added_tokens": 19620,
+      "added_seconds": 28.474671125411987
+    },
+    {
+      "case": "K2",
+      "A": {
+        "tokens": 63963,
+        "seconds": 139.36207103729248,
+        "wall_seconds": 139.36779403686523
+      },
+      "R": {
+        "tokens": 149530,
+        "seconds": 281.4294331073761,
+        "wall_seconds": 281.44085717201233
+      },
+      "added_tokens": 85567,
+      "added_seconds": 142.06736207008362
+    },
+    {
+      "case": "N1",
+      "A": {
+        "tokens": 85316,
+        "seconds": 150.86288046836853,
+        "wall_seconds": 150.86822128295898
+      },
+      "R": {
+        "tokens": 103067,
+        "seconds": 179.94308257102966,
+        "wall_seconds": 179.95381927490234
+      },
+      "added_tokens": 17751,
+      "added_seconds": 29.080202102661133
+    },
+    {
+      "case": "N2",
+      "A": {
+        "tokens": 82773,
+        "seconds": 133.92475080490112,
+        "wall_seconds": 133.9298210144043
+      },
+      "R": {
+        "tokens": 98530,
+        "seconds": 158.2857689857483,
+        "wall_seconds": 158.2963511943817
+      },
+      "added_tokens": 15757,
+      "added_seconds": 24.361018180847168
+    }
+  ],
+  "phases": {
+    "initial_framing": {
+      "calls": 4,
+      "input": 148681,
+      "output": 12897,
+      "call_seconds": [
+        34.53273010253906,
+        36.94041299819946,
+        35.45503091812134,
+        30.659699201583862
+      ],
+      "median_call_seconds": 34.9938805103302,
+      "total_tokens": 161578
+    },
+    "plan_completion": {
+      "calls": 4,
+      "input": 142166,
+      "output": 46392,
+      "call_seconds": [
+        112.5307309627533,
+        97.76902604103088,
+        114.44077777862549,
+        102.32827877998352
+      ],
+      "median_call_seconds": 107.42950487136841,
+      "total_tokens": 188558
+    },
+    "five_principles_0": {
+      "calls": 4,
+      "input": 57523,
+      "output": 12906,
+      "call_seconds": [
+        28.044437885284424,
+        35.62273693084717,
+        28.642733097076416,
+        23.888349294662476
+      ],
+      "median_call_seconds": 28.34358549118042,
+      "total_tokens": 70429
+    },
+    "repair": {
+      "calls": 1,
+      "input": 40019,
+      "output": 10128,
+      "call_seconds": [
+        69.99123787879944
+      ],
+      "median_call_seconds": 69.99123787879944,
+      "total_tokens": 50147
+    },
+    "five_principles_1": {
+      "calls": 1,
+      "input": 13837,
+      "output": 4282,
+      "call_seconds": [
+        35.99952530860901
+      ],
+      "median_call_seconds": 35.99952530860901,
+      "total_tokens": 18119
+    }
+  },
+  "per_case_mean_tokens": {
+    "A": 87534.0,
+    "R": 122207.75
+  },
+  "extra_median_seconds": 28.77743661403656,
+  "physical_elapsed_seconds": 440.8561592102051,
+  "physical_usage": {
+    "requests": 14,
+    "measured_requests": 14,
+    "unmeasured_requests": 0,
+    "input": 402226,
+    "output": 86605,
+    "cache_read": 192620,
+    "cache_create": 209572,
+    "reasoning": 14848
+  },
+  "note": "input은 cache_read/cache_create를 포함한다. output은 reasoning을 포함하므로 별도 합산하지 않는다. 관측값은 토큰 처리량이며 청구액이 아니다. observer 호출 시간과 시작/저장 포함 단계 시간이 구별된다. Codex 훈련자 토큰 미계측."
+}

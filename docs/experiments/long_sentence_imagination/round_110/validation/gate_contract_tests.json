@@ -1,0 +1,7 @@
+{
+  "command": ".venv/bin/python3 -m pytest docs/experiments/long_sentence_imagination/round_110/test_gate_contract.py",
+  "passed": 22,
+  "seconds": 0.12,
+  "status": "passed",
+  "meaning": "누락·중복·잘못된 인용·판본 변경·수정 한도·미통과 차단의 코드 계약. 의미 타당성 증명 아님."
+}

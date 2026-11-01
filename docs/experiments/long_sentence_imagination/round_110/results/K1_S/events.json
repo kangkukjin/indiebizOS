@@ -1,0 +1,25 @@
+[
+  {
+    "timestamp": "2026-11-01T19:25:08.911478",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 13510,
+      "cache_read": 41584,
+      "call_id": "c99facc239684b25afdad227ee298a0c",
+      "event": "usage",
+      "input": 55098,
+      "latency_ms": 33580,
+      "model": "opus",
+      "output": 3440,
+      "parent_call_id": null,
+      "phase": "plan",
+      "provider": "ClaudeCode",
+      "reasoning": 260,
+      "role": "consciousness",
+      "round_index": 2,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  }
+]

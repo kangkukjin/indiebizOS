@@ -1,0 +1,41 @@
+{
+  "status": "training_completed_candidate_rejected",
+  "budget_start": "2026-11-01T19:19:57+09:00",
+  "deadline": "2026-11-01T20:19:57+09:00",
+  "model_calls_started": "2026-11-01T19:24:30.688994+09:00",
+  "model_calls_ended": "2026-11-01T19:31:51.545153+09:00",
+  "diagnosis_and_evidence_completed_at": "2026-11-01T19:37:18.608816+09:00",
+  "elapsed_seconds": 1041.608816,
+  "within_60_minute_budget": true,
+  "counts": {
+    "distinct_requests": 4,
+    "graded_plans": 8,
+    "preserved_stage_runs": 12,
+    "measured_model_calls": 14,
+    "unmeasured_model_calls": 0,
+    "five_principle_audits": 5,
+    "repairs": 1,
+    "important_false_pass_cases": 2
+  },
+  "verification": {
+    "candidate_contract_tests_passed": 22,
+    "manual_quotes_checked": 50,
+    "exact_A_candidates": 4,
+    "backend_full_suite_run": false,
+    "live_source_unchanged": {
+      "backend/cognition/research_planning.py": true,
+      "data/common_prompts/consciousness_prompt.md": true,
+      "data/guides/deep_research.md": true
+    }
+  },
+  "adopted_changes": [],
+  "preserved_changes": "격리 점검 루틴·계약 시험·실제 응답·전후 계획·수동 판정·전체 비용·반례·검증·원장/이력",
+  "limits": [
+    "비맹검 수동 판정, 전문 방법론 전체 인증 아님",
+    "사례별1회; 일반 성공률·통계적 우월성 미추정",
+    "실제 연구 실행·실행자·최종 평가 미시험",
+    "형식 오류/미통과 차단은 단위 시험에서만 관측",
+    "캐시와 병렬 부하가 완전 통제되지 않음; 청구액과 Codex 자체 토큰 미측정"
+  ],
+  "commit": "완료 후 git 사건으로 확인; 자체 해시를 추정 기입하지 않음"
+}

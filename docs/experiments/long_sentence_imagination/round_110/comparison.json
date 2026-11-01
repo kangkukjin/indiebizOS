@@ -1,0 +1,74 @@
+{
+  "R_vs_A": {
+    "cases": [
+      {
+        "case": "K1",
+        "new_in_this_round": false,
+        "removed": [],
+        "added": [],
+        "remaining": [],
+        "check_regression": [],
+        "principle_regression": [],
+        "release_allowed": true,
+        "improved": false
+      },
+      {
+        "case": "K2",
+        "new_in_this_round": false,
+        "removed": [
+          "library_public_attribute"
+        ],
+        "added": [],
+        "remaining": [
+          "memo_provenance_assumed"
+        ],
+        "check_regression": [],
+        "principle_regression": [],
+        "release_allowed": true,
+        "improved": true
+      },
+      {
+        "case": "N1",
+        "new_in_this_round": true,
+        "removed": [],
+        "added": [],
+        "remaining": [],
+        "check_regression": [],
+        "principle_regression": [],
+        "release_allowed": true,
+        "improved": false
+      },
+      {
+        "case": "N2",
+        "new_in_this_round": true,
+        "removed": [],
+        "added": [],
+        "remaining": [
+          "new_contact_in_first_action"
+        ],
+        "check_regression": [],
+        "principle_regression": [],
+        "release_allowed": true,
+        "improved": false
+      }
+    ],
+    "input_output_ratio": 1.39611750862522,
+    "median_time_ratio": 1.2409712396989818,
+    "gates": {
+      "contract_tests": true,
+      "four_results_recovered": true,
+      "improved_at_least_two": false,
+      "improved_at_least_one_new": false,
+      "no_new_important_regression": true,
+      "token_limit_2_5": true,
+      "median_time_limit_2_5": true
+    },
+    "decision": "reject"
+  },
+  "important_false_pass_cases": [
+    "K2",
+    "N2"
+  ],
+  "adoption": "none",
+  "limits": "새 요청은 사전 task.md의 N1/N2만이다. 원문 대조는 비맹검 수동 판정이다. 미통과 차단은 사용 가능한 계획 개선으로 세지 않는다."
+}

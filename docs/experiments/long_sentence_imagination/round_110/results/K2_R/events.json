@@ -1,0 +1,84 @@
+[
+  {
+    "timestamp": "2026-11-01T19:27:26.941801",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 12937,
+      "cache_read": 658,
+      "call_id": "6e74e0b8e26c4c20926cd9d85e1752a4",
+      "event": "usage",
+      "input": 13597,
+      "latency_ms": 35311,
+      "model": "opus",
+      "output": 3704,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 1781,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T19:28:36.953227",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 28359,
+      "cache_read": 11658,
+      "call_id": "4740aff50fab489480e2d5ae4f780393",
+      "event": "usage",
+      "input": 40019,
+      "latency_ms": 69699,
+      "model": "opus",
+      "output": 10128,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 571,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T19:29:12.917979",
+    "kind": "model.usage",
+    "data": {
+      "accounting": "billable_usage",
+      "cache_create": 10801,
+      "cache_read": 3034,
+      "call_id": "055c12633a3749fd9476fbd9b21bde48",
+      "event": "usage",
+      "input": 13837,
+      "latency_ms": 35672,
+      "model": "opus",
+      "output": 4282,
+      "parent_call_id": null,
+      "phase": "plan_completion",
+      "provider": "ClaudeCode",
+      "reasoning": 2117,
+      "role": "consciousness",
+      "round_index": 1,
+      "source": "execution_instance",
+      "tier": "고급"
+    }
+  },
+  {
+    "timestamp": "2026-11-01T19:29:13.241756",
+    "kind": "research.plan_saved",
+    "data": {
+      "author": "consciousness",
+      "guide_sha256": "dc5c81ed3a62e3aca98601891ce7e8d6acb815b46c87fa98c90c3c64bff88f5e",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_110회차/K2_R/outputs/research_plans/54892436b50d4f21bbb9c057b4166246/research_plan.md",
+      "previous_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_110회차/K2_A/outputs/research_plans/fa0a989a750e43928c5ee4dc35d8c33a/research_plan.md",
+      "saved_at": "2026-11-01T10:29:13.240584+00:00",
+      "sha256": "cc27e47a6cf48830ec08352aacc24c1c7788cd7512c916a76fe5b05d5fcc769f",
+      "task_id": "training_ls110_K2_R"
+    }
+  }
+]

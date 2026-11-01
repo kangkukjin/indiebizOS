@@ -66,7 +66,7 @@ def test_catalog_line_stands_under_anchor_and_switch_strips_both(tmp_path, monke
     env = ibl_access.build_environment()
     lines = env.splitlines()
     i = next(k for k, l in enumerate(lines) if l.strip().startswith('self:script ::'))
-    assert lines[i + 1].strip().startswith("↳ 관용구 [fn:위치마다읽기]{위치: "), lines[i + 1]
+    assert lines[i + 1].strip().startswith("↳ 관용구 [fn:위치마다읽기] (호출·용도: ibl_idioms)"), lines[i + 1]
     assert "<ibl_idioms" in env and env.count("↳ 관용구") == 1     # 다른 잎 액션 옆에는 서지 않는다
     hidden = ibl_access.build_environment(expose_idioms=False)
     assert "↳ 관용구" not in hidden and "<ibl_idioms" not in hidden

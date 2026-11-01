@@ -408,10 +408,11 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     block = A.idioms_map(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block
-    # 항목 = 호출 · 언제 · 골격 (뜻 한 줄이 아니라 **부를 조건**)
+    # 항목 = 호출 · 언제 · 연결 (뜻 한 줄이 아니라 **부를 조건**)
     assert '[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
     assert "  언제: 어디 있는지 모르는 것을 읽어야 할 때" in block
-    assert "  골격: def → self:grep → self:read → self:edit" in block
+    assert "  연결: 앞 값 → 패턴" in block
+    assert "  골격:" not in block
     assert "· 사용 6회" not in block  # 옛 행의 통계를 새 판본 실적으로 옮기지 않는다.
     # 층 — 등록만 인 것도, 이름 없는 낱말도 싣지 않는다
     assert "등록만이름" not in block and PIPE not in block

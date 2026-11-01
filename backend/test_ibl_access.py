@@ -102,3 +102,36 @@ def test_demote_clears_historical_selection_and_refreshes_cached_map(selected, m
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+@pytest.mark.parametrize("returns, expected", [
+    ("Record⟨관측: items·count·source_ref⟩", "Record⟨관측⟩"),
+    ("List<Record⟨관측: text·url⟩>", "List<Record⟨관측⟩>"),
+    ("Record{items: List<Text>}", "Record{items: List<Text>}"),
+])
+def test_compact_map_preserves_shape_and_input_conditions(returns, expected):
+    from hippo_tree import phrase_call_line
+    from ibl_signature_slot import signature_of
+    source = '#!ibl edition=2\n[def:조사]($목록,$개수){return $목록}'
+    signature = signature_of(source)
+    row = ('실패 행을 보존하며 목록을 읽을 때', source, 17, 2, '수집', '조사', returns, signature)
+    lesson = {'inputs': '개수는 0 이상. 실패·부분 결과를 보존한다.',
+              'example': 'return [fn:조사]{목록:[],개수:0}'}
+    lines = ibl_access._idiom_lines(row, lesson, authoring=True)
+    text = '\n'.join(lines)
+    assert f'→ {expected}' in text
+    assert '[fn:조사]{목록: "…", 개수: "…"}' in text
+    assert '언제: 실패 행을 보존하며 목록을 읽을 때' in text
+    assert '연결: 앞 값 → 목록' in text
+    assert lesson['inputs'] in text
+    assert not any(label in text for label in ('골격:', '조합 예:', '사용 19회'))
+    assert ibl_access._anchor_line(row) == '    ↳ 관용구 [fn:조사] (호출·용도: ibl_idioms)'
+    # 회상·상세가 쓰는 공용 호출 표시는 관측 필드를 계속 보존한다.
+    assert returns in phrase_call_line('조사', source, returns, signature)
+
+
+def test_compact_map_does_not_guess_unknown_signature():
+    row = ('용도', '', 0, 0, '기타', '미상', '', None)
+    text = '\n'.join(ibl_access._idiom_lines(row))
+    assert '[fn:미상] — 서명 미상, describe로 인자 확인' in text
+    assert '연결:' not in text

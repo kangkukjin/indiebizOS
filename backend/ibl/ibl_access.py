@@ -446,9 +446,7 @@ def build_environment(
 
     # usage, pipeline, principles는 12_ibl_only.md에서 이미 커버하므로 생략
 
-    # 관용구 병기(2026-09-09 지렛대 4): 관용구는 어휘다 — 모델이 낱말을 훑는 자리(잎 액션 줄 바로 아래)에
-    # 한 줄로 선다. 부록(<ibl_idioms>)만 있으면 탐색 순간에 안 보인다(노출 실험: 자족형 둘은 6/6, 부록만 본
-    # 파이프형은 1/6). 어느 낱말 옆에 서는지는 몸의 마지막 잎 액션에서 파생한다(코드에 이름 없음).
+    # 잎 액션 옆에는 관용구 이름만 병기한다. 용도·호출·입력은 ibl_idioms에서 한 번 소개한다.
     anchors = _idiom_anchors(allowed) if expose_idioms else {}
 
     # 노드 상세
@@ -641,15 +639,12 @@ def _spread_by_topic(rows: list, top: int) -> list:
 
 
 def idioms_map(allowed: Optional[Set[str]]) -> str:
-    """부를 수 있는 이름의 **지도** — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
+    """명시 상시 관용구의 호출·용도·입력 지도(5분 캐시).
 
-    2026-09-06 속편(사용자 판정 뒤 근본 집행): 옛 판은 6개만 보였다 — "관련성은 회상 채널 몫" 이라 했지만 회상은
-    사건 요약으로 검색돼 자연 요청에 이름 0건이었고, 상시 블록은 주제를 몰라 무관한 6개를 보였다. 관련성 판단이
-    양쪽 모두에서 비어 있었다. 이제 이 블록은 *지도* 다(심층기억 원칙 "지도가 있으면 단서는 지도에서 온다"):
-    가지별로 모든 이름을 뜻 한 줄과 서명으로 싣고, 무엇을 부를지는 모델이 이번 일과 맞춰 본다.
-    예산(IDIOMS_MAP_CHARS)을 넘으면 쓰인 것 → 가지별 라운드로빈 순으로 자른다(_spread_by_topic).
-    허용 노드 밖 어휘는 뺀다. 한 문장짜리는 수동 선정집의 always_on 본문과 일치할 때만 노출한다.
-    서명은 원장 문에서 계산해 저장한 것만 가르친다(미상이면 미상이라 말한다)."""
+    현재 활성 정의와 허용 노드를 대조하고 예산 안에서 사용 실적·가지별로 고른다.
+    입력 교재는 본문 지문이 일치할 때만 싣는다. 상세 관측 필드·예제·구현은
+    원래 조회 경로에 남기고, 액션 목록에는 같은 항목의 이름만 병기한다.
+    """
     import re as _re
     import sqlite3
     import time
@@ -752,16 +747,13 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                 lines.append(f"[{g}]")
                 lines.extend(groups[g])
             if lines:
-                text = ("<ibl_idioms note=\"관용구 — 자주 쓰는 표현을 한 낱말로 접은 것. 낱말을 매번 조합하지 말고, "
-                        "'언제' 가 이번 일과 맞으면 [fn:이름]{슬롯: 값} 한 줄로 불러라(정의 없이 이름만으로 돈다). "
-                        "인자를 명시하고 반환 계약을 확인해 다음 식에 연결하라. List는 값 자체이며 Record는 필요한 필드를 명시한다. "
-                        "파이프 자리가 선언된 함수만 >>로 연결하고 같은 인자를 중복 전달하지 않는다. "
-                        "'골격' 은 무엇이 도는지 알라고 적은 것 — 부를 때는 필요 없다. 이번 일에 한 문장이 안 맞을 때만 "
-                        "[self:memory]{op: \\\"recall\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 정의를 열어 "
-                        "명시 인자·return을 가진 [def:이름]($인자){…}로 새 정의를 검사한다. 과거 본문은 그대로 붙여 넣지 않는다. "
-                        "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 "
-                        "실행 증거 요약을 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
+                text = ('<ibl_idioms note="[fn:이름]{인자:값}으로 호출한다. 용도·입력·반환이 맞을 때 쓴다. '
+                        '연결에 적힌 인자는 >>의 앞 값으로 전달할 수 있으며 같은 인자를 중복 명시하지 않는다. '
+                        'List는 값 자체, Record는 필요한 필드를 선택한다. 관측은 실행 흔적이며 보장 계약이 아니다. '
+                        '부족한 계약은 describe:[&quot;fn:이름&quot;], 정의를 고칠 때는 '
+                        'self:memory의 실행 기억 expand로 조회한다.">\n'
                         + "\n".join(lines) + "\n</ibl_idioms>")
+
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")
     _idioms_cache.update({"t": time.time(), "text": text, "key": key, "anchors": anchors,
@@ -851,61 +843,46 @@ def _anchor_action(code: str) -> str:
 
 
 def _anchor_line(r, authoring=False) -> str:
-    """병기 한 줄: `↳ 관용구 [fn:이름]{슬롯…} → 반환 :: 언제(첫 문장)`. 교재 전체는 <ibl_idioms> 에."""
-    intent, code, _sc, _fc, _topic, alias, returns, signature = r
-    from hippo_tree import phrase_call_line
-    call = phrase_call_line(alias, code, returns, signature)
-    when = (intent or "").strip()
-    first = when.split(". ")[0].rstrip(".")[:130]     # 실험 v3 는 90자 절단으로 돌았다(evidence exposure_delta.txt) — 문장이 잘려 130 으로
-    pipe = _authoring_pipe_note(code) if authoring else _pipe_input_note(code)
-    return f"    ↳ 관용구 {call} :: {first}" + (f" · {pipe}" if pipe else "") + " (교재: ibl_idioms)"
+    """액션 옆 발견 단서만 남긴다. 호출·용도·반환은 ibl_idioms에 한 번 싣는다."""
+    return f"    ↳ 관용구 [fn:{r[5]}] (호출·용도: ibl_idioms)"
 
 
 def _pipe_input_note(code: str) -> str:
     return _authoring_pipe_note(code)
 
 
-def _authoring_pipe_note(code):
+def _authoring_pipe_note(code, *, compact=False):
     from ibl_v2_parser import parse
     from ibl_v2_ir import Fault
     try:
         node = parse(code).data['statements'][0]
         params = list(node.data.get('params', {})) if node.kind == 'def' else []
-        return f"앞 값 → {params[0]} (같은 인자 동시 명시 금지)" if params else ''
+        if not params:
+            return ''
+        return f"앞 값 → {params[0]}" + ("" if compact else " (같은 인자 동시 명시 금지)")
     except (Fault, IndexError):
         return ''
 
 
 def _idiom_lines(r, lesson=None, authoring=False) -> List[str]:
-    """지도의 한 항목 — **호출 · 언제 · 골격** 세 줄 (2026-09-07 사용자 판정 "언제 어떻게 쓰는지 설명해야").
+    """호출·용도·파이프 자리와 현재 입력 교재만 소개한다. 상세 교재는 조회로 남긴다."""
+    import re
 
-    옛 판은 `이름 — 뜻` + 서명이었다. 뜻은 *무엇을 하는가* 라서 **부를 조건**이 없었다 — 모델은 이름을
-    읽고도 이번 일과 맞는지 판정할 자리가 없었다(실측: 이름 38건 · 호출 7회). `언제` 는 등록된 intent 를
-    그 자리에 세운 것이고(등록 관문이 '언제'로 쓰게 요구한다), `골격` 은 저장하지 않고 몸에서 파생한다
-    — 파생물을 저장하면 몸과 갈라진다."""
-    intent, code, sc, fc, _topic, alias, returns, signature = r
-    _n = int(sc or 0) + int(fc or 0)
-    names, known = _stored_signature(signature)
+    intent, code, _sc, _fc, _topic, alias, returns, signature = r
+    _, known = _stored_signature(signature)
     if known:
         from hippo_tree import phrase_call_line
-        call = "- " + phrase_call_line(alias, code, returns, signature)
+        # 관측 필드 전체는 describe에 남긴다. List/Record 모양과 관측임은 보존한다.
+        shape = re.sub(r"⟨관측: [^⟩]*⟩", "⟨관측⟩", returns or "")
+        call = "- " + phrase_call_line(alias, code, shape, signature)
     else:
-        call = f"- {alias}{{…}} — 서명 미상, 부르기 전에 expand 로 인자 확인"
-    if _n:
-        call += f"  · 사용 {_n}회"
+        call = f"- [fn:{alias}] — 서명 미상, describe로 인자 확인"
     out = [call, f"  언제: {(intent or '').strip()[:150]}"]
-    pipe = _authoring_pipe_note(code) if authoring else _pipe_input_note(code)
+    pipe = _authoring_pipe_note(code, compact=True)
     if pipe:
-        out.append(f"  연결: {pipe}. 파이프가 있으면 이 인자만 생략 가능.")
-    skel = _skeleton(code)
-    if skel:
-        out.append(f"  골격: {skel}")
+        out.append(f"  연결: {pipe}")
     if lesson:
         out.append(f"  입력: {lesson['inputs']}")
-        example = lesson['example']
-        if authoring and example.startswith('#!ibl edition=2\n'):
-            example = example.split('\n', 1)[1]
-        out.append("  조합 예: " + example.replace("\n", "; "))
     return out
 
 

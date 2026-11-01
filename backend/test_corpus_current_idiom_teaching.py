@@ -69,12 +69,12 @@ def test_changed_definition_hides_stale_lesson():
     assert ibl_access._current_lesson(lesson, source + '; [self:read]{path:"x"}') == {}
 
 
-def test_current_example_header_does_not_comment_out_the_whole_example():
+def test_map_keeps_input_contract_without_inlining_example():
     source = '#!ibl edition=2\n[def:f]($목록){return $목록}'
     r = ('뜻', source, 0, 0, '목록', 'f', 'List', '목록')
     lines = ibl_access._idiom_lines(r, {'inputs': '목록', 'example': '#!ibl edition=2\nreturn [fn:f]{목록:[]}'}, authoring=True)
-    assert '  조합 예: return [fn:f]{목록:[]}' in lines
-    assert not any('#!ibl edition=2;' in line for line in lines)
+    assert '  입력: 목록' in lines
+    assert not any('조합 예:' in line or '#!ibl' in line for line in lines)
 
 
 @pytest.mark.parametrize('lesson', LESSONS, ids=lambda x: x['name'])

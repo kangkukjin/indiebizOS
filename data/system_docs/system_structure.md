@@ -1,65 +1,44 @@
 ---
 title: 시스템 구조 가이드
-scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행에 주입, 평가자는 기준·증거 입력 사용)
-owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-10-30
-see_also: [architecture.md, memory.md, ibl.md]
+scope: 의식·실행에 주입하는 자기 소개와 능력 지도. 코드 트리는 필요할 때 조회한다.
+owner_code: prompt_builder.py, consciousness_agent.py
+last_updated: 2026-11-01
+see_also: [anatomy.md, vision.md, architecture.md, technical.md, memory.md, ibl.md]
 ---
 
-# IndieBiz OS 시스템 구조 가이드
+# IndieBiz OS — 자신의 능력을 활용하는 지도
 
-시스템 관리, 확장, 디버깅, 개발 작업 시 참조하는 핵심 구조 정보.
+IndieBiz OS는 사용자의 의도와 판단을 돕는 **인지 외골격**이다. AI 모델은 두뇌이고,
+로컬 시스템·저장된 경험·등록 기기가 몸이다. IBL로 도구를 조합하고, 검증된 절차를
+스크립트·관용구·앱으로 축적한다. 목적은 다양한 작업의 품질을 유지하며 시간과 전체 토큰을 줄이는 것이다.
 
-## 개요
-- **경로**: 저장소 루트(로컬 클론 위치 — 배포판은 `INDIEBIZ_BASE_PATH`)
-- **설명**: AI 기반 통합 관리 시스템 (IBL 추상화 위에서 개인·조직 규모 무관하게 동작)
-- **핵심 가치**: 개인화, 자동화, 연결성
+## 무엇을 할 수 있는가
 
-### 주요 기능
-- **런처 3표면 (트릴레마)**: 같은 IBL 위 세 모드 — **자율주행**(의도→AI 다단계, 구 '프로젝트') / **조종실**(구 '수동'→'계기판'→2026-07-03 개명. 경량모델이 자연어→IBL 번역→dry-run 검수→실행하는 컴파일러 프론트엔드 + 시스템 상태·모델 기어·프레즌스·주행기록 — 자율주행 포함 전체를 감독·개입하는 주권 기관. `api_ibl.py`+`ManualMode.tsx`, 내부 탭 키는 `manual` 유지) / **앱**(아이콘 GUI로 직접 조작, `ActionDesktop`+계기 — 부동산·도서검색). {속도·표현력·주권} 중 둘.
-- **다중 프로젝트 관리**: 목적에 따른 독립적인 작업 공간. **연구 프로젝트**는 대화별 독립 자료실·원문 판본·지속 질문과 지지/반박 근거를 보존하고 현재 기어의 API·CLI 에이전트로 이어 간다. → [연구 가이드](../guides/research_project.md)
-- **에이전트 팀**: 역할이 정의된 여러 AI 에이전트 간의 협업
-- **도구 패키지**: 에이전트가 동적으로 로딩하여 사용하는 확장 기능
-- **어휘 레고박스**: 보유 사전집(installed/not_installed 합집합) 위에 **몸별 활성 원장** `data/vocabulary/activation.json` — 잠든 묶음은 소개·회상·실행에서 빠지고 파일·용례·기록은 보존, 필수 공급자는 `data/vocabulary_policy.yaml`이 보호. 묶음은 `.iblpack` 파일로 교환(런처 안경 메뉴 → **내 어휘**, 가져온 묶음은 잠든 채 보관→깨우기). → packages.md '보유와 활성' · docs/IBLPACK_FORMAT.md
-- **안경 메뉴 도구 창**: 내 어휘 · **프롬프트 구성**(에이전트별 프롬프트 조립을 정본 빌더로 층·조각·분량까지 표시, `/prompt-composition/*`) · **가이드 파일**(`data/guides` 목록·신선도·예산과 본문 편집, `/guides`) — Electron 은 독립 OS 창(`electron/windows.js` `createToolWindow`), 웹은 해시 라우트. → technical.md
-- **작업 공간 앱**: 앱 표면의 독립 창 셋 — **문서**(DOCX/ODT/RTF/PDF·HWP/HWPX 원형 편집, PDF 쪽 조작·OCR, `/documents`) · **스프레드시트**(통합문서 편집·가져오기·변환 사본·인쇄 양식, `/spreadsheets`) · **코딩**(과제별 worktree·실행자 교체·검토 후 정본 반영, `/coding`). 엔진은 초안만 쓰고 원본 교체는 앱의 조건부 저장이 한다. 문서·시트 편집 엔진은 이 PC 의 loopback 에만 열린다. → technical.md '작업 공간 앱'
-- **화면 언어**: 한국어 소스 정본 + 빌드 때 생성되는 번역(언어 목록 `frontend/i18n/languages.json`). 데스크톱·원격 런처·X-Ray 공통, 런타임 네트워크 번역 없음. → `frontend/i18n/README.md`
-- **자기수리**: 사람이 명령한 수리는 격리 사본에서 수정·검사를 끝내고, 검사한 묶음만 정본에 반영한 뒤 재기동 제어자가 적용·복구를 맡는다. 수리 그랜트는 실행 ID 에 묶인다. → architecture.md '자기수정 — REPAIR 경로'
-- **재기동 제어**: 백엔드 밖 단일 제어자 `restart_controller`(`backend/api.py start|restart|status|shutdown --wait`, `/runtime/status`)가 접수 차단·종료 대기·코드 사전검사·재기동·RED 복구를 소유. 워커에 uvicorn 리로더 없음(`reload=False`), 상주 서비스 수명은 작업 수명과 분리, 생존 판정은 PID+출생 신원. → technical.md '데스크탑 재기동 제어'
-- **실행 통합 조회**: 한 작업의 기록을 여러 원장(에피소드·궤적·쓰기 원장·검수 저장소·과제 원장·대화 DB)에서 읽어 한 응답으로 잇는 읽기 전용 서비스(`services/execution_trace.py`, `/world-pulse/episodes/{id}/trace`), 주행기록 상세가 소비자. 물리 통합·이중 쓰기 없음. → docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md
-- **IBL (IndieBiz Logic)**: 정보 흐름 추상화 언어 — 순차 `>>`·병렬 `&`·실패 폴백 `??`·독립 문장 `;`, 명시 값과 함수(`[def]`/`[fn]`), Bool 식의 `if/case`, `try/catch/finally`, `repeat`, `$it/$i`를 쓰는 `[table:each]`를 한 문법으로 다룬다. 새 저장 코드는 `#!ibl edition=2`, 실행 전 `check:true`; 자유 변수와 재귀는 거절한다. → ibl.md · guides/ibl_composition.md
-- **스케줄러**: 정기적인 정보 수집 및 리포트 자동 생성
-- **IndieNet**: 외부 메신저/이메일 연동 (Gmail, Nostr)
-- **공유창고**: 몸(노드)의 공개 얼굴 — `공유창고/0..4/` 폴더가 노드 주소에서 그대로 서빙(색인·변환 없음, 파일시스템이 진실). 사람은 브라우저로, 남의 AI는 `/manifest`(JSON)로 읽는다. 레벨 0~4 = 이웃 CRM 등급과 같은 자(등급 위 파일은 403 아닌 **404**). 읽는 쪽=이웃 창고 폴러(30분, 방언 어댑터로 nginx 색인·RSS·Nextcloud·일반 웹페이지까지 같은 통화로 정규화) + 리트윗(`.url` 포인터 파일). → communication.md
-- **몸 사이 소통(명함·부탁)**: 공유 사전 RPC 대신 **명함**(`GET /nodes/card`)+**자연어 부탁**(`POST /nodes/ask`, 어휘 `[others:ask]`) — 받는 몸이 *자기 사전*으로 컴파일·실행해 통화로 돌려준다. 신뢰=이웃 등급(body_trust), 특권 배관 없음. → communication.md
-- **등록 손발**: PC는 상주 헬퍼로 셸·파일·화면 공유·작업을 수행하고, Android 폰은 USB 최초 등록 뒤 자기 IBL 엔진으로 프로그램을 실행한다. 장기 작업은 접수증을 회수하며 중복 실행하지 않는다. → [remote_access.md](remote_access.md) · [원격폰](../guides/remote_phone.md)
-- **미디어 통신**: 상대 수락 통화와 등록 기기의 카메라·마이크·스피커·재생을 같은 세션 기반으로 연결. 기존 `미디어세션` 스크립트를 사용하며 실제 장치 출력과 능력 신고를 구분한다. → [communication.md](communication.md)
-- **내장 브라우저 제어**: `limbs:browser`의 embedded 드라이버로 기존 탭·로그인 상태·저장 계정을 사용하고 추가 인증은 사람에게 인계한다. Chrome MCP·Playwright 경로도 유지한다. → [architecture.md](architecture.md)
-- **NAS 연동**: 음악 스트리밍, 자막 관리, 웹앱 호스팅 (내 음악 라이브러리는 별도 `[self:music]`)
+- **작업과 화면**: 자율주행은 AI에게 일을 맡기고, 조종실은 실행·상태를 감독하며, 앱은 익힌 일을 직접 조작한다. 프로젝트는 역할·대화·자료를 나누는 작업 공간이다.
+- **도구와 재사용**: IBL은 검색·파일·기기·서비스의 값 전달과 실행을 조합한다. 활성 어휘와 권한이 실제 능력을 정한다. 필요한 부품은 목록·검색·상세 조회로 찾고, 적합한 셸·Python·네이티브 도구도 사용한다.
+- **기억과 연구**: 대화·주행기록, 실행기억·심층기억·포식기억을 통해 경험과 자료를 찾는다. 연구 프로젝트는 대화별 자료실·원문 판본·질문·근거·계획을 이어 간다.
+- **문서와 제작**: 문서·스프레드시트·코딩 작업 공간과 도구 패키지로 파일·보고서·웹앱·미디어를 만든다. 편집 초안과 원본 저장·공개는 각 기능의 계약에 따라 구분한다.
+- **기기와 연결**: 본체·등록 PC·Android의 파일·셸·화면을 다루고 브라우저·미디어·NAS를 이용한다. 장치의 현재 연결·권한·능력을 확인하며, 장기 작업은 접수증으로 추적한다.
+- **자동화와 소통**: 스케줄러·이벤트로 반복 작업을 실행한다. IndieNet·메신저·이메일·공유창고로 소통·공유하고, 다른 몸에는 명함과 자연어 부탁으로 협력한다.
+- **관리와 수리**: 설정·어휘·가이드·실행 기록을 조회한다. 정의·데이터는 소유 관리 연산으로 바꾸고, 구현 수리는 허용된 검사·반영 절차를 따른다. 재기동·복구는 백엔드 밖 제어자가 맡는다.
 
----
+## 생각과 실행의 흐름
 
-## 시스템 문서 (System AI 참조)
-- **경로**: `data/system_docs/`(저장소 루트 기준)
-- 시스템 AI가 장기 기억으로 참조하는 문서들
-- **문서 신뢰 규약**: 정본 서열 = git 커밋(사건) > docs/(설계) > system_docs/(장기기억). 문서 속 수치·파일명·함수명은 *쓰인 당시의 기록*일 수 있다 — 행동 전 `[self:body]`·`[self:grep]` 로 실재를 확인하라. `<!-- …:START/END -->` 마커 구간은 빌드가 재생성하는 기계 소유(손 수정 금지).
-- **파일 목록** (13 문서 + changelog):
-  - `system_structure.md` - 시스템 구조 가이드 (의식·실행 프롬프트의 구조 참조 — 평가자는 달성 기준과 증거만 사용)
-  - `anatomy.md` - **해부도(정문)** — 신참용 전체 지도(철학→3표면→IBL→인지→메모리→검색브라우저→몸), 각 상세 문서 허브
-  - `vision.md` - **비전: 인지 외골격** — 목표(자율 아닌 융합)·개발 북극성=착용감. 모든 설계 결정의 최상위 기준
-  - `harness_haerye.md` - **하네스 해례** — 구현·파일명 없이 읽히는 코드 독립 아홉 원리(자기 하네스를 지으려는 사람용). 공개면 후보
-  - `architecture.md` - 시스템 개요·아키텍처·설계 의도 (구 overview.md 오브젝트/에이전트 유형 흡수)
-  - `technical.md` - 기술 문서 (API, 설정, 경로)
-  - `ibl.md` - IBL 명세(6-Node·op 어휘화·삼각 검증) + **설계 철학**(구 ibl_design_philosophy.md)
-  - `memory.md` - 메모리 7종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
-  - `packages.md` - 패키지 시스템 (구조·설치 절차·설치 목록. 수·표는 빌드 파생)
-  - `inventory.md` - 프로젝트/패키지 현황 (자동 생성)
-  - `communication.md` - 통신/연동 + **위임 체인**(구 delegation.md)
-  - `scheduler_guide.md` - 스케줄러 가이드
-  - `remote_access.md` - 원격 접속 문서
-  - `changelog.log` - 변경 이력
+연상 회상 → 무의식의 요청 분류 → 필요한 경우 의식의 작업 규정 → 실행 → 필요한 평가 → 경험 증류.
+시스템 AI와 프로젝트 에이전트는 공통 흐름을 쓴다. 의식은 목표·기준·접근을 정하고,
+실행자는 도구로 수행하며, 최종평가자는 제공된 목표와 실제 증거로 판정한다.
+모델은 역할과 현재 기어·핀으로 정해진다. 실제 배정은 `data/model_gear.json`과 모델 리졸버에서 확인한다.
 
----
+## 더 알아볼 곳
+
+작업 방법은 `read_guide`로 필요한 가이드·절을 조회한다. 시스템 문서는 `data/system_docs/`에 있다.
+전체 지도는 `anatomy.md`, 목적은 `vision.md`, 구조는 `architecture.md`, 설정·경로는 `technical.md`,
+언어는 `ibl.md`, 기억은 `memory.md`, 패키지는 `packages.md`, 통신은 `communication.md`,
+예약은 `scheduler_guide.md`, 원격 기기는 `remote_access.md`를 읽는다.
+
+경로 기준은 현재 저장소·배포 루트(`INDIEBIZ_BASE_PATH`)다. 사건은 git·주행기록, 설계는 `docs/`,
+장기 설명은 시스템 문서에서 확인한다. 오래된 수치·경로는 행동 전에 실제 원장·코드와 대조한다.
+마커 구간은 정해진 생성 경로로 갱신하고 파생물을 직접 고치지 않는다.
 
 <!-- CODEBASE_MAP:START -->
 ## 아키텍처
@@ -247,76 +226,4 @@ indiebizOS/
 ```
 <!-- CODEBASE_MAP:END -->
 
----
-
-**현재 제어 진입점**: 본체·등록 PC는 `PC제어`, Android는 `Android제어`, macOS 브라우저 창·탭은 `Safari제어`·`Chrome제어`를 쓴다. 기존 어휘 위의 공용 부품이며 실행 조건·관측·복구 계약은 [아키텍처의 드라이버 표](architecture.md#조작면-제어-드라이버)에 모은다.
-
-**사용자 사전 표면**: 대화의 IBL 사전은 낱말을 조회·선택하는 창이고, 내 어휘는 묶음의 보유·활성을 관리한다. 이 창들과 프롬프트 구성·가이드 파일이 같은 레지스트리와 정본 빌더를 참조한다.
-
-## 인지 파이프라인 (연상 → 무의식 → 의식 → 실행 → 평가)
-
-사용자 메시지가 들어오면 다음 순서로 처리된다. 모든 에이전트(시스템 AI / 프로젝트 에이전트)가 동일한 단계를 밟는다.
-
-```
-[0] 연상 단계        — 해마(IBL 사례) + 심층메모리(연상기억) 검색 1회로 자료 묶음
-                       (top_score, top_code 함께 추출 — 중복 검색 제거)
-     ↓
-[1] 무의식 분류     — 경량 AI로 REFLEX / EXECUTE / THINK 판정 (해마 점수와 무관)
-                       REFLEX는 주 세션을 보존하는 짧은 별도 실행 문맥
-     ↓
-EXECUTE                                THINK ( = "framing이 필요하다"는 수요)
-   │                                     ↓
-   │                              [2] framing 재고 확인 (_run_consciousness_or_reuse)
-   │                                  ├─ 재고 있고 fit? → 재사용(criteria만 갱신, 의식 Opus 스킵)
-   │                                  └─ 없음/안맞음 → 의식 에이전트(본격 AI): task_framing / achievement_criteria / …
-   ↓                                     ↓
-[3] 실행 에이전트
-     · REFLEX / EXECUTE / THINK → 실행 역할의 모델 기어 사용 (회상 점수로 모델 변경 없음)
-     · 도구: execute_ibl + run_command + read_guide + 인지도구(4) — Python/Node.js는 [self:write]→run_command 패턴
-   ↓
-[4] 의식 중간관리 + 별도 최종평가 — 의식은 도구로 진단, 평가자는 제공된 목표·실행 증거·결과로 판정
-                       (의식 규정 없는 REFLEX·EXECUTE 는 [4] 생략 → 평가 NULL, 최종 응답 후 [5])
-   ↓
-[5] 증류             — 해마 경험 증류 + 심층메모리 증류 (자동; 장기 기억은 최종 응답 전달 뒤 사용자 원문에서 지속 가치만 선별 — `[self:memory]{op:"save"}` 는 즉시 저장하지 않는다)
-```
-
-**REFLEX 선택과 문맥**: `#reflex`는 분류·의식을 생략하되 문맥 적합성 검사는 유지한다. 주 CLI 세션을 보존하며, 실행 전 문맥 부족 시 전체 이력으로 복귀하고 별도 실행의 결말은 같은 대화에 인계한다. [정책·태그 우선순위·관측 사건](../../docs/MODEL_CONTEXT_POLICY.md).
-
-**모델 기어 (계기판 변속, 2026-06-30):** 자동차 기어처럼 레버 하나로 시스템 전체 모델 등급을 변속. 자동 변속기(무의식 분류기=작업마다 티어 자동선택) 위의 **수동 변속 레버**. `backend/base/model_resolver.py`가 *역할 → 축 → 기어 → 티어 → 모델*로 해소하고 매 호출 읽기(핫리로드, `/model-gear` REST). 설정=`data/model_gear.json`.
-- **3 티어 = 모델 슬롯** (한 번만 설정): 경량(`lightweight_ai_config.json`) / 중급(`midtier_ai_config.json`) / 고급(`system_ai_config.json` 재사용, UI 라벨 '고급').
-- **4 축** (각 독립 티어 배정): 분류(무의식+백그라운드 정리) · 평가(도구 없는 최종평가자·노트북 답변·단계 기준 검사) · 실행(프로젝트 에이전트·시스템 AI·수동 번역·android·자동응답·임베디드 텍스트생성) · 의식(consciousness).
-- **기어 = 축→티어 프리셋**: ★프리셋은 **데이터**(사용자가 `/model-gear/presets` 로 편집) — 현행 값의 정본은 `data/model_gear.json` 이고, 코드의 `_DEFAULT_GEAR` 는 파일 부재·손상 시 폴백일 뿐이다. **값을 말하기 전에 그 파일을 읽어라**(2026-09-04 실측: 라이브 최대 기어의 평가 축은 **고급** — 여기 적혀 있던 '분류·평가는 최대에서도 경량'은 폴백만 맞고 라이브는 아니었다. 산문에 값을 복제하면 반드시 이렇게 썩는다). 폴백 기본값: 절약(전부 경량) / 균형(분류·평가=경량, 실행·의식=중급) / 최대(분류·평가=경량, 실행·의식=고급).
-- **에이전트 핀(overrides)**: 특정 에이전트/역할만 기어 무시하고 티어 고정. 우선순위 override > role > gear. **키 = `resolve(role, agent_id)` 에 실리는 이름 그대로** — 프로젝트 에이전트만 `{project}:{agent_id}` 복합키(동명 격리)이고, 나머지는 단일 이름(`system_ai`·`forage`·`system_ai_delegation` 같은 역할·경로 이름)이다. 계기판 열거는 `api_config._list_pinnable_agents()` 하나뿐이라, 거기 없는 키로 핀이 걸리면 **효력은 있는데 화면에 없는 유령 핀**이 된다 — 그래서 그 함수는 실재 에이전트에 더해 *현재 걸려 있는 핀 전부*를 흡수해 낸다(2026-09-04).
-- **per-agent 모델 폐지**: 에이전트 yaml의 provider/model/apiKey 무시 — 모델*과 키*는 실행 티어 상속. 모달리티(이미지·동영상·임베딩)는 기어 밖 패스스루.
-
-- **연상 단계 (단계 0)** — 공통 흐름 `associative_recall`(2026-09-18): 러너 `_associate()`(1상) → `route(request_type)`(2상) → `text()`
-  - 1상(분류 전): 해마(`ibl_usage_rag.build_execution_memory()`)·심층메모리 지도+선택(`<memory_map>`·`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장. 2상(분류 뒤): 제시 기록 확정. 어느 채널에 어느 기억이 도는지는 정책 표 `SOURCES`/`CHANNELS`(포식=자동 주입 없음)
-  - 회상 통계: `recall.reflex`(점수·코드, 기록·프리뷰 호환 이름이며 라우팅에 사용하지 않음) — 검색 한 번으로 확보. 제시 기록: `recall.presented` 사건
-  - 무의식/의식의 계획/실행이 같은 묶음을 공유. 감독·검수에는 목표·규정·실제 증거를 전달. 관문 `scripts/check_recall_assembly.py`
-- **무의식 (경량 AI)** — `_decide_request_type()` → `_classify_request()`
-  - 명시 태그·수리·의식 토글 등 기존 규칙을 유지하며 해마 고확신 분기와 전용 모델 전환은 제거했다.
-  - 해마 검색·실행기억 주입·성공/실패 귀속은 유지한다. 회상 코드는 참고이며 우선 실행 지시를 덧붙이지 않는다.
-  - 프롬프트: `data/common_prompts/unconscious_prompt.md` (단일 파일, 가볍게 유지)
-- **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
-  - 출력 필드: task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(hint: 작업 분해·입출력·의존 관계·불확실성), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
-  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<recalled_memory>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
-  - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
-- **현재 실행과 규정 계승** — `execution_turn.py`·`framing_inheritance.py`
-  - 활성 task의 MCP 재진입 문맥만 유지하고 종료 때 해제한다. 규정 계승·연구 계획·자기수리 인계는 각 기존 경로가 맡는다.
-  - 일반 과제의 자동 생성·연결·요약은 제거했다. 과거 원문만 주행기록에서 읽는다. 상세: architecture.md와 memory.md.
-- **의식의 중간관리** — `conscious_supervisor.py` + `supervisor_runtime.py`
-  - 계획·재규정·조건부 중간 점검은 도구를 가진 의식 역할이 맡는다. 진단 뒤 본작업은 실행자에게 인계한다.
-- **도구 없는 최종평가** — `final_evaluator.py` + `cognitive_eval.py`
-  - 하네스가 사용자 목표·전체 응답·실제 호출 원장·결과 발췌·산출물을 모아 평가 축 원샷에 전달한다.
-  - 평가자는 직접 조사·수정하지 않는다. 결함을 한 번에 넘기며 실행자의 보완은 최대 한 번, 재평가는 갱신된 증거로 수행한다.
-  - 응답·파일·공개 대기열 지문을 대조해 승인된 결과를 전달하며 자기수리의 보존된 완료 기준을 확인한다.
-  - 모델이 응답 페이지나 인용 영수증을 다시 읽어야 하는 조건은 없다. 감독 객체 없는 호환 경로의 GoalEval/SelfReflect 도 의식의 규정(달성 기준)이 있는 턴에만 돈다 — 의식 없는 EXECUTE 는 도구 실패·쓰기·장시간 실행에도 평가·자기반성을 부르지 않는다(`cognition.evaluation.path=none`, 판정 NULL).
-- **공통 원칙**
-  - 시스템 AI와 프로젝트 에이전트 모두 동일한 AgentRunner 인지 메서드 사용 (`_is_system_ai` 플래그로 DB·도구만 분리)
-  - 모델·API 키는 모두 모델 기어가 해소한 티어에서 상속 (에이전트별 키 설정 폐지). 티어 슬롯의 키가 비면 고급(시스템 AI) 키로 폴백
-
----
-
 <!-- SELF_IMAGE:START -->**현 상태 = 6노드 171 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 22)·51 도구 패키지 + 5 extensions·backend .py 650(test 제외)**<!-- SELF_IMAGE:END -->
-
-*변경 이력은 `git log`와 [changelog.log](changelog.log)를 따른다.*

@@ -110,47 +110,6 @@ def test_driver_references_are_shared_and_follow_current_catalog(monkeypatch, tm
     assert guide_registry.device_drivers("robot-os", "resident-v1")["conflicts"] == ["driver_conflict:robot-v2"]
 
 
-def test_reusable_discovery_adds_only_selected_briefs_within_existing_budget(monkeypatch):
-    import guide_registry
-    import reusable_catalog
-    row = {'id': 'script:one', 'contract_known': True, 'contract': {}}
-    brief = {'file': 'one.md', 'text': 'Call, verify, recover.'}
-    seen = []
-    monkeypatch.setattr(reusable_catalog, 'candidates', lambda q: [dict(row)])
-
-    def selected(names):
-        seen.append(list(names))
-        return [brief]
-
-    monkeypatch.setattr(guide_registry, 'callable_control_briefs', selected)
-    req = recall.RecallRequest(None, 'request', [])
-    block = recall._reusable_capabilities(req, None)
-    assert seen == [['script:one']]
-    assert brief['text'] in block.text and block.meta['control_briefs'] == ['one.md']
-    brief['text'] = 'x' * 5000
-    block = recall._reusable_capabilities(req, None)
-    assert block.meta['control_briefs'] == [] and 'x' * 5000 not in block.text
-    row['error'] = 'not allowed'
-    recall._reusable_capabilities(req, None)
-    assert seen[-1] == []
-
-
-def test_reusable_context_retains_oversize_match_and_its_lookup(monkeypatch):
-    import json
-    import reusable_catalog
-    monkeypatch.setattr(reusable_catalog, 'candidates', lambda q: [
-        {'id': 'fn:long', 'description': '재사용 부품', 'contract_known': True,
-         'contract': {'params': {'request': 'Record'}, 'variants': ['x' * 6000]}}])
-    monkeypatch.setattr('guide_registry.callable_control_briefs', lambda names: [])
-    block = recall._reusable_capabilities(recall.RecallRequest(None, 'request', []), None)
-    payload = json.loads(block.text.split('\n')[1])
-    assert block.ids == block.join['candidates'] == ['fn:long']
-    card, = payload['candidates']
-    assert card['inspect'] == {'describe': ['fn:long']}
-    assert card['details_omitted'] == ['contract'] and 'contract' not in card
-    assert len(json.dumps(payload, ensure_ascii=False)) <= 5000
-
-
 def test_device_context_with_no_known_devices_still_introduces_local_body(monkeypatch):
     """CONTROL_DRIVER_DESIGN_2026_10_20 §5.1 — 본체는 드라이버(`fn:PC제어` __local__)가 있는데 소개에
     없어 AI 가 화면 조작으로 가던 유일한 면. 등록 장치가 없어도 본체 행 하나는 소개한다."""
@@ -260,12 +219,19 @@ if __name__ == "__main__":
 
 @pytest.mark.parametrize("channel", list(recall.CHANNELS))
 @pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REFLEX", "REPAIR", "CONTEXT_UPDATE"])
-def test_retired_world_catalog_is_not_searched_or_presented(monkeypatch, channel, route):
-    """모든 공통 진입점에서 기존 기억은 남고 방법 목록은 분류 후에도 추가되지 않는다."""
+def test_retired_catalogs_are_not_searched_or_presented(monkeypatch, channel, route):
+    """모든 공통 진입점에서 기존 기억은 남고 방법·부품 후보는 분류 후에도 추가되지 않는다."""
     from dataclasses import replace
     import episode_logger
-    expected = {"hippocampus", "reusable_capabilities", "memory_map", "recalled_memory",
+    expected = {"hippocampus", "memory_map", "recalled_memory",
                 "guide_map", "connected_limbs", "pending_repair", "decision_ledger"}
+    import reusable_catalog
+
+    def unexpected_discovery(*args, **kwargs):
+        pytest.fail("자동 회상에서 부품 후보나 설명을 조회했습니다")
+
+    monkeypatch.setattr(reusable_catalog, "candidates", unexpected_discovery)
+    monkeypatch.setattr(reusable_catalog, "discovery_payload", unexpected_discovery)
     calls, events = [], []
     def read(source):
         def run(*args, **kwargs):
@@ -281,6 +247,7 @@ def test_retired_world_catalog_is_not_searched_or_presented(monkeypatch, channel
     assert set(calls) == expected and len(calls) == len(expected)
     assert {b["source"] for b in result.presented()} == expected | {"pursuit"}
     assert "현재 과제" in result.text() and "기존 기억" in result.text()
+    assert "reusable_capabilities" not in result.text()
     result.route(route)
     assert len(events) == 1 and events[0][0] == "recall.presented"
     assert not {"method_map", "world_memory"} & set(recall.USAGE)

@@ -511,25 +511,8 @@ def _used_deep(ids, join, ev) -> Dict[str, Any]:
     return {"used": used, "evidence": "+".join(sorted(set(evidence))) or "none", "opened": opened[:5]}
 
 
-def _reusable_capabilities(req, recall):
-    from reusable_catalog import candidates, discovery_payload
-    import json
-    payload = discovery_payload(candidates(req.message))
-    rows, briefs = payload['candidates'], payload['control_briefs']
-    if not rows:
-        return None
-    text = '<reusable_capabilities>현재 요청과 관련된 기존 부품 후보입니다. 계약과 효과가 맞을 때 사용하세요. '
-    text += ('제공된 계약·control_briefs로 충분한 범위는 재조회 없이 사용하고 검증·실패 복구를 유지합니다. '
-             'call은 입력을 채울 호출 골격입니다. details_omitted는 소개에서 생략된 정보이며, '
-             '호출에 필요한 인수·조건이 부족할 때만 inspect의 execute_ibl 인수로 조회합니다.\n')
-    text += json.dumps(payload, ensure_ascii=False)
-    text += '\n</reusable_capabilities>'
-    return Block('reusable_capabilities', 'reusable_capabilities', text,
-                 ids=[r['id'] for r in rows], join={'candidates': [r['id'] for r in rows]},
-                 meta={'control_briefs': [b['file'] for b in briefs]})
-
-
 def _used_capabilities(ids, join, ev):
+    """자동주입 제거 전 제시 기록을 가진 재개 턴의 사용 증거를 해석한다."""
     import json
     used = set()
     for call in ev.get('tool_calls') or []:
@@ -604,7 +587,6 @@ def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched
 
 SOURCES = (
     Source("hippocampus", "execution_memory", 1, True, _hippocampus),
-    Source("reusable_capabilities", "reusable_capabilities", 1, True, _reusable_capabilities),
     Source("memory_map", "memory_map", 1, True, _memory_map, needs="deep"),
     Source("recalled_memory", "recalled_memory", 1, True, _recalled_memory, needs="deep"),
     Source("guide_map", "guide_map", 1, True, _guide_map),

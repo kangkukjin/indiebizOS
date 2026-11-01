@@ -25,6 +25,16 @@ def test_unaugmented_request_remains_unchanged():
     assert compile_user_command('원문 7행을 확인해줘', {}) == '사용자 명령: 원문 7행을 확인해줘'
 
 
+@pytest.mark.parametrize('key', ['capability_focus', 'ibl_focus'])
+def test_old_recommendations_cannot_invoke_description_or_leak_into_command(monkeypatch, key):
+    import model_result_view
+    monkeypatch.setattr(model_result_view, 'describe_actions', lambda *a, **kw: pytest.fail('automatic describe'))
+    result = compile_user_command('기간 비교', {'task_framing': '기간을 비교',
+        key: {'hint': '단위를 먼저 대조', 'highlight_actions': ['sense:unused_marker']}})
+    assert '기간을 비교' in result and '단위를 먼저 대조' in result
+    assert 'sense:unused_marker' not in result and '상세 계약' not in result
+
+
 @pytest.mark.parametrize('revised', [False, True])
 def test_plan_provenance_survives_multiline_content_and_reframing(revised):
     from reframe import render_for_executor
@@ -128,7 +138,8 @@ def test_driver_primary_delivers_only_entry_and_full_describe_remains_available(
     co = {'guide_files': ['remote_pc_execution.md'],
           'capability_focus': {'highlight_actions': ['limbs:guestpc', 'self:limb']}}
     command = pb.compile_user_command('원격 진단', co)
-    assert '선택 액션의 계약 조회' in command
+    assert '선택 액션의 계약 조회' not in command
+    assert '쓸 수 있는 IBL 액션' not in command
     assert '이번 작업의 상세 계약' not in command
     assert '요약됐으면 read_guide로 열어' not in command
     full = describe_actions(['limbs:guestpc', 'self:limb'], ['limbs', 'self'], edition=2)

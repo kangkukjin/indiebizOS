@@ -282,6 +282,8 @@ class Supervisor:
                           phase="reframe" if revision else "plan")
 
     def configure(self, framing, repair=False):
+        from consciousness_agent import project_framing
+        framing = project_framing(framing)
         self.framing = framing
         self._final_criteria_contract = None
         # 의식이 규정한 턴만 감독·평가한다. 관찰/도구 실패가 이 선택을 바꾸지 않는다.

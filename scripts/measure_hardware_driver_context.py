@@ -9,30 +9,37 @@ import boot_paths  # noqa: E402,F401
 
 import argparse
 import hashlib
+import io
+import tarfile
 import json
 import subprocess
 import tempfile
 import types
 from unittest.mock import patch
 
-import guide_registry
-import prompt_builder
 from model_result_view import describe_actions
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--baseline', required=True, help='Verified pre-change Git revision')
+    parser.add_argument('--after', default='8b3a50a6', help='Historical hardware repair revision (not live code)')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
 
-    def original(path):
-        return subprocess.check_output(['git', 'show', f'{args.baseline}:{path}'], cwd=ROOT).decode()
+    def original(path, revision=None):
+        return subprocess.check_output(['git', 'show', f'{revision or args.baseline}:{path}'], cwd=ROOT).decode()
 
     old = types.ModuleType('hardware_prompt_baseline')
     old.__file__ = str(ROOT / 'backend/cognition/prompt_builder.py')
     exec(compile(original('backend/cognition/prompt_builder.py'), old.__file__, 'exec'), old.__dict__)
-    old_builder, new_builder = old.PromptBuilder(ROOT), prompt_builder.PromptBuilder(ROOT)
+    new = types.ModuleType('hardware_prompt_after')
+    new.__file__ = old.__file__
+    exec(compile(original('backend/cognition/prompt_builder.py', args.after), new.__file__, 'exec'), new.__dict__)
+    historical_guides = types.ModuleType('guide_registry')
+    historical_guides.__file__ = str(ROOT / 'backend/datastore/guide_registry.py')
+    exec(compile(original('backend/datastore/guide_registry.py', args.after), '<historical guides>', 'exec'), historical_guides.__dict__)
+    old_builder, new_builder = old.PromptBuilder(ROOT), new.PromptBuilder(ROOT)
     cases = [
         ('remote_diagnosis', '원격 PC의 환경을 진단해줘', 'guest_helper.md', 'remote_pc_execution.md',
          ['limbs:guestpc'], [('remote_pc_execution.md', '3. 기본 어휘·GUI·작업 기록')]),
@@ -49,22 +56,31 @@ def main():
     ]
     rows = []
     with tempfile.TemporaryDirectory() as directory:
-        baseline_data = Path(directory)
+        baseline_data = Path(directory) / 'before'
+        baseline_data.mkdir()
+        after_root = Path(directory) / 'after'
+        after_root.mkdir()
+        archive = subprocess.check_output(['git', 'archive', args.after, 'data/guides', 'data/guide_db.json'], cwd=ROOT)
+        with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
+            tree.extractall(after_root, filter='data')
+        historical_guides.DATA_PATH = after_root / 'data'
         (baseline_data / 'guide_db.json').write_text(original('data/guide_db.json'))
-        with patch.object(guide_registry, 'record_use'), patch.object(guide_registry, 'mark_injected'), \
-                patch.object(guide_registry, 'freshness_note', return_value=''), \
-                patch.object(guide_registry, 'catalog_revision', return_value='fixed-revision'), \
-                patch.object(old_builder, '_load_guide_file', side_effect=lambda name: original('data/guides/' + name)):
+        with patch.dict(sys.modules, {'guide_registry': historical_guides}), \
+                patch.object(historical_guides, 'record_use'), patch.object(historical_guides, 'mark_injected'), \
+                patch.object(historical_guides, 'freshness_note', return_value=''), \
+                patch.object(historical_guides, 'catalog_revision', return_value='fixed-revision'), \
+                patch.object(old_builder, '_load_guide_file', side_effect=lambda name: original('data/guides/' + name)), \
+                patch.object(new_builder, '_load_guide_file', side_effect=lambda name: original('data/guides/' + name, args.after)):
             for name, request, before_guide, after_guide, actions, reads in cases:
                 def co(guide):
                     return {'guide_files': [guide], 'capability_focus': {'highlight_actions': actions}}
-                with patch.object(guide_registry, 'DATA_PATH', baseline_data):
+                with patch.object(historical_guides, 'DATA_PATH', baseline_data):
                     before = old_builder._guide_block(before_guide) + old.compile_user_command(request, co(before_guide))
-                after = new_builder._guide_block(after_guide) + prompt_builder.compile_user_command(request, co(after_guide))
+                after = new_builder._guide_block(after_guide) + new.compile_user_command(request, co(after_guide))
                 followups = []
                 for filename, section in reads:
-                    view = guide_registry.guide_read_view(
-                        {'file': filename, 'content': (ROOT / 'data/guides' / filename).read_text()}, {'section': section})
+                    view = historical_guides.guide_read_view(
+                        {'file': filename, 'content': original('data/guides/' + filename, args.after)}, {'section': section})
                     if view.get('error'):
                         raise ValueError(view)
                     followups.append({'file': filename, 'section': section, 'response_chars': len(json.dumps(view, ensure_ascii=False))})
@@ -78,7 +94,8 @@ def main():
                              'before_sha256': hashlib.sha256(before.encode()).hexdigest(),
                              'after_sha256': hashlib.sha256(after.encode()).hexdigest()})
     result = {'baseline_commit': subprocess.check_output(['git', 'rev-parse', args.baseline], cwd=ROOT).decode().strip(),
-              'method': 'Deterministic assembly replay. Same request/actions; no model calls or remote execution. '
+              'after_commit': subprocess.check_output(['git', 'rev-parse', args.after], cwd=ROOT).decode().strip(),
+              'method': 'Historical builders and guide snapshots for initial assembly; retired recommendation input never reaches live prompt assembly. Explicit describe estimates use current public contracts. Deterministic assembly replay. Same request/actions; no model calls or remote execution. '
                         'Adds one conservative complete describe plus indicated section response to the new context. '
                         'Counts concatenated text once, not cumulative model tokens across rounds.',
               'model_input_tokens': None, 'model_output_tokens': None, 'cache_tokens': None,

@@ -759,7 +759,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     보강은 당위 앵커 아래 실행 지시로 유지한다. 생성된 절차의 숫자·판단은 사용자
     인용이나 관측 사실이 아니므로 원문·입력과 대조한다. 무거운 배경은 turn_context에 둔다.
     """
-    co = consciousness_output or {}
+    from consciousness_agent import project_framing
+    co = project_framing(consciousness_output) or {}
 
     # 보강 줄을 먼저 모은다 — 비어있으면 앵커를 끼우지 않는다(허공 매달림 방지).
     aug = []
@@ -789,31 +790,7 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
                    "reframe 도구로 깨진 전제와 근거를 보내 재규정을 받아라 — 이 틀 안에서 풀 수 없거나 "
                    "위험하다고 알게 됐을 때도 같다):\n" + assumptions)
 
-    # 의식 프롬프트 출력 키는 capability_focus (consciousness_prompt.md 응답 형식).
-    # 예전 ibl_focus 이름을 폴백으로 둔다 — 개명 드리프트로 highlight_actions·hint가
-    # 융합에서 조용히 새던 버그의 재발 방지.
-    cap_focus = co.get("capability_focus") or co.get("ibl_focus") or {}
-    highlight = cap_focus.get("highlight_actions") or []
-    if highlight:
-        # 팔레트가 열려 있다는 건 사실 — '(이 밖의 액션도 가능)'은 *목록*에만 남긴다.
-        aug.append("쓸 수 있는 IBL 액션: " + ", ".join(highlight) + " (이 밖의 액션도 가능).")
-        try:
-            from model_result_view import describe_actions
-            from thread_context import get_allowed_nodes
-            from guide_registry import deferred_action_guides
-            selected = list(dict.fromkeys(highlight))[:4]
-            deferred = deferred_action_guides(selected)
-            detailed = [name for name in selected if name not in deferred]
-            if detailed:
-                contracts = describe_actions(detailed, get_allowed_nodes(), edition=2)
-                aug.append("이번 작업의 상세 계약: " + json.dumps(contracts, ensure_ascii=False))
-            if deferred:
-                aug.append("선택 액션의 계약 조회: " + json.dumps([
-                    {"action": name, "guide": filename, "section": "빠른 호출",
-                     "describe": [name]} for name, filename in deferred.items()], ensure_ascii=False)
-                    + " — 현재 드라이버 호출 요약으로 충분하면 바로 사용한다. 필요한 op 인자·권한·실패 의미가 없으면 describe 또는 해당 절을 조회한다.")
-        except (ValueError, KeyError, TypeError):
-            pass
+    cap_focus = co.get("capability_focus") or {}
     hint = (cap_focus.get("hint") or "").strip()
     if hint:
         # 방법 지시는 허가 어조에서 분리해 명령문 줄로.

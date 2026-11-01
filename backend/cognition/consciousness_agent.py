@@ -5,7 +5,7 @@ consciousness_agent.py - 의식 에이전트
 
 역할:
     1. 히스토리 정제 — 문맥상 불필요한 턴 압축, 핵심 맥락 보존
-    2. IBL 포커싱 — 관련 액션/노드에 대한 강조 힌트 생성
+    2. 작업 구조 — 입력·출력·의존 관계와 불확실성 전달
     3. 가이드 파일 선택 — 읽어야 할 가이드 파일 지정
     4. 태스크 프레이밍 — "지금 풀어야 할 문제"를 명확히 정의
 
@@ -21,6 +21,34 @@ from typing import Dict, List, Optional
 from history_excerpt import history_excerpt, CONSCIOUSNESS_HISTORY_CHARS
 
 logger = logging.getLogger(__name__)
+
+
+def project_framing(value):
+    """Current view of a framing; never rewrite historical records or infer user selection."""
+    if not isinstance(value, dict):
+        return value
+    result = dict(value)
+    if "capability_focus" in value or "ibl_focus" in value:
+        focus = value.get("capability_focus")
+        if (focus is None or focus == {}) and "ibl_focus" in value:
+            focus = value["ibl_focus"]
+        # Keep current-field type errors visible to the existing correction boundary.
+        result["capability_focus"] = ({k: v for k, v in focus.items() if k != "highlight_actions"}
+                                      if isinstance(focus, dict) else focus)
+        result.pop("ibl_focus", None)
+    return result
+
+
+def validate_framing_focus(value):
+    """Validate the live hint contract after projecting away retired fields."""
+    if not isinstance(value, dict):
+        raise ValueError("의식 출력은 JSON 객체여야 합니다")
+    focus = value.get("capability_focus")
+    if focus is not None:
+        if not isinstance(focus, dict):
+            raise ValueError("capability_focus는 hint를 갖는 객체여야 합니다")
+        if focus.get("hint") is not None and not isinstance(focus["hint"], str):
+            raise ValueError("capability_focus.hint는 문자열이어야 합니다")
 
 
 class FramingContractError(ValueError):
@@ -142,8 +170,7 @@ class ConsciousnessAgent:
 
         self._supervisor_prompt = self._prompt  # 감독은 작업대로 필요한 스키마를 읽는다.
         # IBL 환경 주입 — 도구 없는 호환 경로는 문법서 + 액션 카탈로그 전체.
-        # 의식이 어떤 액션이 실재하는지 알아야 capability_focus.highlight_actions를 *검증 가능하게*
-        # 줄 수 있다(prompt의 "실제 존재하는 액션만" 규칙이 비로소 지켜짐). build_environment =
+        # 작업 구조와 상상실행을 실제 능력에 근거해 판단한다. build_environment =
         # 12_ibl_only.md(문법) + 노드별 카탈로그 → 별도 12_ibl_only 주입은 불필요(중복).
         # ★시스템 프롬프트(캐시 prefix)에 박히므로 비용은 캐시-읽기. 카탈로그가 바뀌면(/packages/reload)
         #  reset_consciousness_agent 로 재빌드해 stale 방지(api_packages 가 호출).
@@ -210,9 +237,8 @@ class ConsciousnessAgent:
                 "task_framing": str,       # 지금 풀어야 할 문제 정의
                 "achievement_criteria": str, # 달성 기준 (비어있으면 평가 루프 안 탐)
                 "expert_choice": str,      # 전문가의 선택 — 실행자 명령의 제 이름 섹션(한 문장)
-                "capability_focus": {      # IBL 포커싱 (프롬프트 응답 형식 키)
-                    "highlight_actions": list, # 강조할 액션
-                    "hint": str                # 접근 방향 (IBL 밖 도구 이름도 여기서)
+                "capability_focus": {
+                    "hint": str                # 입력·출력·의존 관계·불확실성
                 },
                 "guide_files": list[str],  # 읽어야 할 가이드 파일
                 "assumptions": list[str],  # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증
@@ -277,14 +303,18 @@ class ConsciousnessAgent:
             if not result:
                 # 형식은 어겼어도 *내용*은 살린다 (아래 _salvage_framing 참조).
                 result = self._salvage_framing(response)
-            def validate_initial(value):
+            def validate_contract(value):
+                validate_framing_focus(value)
                 if validate_framing:
                     validate_framing(value)
+
+            def validate_initial(value):
+                validate_contract(value)
                 if research_topic is not None:
                     from research_planning import validate_topic_choice
                     validate_topic_choice(value)
 
-            if result and (validate_framing or research_topic is not None):
+            if result:
                 from episode_logger import record_trajectory_event
                 from logging_utils import mask_secrets
                 try:
@@ -318,7 +348,7 @@ class ConsciousnessAgent:
                 result = prepare(self, result, input_text, supervisor=supervisor,
                                  project_path=project_path,
                                  previous_plan=previous_research_plan,
-                                 validate_framing=validate_framing, topic=research_topic)
+                                 validate_framing=validate_contract, topic=research_topic)
                 import json as _json
                 print(f"[ConsciousnessAgent] 파싱 결과:\n{_json.dumps(result, ensure_ascii=False, indent=2)}")
             else:
@@ -525,7 +555,7 @@ class ConsciousnessAgent:
         if not isinstance(result, dict) or not isinstance(result.get("task_framing"), str):
             logger.warning("[ConsciousnessAgent] task_framing 누락")
             return None
-        return result
+        return project_framing(result)
 
     # 살릴 가치가 있는 최소 분량 — 이보다 짧으면 프레이밍이라 부를 게 없다.
     _SALVAGE_MIN_CHARS = 40

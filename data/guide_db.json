@@ -2415,10 +2415,7 @@
           "fn:외부PC재생"
         ],
         "brief_section": "빠른 호출"
-      },
-      "defer_action_contracts": [
-        "limbs:guestpc"
-      ]
+      }
     },
     {
       "id": "remote_pc_installation",
@@ -2463,10 +2460,7 @@
           "self:limb"
         ],
         "brief_section": "빠른 호출"
-      },
-      "defer_action_contracts": [
-        "self:limb"
-      ]
+      }
     }
   ],
   "driver_components": {

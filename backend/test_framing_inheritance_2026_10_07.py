@@ -126,7 +126,7 @@ def test_followup_needs_history_and_freshness(monkeypatch):
     assert seen == [] and r.calls == 2
 
 
-def test_patch_keeps_only_action_names_in_highlight(monkeypatch):
+def test_patch_keeps_hint_without_recommending_actions(monkeypatch):
     r = Runner()
     _remember(r, "AI 동향 보고서 써줘.")
     _calls(monkeypatch, patch='{"capability_focus": {"hint": "원장부터", "highlight_actions": '
@@ -134,7 +134,7 @@ def test_patch_keeps_only_action_names_in_highlight(monkeypatch):
     with actor_context(agent_id="agent_t", task_id="t1"):
         out = r._run_consciousness_or_reuse("AI 동향 보고서 써줘.", [], "")
     assert r.calls == 0
-    assert out["capability_focus"]["highlight_actions"] == ["sense:search", "fn:주소마다읽기", "self:read"]
+    assert out["capability_focus"] == {"hint": "원장부터"}
 
 
 @pytest.mark.parametrize("patch", ['{"needs_repair": true}', '{"scope": "pursuit", "title": "x"}', 'not json', '[]'])

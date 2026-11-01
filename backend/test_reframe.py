@@ -113,7 +113,8 @@ def test_executor_reframe_revises_and_updates_channel():
     assert out["revised"] is True and out["revision_no"] == 1
     assert "처음부터 다시 시작하지 말고" in out["content"]
     assert "원장이 없으므로" in out["content"] and "충족 기준(갱신)" in out["content"]
-    assert "- 검색이 된다" in out["content"] and "self:write" in out["content"]
+    assert "- 검색이 된다" in out["content"] and "self:write" not in out["content"]
+    assert ch.current["capability_focus"] == {"hint": "먼저 원장을 만든다"}
     # 의식은 revision 을 받았다
     rev = r.calls[0]["revision"]
     assert rev["broken_assumption"] == "원장 파일이 있다" and rev["previous_framing"] == _BASE["task_framing"]

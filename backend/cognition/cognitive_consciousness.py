@@ -12,7 +12,7 @@ agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인
 import json
 import re
 from typing import Optional, Dict, Any
-from consciousness_agent import FramingContractError, ConsciousnessCallSkipped
+from consciousness_agent import FramingContractError, ConsciousnessCallSkipped, project_framing
 
 
 # ============================================================
@@ -55,13 +55,13 @@ class CognitiveConsciousnessMixin:
         from repair_continuation import inherited_framing
         inherited = inherited_framing(user_message) if repair else None
         if inherited:
-            return inherited
+            return project_framing(inherited)
         # 명시적인 수리는 실행자가 직접 조사·검사한다. #think는 기존 의식을 유지한다.
         from thread_context import get_task_origin
         if (repair and get_task_origin() == "user" and re.search(r"(?i)#repair\b", user_message)
                 and not re.search(r"(?i)#think\b", user_message)):
             from repair_policy import direct_framing
-            return direct_framing(user_message)
+            return project_framing(direct_framing(user_message))
         # 규정 계승(2026-10-07): 같은 문장의 정기 실행(직전 ACHIEVED) 또는 같은 과제의 후속 턴은
         # 직전 규정을 경량 패치로 잇는다 — 의식 각성(≈1분·10만 토큰)을 건너뛴다. 수리 턴은 제외
         # (수리는 repair_continuation 이 따로 계승한다). 포기하면 아래에서 전과 같이 깨운다.
@@ -69,8 +69,8 @@ class CognitiveConsciousnessMixin:
             from framing_inheritance import inherit
             inherited_turn = inherit(self, user_message, history)
             if inherited_turn:
-                return inherited_turn
-        result = self._run_consciousness(user_message, history, execution_memory, repair=repair)
+                return project_framing(inherited_turn)
+        result = project_framing(self._run_consciousness(user_message, history, execution_memory, repair=repair))
         if result:
             result["_framing_source"] = "fresh_consciousness"
         if repair and isinstance(result, dict) and get_task_origin() == "user":

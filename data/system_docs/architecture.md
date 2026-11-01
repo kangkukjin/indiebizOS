@@ -275,7 +275,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
+  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(hint: 작업 분해·입출력·의존 관계·불확실성), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 현재 지시를 해석할 때 필요한 과거만 채택한 뒤 규정한다. 명시적 빈 history_summary는
     실행 히스토리를 비우고, 비어 있지 않은 선별 요약도 CLI 세션 재개로 우회하지 않는다.
@@ -399,7 +399,9 @@ PC에는 `[limbs:guestpc]`의 셸·파일·작업 명령을 보내고, Android �
 가이드 정본의 현재 호출 요약·지문을 제공한다. 정확한 절이 없거나 중복·예산 초과이면
 요약을 생략하고 가이드 포인터를 유지한다. 모든 기기의 요약을 소개에서 상시 제공하지 않는다.
 같은 연결은 일반 Script에도 적용한다(`폴더변화`의 check·ack 호출과 결과 해석).
-선택 액션 회상은 describe의 호출 예·관측 반환·가이드 요약을 함께 전달한다. 부품 후보는
+사용자가 직접 선택한 액션의 회상은 describe의 호출 예·관측 반환·가이드 요약을 함께 전달한다.
+의식의 자동 액션 추천과 추천에 따른 상세 계약 선주입은 하지 않는다. 의식은 작업 구조 hint를
+전달하고 실행자는 전체 허용 액션 요약에서 판단하며 필요한 계약을 명시적으로 조회한다. 부품 후보는
 5,000자 JSON 예산 안에서 이름·정확한 `inspect` 경로를 먼저 보존하고 상세 계약·요약은
 완결된 단위로 싣는다. `details_omitted`는 표시 생략이며 계약·현재 상태의 보장을 뜻하지 않는다.
 이미 받은 설명으로 충분한 범위는 재조회하지 않는다. [수리 범위와 검증](../../docs/IBL_DISCOVERY_EXECUTION_REPAIR_DESIGN_2026_10_24.md#9-발견에서-호출까지의-최소-수리-2026-10-24).

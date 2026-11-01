@@ -136,8 +136,7 @@ def tool_context(controller, *, include_idioms=False):
     names = [f"{node}:{action}" for node, spec in nodes.items()
              for action, config in spec.get("actions", {}).items()
              if not config.get("prompt_hidden") and self_can_run(node, action, config)]
-    focus = ((controller.framing or {}).get("capability_focus") or {}).get("highlight_actions", [])
-    context = {"available_actions": names, "focused_actions": [action_schema(n) for n in dict.fromkeys(focus) if n in names],
+    context = {"available_actions": names,
             "tools": [{"name": name, "description": spec.get("description", "")[:200]}
                       for name, spec in controller.catalog.items() if name not in {"reframe", "supervision"}],
             "schema_hint": "전체 스키마는 evidence id=tool:이름으로 조회. reframe은 실행자가 직접 호출한다."}
@@ -145,7 +144,7 @@ def tool_context(controller, *, include_idioms=False):
         from ibl_access import idioms_map
         context["available_idioms"] = idioms_map(set(nodes))
         context["idiom_hint"] = ("반복 읽기·필터·누적이 있으면 지도에서 맞는 관용구를 검토하고 "
-                                "capability_focus.hint에 실제 이름과 쓸 위치를 적는다. "
+                                "작업의 입력·출력과 의존 관계를 정리한다. "
                                 "단일 작업이나 서명이 맞지 않는 경우 억지로 사용하지 않는다.")
     return context
 

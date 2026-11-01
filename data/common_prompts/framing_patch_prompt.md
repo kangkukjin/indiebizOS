@@ -11,7 +11,7 @@
 - `criteria` (객체 목록) — 평가의 정본. 각 객체는 `text`(비어 있지 않은 기준), `user_quote`(현재 사용자 원문 인용 또는 빈 문자열), `fallback`(허용된 대안 또는 빈 문자열). 요약을 바꾸면 criteria도 함께 갱신한다. 기존 명시 조건·대안을 임의로 면제하거나 강화하지 않는다.
 - `assumptions` (문자열 목록) — 깨진 전제는 빼고 새 전제는 더한다
 - `expert_choice` (문자열, 한 문장 — 이 분야의 함정 하나, 이름 하나 포함; 세상의 방식 줄을 되풀이하지 않는다)
-- `capability_focus` (객체: `hint` 문자열, `highlight_actions` 는 **IBL 액션 이름만** — `self:read`·`sense:search` 같은 `node:action` 꼴. 직전 규정에 있던 이름을 유지하고, 모르는 이름은 짓지 말고 생략한다. 산문 금지)
+- `capability_focus` (객체: `hint` 문자열) — 작업 분해·입출력·의존 관계·불확실성. 자명하면 빈 문자열. 자동 액션 추천 목록이나 상세 계약을 hint·task_framing 등 다른 필드에 옮기지 않는다. 사용자 지정 도구·확보한 도구 관측은 출처와 함께 보존한다.
 - `guide_files` (문자열 목록)
 - `deep_research` (참/거짓) — 새 요청이 심층연구로 바뀌면 참. 하네스가 의식을 깨워 연구계획을 작성한다. 단순 조회·비교나 연구 기능 수리는 해당하지 않는다. 의식용 연구 가이드를 실행자에게 추천하지 않는다.
 - `needs_clarification` (참/거짓), `clarification_question` (문자열)

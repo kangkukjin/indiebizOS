@@ -64,6 +64,22 @@ def manager_tool(controller, payload):
         return json.loads(controller.tool(payload))
 
 
+def test_saved_recommendations_are_projected_without_automatic_schema_reads(supervisor, monkeypatch):
+    import supervisor_runtime
+    old = {'task_framing': '문제', 'achievement_criteria': '실제 증거 확인',
+           'capability_focus': {'hint': '입력의 범위를 확인', 'highlight_actions': ['self:read']}}
+    supervisor.configure(old)
+    assert supervisor.framing['capability_focus'] == {'hint': '입력의 범위를 확인'}
+    assert old['capability_focus']['highlight_actions'] == ['self:read']
+    schema = supervisor_runtime.action_schema
+    monkeypatch.setattr(supervisor_runtime, 'action_schema', lambda *a: pytest.fail('automatic schema read'))
+    context = supervisor_runtime.tool_context(supervisor)
+    assert 'focused_actions' not in context and 'self:read' in context['available_actions']
+    monkeypatch.setattr(supervisor_runtime, 'action_schema', schema)
+    explicit = manager_tool(supervisor, {'op': 'evidence', 'id': 'tool:inspect'})
+    assert 'input_schema' in json.dumps(explicit)
+
+
 @pytest.mark.parametrize("code", [
     'return [engines:image_read]{op:"read",path:"/tmp/attachment.jpg",question:"숫자"}',
     'return [self:health]{op:"save",category:"혈압",systolic:117,diastolic:72}',

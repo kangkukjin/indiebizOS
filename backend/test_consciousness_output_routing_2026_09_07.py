@@ -54,7 +54,7 @@ def _fill(keys) -> dict:
     for key in keys:
         head, _, sub = key.partition(".")
         target, name = (out["capability_focus"], sub) if sub else (out, head)
-        if name in ("assumptions", "guide_files", "highlight_actions", "primary_nodes", "tools"):
+        if name in ("assumptions", "guide_files"):
             target[name] = [_sentinel(key)]
         elif name == "criteria":
             target[name] = [{"text": _sentinel(key), "user_quote": "", "fallback": "한계를 명시"}]
@@ -168,8 +168,7 @@ def test_reframe_reply_carries_the_same_keys():
     import reframe
     keys = {k for k in _prompt_schema_keys()
             if k in ("task_framing", "expert_choice", "assumptions",
-                     "achievement_criteria", "capability_focus.hint",
-                     "capability_focus.highlight_actions")}
+                     "achievement_criteria", "capability_focus.hint")}
     co = _fill(keys)
     co["_revision"] = {"revision_no": 1}
     rendered = reframe.render_for_executor({"revised": True, "output": co})

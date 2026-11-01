@@ -83,6 +83,30 @@ def test_browser_selection_keeps_current_published_call_brief():
     assert any(b['file'] == 'browser_action.md' for b in taught['control_briefs'])
 
 
+@pytest.mark.parametrize('think', [False, True])
+def test_explicit_choice_change_cancel_and_permission_survive_executor_refresh(monkeypatch, think):
+    from types import SimpleNamespace
+    import associative_recall as recall
+    import ibl_usage_rag
+    from agent_pipeline import CognitivePipelineMixin
+    runner = SimpleNamespace(config={}, ai=SimpleNamespace(_provider=None), _load_role=lambda: '')
+    runner._build_system_prompt_split = lambda role, framing, memory: ('stable', memory)
+    monkeypatch.setattr(recall, '_allowed_set', lambda _: {'table'})
+    monkeypatch.setattr(ibl_usage_rag, 'build_execution_memory_detail', lambda *a, **kw: {
+        'xml': '', 'top_score': 0, 'top_code': '', 'presented': []})
+    framing = {'task_framing': '사용자 선택 실행', 'capability_focus': {
+        'highlight_actions': ['sense:unselected_marker'], 'hint': ''}} if think else None
+    for selected in ['table:select', 'table:filter', None, 'sense:search', 'table:missing']:
+        req = recall.RecallRequest(runner, '이걸로 처리해줘', [], action_hint=selected)
+        block = recall._hippocampus(req, recall.Recall(req))
+        result = CognitivePipelineMixin._refresh_execution_prompt(runner, req.message, framing, block.text)
+        assert 'sense:unselected_marker' not in result
+        if selected in ('table:select', 'table:filter'):
+            assert f'action="[{selected}]"' in result and 'callable_contract' in result
+        else:
+            assert 'user_selected_action' not in result
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

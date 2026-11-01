@@ -148,7 +148,8 @@ def test_supervisor_catalog_and_contract_follow_activation(prompt_box, monkeypat
     initial = tool_context(controller)
     assert "sense:awake" in initial["available_actions"]
     assert "sense:asleep" not in initial["available_actions"]
-    assert [v["action"] for v in initial["focused_actions"]] == ["sense:awake"]
+    assert "focused_actions" not in initial
+    assert action_schema("sense:awake")["action"] == "sense:awake"
     set_package_active("awake", False, authority=HUMAN_AUTHORITY)
     assert "sense:awake" not in tool_context(controller)["available_actions"]
     with pytest.raises(ValueError, match="사용할 수 없는"):

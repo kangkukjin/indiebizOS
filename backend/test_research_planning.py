@@ -508,3 +508,23 @@ def test_research_stream_delivers_persistent_plan_through_real_consciousness_ent
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+@pytest.mark.parametrize('focus,expected_calls', [
+    ({'hint': '기준일 확인', 'highlight_actions': 42}, 2),
+    ({'hint': []}, 3),
+])
+def test_research_completion_uses_current_focus_contract(workspace, monkeypatch, focus, expected_calls):
+    import consciousness_agent as ca
+    root, guide, events = workspace
+    monkeypatch.setattr(ca, 'get_world_pulse_text', lambda: '')
+    answers = iter([{'task_framing': '연구', 'deep_research': True},
+                    draft(capability_focus=focus), draft(capability_focus={'hint': '기준일 확인'})])
+    calls = []
+    def plan(*args, **kwargs):
+        calls.append(args)
+        return json.dumps(next(answers))
+    result = agent().process('연구해줘', [], '', project_path=str(root), supervisor=SimpleNamespace(plan=plan))
+    assert result['capability_focus'] == {'hint': '기준일 확인'}
+    assert len(calls) == expected_calls
+    assert Path(result['_research_plan']['path']).is_file()

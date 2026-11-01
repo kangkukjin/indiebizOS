@@ -17,7 +17,7 @@ hint가 사용자 명령 융합에서 조용히 사라진 2026-07-06 버그가 �
 그 구멍으로 capability_focus.tools 가 5개월(84.9% 의 턴에서 채워지며) 아무 데도 닿지 않았다
 (2026-09-07 실측·폐지). 둘 다 같은 pre-commit 블록에서 돈다.
 
-정적 검사만 한다(백엔드 불필요). AST 1-hop: 함수 안에서
+정적 검사만 한다(백엔드 불필요). 최상위 키는 AST 1-hop으로, focus는 투영·별칭·controller.framing·회원 키 반복문을 따라 추적한다. 함수 안에서
   cons = {consciousness_output 파라미터, `X = consciousness_output ...` 로 바인딩된 X}
   focus = {`Y = <cons>.get("capability_focus"|"ibl_focus") ...` 로 바인딩된 Y}
 그 위의 .get("KEY") / ["KEY"] 문자열 키만 수집 → 프레즌스 dict(cap.get("micros") 등) 오탐 회피.
@@ -42,6 +42,11 @@ CONSUMER_FILES = [
     # 2026-07-17 모듈화: agent_cognitive 분할로 의식 출력 소비 코드가 이동한 파일들
     ROOT / "backend" / "cognition" / "cognitive_consciousness.py",
     ROOT / "backend" / "cognition" / "cognitive_eval.py",
+    ROOT / "backend" / "cognition" / "consciousness_agent.py",
+    ROOT / "backend" / "cognition" / "framing_inheritance.py",
+    ROOT / "backend" / "cognition" / "reframe.py",
+    ROOT / "backend" / "cognition" / "supervisor_runtime.py",
+    ROOT / "backend" / "cognition" / "member_runner.py",
 ]
 
 # capability_focus 하위 dict를 바인딩하는 .get 키(별칭 포함). 새 별칭은 여기 추가.
@@ -85,6 +90,56 @@ def _name_of(node):
     return node.id if isinstance(node, ast.Name) else None
 
 
+def _focus_reads(fn):
+    """Follow framing projections, controller.framing and nested focus getters.
+
+    Extra entry points audit focus keys; their other fields include runtime metadata
+    rather than only the producer's top-level JSON contract.
+    """
+    parameters = {a.arg for a in fn.args.args}
+    frames = parameters & {"consciousness_output", "framing"}
+    if fn.name in {"project_framing", "validate_framing_focus", "_validate_member_framing"}:
+        frames |= parameters & {"value"}
+    focuses, key_vars = set(), set()
+    nodes = list(ast.walk(fn))
+    for node in nodes:
+        if isinstance(node, ast.For) and isinstance(node.target, ast.Name) and isinstance(node.iter, (ast.Tuple, ast.List)):
+            keys = {n.value for n in node.iter.elts if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+            if keys and keys <= FOCUS_GETTERS and len(keys) == len(node.iter.elts):
+                key_vars.add(node.target.id)
+
+    def kind(node):
+        if isinstance(node, ast.Name):
+            return "focus" if node.id in focuses else "frame" if node.id in frames else None
+        if isinstance(node, ast.Attribute) and node.attr == "framing":
+            return "frame"
+        if isinstance(node, ast.BoolOp):
+            return next((k for v in node.values if (k := kind(v))), None)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "project_framing":
+            return "frame"
+        read = _str_key(node)
+        if read and read[1] in FOCUS_GETTERS and kind(read[0]) == "frame":
+            return "focus"
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "get"
+                and node.args and _name_of(node.args[0]) in key_vars and kind(node.func.value) == "frame"):
+            return "focus"
+        return None
+
+    # Alias chains can be longer than one hop, independently of statement order.
+    for _ in range(len(nodes)):
+        before = (len(frames), len(focuses))
+        for node in nodes:
+            if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target = _name_of(node.targets[0])
+                category = kind(node.value)
+                if target and category:
+                    (focuses if category == "focus" else frames).add(target)
+        if before == (len(frames), len(focuses)):
+            break
+    return [(read[1], node.lineno) for node in nodes
+            if (read := _str_key(node)) and kind(read[0]) == "focus"]
+
+
 def scan_consumer(path):
     """(top_reads, focus_reads) — 각 [(key, lineno)]. cons/ focus 수신에 걸린 키만."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -93,6 +148,7 @@ def scan_consumer(path):
     for fn in ast.walk(tree):
         if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
+        focus_reads.extend(_focus_reads(fn))
         cons = {a.arg for a in fn.args.args if a.arg == "consciousness_output"}
         focus = set()
         # 1-hop 바인딩 수집 (정의 순서대로)
@@ -134,7 +190,7 @@ def scan_consumer(path):
                 top_reads.append((key, node.lineno))
             elif rname in focus:
                 focus_reads.append((key, node.lineno))
-    return top_reads, focus_reads
+    return list(dict.fromkeys(top_reads)), list(dict.fromkeys(focus_reads))
 
 
 def main():

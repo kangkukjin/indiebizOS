@@ -54,6 +54,29 @@ def test_valid_plan_needs_only_one_call(agent, monkeypatch):
     assert len(calls) == 1
 
 
+@pytest.mark.parametrize("key", ["capability_focus", "ibl_focus"])
+@pytest.mark.parametrize("retired", [["self:read"], "bad shape", 7, {"nested": True}])
+def test_current_projection_preserves_framing_without_retry_for_retired_field(agent, monkeypatch, key, retired):
+    from copy import deepcopy
+    raw = {**GOOD, key: {"hint": "자료의 기간을 비교", "highlight_actions": retired},
+           "criteria": [{"text": "같은 기간 비교", "user_quote": "기간 비교", "fallback": ""}],
+           "_inherited_from": {"episode_id": 1}}
+    original = deepcopy(raw)
+    calls, supervisor = replies(monkeypatch, [raw])
+    result = agent.process(QUESTION, [], "", supervisor=supervisor)
+    assert result == {**{k: v for k, v in raw.items() if k != key},
+                      "capability_focus": {"hint": "자료의 기간을 비교"}}
+    assert raw == original and len(calls) == 1
+    assert ca.project_framing(result) == result
+
+
+@pytest.mark.parametrize("focus", [[], "", False, {"hint": []}, {"hint": 1}])
+def test_current_hint_types_still_use_correction_boundary(agent, monkeypatch, focus):
+    calls, supervisor = replies(monkeypatch, [{**GOOD, "capability_focus": focus}, GOOD])
+    assert agent.process(QUESTION, [], "", supervisor=supervisor) == GOOD
+    assert len(calls) == 2 and 'validation_error' in calls[-1]
+
+
 @pytest.mark.parametrize("second", [BAD, '{"task_framing":', '', 'null', RuntimeError("연결 실패")])
 def test_second_invalid_plan_stops(agent, monkeypatch, second):
     calls, supervisor = replies(monkeypatch, [BAD, second])

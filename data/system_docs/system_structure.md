@@ -298,7 +298,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 해마 검색·실행기억 주입·성공/실패 귀속은 유지한다. 회상 코드는 참고이며 우선 실행 지시를 덧붙이지 않는다.
   - 프롬프트: `data/common_prompts/unconscious_prompt.md` (단일 파일, 가볍게 유지)
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
-  - 출력 필드: task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
+  - 출력 필드: task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(hint: 작업 분해·입출력·의존 관계·불확실성), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<recalled_memory>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **현재 실행과 규정 계승** — `execution_turn.py`·`framing_inheritance.py`

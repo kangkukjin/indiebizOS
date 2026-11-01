@@ -211,17 +211,8 @@ class MemberRunner(AgentRunner):
         if value.get('criteria') is not None and not (isinstance(value['criteria'], list) and
                 all(isinstance(x, dict) and isinstance(x.get('text'), str) for x in value['criteria'])):
             raise ValueError('criteria는 text 문자열을 갖는 객체 목록이어야 합니다')
-        for key in ('capability_focus', 'ibl_focus'):
-            focus = value.get(key)
-            if focus is None:
-                continue
-            if not isinstance(focus, dict):
-                raise ValueError(f'{key}는 highlight_actions와 hint를 갖는 객체여야 합니다')
-            if focus.get('hint') is not None and not isinstance(focus['hint'], str):
-                raise ValueError(f'{key}.hint는 문자열이어야 합니다')
-            actions = focus.get('highlight_actions')
-            if actions is not None and not (isinstance(actions, list) and all(isinstance(x, str) for x in actions)):
-                raise ValueError(f'{key}.highlight_actions는 문자열 목록이어야 합니다')
+        from consciousness_agent import project_framing, validate_framing_focus
+        validate_framing_focus(project_framing(value))
 
     def _run_consciousness(self, user_message, history, execution_memory="", repair=False, revision=None):
         from consciousness_agent import ConsciousnessAgent
@@ -233,7 +224,7 @@ class MemberRunner(AgentRunner):
         agent._prompt = ("회원의 요청에 대한 작업 규정자다. JSON으로 task_framing, approach, achievement_criteria, "
                          "assumptions를 반환한다. task_framing·approach·achievement_criteria는 문자열, assumptions는 문자열 목록이다. "
                          "achievement_criteria는 요청의 완료 조건이다. 선택 필드 imagined_ibl·history_summary는 문자열, "
-                         "capability_focus는 {highlight_actions:[문자열],hint:문자열} 객체다. "
+                         "capability_focus는 {hint:문자열} 객체다. hint는 작업의 입력·출력·의존 관계와 불확실성을 담고 자명하면 비운다. 액션 추천 목록이나 상세 계약을 다른 필드에 옮기지 않는다. "
                          "허브 하네스 변경은 허용되지 않는다.\n" + self._build_system_prompt(self._load_role()))
         agent._supervisor_prompt = agent._prompt
         return agent.process(user_message=user_message, history=history,

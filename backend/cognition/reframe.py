@@ -78,8 +78,9 @@ class TurnChannel:
         self.message = message
         self.history = list(history or [])
         self.execution_memory = execution_memory or ""
-        self.original = dict(consciousness_output or {})
-        self.current = dict(consciousness_output or {})
+        from consciousness_agent import project_framing
+        self.original = project_framing(consciousness_output) or {}
+        self.current = project_framing(consciousness_output) or {}
         self.repair = bool(repair)
         self.registry_key = registry_key or "default"
         self.revisions = 0
@@ -209,6 +210,9 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
         return {"revised": False, "reason": "의식이 새 규정을 내지 못했다",
                 "directive": "현재 규정으로 가능한 만큼 진행하고 깨진 전제를 최종 보고에 적어라."}
 
+    from consciousness_agent import project_framing
+    out = project_framing(out)
+
     # 권한은 재규정으로 늘지 않는다 — 수리 승격은 턴 시작의 파이프라인 판단이다.
     if out.get("needs_repair") and not ch.repair:
         out["needs_repair"] = False
@@ -243,7 +247,8 @@ def render_for_executor(env: dict) -> str:
                            "directive": env.get("directive", ""),
                            **{key: env[key] for key in ("model_called", "stop_kind") if key in env}},
                           ensure_ascii=False, indent=2)
-    out = env["output"]
+    from consciousness_agent import project_framing
+    out = project_framing(env["output"])
     lines = ["[재규정] 의식이 깨진 전제를 반영해 문제를 다시 규정했다. 지금부터는 아래 규정을 따른다 — "
              "처음부터 다시 시작하지 말고, 이미 확보한 사실은 그대로 쓴다."]
     if env.get("scope_revision") == "task":
@@ -272,9 +277,6 @@ def render_for_executor(env: dict) -> str:
     hint = (cf.get("hint") or "").strip()
     if hint:
         lines.append("수행 절차(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
-    hl = cf.get("highlight_actions") or []
-    if hl:
-        lines.append("쓸 수 있는 IBL 액션: " + ", ".join(hl) + " (이 밖의 액션도 가능)")
     crit = (out.get("achievement_criteria") or "").strip()
     if crit:
         lines.append("충족 기준(갱신): " + crit)

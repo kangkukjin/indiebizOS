@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from history_excerpt import conversation_excerpt
+from consciousness_agent import project_framing, validate_framing_focus
 
 FOLLOWUP_MAX_AGE_S = 24 * 3600        # 후속 계승 창 — 그보다 오래되면 새 요청으로 본다
 REPEAT_MAX_AGE_S = 30 * 24 * 3600     # 정기 계승 창
@@ -47,7 +48,6 @@ _RELATION_PROMPT = "framing_relation_prompt.md"
 _PATCH_PROMPT = "framing_patch_prompt.md"
 _prompt_cache: dict = {}
 
-_ACTION_NAME_RE = re.compile(r"^[a-z_]+:[^\s{}\[\]]+$")   # self:read · sense:search · fn:주소마다읽기
 _DELEGATION_REPORT_RE = re.compile(r"^\s*\[task:[^\]\n]+\]\s*완료\.?(\s|$)")
 
 
@@ -125,7 +125,7 @@ def _age_s(record: dict) -> float:
 
 def _storable(framing: dict) -> dict:
     """권한·과거 과제 표식을 다음 실행에 전달하지 않는다."""
-    return {k: v for k, v in (framing or {}).items() if k not in STRIP_ALWAYS}
+    return {k: v for k, v in (project_framing(framing) or {}).items() if k not in STRIP_ALWAYS}
 
 
 def remember(runner, message: str, framing: dict, *, completed: bool = True) -> Optional[dict]:
@@ -183,6 +183,7 @@ def _prompt(name: str) -> str:
 
 
 def _compact(framing: dict) -> dict:
+    framing = project_framing(framing)
     return {k: framing.get(k) for k in ("task_framing", "achievement_criteria", "criteria", "assumptions",
                                         "expert_choice", "capability_focus", "guide_files")
             if framing.get(k) not in (None, "", [], {})}
@@ -222,6 +223,8 @@ def _parse_patch(raw: str) -> dict:
         raise ValueError("패치는 JSON 객체여야 합니다")
     if "patch" in obj and isinstance(obj["patch"], dict) and set(obj) <= {"patch", "note"}:
         obj = obj["patch"]
+    obj = project_framing(obj)
+    validate_framing_focus(obj)
     extra = set(obj) - PATCHABLE
     if extra:
         raise ValueError(f"패치할 수 없는 필드: {sorted(extra)}")
@@ -239,16 +242,6 @@ def _parse_patch(raw: str) -> dict:
                     raise ValueError("criteria: text·user_quote·fallback 문자열을 가진 기준 객체 목록이어야 합니다")
         if k in PATCHABLE_DICT and not isinstance(v, dict):
             raise ValueError(f"{k}: 객체여야 합니다")
-        if k == "capability_focus":
-            # highlight_actions 는 실행자 명령에 "쓸 수 있는 IBL 액션: …" 으로 그대로 실리고 계약 조회까지
-            # 간다(prompt_builder). 경량 모델이 넣는 산문("해당 섹션 재작성")은 액션 이름이 아니다 —
-            # `node:action` 꼴만 남기고 나머지는 버린다(패치 전체를 버리지는 않는다).
-            acts = v.get("highlight_actions")
-            if acts is not None:
-                if not isinstance(acts, list):
-                    raise ValueError("capability_focus.highlight_actions: 목록이어야 합니다")
-                kept = [a for a in acts if isinstance(a, str) and _ACTION_NAME_RE.match(a.strip())]
-                v["highlight_actions"] = [a.strip() for a in kept]
         if k in PATCHABLE_BOOL and not isinstance(v, bool):
             raise ValueError(f"{k}: 참/거짓이어야 합니다")
     return obj
@@ -334,7 +327,7 @@ def _inherit(runner, message, history, record_trajectory_event):
     if not mode:
         record_trajectory_event("framing.inherit_declined", {"mode": None, "reason": found})
         return None
-    previous = found
+    previous = {**found, "framing": project_framing(found.get("framing"))}
     from research_planning import requested
     if requested(previous.get("framing")):
         record_trajectory_event("framing.inherit_declined", {
@@ -362,7 +355,13 @@ def _inherit(runner, message, history, record_trajectory_event):
     framing.pop("history_summary", None)          # 판단 부재 → 원본 히스토리 유지
     if mode == "followup":
         framing.pop("imagined_ibl", None)         # 직전 메시지의 초안이지 이번 것이 아니다
-    framing.update(patch)
+    for key, value in patch.items():
+        if key in PATCHABLE_DICT and isinstance(value, dict):
+            framing[key] = {**(framing.get(key) or {}), **value}
+        else:
+            framing[key] = value
+    framing = project_framing(framing)
+    validate_framing_focus(framing)
     if requested(framing):
         record_trajectory_event("framing.inherit_declined", {
             "mode": mode, "reason": "심층연구로 변경되어 의식의 계획 작성 필요"})

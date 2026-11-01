@@ -274,22 +274,6 @@ def has_current_brief(filename, context):
     return False
 
 
-def deferred_action_guides(names) -> dict:
-    """Selected large actions get a discovery reference; explicit describe stays complete."""
-    try:
-        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
-        owners = {}
-        for filename, entry in _control_entries(catalog):
-            if entry.get("delivery") != "brief":
-                continue
-            for name in entry.get("defer_action_contracts", []):
-                if name in names:
-                    owners.setdefault(name, []).append(filename)
-        return {name: files[0] for name, files in owners.items() if len(files) == 1}
-    except (OSError, ValueError):
-        return {}
-
-
 def device_control_guides() -> Dict[str, str]:
     """장치 소개용 OS→가이드 포인터. 본문 없이 등록 데이터만 읽는다."""
     try:

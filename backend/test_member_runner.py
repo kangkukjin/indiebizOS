@@ -10,7 +10,8 @@ from member_runner import MemberRunner
 @pytest.mark.parametrize('bad', [
     {'capability_focus': ['self:read']},
     {'imagined_ibl': {'code': '[self:read]{}'}},
-    {'ibl_focus': {'highlight_actions': [1]}},
+    {'ibl_focus': {'hint': [1]}},
+    {'capability_focus': []},
     {'criteria': '완료'},
 ])
 def test_malformed_member_plan_is_corrected_before_execution(monkeypatch, tmp_path, bad):
@@ -31,6 +32,26 @@ def test_malformed_member_plan_is_corrected_before_execution(monkeypatch, tmp_pa
     monkeypatch.setattr(consciousness_agent, 'call_oneshot_provider', respond)
     assert runner._run_consciousness('보고서 작성', []) == good
     assert len(calls) == 2 and 'validation_error' in calls[-1]
+
+
+def test_retired_member_field_is_projected_without_retry(monkeypatch, tmp_path):
+    import consciousness_agent
+    runner = MemberRunner.__new__(MemberRunner)
+    runner.config = {}
+    runner.project_path = tmp_path
+    monkeypatch.setattr(runner, '_role_provider', lambda role: SimpleNamespace(is_ready=True))
+    monkeypatch.setattr(runner, '_load_role', lambda: '회원 역할')
+    monkeypatch.setattr(runner, '_build_system_prompt', lambda role: role)
+    monkeypatch.setattr(runner, '_get_available_tools', lambda: ['execute_ibl'])
+    calls = []
+    def respond(provider, prompt, **kwargs):
+        calls.append(prompt)
+        return json.dumps({'task_framing': '비교', 'ibl_focus': {
+            'highlight_actions': 42, 'hint': '두 입력의 기준일을 확인'}})
+    monkeypatch.setattr(consciousness_agent, 'call_oneshot_provider', respond)
+    result = runner._run_consciousness('비교해줘', [])
+    assert result == {'task_framing': '비교', 'capability_focus': {'hint': '두 입력의 기준일을 확인'}}
+    assert len(calls) == 1
 
 
 if __name__ == '__main__':

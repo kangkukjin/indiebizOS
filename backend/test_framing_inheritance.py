@@ -41,6 +41,30 @@ def test_unchanged_repeat_preserves_criteria(monkeypatch):
     assert fi._patch({'framing': {'criteria': [{'text': 'same'}]}}, 'same', 'repeat') == {}
 
 
+@pytest.mark.parametrize('key', ['capability_focus', 'ibl_focus'])
+@pytest.mark.parametrize('patch', [{}, {'capability_focus': {'highlight_actions': 'malformed'}},
+                                 {'ibl_focus': {'hint': '새 의존 관계', 'highlight_actions': [7]}}])
+def test_old_saved_recommendations_do_not_enter_patch_or_merged_framing(monkeypatch, tmp_path, key, patch):
+    from copy import deepcopy
+    previous = {'message': '주기 요청', 'framing': {
+        'task_framing': '기간 비교', 'achievement_criteria': '근거 보존',
+        'criteria': [{'text': '근거 보존', 'user_quote': '', 'fallback': ''}],
+        key: {'hint': '기존 의존 관계', 'highlight_actions': ['self:read']}}}
+    original = deepcopy(previous)
+    monkeypatch.setattr(fi, '_candidate', lambda *a: ('repeat', previous))
+    inputs = []
+    def reply(prompt, *args):
+        inputs.append(json.loads(prompt))
+        return json.dumps(patch)
+    monkeypatch.setattr(fi, '_oneshot', reply)
+    result = fi._inherit(None, '주기 요청', [], lambda *a: None)
+    expected = '새 의존 관계' if 'ibl_focus' in patch else '기존 의존 관계'
+    assert result['capability_focus'] == {'hint': expected}
+    assert 'highlight_actions' not in json.dumps(inputs) and 'ibl_focus' not in json.dumps(inputs)
+    assert result['criteria'] == original['framing']['criteria'] and previous == original
+    assert 'highlight_actions' not in json.dumps(fi._storable(previous['framing']))
+
+
 def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path, monkeypatch):
     from test_framing_inheritance_2026_10_07 import Runner, _remember, _calls
     from thread_context import actor_context

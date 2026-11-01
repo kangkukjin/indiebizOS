@@ -1,0 +1,11 @@
+[
+  {
+    "index": 0,
+    "phase": "plan",
+    "started": 1793519674.0748532,
+    "prompt_sha256": "0e8d90d78b950e1182108a0b86d61f4df05d4c20967fcbf51e47194844d095af",
+    "system_sha256": "93311c2484c0920f4a8614fc2c3b41c2b78ffe878161479f204d0a3b43550a62",
+    "ended": 1793519680.594047,
+    "response_sha256": "175d8951593d35b319f9e8a98b71fbc76928800803bd634b94c6b14e40d87db5"
+  }
+]

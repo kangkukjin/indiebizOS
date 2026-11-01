@@ -1,0 +1,71 @@
+{
+  "id": "C09",
+  "started": 1793519713.258225,
+  "status": "completed",
+  "origin": "training",
+  "episode_id": 5682,
+  "model": {
+    "provider": "claude_code",
+    "model": "opus",
+    "tier": "고급",
+    "source": "gear:최대|의식→고급"
+  },
+  "calls": 2,
+  "has_plan": true,
+  "deep_research": true,
+  "needs_clarification": false,
+  "controller_usage": {
+    "input": 69489,
+    "output": 18374
+  },
+  "usage": {
+    "requests": 2,
+    "measured_requests": 2,
+    "unmeasured_requests": 0,
+    "input": 69489,
+    "output": 18374,
+    "cache_read": 38542,
+    "cache_create": 30943,
+    "reasoning": 1863,
+    "calls": [
+      {
+        "call_id": "806c1937e322418ea29f1cdd4a148274",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 35105,
+        "input": 27718,
+        "output": 3756,
+        "cache_read": 27352,
+        "cache_create": 364,
+        "reasoning": 177
+      },
+      {
+        "call_id": "e6329912c8b84a0b9caefa061f433c52",
+        "parent_call_id": null,
+        "role": "consciousness",
+        "phase": "plan_completion",
+        "provider": "ClaudeCode",
+        "model": "opus",
+        "round_index": 1,
+        "tier": "고급",
+        "source": "execution_instance",
+        "measured": true,
+        "elapsed_ms": 129218,
+        "input": 41771,
+        "output": 14618,
+        "cache_read": 11190,
+        "cache_create": 30579,
+        "reasoning": 1686
+      }
+    ]
+  },
+  "ended": 1793519879.5785081,
+  "seconds": 166.32028317451477
+}

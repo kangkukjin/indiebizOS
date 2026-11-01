@@ -1,0 +1,20 @@
+[
+  {
+    "index": 0,
+    "phase": "plan",
+    "started": 1793518946.251096,
+    "prompt_sha256": "c117c85e4f6ebb4f63bad7a9f67d9e82ceda3721fbe62c5725349948671087d9",
+    "system_sha256": "93311c2484c0920f4a8614fc2c3b41c2b78ffe878161479f204d0a3b43550a62",
+    "ended": 1793518977.036203,
+    "response_sha256": "125bc7d48a8676b87b6e5d04a15ea5dc8237206848b8876c86fd20a3416748c7"
+  },
+  {
+    "index": 1,
+    "phase": "plan_completion",
+    "started": 1793518977.037384,
+    "prompt_sha256": "d6798e2c228d6e830502efac9916c60930aaac34e14a63ab08013154a48b66fe",
+    "system_sha256": "93311c2484c0920f4a8614fc2c3b41c2b78ffe878161479f204d0a3b43550a62",
+    "ended": 1793519070.684683,
+    "response_sha256": "54d723117a96e617c2cabb68ce71f50f3b4209f136ce643a8deede40ed2e3f0f"
+  }
+]

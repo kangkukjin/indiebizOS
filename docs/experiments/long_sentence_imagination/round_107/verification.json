@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "semantic_auto_grading": false,
+  "valid_cases": 10,
+  "invalid_attempts_preserved": 2,
+  "unique_model_calls": 22,
+  "exact_quotes": 21,
+  "local_attempts_checked": [
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "C07",
+    "C08",
+    "C09_recheck",
+    "C10_recheck",
+    "C09",
+    "C10"
+  ],
+  "local_attempts_missing": [],
+  "live_source_and_db_checked": true
+}

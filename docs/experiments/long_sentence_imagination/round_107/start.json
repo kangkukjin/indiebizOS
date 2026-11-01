@@ -1,0 +1,16 @@
+{
+  "start": "2026-11-01T16:39:33+09:00",
+  "deadline": "2026-11-01T17:39:33+09:00",
+  "pre_interruption": "15:19경부터 읽기·설계만 수행. 사용자 중단 전 모델 실행·회차 원장 등록 없음. 16:39 계속 요청으로 실제 실행 회차 시작.",
+  "head": "e4ba72c06b97eafda5f07a4af5eacbdc9feb2dad",
+  "source_sha256": {
+    "data/guides/deep_research.md": "0d5de1e7f3313a3334dc1041f0749bd4b1618d48df79a6225e533375545cb4bd",
+    "data/common_prompts/consciousness_prompt.md": "b5e9684316e4cb57739aceaeb319cbf1908844c1ced05cc41a8af7a8e85666e1",
+    "backend/cognition/consciousness_agent.py": "aee811d49958923ceb1342f8819be9c9156c80610e7b71f86c1d8791cdc65b30",
+    "backend/cognition/research_planning.py": "2b907358a4a241212174e325bb41c1b829ea73ab4b7a0c216125c44e8a69a7a7",
+    "backend/cognition/supervisor_runtime.py": "15b6a29dc286e13a97f532dbaeba6485a13bac687259363c6e275aa1da9dc31d"
+  },
+  "cases_sha256": "9be7b0a5d0cb6139b1bbea64445e9e582e0716d4b5b5e13f37e8165e943da377",
+  "case_count": 10,
+  "scope": "실제 의식 문제규정→연구계획 저장까지. 실행자·평가자 연구 수행은 호출하지 않음."
+}

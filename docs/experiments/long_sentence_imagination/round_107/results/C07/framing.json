@@ -1,0 +1,17 @@
+{
+  "task_framing": "문제: 평균과 중앙값의 차이를 사용자가 쉽게 이해하도록, 일상적인 예 하나를 들어 정확히 두 문장으로 설명한다.\n세상의 방식: 평균은 모든 값을 더해 개수로 나눈 값이라 극단값에 끌려가고, 중앙값은 값을 크기순으로 놓았을 때 가운데 값이라 극단값의 영향을 덜 받는다. 소득처럼 한쪽으로 치우친 분포가 대표적인 예다.\n무게·멈춤선: 사용자가 긴 연구는 필요 없다고 했으므로 조사, 도구 호출, 연구계획을 하지 않는다. 예 하나를 든 두 문장 답변이 나오면 끝낸다.",
+  "expert_choice": "",
+  "needs_clarification": false,
+  "clarification_question": "",
+  "needs_repair": false,
+  "deep_research": false,
+  "assumptions": [],
+  "achievement_criteria": "",
+  "criteria": [],
+  "history_summary": "",
+  "capability_focus": {
+    "hint": ""
+  },
+  "imagined_ibl": "",
+  "guide_files": []
+}

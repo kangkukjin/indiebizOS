@@ -1,0 +1,49 @@
+{
+  "status": "훈련·계획 품질 검토·증거 검증 완료; 제품 수리 없음",
+  "started_at": "2026-11-01T16:39:33+09:00",
+  "completed_at": "2026-11-01T17:08:15.076274+09:00",
+  "deadline": "2026-11-01T17:39:33+09:00",
+  "elapsed_seconds": 1722.076274,
+  "within_deadline": true,
+  "preparation_before_first_attempt_seconds": 168.959148,
+  "model_attempt_window": {
+    "first_started": "2026-11-01T16:42:21.959148+09:00",
+    "last_ended": "2026-11-01T17:00:32.170971+09:00",
+    "wall_span_seconds": 1090.211823,
+    "sum_case_elapsed_seconds": 1477.134765625,
+    "note": "시도는 중첩됐으므로 사례 경과 시간 합은 사용자 대기 시간이 아니다. 이 구간에 훈련자의 진단도 병행했다."
+  },
+  "diagnosis_reporting_after_last_attempt_seconds": 462.905303,
+  "diagnostic_active_labor_seconds": null,
+  "timing_note": "진단은 호출과 중첩됐다. 진단만의 독립 인력시간은 계측하지 않았다. 완료 시각은 증거 검증과 보고서 작성 완료 기준이며 이후 git 반영·최종 전달 시간은 포함하지 않는다.",
+  "valid_cases": 10,
+  "research_plans": 8,
+  "without_plan": 2,
+  "preserved_invalid_attempts": 2,
+  "harness_repair_cycles": 1,
+  "product_repair_cycles": 0,
+  "valid_model_calls": 18,
+  "all_model_calls": 22,
+  "all_model_usage": {
+    "requests": 22,
+    "measured_requests": 22,
+    "unmeasured_requests": 0,
+    "input": 639267,
+    "output": 150038,
+    "cache_read": 297961,
+    "cache_create": 341260,
+    "reasoning": 17991
+  },
+  "codex_trainer_usage": null,
+  "model_processes_exit_code": {
+    "batch": 0,
+    "recheck": 0
+  },
+  "quality": {
+    "충족": 6,
+    "부분": 4,
+    "note": "확률·성공률 추정 아님. 독립 외부 평가 아님. 모든 연구 실행은 미검증."
+  },
+  "verification_file": "verification.json",
+  "pending_product_changes": []
+}

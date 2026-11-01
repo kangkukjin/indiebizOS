@@ -1,0 +1,8 @@
+{
+  "case": "C01",
+  "compiled_sha256": "6ccb5a87c9928568d07b7be0152fa958d52e8f1a28b6c6cae4c576eaa8a615c6",
+  "expert_choice_propagates": true,
+  "source_guard_present": true,
+  "scope": "compile_user_command 실제 호출, 실행 모델은 호출하지 않음",
+  "quote": "개점 시점과 감소 시작 시점이 어긋나는데도 '개점 후 매출 감소'를 곧 인과로 받아들이는 사후 오류(post hoc)를 피해야 한다. 월별 전년 대비 감소율을 개점 전후로 나누고, 비교 집단을 둔 이중차분으로 개점 효과를 업계 추세·계절성과 분리한다."
+}

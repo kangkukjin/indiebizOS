@@ -863,6 +863,10 @@ class CodexProvider(CliSubprocessProvider):
                 _t_str = str(_t).strip()
                 if _t_str:
                     out.append(({"type": "thinking", "content": _t_str}, None))
+                else:
+                    # 수신 표지는 본문이 아니다. CLI의 본문 수신/재시도 판정을 바꾸지 않는다.
+                    out.append(({"type": "progress", "detail": "reasoning 항목 수신 — 공개 요약 없음",
+                                 "source": "codex", "item_id": iid}, None))
 
             elif itype == "context_compaction":
                 # 턴 안 압축 사건(문턱은 _build_command 의 model_auto_compact_token_limit) — 세기만 한다.

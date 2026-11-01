@@ -26,6 +26,7 @@ SAFE_FIELDS = {"call_id", "parent_call_id", "provider", "model", "role", "phase"
                "accounting", "usage_partial", "response_id", "status", "version", "gate", "event",
                "hash", "bytes", "manifest_hash",
                "path", "size", "elapsed_ms", "latency_ms", "elapsed_s", "is_error", "operation", "name",
+               "event_type", "first_elapsed_s", "chunks",
                "child_task_id", "child_run_id", "parent_task_id", "parent_run_id", *TOKEN_FIELDS}
 
 

@@ -190,6 +190,24 @@ def test_evidence_inspection_bounds_hash_missing_and_permissions(trace):
     assert svc.document(ACCESS, ref, episode_id=1)['status'] == 'forbidden'
 
 
+def test_consciousness_stream_metadata_and_evidence_are_readable(trace):
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    evidence = store.evidence({"type": "thinking", "content": "자료 조건 확인"})
+    store.log("model.stream", task_id="shared-task", role="consciousness",
+              phase="plan_completion", call_id="planning-call", event_type="thinking",
+              first_elapsed_s=12.5, elapsed_s=12.6, chunks=1, evidence=evidence)
+    page = svc.query(ACCESS, episode_id=1)
+    event = next(e for e in page["events"] if e["kind"] == "supervision.model.stream")
+    assert event["summary"]["event_type"] == "thinking"
+    assert event["summary"]["first_elapsed_s"] == 12.5
+    assert event["summary"]["chunks"] == 1
+    assert event["summary"]["call_id"] == "planning-call"
+    assert "자료 조건 확인" not in json.dumps(page, ensure_ascii=False)
+    doc = svc.document(ACCESS, event["links"][0]["source_ref"], episode_id=1)
+    assert json.loads(doc["text"])["content"] == "자료 조건 확인"
+
+
 def test_supervision_restarted_seq_is_ambiguous_not_collapsed(trace):
     svc, root = trace
     add_store(svc, root, duplicate=True)

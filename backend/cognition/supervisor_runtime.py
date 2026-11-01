@@ -149,6 +149,54 @@ def tool_context(controller, *, include_idioms=False):
     return context
 
 
+class StreamJournal:
+    """의식의 수신 이벤트도 기록한다. 텍스트 청크는 합치고 원문은 기존 증거 저장소에 둔다."""
+
+    def __init__(self, controller, started):
+        self.controller, self.started = controller, started
+        self.parts, self.chars = [], 0
+        self.first_at = self.last_flush = started
+        self.received_text = False
+
+    def observe(self, event):
+        kind = event.get("type")
+        now = time.monotonic()
+        if kind == "text":
+            content = event.get("content")
+            if not isinstance(content, str) or not content:
+                return
+            if not self.parts:
+                self.first_at = now
+            self.parts.append(content)
+            self.chars += len(content)
+            if not self.received_text or self.chars >= 4096 or now - self.last_flush >= 5:
+                self.flush()
+            self.received_text = True
+        else:
+            self.flush()  # 도구·오류·최종 응답과 수신 순서를 보존한다.
+            if kind in {"thinking", "progress"}:
+                self.record(kind, event, now, 1)
+
+    def record(self, kind, value, first_at, chunks):
+        controller = self.controller
+        evidence = controller.store.evidence(value)
+        elapsed = round(time.monotonic() - self.started, 3)
+        controller.log("model.stream", role="consciousness", event_type=kind,
+                       first_elapsed_s=round(first_at - self.started, 3),
+                       elapsed_s=elapsed, chunks=chunks, evidence=evidence)
+        # 원문은 마스킹된 증거로 회수한다. 일반 시스템 로그에도 역할·수신 현황을 남긴다.
+        detail = (f"{evidence['chars']}자 수신" if kind == "text"
+                  else evidence["excerpt"].replace("\n", " "))
+        print(f"[의식/{controller.phase}] {kind}: {detail} (경과 {elapsed}초)")
+
+    def flush(self):
+        if not self.parts:
+            return
+        self.record("text", "".join(self.parts), self.first_at, len(self.parts))
+        self.parts, self.chars = [], 0
+        self.last_flush = time.monotonic()
+
+
 class UsageSnapshots:
     """한 CLI 응답의 여러 content 블록은 같은 ID의 누적 스냅샷이다. 재합산하지 않는다."""
     def __init__(self, controller):
@@ -237,10 +285,12 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         call_context.__enter__()
         controller.call_metrics = agent._provider.metrics
         controller.log("model.started", phase=phase, model=agent.model, provider=agent.provider_name)
+        journal = StreamJournal(controller, started)
         response = ""
         native_calls = {}
         for event in agent.process_message_stream(prompt, history=[], images=controller.final_images if phase == "final" else None,
                                                  cancel_check=controller.call_cancelled):
+            journal.observe(event)
             if event.get("type") == "final":
                 response = event.get("content", "")
             elif event.get("type") == "error":
@@ -257,6 +307,7 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
                 if "supervision" not in name:
                     controller.log("model.native_tool", name=name, event_type=event["type"],
                                    evidence=controller.store.evidence(event), is_error=event.get("is_error", False))
+        journal.flush()
         snapshots.reconcile(agent._provider.metrics, (time.monotonic() - started) * 1000)
         controller.log("model.finished", phase=phase, elapsed_s=round(time.monotonic() - started, 3),
                        usage={"input": agent._provider.metrics.total_input_tokens,
@@ -268,6 +319,8 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
             raise FramingContractError("의식 계획 호출이 중단되었습니다: " + controller.call_stop["reason"])
         return response
     finally:
+        if "journal" in locals():
+            journal.flush()  # 제공자 예외·취소에도 이미 받은 텍스트를 잃지 않는다.
         if controller.call_metrics:
             if "snapshots" in locals():
                 snapshots.reconcile(controller.call_metrics, (time.monotonic() - started) * 1000)

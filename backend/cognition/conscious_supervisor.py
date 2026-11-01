@@ -14,7 +14,7 @@ from supervision_watch import JobWatch
 
 DEFAULTS = {"enabled": True, "max_reviews": 2, "review_interval_s": 240,
             "stall_s": 180, "tick_s": 5,
-            "call_timeout_s": 180, "max_tools_per_call": 10, "max_tools_total": 40,
+            "call_timeout_s": 360, "max_tools_per_call": 10, "max_tools_total": 40,
             "final_tool_reserve": 12, "max_repairs": 1,
             "max_input_tokens": 300000, "max_output_tokens": 16000,
             "final_input_reserve": 80000, "final_output_reserve": 4000,

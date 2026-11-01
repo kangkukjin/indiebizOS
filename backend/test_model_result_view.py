@@ -19,6 +19,63 @@ def envelope(value, *, complete=True):
             "evidence": [{"kind": "ref", "parents": [i]} for i in range(300)]}
 
 
+@pytest.mark.parametrize("success", [True, False])
+def test_execution_metadata_projection_preserves_outcomes_and_lossless_reads(tmp_path, monkeypatch, success):
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    original = envelope({"status": "running", "task_ref": {"task_id": "pending-job"}}, complete=False)
+    original.update(success=success, executed=True, run_status="suspended", evidence=[],
+                    waiting={"task_id": "pending-job"}, error="still pending" if not success else None,
+                    continuation={"reuse_args": {"reuse": {"run_id": "original-run"}}})
+    original["precheck_warnings"] = [{
+        "code": "RECORD_LENGTH", "severity": "warning", "message": "필드 수와 행 수는 다릅니다.",
+        "hint": "계약을 확인하세요.", "facts": {"known_type": "Record"},
+        "location": {"source": "count", "source_hash": "a" * 64, "line": 3, "column": 8},
+        "call_path": [{"function": "count", "call": {"line": i, "source_hash": "b" * 64}}
+                      for i in range(12)]}]
+    entries = []
+    for scope, revision, passed in [("first", "v1", True), ("second", "v1", True),
+                                    ("first", "v2", True), ("first", "v2", False)]:
+        item = {"id": "fn:count", "success": passed, "source_hash": "c" * 64,
+                "function_ref": {"scope_id": scope, "revision": revision,
+                                 "function_id": "d" * 64, "definition": "details " * 80}}
+        entries.extend([item, deepcopy(item)])
+    original["capability_usage"] = entries
+    before = deepcopy(original)
+    shown = view.project_result(original)
+    assert original == before
+    for field in ("value", "success", "source_complete", "run_status", "waiting", "error",
+                  "resume", "continuation"):
+        assert shown[field] == original[field]
+    warnings = shown["precheck_warnings"]
+    assert len(warnings) == 1 and warnings[0]["detail_index"] == 0
+    for field in ("code", "severity", "message", "hint", "facts", "location"):
+        assert warnings[0][field] == original["precheck_warnings"][0][field]
+    grouped = shown["capability_usage"]
+    assert len(grouped) == 4 and [row["count"] for row in grouped] == [2] * 4
+    assert [row["success"] for row in grouped] == [True, True, True, False]
+    assert [row["detail_indices"] for row in grouped] == [[0, 1], [2, 3], [4, 5], [6, 7]]
+    for field, detail in shown["metadata_details"].items():
+        page = view.read_result(detail["read_args"])
+        assert page["read_scope"]["complete"]
+        assert json.loads(page["text"]) == original[field]
+        assert detail["count"] == len(original[field])
+    restored, _ = view.resolve_input_refs(shown["result_ref"]["input_args"], store=store)
+    assert restored["입력"] == original["value"]
+    assert shown["result_ref"]["max_limit"] == 60000
+
+
+def test_small_execution_metadata_is_not_inflated(tmp_path, monkeypatch):
+    monkeypatch.setattr(view, "evidence_store", lambda: TurnStore(tmp_path / "evidence"))
+    original = envelope(1)
+    original.update(capability_usage=[{"id": "script:small", "success": True}],
+                    precheck_warnings=[{"code": "NOTICE", "message": "확인"}])
+    shown = view.project_result(original)
+    assert shown["capability_usage"] == original["capability_usage"]
+    assert shown["precheck_warnings"] == original["precheck_warnings"]
+    assert "metadata_details" not in shown
+
+
 def test_describe_driver_briefs_preserve_permission_and_local_shadowing(monkeypatch):
     import guide_registry
     import ibl_v2_store

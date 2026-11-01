@@ -365,6 +365,7 @@ ForeignRef를 포함한 값은 `ibl-value/2`로 전송한다. 외부 참조는 �
 개별로 보존한다. 이는 값별·행별 실행 이력이 아니라 보수적 근거 연결이며 `evidence()`도 같은 DAG를 읽는다.
 모델 표면은 요약과 result_ref를 받고, 앱/직접 HTTP는 전체 결과를 받는다. 전체 증거와 값은 기존 read_result로 회수한다.
 모델 표시 사본은 크기와 무관하게 최상위 `value_wire`·`partial_wire`의 중복 본문을 생략한다. 저장 원본·앱 응답의 wire와 `result_ref`를 통한 타입 복원은 유지하며, 기존 미리보기·전달 한도 판정 뒤에만 생략한다.
+실행 경고는 내용·심각도·힌트·관측 사실·원문 위치를 표시하고 긴 호출 경로는 `metadata_details.precheck_warnings.read_args`로 조회한다. 사용 능력 기록은 같은 응답 안의 동일한 신원·판본·결과만 `count`로 합치며, 상세는 `metadata_details.capability_usage.read_args`로 읽는다. 표시의 `detail_index`·`detail_indices`는 저장 원본 목록의 인덱스다. 상세 조회 안내까지 포함해 더 작아지는 경우에만 접는다. 업무 값·실패·불완전성·재개 계약과 원본은 유지하며, `result_ref`에는 실제 읽기·입력 인자와 한도를 남기고 반복 사용 설명만 생략한다.
 `read_result:{calls:true}`는 현재 턴과 같은 행위자의 바로 앞 턴들이 실행한 호출 목록(프로그램 `input.id`·결과 `result.id`·실패 여부)을 돌려준다 — 같은 일을 다른 자료로 반복할 때 통과한 프로그램을 읽어 다시 쓴다.
 result_ref의 읽기·`$ref` 입력은 그 결과를 만든 턴과, 같은 에이전트·프로젝트·요청 주체의 바로 앞 턴들(최근 8개)에서 유효하다. 앞 턴 값은 원문 인증이 확인된 것만 넘기고 `from_turn`으로 출처 턴을 밝힌다 — 그때 조회한 값이며 원천의 현재 상태가 아니다. 다른 행위자의 턴·더 오래된 턴의 결과는 원천을 다시 조회한다.
 `result_ref.value_chars`는 업무 값의 JSON 문자 수로, 증거를 포함한 `chars`와 구분한다.

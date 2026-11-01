@@ -798,6 +798,60 @@ def _compact_compile_context(out, ref, policy):
         out['compile_context'] = sections
 
 
+def _compact_execution_metadata(out, ref):
+    """Project diagnostics after body budgeting; the saved envelope stays lossless.
+
+    Keep each warning and each capability outcome visible. Detail indices address
+    the original lists, not the grouped display. Never merge across responses or
+    across different function identities/revisions/outcomes.
+    """
+    details = {}
+
+    def install(key, shown):
+        original = out[key]
+        read = {"read_args": {"id": ref["id"], "path": [key]}, "count": len(original)}
+        # Small metadata already costs less than a summary plus its retrieval contract.
+        candidate = {key: shown, "metadata_details": {**details, key: read}}
+        before = {key: original, **({"metadata_details": details} if details else {})}
+        if len(json.dumps(candidate, ensure_ascii=False)) < len(json.dumps(before, ensure_ascii=False)):
+            out[key] = shown
+            details[key] = read
+
+    warnings = out.get("precheck_warnings")
+    if isinstance(warnings, list) and warnings and all(isinstance(w, dict) for w in warnings):
+        shown = []
+        for index, warning in enumerate(warnings):
+            row = {k: warning[k] for k in ("code", "severity", "message", "hint", "facts") if k in warning}
+            location = warning.get("location") or warning.get("source_span") or {}
+            if isinstance(location, dict):
+                row["location"] = {k: location[k] for k in (
+                    "source", "source_hash", "line", "column", "end_line", "end_column") if k in location}
+            row["detail_index"] = index
+            shown.append(row)
+        install("precheck_warnings", shown)
+
+    usage = out.get("capability_usage")
+    if isinstance(usage, list) and usage and all(isinstance(u, dict) for u in usage):
+        groups = {}
+        for index, item in enumerate(usage):
+            # Full identity, including any future fields, determines equivalence.
+            identity = json.dumps(item, sort_keys=True, ensure_ascii=False)
+            if identity not in groups:
+                row = {k: item[k] for k in ("id", "success", "source_hash") if k in item}
+                function = item.get("function_ref")
+                if isinstance(function, dict):
+                    row["function_revision"] = function.get("revision")
+                groups[identity] = {**row, "count": 0, "detail_indices": []}
+            groups[identity]["count"] += 1
+            groups[identity]["detail_indices"].append(index)
+        install("capability_usage", list(groups.values()))
+    if details:
+        out["metadata_details"] = details
+    # Instructions are already in execute_ibl's schema/base grammar. Keep actual
+    # read/input arguments, limits, masked-value warnings and partial-result refs.
+    out["result_ref"] = {k: v for k, v in out["result_ref"].items() if k not in {"read", "input_hint"}}
+
+
 def project_v2_result(result):
     """Typed values keep their meaning; verbose execution evidence stays on disk."""
     raw = json.dumps(result, ensure_ascii=False, default=str)
@@ -889,6 +943,7 @@ def project_v2_result(result):
     out.pop("partial_wire", None)
     out["_hint"] = out["_hint"].replace("손실 없는 타입 전송은 value_wire입니다.",
                                       "손실 없는 타입은 저장 원본에 보존됩니다.")
+    _compact_execution_metadata(out, ref)
     from episode_logger import record_trajectory_event
     text_view = ({**out, "images": [{"media_type": item.get("media_type", "image/png")} for item in images]}
                  if images else out)

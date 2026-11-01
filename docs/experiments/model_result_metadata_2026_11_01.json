@@ -1,0 +1,164 @@
+{
+  "date": "2026-11-01",
+  "baseline": "8d9bee6b",
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "probe": "scripts/probe_model_result_metadata.py",
+  "scope": "Pure IBL run, paired real model calls and isolated read_result. Historical replay, if supplied, does not repeat original effects. One pair per case; not a statistical end-to-end performance claim.",
+  "production_base_prompt": "v7 unchanged; probes use a common isolated system prompt, not a full production-agent episode",
+  "token_measure": "Normalized total input including cache creation/read; multi-turn cases accumulate model calls",
+  "cases": [
+    {
+      "case": "row_count",
+      "records": null,
+      "runs": [
+        {
+          "variant": "before",
+          "prompt_chars": 3195,
+          "elapsed_s": 9.999,
+          "usage": {
+            "input": 2581,
+            "output": 850,
+            "cache_read": 0,
+            "cache_create": 2579,
+            "reasoning": 184
+          },
+          "num_turns": 1,
+          "check_passed": true,
+          "evidence_reads": []
+        },
+        {
+          "variant": "after",
+          "prompt_chars": 1952,
+          "elapsed_s": 10.025,
+          "usage": {
+            "input": 1869,
+            "output": 942,
+            "cache_read": 0,
+            "cache_create": 1867,
+            "reasoning": 190
+          },
+          "num_turns": 1,
+          "check_passed": true,
+          "evidence_reads": []
+        }
+      ],
+      "input_reduction_percent": 27.59
+    },
+    {
+      "case": "warning_detail",
+      "records": null,
+      "runs": [
+        {
+          "variant": "after",
+          "prompt_chars": 1994,
+          "elapsed_s": 5.196,
+          "usage": {
+            "input": 6953,
+            "output": 171,
+            "cache_read": 2502,
+            "cache_create": 4447,
+            "reasoning": 0
+          },
+          "num_turns": 2,
+          "check_passed": true,
+          "evidence_reads": [
+            {
+              "path": [
+                "precheck_warnings"
+              ],
+              "chars": 1531
+            }
+          ]
+        },
+        {
+          "variant": "before",
+          "prompt_chars": 3237,
+          "elapsed_s": 8.092,
+          "usage": {
+            "input": 8543,
+            "output": 311,
+            "cache_read": 3872,
+            "cache_create": 4667,
+            "reasoning": 137
+          },
+          "num_turns": 2,
+          "check_passed": true,
+          "evidence_reads": [
+            {
+              "path": [
+                "precheck_warnings",
+                0
+              ],
+              "chars": 1529
+            }
+          ]
+        }
+      ],
+      "input_reduction_percent": 18.61
+    },
+    {
+      "case": "historical_result_replay",
+      "records": 20,
+      "runs": [
+        {
+          "variant": "before",
+          "prompt_chars": 118480,
+          "elapsed_s": 30.811,
+          "usage": {
+            "input": 69228,
+            "output": 2756,
+            "cache_read": 0,
+            "cache_create": 69226,
+            "reasoning": 985
+          },
+          "num_turns": 1,
+          "check_passed": null,
+          "evidence_reads": []
+        },
+        {
+          "variant": "after",
+          "prompt_chars": 83494,
+          "elapsed_s": 25.151,
+          "usage": {
+            "input": 49114,
+            "output": 2612,
+            "cache_read": 0,
+            "cache_create": 49112,
+            "reasoning": 1151
+          },
+          "num_turns": 1,
+          "check_passed": null,
+          "evidence_reads": []
+        }
+      ],
+      "input_reduction_percent": 29.05
+    }
+  ],
+  "observations": [
+    "Both variants correctly returned actual_rows=3, claimed_rows=2, safe_to_claim=false and RECORD_LENGTH for all six results. Extra explanatory prose incorrectly guessed input field names in BOTH variants; checks cover requested fields only.",
+    "Both variants retrieved original warning evidence using real read_result and returned source_span offsets 53 and 65.",
+    "Historical replay: both distinguished execution success from business failure and accepted/running work, and recognized the observed installation success. Manual review only; no task-completion score. Answers differ in record index base and contain imperfect generalizations.",
+    "Row-count validator was corrected to accept the results-list response shape; saved responses were revalidated without model reruns."
+  ],
+  "limitations": [
+    "No original remote task was repeated.",
+    "One pair per case; timing differences are not statistically established.",
+    "Input savings concern these controlled probe inputs, not the whole production conversation.",
+    "No claim of improved or identical overall answer accuracy."
+  ],
+  "validation": {
+    "direct_tests": "67 passed",
+    "non_system_suite": "11547 passed, 9 skipped, 321.07s",
+    "related_system_suite": "7 passed, 94.12s; long-sentence rounds 6/15/3 result reads, reuse and rendering",
+    "ibl_build_check": "passed; existing non-blocking warnings",
+    "layers": "passed",
+    "android_body_bundle": "rebuilt; no tracked output difference",
+    "live_backend": {
+      "phase": "ACTIVE",
+      "health": "healthy",
+      "source_matches": true,
+      "source_sha256": "e86bde19dd3cf78429d700a0ce9ce20528eb54cb45e8db1f5c9fae88e98ae59d"
+    }
+  }
+}

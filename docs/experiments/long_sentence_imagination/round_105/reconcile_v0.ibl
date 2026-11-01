@@ -1,0 +1,14 @@
+#!ibl edition=2
+[def:LS105Reconcile]($assets,$checks,$bills,$tolerance=0){
+  $known=from_entries(map($assets,($a)=>[$a.asset_id,true]))
+  $inspected=from_entries(map($checks,($a)=>[$a.asset_id,true]))
+  $eligible=filter($bills,($b)=>$b.asset_id!=null and get($known,$b.asset_id,false))
+  $unmatched=map(filter($bills,($b)=>$b.asset_id==null or not get($known,$b.asset_id,false)),($b)=>$b.raw)
+  $unique=[table:dedup]{items:$eligible,by:"invoice_id"}
+  $sums=[table:groupby]{items:$unique.items,by:"asset_id",agg:{actual_cost:["sum","amount"],unique_count:["count"]}}
+  $counts=[table:groupby]{items:$eligible,by:"asset_id",agg:{raw_count:["count"]}}
+  $byid=from_entries(map($sums.items,($r)=>[$r.asset_id,$r]))
+  $bycount=from_entries(map($counts.items,($r)=>[$r.asset_id,$r.raw_count]))
+  $rows=map($assets,($a)=>{**$a,actual_cost:get(get($byid,$a.asset_id,{}),"actual_cost",0),difference:get(get($byid,$a.asset_id,{}),"actual_cost",0)-$a.expected_cost,missing_check:not get($inspected,$a.asset_id,false),duplicate_count:get($bycount,$a.asset_id,0)-get(get($byid,$a.asset_id,{}),"unique_count",0)})
+  return {rows:$rows,unmatched:$unmatched,total_actual:sum(map($rows,($r)=>$r.actual_cost)),duplicates:len($eligible)-len($unique.items),missing_checks:len(filter($rows,($r)=>$r.missing_check)),mismatches:len(filter($rows,($r)=>abs($r.difference)>$tolerance))}
+}

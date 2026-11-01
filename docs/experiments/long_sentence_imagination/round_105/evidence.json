@@ -1,0 +1,715 @@
+{
+  "outputs": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_105회차",
+  "models": {
+    "ai_fault": {
+      "session_id": "7fe5e0e1-07c8-436f-b3e8-0dfc7f5ec602",
+      "turns": 21,
+      "usage": {
+        "input_tokens": 38,
+        "cache_creation_input_tokens": 114227,
+        "cache_read_input_tokens": 1131723,
+        "output_tokens": 17536,
+        "output_tokens_details": {
+          "thinking_tokens": 4116
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 114227,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1711,
+            "cache_read_input_tokens": 111312,
+            "cache_creation_input_tokens": 2915,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2915
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-opus-5-5": {
+          "inputTokens": 38,
+          "outputTokens": 17536,
+          "cacheReadInputTokens": 1131723,
+          "cacheCreationInputTokens": 114227,
+          "webSearchRequests": 0,
+          "costUSD": 1.4910326,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 4116,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "wall_seconds": 170.89543890953064,
+      "returncode": 0,
+      "model_file_sha256": "b027db68acc1d4f0aef2c3eddd03c843823e29ee63d80e4cc5f9d215f10c7df7"
+    },
+    "ai_main": {
+      "session_id": "9d77263e-8e1a-4c98-a2cb-602b2a53110f",
+      "turns": 14,
+      "usage": {
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 44000,
+        "cache_read_input_tokens": 474189,
+        "output_tokens": 12101,
+        "output_tokens_details": {
+          "thinking_tokens": 2706
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 44000,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1521,
+            "cache_read_input_tokens": 62072,
+            "cache_creation_input_tokens": 1991,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1991
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-opus-5-5": {
+          "inputTokens": 24,
+          "outputTokens": 12101,
+          "cacheReadInputTokens": 474189,
+          "cacheCreationInputTokens": 44000,
+          "webSearchRequests": 0,
+          "costUSD": 0.6889537999999998,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 2706,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "wall_seconds": 135.36838483810425,
+      "returncode": 0,
+      "model_file_sha256": "461756e4287b6766884b2cc112c4725ea98b5acb241429f6620104ac708b0ba0"
+    },
+    "ai_variant": {
+      "session_id": "9d77263e-8e1a-4c98-a2cb-602b2a53110f",
+      "turns": 7,
+      "usage": {
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 39654,
+        "cache_read_input_tokens": 548739,
+        "output_tokens": 8018,
+        "output_tokens_details": {
+          "thinking_tokens": 1894
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 39654,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1240,
+            "cache_read_input_tokens": 100938,
+            "cache_creation_input_tokens": 2779,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2779
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-opus-5-5": {
+          "inputTokens": 38,
+          "outputTokens": 20119,
+          "thinkingTokens": 4600,
+          "cacheReadInputTokens": 1022928,
+          "cacheCreationInputTokens": 83654,
+          "webSearchRequests": 0,
+          "costUSD": 1.2763495999999999,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "wall_seconds": 98.82966303825378,
+      "returncode": 0,
+      "model_file_sha256": "319a6435e865283d88e768718de4f80f998566e15720c8527d1a2a7e81bc3182"
+    },
+    "ai_transfer": {
+      "session_id": "8edcc595-3e9f-4516-a20d-66ae97b1f9e5",
+      "turns": 8,
+      "usage": {
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 38005,
+        "cache_read_input_tokens": 171059,
+        "output_tokens": 3672,
+        "output_tokens_details": {
+          "thinking_tokens": 619
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 38005,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 977,
+            "cache_read_input_tokens": 35664,
+            "cache_creation_input_tokens": 3898,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 3898
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-opus-5-5": {
+          "inputTokens": 14,
+          "outputTokens": 3672,
+          "cacheReadInputTokens": 171059,
+          "cacheCreationInputTokens": 38005,
+          "webSearchRequests": 0,
+          "costUSD": 0.41174780000000005,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 619,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "wall_seconds": 46.10431909561157,
+      "returncode": 0,
+      "model_file_sha256": "bb8bed1385bb325b39f087a123148c299c14bbd6cda649dfe8d24d7fc498a7ac"
+    },
+    "ai_script": {
+      "session_id": "9d77263e-8e1a-4c98-a2cb-602b2a53110f",
+      "turns": 10,
+      "usage": {
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 54767,
+        "cache_read_input_tokens": 1046686,
+        "output_tokens": 9458,
+        "output_tokens_details": {
+          "thinking_tokens": 2990
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 54767,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1472,
+            "cache_read_input_tokens": 153109,
+            "cache_creation_input_tokens": 5375,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 5375
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-opus-5-5": {
+          "inputTokens": 54,
+          "outputTokens": 29577,
+          "thinkingTokens": 7590,
+          "cacheReadInputTokens": 2069614,
+          "cacheCreationInputTokens": 138421,
+          "webSearchRequests": 0,
+          "costUSD": 2.1130467999999993,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "wall_seconds": 108.75114321708679,
+      "returncode": 0,
+      "model_file_sha256": "3b5b302322a3ab5d0c354a302652c6d1a3205bc49934126f5a05ec3da90e9411"
+    },
+    "ai_action": {
+      "session_id": "d922c179-f7d4-47dd-8ad2-c135b7a3876c",
+      "turns": 40,
+      "usage": {
+        "input_tokens": 74,
+        "cache_creation_input_tokens": 201418,
+        "cache_read_input_tokens": 4404162,
+        "output_tokens": 37807,
+        "output_tokens_details": {
+          "thinking_tokens": 11511
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 201418,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1777,
+            "cache_read_input_tokens": 192936,
+            "cache_creation_input_tokens": 10039,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 10039
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "modelUsage": {
+        "claude-opus-5-5": {
+          "inputTokens": 74,
+          "outputTokens": 37807,
+          "cacheReadInputTokens": 4404162,
+          "cacheCreationInputTokens": 201418,
+          "webSearchRequests": 0,
+          "costUSD": 3.2486124000000003,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 11511,
+          "canonicalModel": "claude-opus-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "wall_seconds": 588.1871991157532,
+      "returncode": 0,
+      "model_file_sha256": "1a1c11aea7f14294d9b93de7174d867eb2665a589d90d6927015a07e50fd5fe3"
+    }
+  },
+  "validation": {
+    "ai_fault_validation": {
+      "passed": true,
+      "rows_checked": 600,
+      "cells_checked": 4200,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "bc374b920b940060f90a98378b5d5b3e5692eb5727ac5bb661bc6a3eb1206bcb",
+      "oracle_sha256": "05e4e752f951bbf07c381dbec3483d848150a881785c4df7d6dbe9f5e9bff6d0"
+    },
+    "ai_main_validation": {
+      "passed": true,
+      "rows_checked": 600,
+      "cells_checked": 4200,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "bc374b920b940060f90a98378b5d5b3e5692eb5727ac5bb661bc6a3eb1206bcb",
+      "oracle_sha256": "05e4e752f951bbf07c381dbec3483d848150a881785c4df7d6dbe9f5e9bff6d0"
+    },
+    "ai_script_validation": {
+      "passed": true,
+      "rows_checked": 600,
+      "cells_checked": 4200,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "60f46e2adf205913013662147f1aa22a3bf504e261584d9345b900a209dbf4cc",
+      "oracle_sha256": "a0895c0b062b57323779c3d9df81c82f1e886439b09c5cb4d65ed002eaaed690"
+    },
+    "ai_transfer_validation": {
+      "passed": true,
+      "rows_checked": 80,
+      "cells_checked": 560,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "1609556f4abcc1696199982bb5cd6f9ece92c76960c7877f68ee9926f457c8c4",
+      "oracle_sha256": "c89bc2bdf8b6ca700aa47dd8972c01ad80570e6e6d24c8dff2abffae832ada2d"
+    },
+    "ai_variant_validation": {
+      "passed": true,
+      "rows_checked": 600,
+      "cells_checked": 4200,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "60f46e2adf205913013662147f1aa22a3bf504e261584d9345b900a209dbf4cc",
+      "oracle_sha256": "a0895c0b062b57323779c3d9df81c82f1e886439b09c5cb4d65ed002eaaed690"
+    },
+    "trainer_transfer_validation": {
+      "passed": true,
+      "rows_checked": 80,
+      "cells_checked": 560,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "1609556f4abcc1696199982bb5cd6f9ece92c76960c7877f68ee9926f457c8c4",
+      "oracle_sha256": "c89bc2bdf8b6ca700aa47dd8972c01ad80570e6e6d24c8dff2abffae832ada2d"
+    },
+    "trainer_validation": {
+      "passed": true,
+      "rows_checked": 600,
+      "cells_checked": 4200,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "bc374b920b940060f90a98378b5d5b3e5692eb5727ac5bb661bc6a3eb1206bcb",
+      "oracle_sha256": "05e4e752f951bbf07c381dbec3483d848150a881785c4df7d6dbe9f5e9bff6d0"
+    },
+    "trainer_variant_validation": {
+      "passed": true,
+      "rows_checked": 600,
+      "cells_checked": 4200,
+      "errors": [],
+      "error_count": 0,
+      "report_sha256": "60f46e2adf205913013662147f1aa22a3bf504e261584d9345b900a209dbf4cc",
+      "oracle_sha256": "a0895c0b062b57323779c3d9df81c82f1e886439b09c5cb4d65ed002eaaed690"
+    }
+  },
+  "executions": {
+    "trainer": {
+      "calls": 23,
+      "failed": 5,
+      "events_file": "trainer_events.jsonl",
+      "raw_sha256": "cf2f1be72f0ac4b23587456138069ea0cac5570fa052dd81075461f20ff87c1e"
+    },
+    "ai_fixture_fault": {
+      "calls": 18,
+      "failed": 4,
+      "events_file": "ai_fixture_fault_events.jsonl",
+      "raw_sha256": "147469ad5f87d7c2491e2a86383e412e1b6a730f04d99cf6261b064b786ad2d6"
+    },
+    "ai": {
+      "calls": 24,
+      "failed": 4,
+      "events_file": "ai_events.jsonl",
+      "raw_sha256": "dad76ffe8eb08c68dab18fe898a28721008150a80dbb39776366461e660ddeef"
+    },
+    "ai_transfer": {
+      "calls": 6,
+      "failed": 1,
+      "events_file": "ai_transfer_events.jsonl",
+      "raw_sha256": "33060c4d53741c84060ec432a0c7191365b6499d83080df2d7c3fd4cf3fd0b4f"
+    },
+    "action": {
+      "calls": 36,
+      "failed": 5,
+      "events_file": "action_events.jsonl",
+      "raw_sha256": "37eac923d57a6425016f1e59eaddfb44eb203e70bc2e1066c456faa0a8db4560"
+    }
+  },
+  "source_checks": {
+    "trainer": {
+      "initial_inputs_equal": true,
+      "initial_report_unchanged": true
+    },
+    "ai": {
+      "initial_inputs_equal": true,
+      "initial_report_unchanged": true
+    }
+  },
+  "execution_count_note": "Counts include preflights and operator diagnostics; not model turn counts. Action indices 34 and 35 are operator postchecks.",
+  "action": {
+    "target": "sense:ls105_inspection",
+    "package": "ls105-inspection",
+    "scope": "105회차 시험 몸 전용. 실제 운영 사전에는 추가하지 않음.",
+    "body_root": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/long_sentence_imagination/2026-11-01_105회차/action",
+    "overall": {
+      "complete": false,
+      "status": "prepared_and_built_in_test_body__formal_apply_blocked_at_precheck",
+      "summary": "선언·구현·교재·검사 예제를 준비했고 핸들러 직접 검사 5/5를 통과했다. 기존 빌더로 파생물을 재생성했고 패키지로 인한 빌더 관문 실패는 0건이다. 그러나 정식 반영 경로(능력변경 check → self:patch apply)가 사전검사에서 ok:false로 멈춰, 실제 반영·활성·새 호출은 성공하지 않았다."
+    },
+    "prepared_files": {
+      "status": "done",
+      "files": [
+        "data/packages/installed/tools/ls105-inspection/__init__.py",
+        "data/packages/installed/tools/ls105-inspection/handler.py",
+        "data/packages/installed/tools/ls105-inspection/ibl_actions.yaml",
+        "data/packages/installed/tools/ls105-inspection/README.md",
+        "data/packages/installed/tools/ls105-inspection/test_ls105_inspection.py"
+      ],
+      "declaration": "ibl_actions.yaml: node sense, returns items, side_effect false, runs_on pc_only, params {query: string}, target_key query, fixture '[sense:ls105_inspection]{query: \"M1\"}', tool_json 블록(도구 ls105_inspection)",
+      "implementation": "handler.py execute(tool_input, context): 몸 루트의 inputs/inspection_source.json을 읽어 items 반환. query가 있으면 asset_id 일치 행만. 없는 query면 빈 items(success true). 파일 부재면 success false와 error_code SOURCE_MISSING, JSON 파싱 실패나 행 목록이 아닌 경우 SOURCE_PARSE_ERROR. asset_id·checked·source_revision을 그대로 보존.",
+      "teaching_material": "README.md(사용 예·실패 구분)",
+      "check_example": "test_ls105_inspection.py(전체·M1·X 0건·부재·파싱 실패)",
+      "fixes_during_work": [
+        "몸 루트 경로 parents[4]→parents[5] (첫 검사에서 data/inputs를 가리켜 실패)",
+        "runs_on: pc_only 추가 (빌더: 폰 미검증 패키지)",
+        "입력 별칭 ti = tool_input or {} 형태로 변경 (선언-읽기 관문이 query 읽기를 추적하도록)"
+      ]
+    },
+    "precheck": {
+      "handler_direct_test": {
+        "ok": true,
+        "cases": {
+          "all": true,
+          "one_M1": true,
+          "zero_X": true,
+          "missing_fails": true,
+          "parse_fails": true
+        },
+        "runner": "~turn/run_ls105_test.py (self:script 파일 실행, run 3af87018d3064bf1a16209b03e83f21e 이후 수정본 재실행 통과)"
+      },
+      "builder_build": {
+        "command": "scripts/build_ibl_nodes.py",
+        "exit_code": 0,
+        "result": "액션 172개(sense 40), tool.json 파생 1개 갱신, 문서 파생 9개 재기입",
+        "derived_written_by_builder": [
+          "data/ibl_nodes.yaml",
+          "data/phone_manifest.json",
+          "data/member_manifest.json",
+          "data/package_meta.json",
+          "data/ibl_fixtures.json",
+          "data/shell_shadow.json",
+          "data/packages/installed/tools/ls105-inspection/tool.json",
+          "data/system_docs/ibl.md",
+          "data/system_docs/system_structure.md",
+          "README.md",
+          "README.ko.md",
+          "data/system_docs/anatomy.md",
+          "data/system_docs/architecture.md",
+          "data/system_docs/technical.md",
+          "data/system_docs/inventory.md",
+          "data/system_docs/packages.md"
+        ],
+        "note": "파생물은 직접 편집하지 않았고 빌더만 썼다. 이 빌드는 시험 몸 작업 트리 안에서만 수행했다."
+      },
+      "example_review": {
+        "command": "scripts/iblbuild_example_review.py --show/--ack sense:ls105_inspection",
+        "show": "용례 0건, 바뀐 필드 ['(신규)']",
+        "ack_exit_code": 0,
+        "ack": "원장 갱신 1건"
+      },
+      "builder_check": {
+        "command": "scripts/build_ibl_nodes.py --check",
+        "exit_code": 1,
+        "package_caused_failures": 0,
+        "remaining_failures_environment": [
+          "가이드 배선: ibl_composition_tools.md → ../../docs/experiments/legacy_long_replay_2026_09_25/report.md 끊김 (이 패키지 추가 전부터 존재)",
+          "가이드 배선: pc_control.md → ../../helper/README.md 끊김 (이 패키지 추가 전부터 존재)",
+          "가이드 배선: remote_pc_installation.md → ../../helper/README.md 끊김 (이 패키지 추가 전부터 존재)",
+          "package.json 설치필터 stale: scripts/build_dist_filter.py 가 frontend/package.json 쓰기에서 PermissionError [Errno 1] Operation not permitted"
+        ],
+        "skipped_by_builder": [
+          "코퍼스/파서 미가용 — param 정합·param 선언 완전성 검사 건너뜀",
+          "core_manifest 검사 건너뜀"
+        ],
+        "resolved_during_work": [
+          "runs_on 미선언",
+          "선언-읽기 관문(query)",
+          "용례 재검토 대기",
+          "자기상 가드(액션 171→172, sense 39→40, 패키지 51→52: 빌더 재생성으로 해소)",
+          "바이트·package_meta·ibl_fixtures·tool.json·문서 파생 불일치"
+        ]
+      },
+      "capability_change_check": {
+        "ok": false,
+        "exit_code": 1,
+        "plan_request_id": "0bfb942a036ae124597037c30318a99f21821284367b74903ed4bb65f606b46a",
+        "error_detail": "변경 6 파일, backend 모듈 0개 → 전이 시험 파일 0/0 (0%) / backend .py 변경이 시험에 닿지 않음 — 데이터·문서 변경이면 해당 관문으로 검증.",
+        "log": "runtime/script_runs/능력변경-*.log (2026-11-01T14:39:49 exit=1)",
+        "attempted_remedy": "회귀 규약대로 backend/test_ls105_inspection.py 신규 작성을 시도했으나, backend/ 경로가 시험 몸이 아닌 실제 저장소 /Users/kangkukjin/Desktop/AI/indiebizOS/backend/ 로 해소되고 Operation not permitted 로 거부됨(임시 파일 단계 실패, 생성물 없음). 운영 쪽이므로 더 시도하지 않음."
+      }
+    },
+    "formal_apply": {
+      "attempted": false,
+      "succeeded": false,
+      "reason": "능력변경 프로그램은 'assert $pre.ok' 뒤에만 self:patch apply를 부른다. 사전검사가 ok:false라 적용 단계에 도달하지 않았고, 관문을 건너뛰어 self:patch apply를 직접 부르는 우회는 하지 않았다.",
+      "receipts": {
+        "workflow_run_with_plan": "a25ad55fa454461cbc57c25a28eee061 (내부 실패: 능력변경 check exit 1, self:patch 미호출)",
+        "latest_check_run": "41dea6a46a6e48838f1c0ec876cdcb6d",
+        "plan_request_ids": [
+          "fb71df6abcc94c8b0608b5346a327025b19b9aaffdcdd88e40b698319b386620",
+          "e86a38a564cc85d4ff21f0555133a3c755afd4c48d3b9ba2263541a2d0d87ebf",
+          "0bfb942a036ae124597037c30318a99f21821284367b74903ed4bb65f606b46a"
+        ]
+      }
+    },
+    "activation": {
+      "attempted": false,
+      "active": false,
+      "note": "[self:package]{op:\"reload\"} 등 비정식 활성화는 하지 않았다."
+    },
+    "new_call": {
+      "attempted": true,
+      "succeeded": false,
+      "observation": "[sense:ls105_inspection]{} 실행 전 검사에서 거절: UNSUPPORTED_ADAPTER (판본 2 계약이 없는 어휘: sense:ls105_inspection). 런타임 미활성.",
+      "comparisons": {
+        "performed": false,
+        "reason": "새 호출 불가 — IBL 호출로는 대조하지 못했다. 아래 expected는 원천 파일에서 계산한 기대값이고, 핸들러 직접 검사에서는 일치했다(IBL 경유 검증 아님).",
+        "M1_M2_all": {
+          "expected": [
+            {
+              "asset_id": "M1",
+              "checked": true,
+              "source_revision": "test-v1"
+            },
+            {
+              "asset_id": "M2",
+              "checked": false,
+              "source_revision": "test-v1"
+            }
+          ],
+          "handler_direct_match": true,
+          "ibl_call_match": null
+        },
+        "M1_one": {
+          "expected": [
+            {
+              "asset_id": "M1",
+              "checked": true,
+              "source_revision": "test-v1"
+            }
+          ],
+          "handler_direct_match": true,
+          "ibl_call_match": null
+        },
+        "X_zero": {
+          "expected": [],
+          "handler_direct_match": true,
+          "ibl_call_match": null
+        }
+      }
+    },
+    "not_done": [
+      "해마 합성 용례 등록(add_examples_batch)·임베딩 — 반영 전이고 시험 전용 어휘라 보류",
+      "ibl_health_check 실행 — 런타임 미활성이라 불가",
+      "build_dist_filter.py 재생성 — frontend/package.json 쓰기 권한 없음"
+    ],
+    "remaining_steps": [
+      "1. 능력변경 check 의 시험 선택 관문 충족: 패키지 경로를 가리키는 backend/test_ls105_inspection.py 회귀 시험을 시험 몸의 backend 에 둘 수 있는 쓰기 권한(또는 패키지 내부 시험을 인정하는 선택 규칙)이 필요. 본문은 이 보고서 작업에서 준비했으나 쓰지 못했다.",
+      "2. 환경 관문: 가이드 끊긴 링크 3건(몸에 helper/·docs/experiments 부재)과 frontend/package.json 쓰기 권한 — 이 패키지와 무관하지만 build_ibl_nodes.py --check 전체 통과를 막는다.",
+      "3. 위가 충족되면 같은 요청(probes 3건 포함)으로 능력변경 plan → self:workflow run(program) 실행. self:patch apply 의 적용 권한·승인은 그 경로의 규칙을 따른다. pending이면 영수증의 recovery 로 재개.",
+      "4. 활성 후 probes(M1/M2 전체, M1 한 건, X 0건) 대조를 이 보고서에 갱신."
+    ],
+    "request_for_resume": {
+      "kind": "action",
+      "target": "sense:ls105_inspection",
+      "operation": "add",
+      "files": [
+        "data/packages/installed/tools/ls105-inspection/__init__.py",
+        "data/packages/installed/tools/ls105-inspection/handler.py",
+        "data/packages/installed/tools/ls105-inspection/ibl_actions.yaml",
+        "data/packages/installed/tools/ls105-inspection/tool.json",
+        "data/packages/installed/tools/ls105-inspection/README.md",
+        "data/packages/installed/tools/ls105-inspection/test_ls105_inspection.py"
+      ],
+      "probes": [
+        {
+          "code": "$r = [sense:ls105_inspection]{}\nreturn $r.items",
+          "expected": [
+            {
+              "asset_id": "M1",
+              "checked": true,
+              "source_revision": "test-v1"
+            },
+            {
+              "asset_id": "M2",
+              "checked": false,
+              "source_revision": "test-v1"
+            }
+          ]
+        },
+        {
+          "code": "$r = [sense:ls105_inspection]{query:\"M1\"}\nreturn $r.items",
+          "expected": [
+            {
+              "asset_id": "M1",
+              "checked": true,
+              "source_revision": "test-v1"
+            }
+          ]
+        },
+        {
+          "code": "$r = [sense:ls105_inspection]{query:\"X\"}\nreturn $r.items",
+          "expected": []
+        }
+      ]
+    },
+    "probe_note": "자동 생성 계획의 probe 는 $probe.value 를 목록과 비교한다. 이 액션은 legacy-envelope 로 Record를 반환하므로 probe 코드가 $r.items 를 반환하도록 작성했다."
+  },
+  "action_operator_check": {
+    "contract": {
+      "actions": {}
+    },
+    "call_succeeded": false,
+    "call_issue": "UNSUPPORTED_ADAPTER",
+    "selector": {
+      "files": [
+        "data/packages/installed/tools/ls105-inspection/__init__.py",
+        "data/packages/installed/tools/ls105-inspection/handler.py",
+        "data/packages/installed/tools/ls105-inspection/ibl_actions.yaml",
+        "data/packages/installed/tools/ls105-inspection/tool.json",
+        "data/packages/installed/tools/ls105-inspection/README.md",
+        "data/packages/installed/tools/ls105-inspection/test_ls105_inspection.py"
+      ],
+      "returncode": 0,
+      "stdout": "backend/test_ai_boundary_contract.py backend/test_browser_session.py backend/test_capability_age.py backend/test_cctv.py backend/test_component_registry.py backend/test_compute_condition_semantics.py backend/test_computer_use.py backend/test_condition_observability.py backend/test_control_driver.py backend/test_core_seam_scripts.py backend/test_data_ops.py backend/test_data_ownership.py backend/test_datetime_semantics.py backend/test_deck_video_captions.py backend/test_episode3176_repairs.py backend/test_episode3286_repairs.py backend/test_episode3395_roots.py backend/test_episode4064_repairs.py backend/test_episode4120_4126_repairs.py backend/test_episode4129_repairs.py backend/test_episode4132_4134_repairs.py backend/test_episode4169_recall.py backend/test_episode_memory_repairs_2026_09_12.py backend/test_execution_commit.py backend/test_field_path_single_owner.py backend/test_filter_precheck_2026_09_21.py backend/test_generation_store.py backend/test_grep_edit_topic_gate_2026_09_05.py backend/test_guest_helper_legacy_mac.py backend/test_guest_helper_status.py backend/test_guestpc_resident_idioms.py backend/test_handler_error_contract.py backend/test_hardware_registry.py backend/test_ibl_execution_evolution.py backend/test_ibl_expression_revision_2026_09_08.py backend/test_ibl_learnability.py backend/test_ibl_shape_handoff_20260912.py backend/test_idiom_expansion_2026_09_09.py backend/test_imagination_root_repairs.py backend/test_imagination_round65_repairs.py backend/test_imagination_round78_79_forage.py backend/test_ledger_ops.py backend/test_legal_handler.py backend/test_long_sentence_round3_repairs.py backend/test_long_sentence_round53_repairs.py backend/test_long_sentence_round6_repairs.py backend/test_member_profile.py backend/test_memory_final_retention.py backend/test_messenger_calls.py backend/test_narration_injection.py backend/test_pc_manager.py backend/test_population_scope_2026_09_08.py backend/test_red_zone_body_family.py backend/test_remote_steps.py backend/test_render_xlsx_contract.py backend/test_repair_bundle_recovery.py backend/test_repair_execution_capabilities.py backend/test_repair_staging.py backend/test_report_repair_contracts_2026_09_08.py backend/test_resident_pcs.py backend/test_round63_research_attachment_stall.py backend/test_task_repair.py backend/test_tool_google_search.py backend/test_tool_naver_search.py backend/test_tool_radio.py backend/test_value_judgment_gate.py backend/test_value_semantics_single_owner.py backend/test_visualization.py backend/test_web_collection_2026_09_15.py backend/test_web_search.py backend/test_webcrawl_embedded.py backend/test_workspace_sessions.py backend/test_world_noun_refutable.py backend/test_youtube_episode3148_repairs.py backend/test_youtube_phone.py backend/test_youtube_search_empty.py\n",
+      "stderr": "변경 6 파일, backend 모듈 0개 → 전이 시험 파일 76/837 (9%)\n"
+    },
+    "interpretation": "The fixture lives under outputs, which select_tests excludes. Canonical read-only selection found 76/837 tests; no tests were run against the canonical tree for the absent candidate. Formal apply was not reached."
+  },
+  "isolation": {
+    "stdout": "{'own': 'allowed', 'canonical': 'denied', 'network': 'denied'}\n",
+    "stderr": "",
+    "code": 0
+  },
+  "recovery": {
+    "postsave_failed": true,
+    "published_matches": true,
+    "verify_complete": true,
+    "same_revision": true
+  }
+}

@@ -1,0 +1,38 @@
+node: sense
+actions:
+  ls105_inspection:
+    description: 105회차 시험 전용 점검 자료 공급자. inputs/inspection_source.json 행을 items로 반환 (query=asset_id 일치 행만).
+    returns: items
+    side_effect: false    # 원천 파일 읽기 전용
+    fixture: '[sense:ls105_inspection]{query: "M1"}'
+    group: research
+    target_description: query(선택) = asset_id. 없으면 전체 행, 일치 없는 query는 빈 items. 파일 부재·파싱 실패는 실패.
+    target_key: query
+    params:
+      query: string
+    router: handler
+    tool: ls105_inspection
+    runs_on: pc_only      # 이 몸의 inputs 파일을 읽는 시험 전용 공급자 — 폰 미검증
+    implementation: ls105-inspection 패키지. 몸의 inputs/inspection_source.json(JSON 행 목록)을 읽어 asset_id·checked·source_revision을 보존한 items 반환. 부재=SOURCE_MISSING, 파싱 실패=SOURCE_PARSE_ERROR.
+    keywords:
+    - 점검자료
+    - 시험점검
+    - ls105
+    - inspection
+
+tool_json:
+  header:
+    id: ls105-inspection
+    name: 시험 점검 자료 공급자
+    description: 105회차 시험 범위 전용 — 점검 원천 JSON 행 목록을 items로 공급합니다.
+    version: 1.0.0
+  tools:
+  - name: ls105_inspection
+    description: '[sense:ls105_inspection] 시험 전용 점검 자료 공급자. inputs/inspection_source.json의 행을 items로 반환한다. query가 있으면 asset_id가 그 값인 행만, 없으면 전체. 일치 없음=빈 items, 파일 부재·파싱 실패=실패.'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 찾을 asset_id (예 "M1"). 생략하면 전체 행.
+      required: []

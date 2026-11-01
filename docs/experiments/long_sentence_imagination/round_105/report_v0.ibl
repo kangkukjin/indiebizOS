@@ -1,0 +1,12 @@
+#!ibl edition=2
+[def:LS105Report]($input_root,$output,$tolerance=0){
+  $a=[self:read]{path:$input_root+"/assets.json"}
+  $c=[self:read]{path:$input_root+"/checks.json"}
+  $b=[self:read]{path:$input_root+"/invoices.json"}
+  $n=[self:script]{id:"LS105Normalize",args:{rows:$b.data.items}}
+  $r=[fn:LS105Reconcile]{assets:$a.data.items,checks:$c.data.items,bills:$n,tolerance:$tolerance}
+  $saved=[self:write]{path:$output,content:json($r)}
+  $back=[self:read]{path:$output}
+  assert $back.data==$r,"저장 재독 결과 불일치"
+  return {path:$output,total_actual:$r.total_actual,duplicates:$r.duplicates,missing_checks:$r.missing_checks,mismatches:$r.mismatches,rows:len($r.rows),unmatched:len($r.unmatched)}
+}

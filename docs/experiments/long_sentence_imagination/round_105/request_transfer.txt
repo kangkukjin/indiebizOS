@@ -1,0 +1,3 @@
+차량 80대의 정비대장과 점검기록·청구를 대사해 줘. 자료는 inputs_transfer/assets.json, checks.json, invoices.json이야. asset_id와 machine은 차량 식별번호, amount는 원 단위 숫자, fee는 ₩ 또는 KRW 접두와 쉼표가 붙은 같은 원 단위 금액이야. invoice_id가 같은 재접수는 첫 청구만 금액에 반영하고 초과 행수를 duplicate_count로 남겨 줘. 대장에 없거나 식별번호가 없는 청구는 unmatched에 원행을 보존해. 점검기록에 없는 차량은 missing_check=true로 적어 줘.
+outputs/vehicle_report.json에 rows(대장 순서, asset_id·branch·expected_cost·actual_cost·difference·missing_check·duplicate_count), unmatched, total_actual, duplicates, missing_checks, mismatches를 넣어 줘. difference는 실제 차액이고 mismatches는 차액 절댓값이 500원을 초과하는 차량수야. 추가로 branch_totals에 branch 오름차순의 {branch,actual_cost} 합계를 만들어 줘.
+시스템에 이미 쓸 수 있는 부품이 있으면 찾아 재사용하고 어떤 부품을 실제 호출했는지 알려줘. 다른 실행자의 보고서나 정답 자료는 참고하지 말아 줘.

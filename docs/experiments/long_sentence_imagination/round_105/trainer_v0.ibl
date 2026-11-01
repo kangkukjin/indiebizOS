@@ -1,0 +1,10 @@
+#!ibl edition=2
+$source=[self:write]{path:"data/scripts/ls105_normalize.py",content:$normalizer}
+$script=[fn:능력변경완료]{요청:$script_request}
+assert $script.behavior_verified,"정규화 스크립트 동작 검사 실패"
+$reconcile=[fn:능력변경완료]{요청:$reconcile_request}
+assert $reconcile.complete,"대사 관용구 등록 미완료"
+$report=[fn:능력변경완료]{요청:$report_request}
+assert $report.complete,"보고 관용구 등록 미완료"
+$business=[self:workflow]{op:"run",edition:2,pipeline:"return [fn:LS105Report]{input_root:\"inputs\",output:\"outputs/report.json\"}"}
+return {script_registration:$script,idiom_registration:$reconcile,report_registration:$report,business:$business.value}

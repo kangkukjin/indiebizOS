@@ -1,0 +1,7 @@
+$w=[self:write]{path:"data/scripts/ls105_normalize.py",content:$source}
+$s=[fn:능력변경완료]{요청:$script}
+assert $s.behavior_verified,"스크립트 검사"
+$r=[fn:능력변경완료]{요청:$report}
+assert $r.complete,"관용구 검사"
+$out=[self:workflow]{op:"run",edition:2,pipeline:"[fn:LS105Report]{input_root:\"inputs_variant\",output:\"outputs/report_variant.json\"}"}
+return {script:$s,report:$r,business:$out.value}

@@ -1,0 +1,9 @@
+#!ibl edition=2
+$base=[fn:LS105Report]{input_root:"inputs_transfer",output:"outputs/vehicle_base.json"}
+$read=[self:read]{path:$base.path}
+$groups=[table:groupby]{items:$read.data.rows,by:"branch",agg:{actual_cost:["sum","actual_cost"]}}
+$report={**$read.data,branch_totals:sorted($groups.items,"branch")}
+$w=[self:write]{path:"outputs/vehicle_report.json",content:json($report)}
+$check=[self:read]{path:"outputs/vehicle_report.json"}
+assert $check.data==$report,"차량 보고서 재독 불일치"
+return {base:$base,branch_totals:$report.branch_totals}

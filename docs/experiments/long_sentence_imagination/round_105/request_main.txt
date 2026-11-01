@@ -1,0 +1,4 @@
+6개 지점의 장비대장(inputs/assets.json), 점검기록(inputs/checks.json), 수리청구(inputs/invoices.json)를 대사해 장비별 점검 누락, 중복 청구, 비용 불일치를 찾아 outputs/report.json에 저장하고 요약해 줘. 자료는 모두 합성 훈련자료다.
+규칙: asset_id가 기본 식별번호이고 일부 청구의 machine도 같은 식별번호다. amount는 원 단위 정수, fee는 ₩와 쉼표가 붙은 같은 원 단위 금액이다. invoice_id가 같은 재접수는 한 번만 금액에 반영하고 초과 행수는 duplicate_count로 남긴다. 식별번호가 없거나 대장에 없으면 억지로 연결하지 말고 unmatched에 원행을 모두 보존한다. 점검기록에 없는 장비는 missing_check=true다. 장비별 expected_cost와 고유 청구의 합 actual_cost를 비교하며 difference=actual_cost-expected_cost다.
+보고서는 rows(대장 순서의 600행: asset_id,branch,expected_cost,actual_cost,difference,missing_check,duplicate_count), unmatched(원행 목록), total_actual, duplicates(초과 청구행수), missing_checks(장비수), mismatches(difference가 0 아닌 장비수)를 포함해 줘.
+다음 달과 다른 지점 업무에도 반복할 것이므로 재사용할 가치가 있는 처리 방법을 시스템에서 다시 찾아 쓸 수 있도록 등록하고, 등록한 방법을 새로 호출해서 이번 결과도 확인해 줘. 기존 기능이 있으면 찾아 활용해 줘. 무엇을 등록했고 실제 동작과 등록 절차 중 어디까지 확인했는지 구분해서 알려줘. 파일만 만든 것을 등록 완료로 부르지 말아 줘.

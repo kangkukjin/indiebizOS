@@ -1,0 +1,23 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "ls105-inspection",
+  "name": "시험 점검 자료 공급자",
+  "description": "105회차 시험 범위 전용 — 점검 원천 JSON 행 목록을 items로 공급합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "ls105_inspection",
+      "description": "[sense:ls105_inspection] 시험 전용 점검 자료 공급자. inputs/inspection_source.json의 행을 items로 반환한다. query가 있으면 asset_id가 그 값인 행만, 없으면 전체. 일치 없음=빈 items, 파일 부재·파싱 실패=실패.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "찾을 asset_id (예 \"M1\"). 생략하면 전체 행."
+          }
+        },
+        "required": []
+      }
+    }
+  ]
+}

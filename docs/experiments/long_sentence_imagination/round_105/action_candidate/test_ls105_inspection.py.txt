@@ -1,0 +1,56 @@
+"""ls105-inspection 핸들러 계약 검사 (직접 호출, 외부 효과 없음 — 임시 파일만 사용)."""
+import importlib.util
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+_spec = importlib.util.spec_from_file_location("ls105_handler", _HERE / "handler.py")
+H = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(H)
+
+
+class _Ctx:
+    tool_name = "ls105_inspection"
+
+
+def _run(ti):
+    return H.execute(ti, _Ctx())
+
+
+def main():
+    results = {}
+    real = H._source_path()
+    expected = json.loads(real.read_text(encoding="utf-8"))
+
+    r = _run({})
+    results["all"] = r.get("success") is True and r["items"] == expected
+    r = _run({"query": "M1"})
+    results["one_M1"] = (r.get("success") is True and len(r["items"]) == 1
+                         and r["items"][0] == {"asset_id": "M1", "checked": True, "source_revision": "test-v1"})
+    r = _run({"query": "X"})
+    results["zero_X"] = r.get("success") is True and r["items"] == [] and r["count"] == 0
+
+    with tempfile.TemporaryDirectory() as d:
+        missing = Path(d) / "none.json"
+        bad = Path(d) / "bad.json"
+        bad.write_text("{not json", encoding="utf-8")
+        orig = H._source_path
+        try:
+            H._source_path = lambda: missing
+            r = _run({})
+            results["missing_fails"] = r.get("success") is False and r.get("error_code") == "SOURCE_MISSING"
+            H._source_path = lambda: bad
+            r = _run({})
+            results["parse_fails"] = r.get("success") is False and r.get("error_code") == "SOURCE_PARSE_ERROR"
+        finally:
+            H._source_path = orig
+
+    ok = all(results.values())
+    print(json.dumps({"ok": ok, "cases": results}, ensure_ascii=False))
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

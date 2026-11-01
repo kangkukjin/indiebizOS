@@ -1,0 +1,11 @@
+import json,sys
+from decimal import Decimal
+args=json.load(sys.stdin)
+rows=[]
+for raw in args['rows']:
+    value=raw.get('amount',raw.get('fee'))
+    amount=Decimal(str(value).replace('₩','').replace('KRW','').replace(',','').strip())
+    if not amount.is_finite() or amount != amount.to_integral_value():
+        raise ValueError('정수 원 금액이 필요합니다')
+    rows.append({'invoice_id':raw['invoice_id'],'asset_id':raw.get('asset_id',raw.get('machine')),'amount':int(amount),'raw':raw})
+print(json.dumps(rows,ensure_ascii=False))

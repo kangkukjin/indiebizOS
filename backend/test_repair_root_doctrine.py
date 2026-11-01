@@ -129,9 +129,9 @@ def test_d5_repair_fragment_reaches_executor_only_with_grant(monkeypatch):
 
 def test_d6_base_prompt_scope_is_the_chain():
     """D6 — 실행자 base 프롬프트의 경계가 범위가 아니라 사슬이다."""
-    t = _read("base_prompt_v6.md")
-    assert "- 요청하지 않은 개선을 하지 마라\n" not in t
-    assert "원인 사슬 밖" in t
+    t = _read("base_prompt_v7.md")
+    assert "요청의 원인 사슬을 따라 필요한 부분을 고치되" in t
+    assert "관계없는 개선으로 범위를 넓히지 마라" in t
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ def prompt_box(box, monkeypatch):
     }, allow_unicode=True))
     prompts = box / "data/common_prompts"
     (prompts / "fragments").mkdir(parents=True)
-    (prompts / "base_prompt_v6.md").write_text("공통 규칙")
+    (prompts / "base_prompt_v7.md").write_text("공통 규칙")
     (prompts / "consciousness_prompt.md").write_text("문제 규정 역할")
     (box / "data/system_ai_role.txt").write_text("시스템 역할")
     monkeypatch.setattr(prompt_builder, "get_base_path", lambda: box)
@@ -73,6 +73,7 @@ def test_storage_move_shrinks_resident_provider_prompt_and_wake_restores(prompt_
             # 회상·의식·reflex가 하나도 없는 요청이 과거에는 초기 프롬프트를 그대로 썼다.
             message = runner._refresh_execution_prompt("안녕")
             sent.append(runner.ai._provider.system_prompt)
+            assert "공통 규칙" in sent[-1]
             assert runner.ai.system_prompt == sent[-1]
             assert "안녕" in message
 

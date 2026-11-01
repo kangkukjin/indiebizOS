@@ -45,6 +45,11 @@ def test_system_ai_sections_match_real_builder():
     r = PC.assemble("system_ai", "테스트")
     if "error" in r["assembled"]:
         pytest.skip(r["assembled"]["error"])
+    from runtime_utils import get_base_path
+    base = next(s for s in r["sections"] if s["key"] == "base_prompt")
+    assert base["source"] == "data/common_prompts/base_prompt_v7.md"
+    assert base["content"] == (get_base_path() / base["source"]).read_text(encoding="utf-8")
+    assert base["content"].strip() and base["included"]
     sys_secs = [s for s in r["sections"] if s["layer"] == "system" and s["included"]]
     joiner = 2 * (len(sys_secs) - 1)
     assert r["assembled"]["stable_chars"] - r["totals"]["system"]["chars"] == joiner

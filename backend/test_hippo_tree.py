@@ -187,7 +187,7 @@ def test_guide_map_lists_only_guides_and_injection_drops_execution_map(env):
     assert not any(s.name == "execution_map" or s.tag == "execution_map" for s in AR.SOURCES)
 
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    live = [os.path.join(root, "data/common_prompts", n) for n in ("consciousness_prompt.md", "base_prompt_v6.md")]
+    live = [os.path.join(root, "data/common_prompts", n) for n in ("consciousness_prompt.md", "base_prompt_v7.md")]
     live.append(os.path.join(root, "data/common_prompts/fragments/12_ibl_only.md"))
     live += [os.path.join(root, "backend/cognition", n) for n in ("agent_cognitive.py", "switch_runner.py", "system_ai_tools.py")]
     for path in live:

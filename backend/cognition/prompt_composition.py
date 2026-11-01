@@ -232,7 +232,7 @@ def _assemble_system_ai(sample: str, variant: str = "") -> Dict[str, Any]:
 
     sections: List[Dict[str, Any]] = [
         _date_section(),
-        _file_section("base_prompt", "기본 프롬프트", "system", "data/common_prompts/base_prompt_v6.md"),
+        _file_section("base_prompt", "기본 프롬프트", "system", "data/common_prompts/base_prompt_v7.md"),
         _structure_section(),
         _file_section("git", "Git 규약", "system", "data/common_prompts/fragments/06_git.md",
                       condition="indiebizOS 루트에 .git 이 있을 때", included=git_enabled),
@@ -372,7 +372,7 @@ def _assemble_project_agent(sample: str, project_id: Optional[str]) -> Dict[str,
     role_prompt = "\n".join([f"당신은 '{agent_name}'입니다."] + ([role_text] if role_text else []))
     sections: List[Dict[str, Any]] = [
         _date_section(),
-        _file_section("base_prompt", "기본 프롬프트", "system", "data/common_prompts/base_prompt_v6.md"),
+        _file_section("base_prompt", "기본 프롬프트", "system", "data/common_prompts/base_prompt_v7.md"),
         _structure_section(),
         _file_section("git", "Git 규약", "system", "data/common_prompts/fragments/06_git.md",
                       condition="프로젝트 폴더에 .git 이 있을 때", included=git_enabled),

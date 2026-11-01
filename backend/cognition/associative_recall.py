@@ -368,7 +368,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
             return None
         import device_registry as dr
         import limb_keys
-        from guide_registry import device_control_guides, control_briefs
+        from guide_registry import device_control_guides, control_briefs, device_drivers
         from xml.sax.saxutils import escape, quoteattr
         control_guides = device_control_guides()
         live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
@@ -415,9 +415,18 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                      "connected": connected,
                      "paused": str(bool(reg.get("paused"))).lower(),
                      "kind": reg.get("kind"), "os": platform, "host": rec.get("last_host")}
-            if guide := control_guides.get(str(platform).lower()):
+            if (guide := control_guides.get(str(platform).lower())) and caps.get("service_scope") != "machine":
                 attrs["control_guide"] = guide
                 introduced_guides.add(guide)
+            links = device_drivers(str(platform), reg.get("adapter") or ("resident-v1" if reg else "portable"),
+                                   caps.get("service_scope", "unknown"))
+            attrs["drivers"] = ",".join(d["id"] for d in links["items"])
+            attrs["driver_guides"] = ",".join(d["file"] for d in links["items"])
+            attrs["components"] = ",".join(c["id"] for c in links["components"])
+            attrs["installation_generation"] = reg.get("generation")
+            attrs["service_scope"] = caps.get("service_scope", "unknown")
+            if links["conflicts"]:
+                attrs["driver_conflicts"] = ",".join(links["conflicts"])
             if isinstance(reg.get("observations"), list) and reg["observations"]:
                 attrs["observations"] = len(reg["observations"])   # 개수만 — 본문은 다룰 때 읽는다(§5.3)
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
@@ -434,7 +443,7 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                 "connected는 최근 접속 관측이며 unknown은 미확인이다. 네트워크 기기의 false는 응답 없음이며 전원 꺼짐을 뜻하지 않는다. paused=true이면 실행 중지 상태다. "
                 "이름·장소·용도로 대상을 고른다. control_brief는 가이드 정본의 현재 호출 요약이며 해당 범위는 바로 호출한다. "
                 "드라이버 내부의 연결·준비 검사와 결과 검증을 유지하며 같은 검사를 별도 info 조회로 중복하지 않는다. "
-                "요약 밖의 동작·인수·조건만 control_guide 또는 describe로 확인한다. "
+                "요약 밖의 동작·인수·조건만 control_guide 또는 describe로 확인한다. driver_guides는 조작면별 자료이며 설치 절은 설치 작업에서만 읽는다. components가 같은 드라이버들은 실제 설치 부품을 공유한다. "
                 "adapter=network-api는 IndieBiz OS나 헬퍼 없이 제어하는 기기이며 guestpc 대신 control_guide의 스크립트를 허브에서 실행한다. "
                 "가이드와 호출 계약이 현재 문맥에 있으면 다시 읽거나 코드를 새로 작성하지 않는다. "
                 "원격 대상을 지정하지 않은 시스템 상태 조회는 본체([sense:host])다. 본체 제어(음량·주소 열기·잠금·앱 조작)는 "

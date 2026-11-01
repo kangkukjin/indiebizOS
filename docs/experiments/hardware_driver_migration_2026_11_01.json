@@ -1,0 +1,13 @@
+{
+  "source": "data/guides/guest_helper.md",
+  "sha256": "96c902e1803a5fba7db303998d12510429ceb6fe1a2b3added98032610038ae8",
+  "observations": "## 실측 기록 (자동 누적)\n- 2026-11-01 실측: tv1 클론의 frontend/node_modules/electron에 실행 파일이 없었고, PC에 캐시돼 있던 electron 44.10.0을 풀어 다운로드 없이 채울 수 있었다\n- 2026-11-01 실측: 설치판 IndieBiz.exe(AppData\\Local\\Programs\\IndieBiz)와 그 하위 python이 8765 포트를 점유하고 있어, 클론으로 실행하기 전에 종료해야 했다\n- 2026-11-01 실측: 클론에서 electron.exe . --preview로 기동한 뒤 /health가 healthy로 응답하기까지 약 165초 걸렸다. 짧은 대기 한 번으로 실패라고 판정하면 안 된다\n- 2026-11-01 실측: tv1은 소스 클론(C:\\Users\\kyungho\\indiebizOS, node_modules·.venv 포함)이 있어도 실제 실행 중인 것은 설치 앱(AppData\\Local\\Programs\\IndieBiz\\IndieBiz.exe)과 그 안의 Python이다. 따라서 클론만 갱신해서는 실행본이 바뀌지 않으며, 실행 중인 프로세스 경로를 함께 확인해야 한다.\n- 2026-11-01 실측: Windows 무인관리(관리자 권한) 설치 명령을 원격으로 보내면 KHJoffice에 UAC 승인 창이 뜨고, 이 창은 원격 화면·입력으로 누를 수 없어 PC 앞의 사람이 직접 승인해야 했다. 가이드에는 이 제약이 없다.\n- 2026-11-01 실측: 무인관리 설치는 등록 초대 파일(machine-invite)을 대상 PC에 보낸 뒤 관리자 권한 설치 명령을 실행하는 순서였다. 결과를 machine-invite\\install.log로 리다이렉트해 두어야 UAC 이후 실패 문구를 회수할 수 있다.\n\n> 실행 에이전트가 턴 종료 후 덧붙인다.\n- 2026-11-01 실측: Windows 헬퍼의 무인관리 설치는 UAC 승인 뒤 `C:\\Program Files\\IndieBizManaged` 폴더를 만들고 SYSTEM·관리자만 접근하도록 잠근다. 그래서 일반 권한 셸로는 이 폴더의 목록도 ACL도 읽을 수 없다.\n- 2026-11-01 실측: 무인관리 등록이 실패해도 `C:\\Program Files\\IndieBizManaged` 폴더는 남는다. 이 경우 Get-Service에는 IndieBiz 서비스가 없고, System 이벤트 7045에도 서비스 설치 기록이 없다. 폴더가 있으면 UAC 승인은 통과했고, 실패는 그 뒤 단계에서 났다고 구분할 수 있다.\n",
+  "scope": "과거 실행자가 쓴 미검증 관측. 설치 판본 미상. 일반 사실로 승격하지 않음.",
+  "conflicts": [
+    {
+      "claim": "가이드에는 이 제약이 없다",
+      "existing": "UAC 보안 화면은 헬퍼로 조작할 수 없다.",
+      "resolution": "제약은 설치 관리 설명에 유지. 원 관측은 그대로 보존."
+    }
+  ]
+}

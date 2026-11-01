@@ -1203,7 +1203,7 @@
     {
       "id": "guest_helper",
       "name": "원격 PC 헬퍼 — 상주 PC·휴대 USB",
-      "description": "원격 PC의 등록·셸·파일 전송·깨우기·재생·화면 조작. 상주형은 작업별 cwd/env 분리, GUI mode:interactive 필수, request_id로 중복 방지. 등록 관용구 아홉 개로 준비·실행·상태 확인·마무리·파일 보내기/가져오기·깨워 준비·중지 확인·재생을 조합한다. 상주 PC의 detach는 거절하며 제거는 self:limb remove. 작업 확인은 self:task, 실패 원문은 history.",
+      "description": "원격 하드웨어 공통 입구. PC·Android·TV 제어, 원격 실행·전송, 설치·업데이트 소유 가이드로 연결한다.",
       "keywords": [
         "USB",
         "손발",
@@ -1240,7 +1240,10 @@
         "외부PC파일가져오기"
       ],
       "file": "guest_helper.md",
-      "topic": "손발·이웃 몸"
+      "topic": "손발·이웃 몸",
+      "delivery": "brief",
+      "driver_owned": true,
+      "control_brief_section": "빠른 호출"
     },
     {
       "id": "android_control",
@@ -1260,15 +1263,29 @@
         "음량"
       ],
       "file": "android_control.md",
-      "control_brief_section": "빠른 호출",
-      "control_platforms": [
-        "android"
-      ],
       "topic": "손발·이웃 몸",
-      "control_callables": [
-        "fn:Android제어",
-        "fn:Android제어확인"
-      ]
+      "driver": {
+        "id": "android_control",
+        "platforms": [
+          "android"
+        ],
+        "adapters": [
+          "indiebiz-v1"
+        ],
+        "surfaces": [
+          "os"
+        ],
+        "components": [
+          "phone-apk"
+        ],
+        "callables": [
+          "fn:Android제어",
+          "fn:Android제어확인"
+        ],
+        "brief_section": "빠른 호출",
+        "primary": true
+      },
+      "delivery": "brief"
     },
     {
       "id": "pc_control",
@@ -1287,24 +1304,57 @@
         "PC 브라우저",
         "유튜브 교체",
         "중복 재생",
-        "광고 확인"
-      , "본체 제어", "화면 밝기", "잠들지 않기", "전원 상태", "앞 앱", "앱 실행", "앱 종료", "클립보드", "Wi-Fi", "블루투스", "단축어"],
-      "file": "pc_control.md",
-      "control_platforms": [
-        "darwin",
-        "macos",
-        "mac",
-        "osx",
-        "windows",
-        "win32",
-        "win"
+        "광고 확인",
+        "본체 제어",
+        "화면 밝기",
+        "잠들지 않기",
+        "전원 상태",
+        "앞 앱",
+        "앱 실행",
+        "앱 종료",
+        "클립보드",
+        "Wi-Fi",
+        "블루투스",
+        "단축어"
       ],
+      "file": "pc_control.md",
       "topic": "손발·이웃 몸",
-      "control_brief_section": "빠른 호출",
-      "control_callables": [
-        "fn:PC제어",
-        "fn:PC제어확인"
-      ]
+      "driver": {
+        "id": "pc_control",
+        "platforms": [
+          "darwin",
+          "macos",
+          "mac",
+          "osx",
+          "windows",
+          "win32",
+          "win"
+        ],
+        "adapters": [
+          "local",
+          "resident-v1",
+          "portable"
+        ],
+        "surfaces": [
+          "os"
+        ],
+        "components": [
+          "pc-os-code",
+          "resident-helper",
+          "portable-helper"
+        ],
+        "callables": [
+          "fn:PC제어",
+          "fn:PC제어확인"
+        ],
+        "brief_section": "빠른 호출",
+        "primary": true,
+        "service_scopes": [
+          "user_login",
+          "unknown"
+        ]
+      },
+      "delivery": "brief"
     },
     {
       "id": "tv_control",
@@ -1323,14 +1373,29 @@
         "네트워크 기기"
       ],
       "file": "tv_control.md",
-      "control_platforms": [
-        "tizen"
-      ],
       "topic": "손발·이웃 몸",
-      "control_brief_section": "빠른 호출",
-      "control_callables": [
-        "script:TV제어"
-      ]
+      "driver": {
+        "id": "tv_control",
+        "platforms": [
+          "tizen"
+        ],
+        "adapters": [
+          "network-api"
+        ],
+        "surfaces": [
+          "os",
+          "media"
+        ],
+        "components": [
+          "tv-hub"
+        ],
+        "callables": [
+          "script:TV제어"
+        ],
+        "brief_section": "빠른 호출",
+        "primary": true
+      },
+      "delivery": "brief"
     },
     {
       "id": "remote_phone",
@@ -1351,7 +1416,28 @@
         "indiebiz-v1"
       ],
       "file": "remote_phone.md",
-      "topic": "손발·이웃 몸"
+      "topic": "손발·이웃 몸",
+      "driver": {
+        "id": "remote_phone",
+        "platforms": [
+          "android"
+        ],
+        "adapters": [
+          "indiebiz-v1"
+        ],
+        "surfaces": [
+          "execution",
+          "transfer",
+          "installation"
+        ],
+        "components": [
+          "phone-apk"
+        ],
+        "callables": [],
+        "brief_section": "빠른 호출",
+        "primary": false
+      },
+      "delivery": "brief"
     },
     {
       "id": "music_player",
@@ -1926,7 +2012,9 @@
         "forage"
       ],
       "file": "folder_survey.md",
-      "control_callables": ["script:폴더변화"],
+      "control_callables": [
+        "script:폴더변화"
+      ],
       "control_brief_section": "폴더변화 빠른 호출",
       "topic": "기억"
     },
@@ -2274,6 +2362,192 @@
       ],
       "file": "capability_change.md",
       "topic": "워크플로·스크립트"
+    },
+    {
+      "id": "remote_pc_execution",
+      "name": "원격 PC 실행·전송 드라이버",
+      "description": "원격 PC 실행·전송 드라이버 — 빠른 호출과 필요한 절 조회. 접수·완료와 설치 판본을 구분한다.",
+      "file": "remote_pc_execution.md",
+      "topic": "손발·이웃 몸",
+      "keywords": [
+        "원격셸",
+        "파일전송",
+        "작업확인",
+        "취소",
+        "guestpc"
+      ],
+      "delivery": "brief",
+      "driver": {
+        "id": "remote_pc_execution",
+        "platforms": [
+          "darwin",
+          "macos",
+          "mac",
+          "osx",
+          "windows",
+          "win32",
+          "win",
+          "linux"
+        ],
+        "adapters": [
+          "resident-v1",
+          "portable"
+        ],
+        "surfaces": [
+          "execution",
+          "transfer"
+        ],
+        "components": [
+          "resident-helper",
+          "managed-helper",
+          "portable-helper"
+        ],
+        "callables": [
+          "limbs:guestpc",
+          "fn:외부PC준비",
+          "fn:외부PC작업실행",
+          "fn:외부PC작업확인",
+          "fn:외부PC작업마무리",
+          "fn:외부PC파일보내기",
+          "fn:외부PC파일가져오기",
+          "fn:외부PC깨워준비",
+          "fn:외부PC작업중지확인",
+          "fn:외부PC재생"
+        ],
+        "brief_section": "빠른 호출"
+      },
+      "defer_action_contracts": [
+        "limbs:guestpc"
+      ]
+    },
+    {
+      "id": "remote_pc_installation",
+      "name": "원격 PC 드라이버 설치·등록·업데이트",
+      "description": "원격 PC 드라이버 설치·등록·업데이트 — 빠른 호출과 필요한 절 조회. 접수·완료와 설치 판본을 구분한다.",
+      "file": "remote_pc_installation.md",
+      "topic": "손발·이웃 몸",
+      "keywords": [
+        "원격PC",
+        "설치",
+        "등록",
+        "업데이트",
+        "무인관리"
+      ],
+      "delivery": "brief",
+      "driver": {
+        "id": "remote_pc_installation",
+        "platforms": [
+          "darwin",
+          "macos",
+          "mac",
+          "osx",
+          "windows",
+          "win32",
+          "win",
+          "linux"
+        ],
+        "adapters": [
+          "resident-v1",
+          "portable"
+        ],
+        "surfaces": [
+          "installation",
+          "management"
+        ],
+        "components": [
+          "resident-helper",
+          "managed-helper",
+          "portable-helper"
+        ],
+        "callables": [
+          "self:limb"
+        ],
+        "brief_section": "빠른 호출"
+      },
+      "defer_action_contracts": [
+        "self:limb"
+      ]
     }
-  ]
+  ],
+  "driver_components": {
+    "pc-os-code": {
+      "location": "hub",
+      "implementation": "script:PC제어부품",
+      "conditions": {
+        "adapters": [
+          "local",
+          "resident-v1",
+          "portable"
+        ]
+      }
+    },
+    "resident-helper": {
+      "location": "device",
+      "implementation": "helper/resident_runtime.go",
+      "conditions": {
+        "adapters": [
+          "resident-v1"
+        ],
+        "service_scopes": [
+          "user_login",
+          "unknown"
+        ]
+      },
+      "updater": "resident_pcs.update_helper",
+      "release_ref": "helper/releases/*/current.json; helper/dist",
+      "approval": "대상 OS 설치·화면 권한",
+      "recovery": "helper/README.md#사용자-요청의-헬퍼-업데이트"
+    },
+    "managed-helper": {
+      "location": "device",
+      "implementation": "helper/resident_runtime.go",
+      "conditions": {
+        "adapters": [
+          "resident-v1"
+        ],
+        "service_scopes": [
+          "machine"
+        ]
+      },
+      "updater": "resident_pcs.update_helper",
+      "release_ref": "helper/dist",
+      "approval": "최초 관리자 등록·현지 UAC 승인",
+      "recovery": "helper/README.md#무인-관리-서비스"
+    },
+    "portable-helper": {
+      "location": "device",
+      "implementation": "helper/",
+      "conditions": {
+        "adapters": [
+          "portable"
+        ]
+      },
+      "updater": null,
+      "release_ref": "helper/dist",
+      "approval": "대상 사용자 실행·OS 권한"
+    },
+    "phone-apk": {
+      "location": "device",
+      "implementation": "phone-companion/",
+      "conditions": {
+        "adapters": [
+          "indiebiz-v1"
+        ]
+      },
+      "updater": "phone_updates.submit",
+      "release_ref": "phone-releases/<abi>/current.json",
+      "approval": "Android 앱 설치 권한·설치 확인",
+      "recovery": "remote_phone.md"
+    },
+    "tv-hub": {
+      "location": "hub",
+      "implementation": "script:TV제어",
+      "conditions": {
+        "adapters": [
+          "network-api"
+        ]
+      },
+      "updater": null
+    }
+  }
 }

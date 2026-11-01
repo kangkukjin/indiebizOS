@@ -1,0 +1,124 @@
+{
+  "baseline_commit": "bdde19c683976f0a8ac99bf741fa7f9bc7bbe49d",
+  "method": "Deterministic assembly replay. Same request/actions; no model calls or remote execution. Adds one conservative complete describe plus indicated section response to the new context. Counts concatenated text once, not cumulative model tokens across rounds.",
+  "model_input_tokens": null,
+  "model_output_tokens": null,
+  "cache_tokens": null,
+  "user_wait_seconds": null,
+  "postprocessing_model_cost": null,
+  "live_execution": false,
+  "cases": [
+    {
+      "case": "remote_diagnosis",
+      "initial_before_chars": 28974,
+      "initial_after_chars": 1517,
+      "guide_reads": [
+        {
+          "file": "remote_pc_execution.md",
+          "section": "3. 기본 어휘·GUI·작업 기록",
+          "response_chars": 1304
+        }
+      ],
+      "extra_full_describe_calls": 1,
+      "extra_full_describe_chars": 9215,
+      "after_with_explicit_reads_chars": 12036,
+      "before_sha256": "a873a7fe6dbc129f08e605296348f469cb2cf68f346c7e43d91e16883cb18d5a",
+      "after_sha256": "af552c51f6f76d77006e4311198672ae7fa2a2b556cd4d32d94be58694f9dd26"
+    },
+    {
+      "case": "file_transfer",
+      "initial_before_chars": 28970,
+      "initial_after_chars": 1513,
+      "guide_reads": [
+        {
+          "file": "remote_pc_execution.md",
+          "section": "파일 전송과 결과 회수",
+          "response_chars": 1747
+        }
+      ],
+      "extra_full_describe_calls": 1,
+      "extra_full_describe_chars": 9215,
+      "after_with_explicit_reads_chars": 12475,
+      "before_sha256": "f2265bd44a80e42df30aa809654fde14f317c53264296fb38ab792383e791663",
+      "after_sha256": "8412c6fa8f3465b7a2ac276a5de1714994eab84dfd46845a7ca64761f198cd16"
+    },
+    {
+      "case": "long_update_status",
+      "initial_before_chars": 33711,
+      "initial_after_chars": 1642,
+      "guide_reads": [
+        {
+          "file": "remote_pc_execution.md",
+          "section": "작업 종료·출력·확인 자리",
+          "response_chars": 2195
+        }
+      ],
+      "extra_full_describe_calls": 1,
+      "extra_full_describe_chars": 14412,
+      "after_with_explicit_reads_chars": 18249,
+      "before_sha256": "569558ccd057336c14682972690c3bf16fd3399fd5efd145b8ee0307aa6f983e",
+      "after_sha256": "79e5ccc5255f3083f11affef25617eb036be7634bfcb50d4d899964bf53c7462"
+    },
+    {
+      "case": "unattended_setup",
+      "initial_before_chars": 25463,
+      "initial_after_chars": 1062,
+      "guide_reads": [
+        {
+          "file": "remote_pc_installation.md",
+          "section": "모든 폴더·외장 드라이브와 관리자 명령",
+          "response_chars": 996
+        }
+      ],
+      "extra_full_describe_calls": 1,
+      "extra_full_describe_chars": 5249,
+      "after_with_explicit_reads_chars": 7307,
+      "before_sha256": "e2d1191792612a4de48c3a4937ab93fc71ccd187c17e11d8fc22c9f6ce7779b8",
+      "after_sha256": "e43aea3428ab325ecad35c7148fa8247383d8b51f865311bd9dd3d9cec7acc40"
+    },
+    {
+      "case": "pc_control",
+      "initial_before_chars": 13615,
+      "initial_after_chars": 1550,
+      "guide_reads": [],
+      "extra_full_describe_calls": 0,
+      "extra_full_describe_chars": 0,
+      "after_with_explicit_reads_chars": 1550,
+      "before_sha256": "edf5bc9caef0475f58ee42ac024723f575134867069db6ebc874928381ef0ad0",
+      "after_sha256": "748b5048ea6b0803661d61a77d9406a47df5d398a144d7c4bdedae16db485e8c"
+    },
+    {
+      "case": "phone_control",
+      "initial_before_chars": 11428,
+      "initial_after_chars": 1602,
+      "guide_reads": [],
+      "extra_full_describe_calls": 0,
+      "extra_full_describe_chars": 0,
+      "after_with_explicit_reads_chars": 1602,
+      "before_sha256": "7110737bac4f77e775e32ef34d2deecb64eeb18a41b7e565967580e2130560df",
+      "after_sha256": "3dd9c26706ca73462db0f330047757bae29ede44b06f098d0109b644008008e4"
+    },
+    {
+      "case": "mixed_devices",
+      "initial_before_chars": 28974,
+      "initial_after_chars": 1774,
+      "guide_reads": [
+        {
+          "file": "pc_control.md",
+          "section": "빠른 호출",
+          "response_chars": 1544
+        },
+        {
+          "file": "android_control.md",
+          "section": "빠른 호출",
+          "response_chars": 1597
+        }
+      ],
+      "extra_full_describe_calls": 1,
+      "extra_full_describe_chars": 9215,
+      "after_with_explicit_reads_chars": 14130,
+      "before_sha256": "596d5f064b20a65bf347e5e9d8439593beeeda5a406548c19973d75d07ee7f9b",
+      "after_sha256": "0014c742d9916a5924a62c96bd60683d8da71f7280181f51fb62fc903a4f110d"
+    }
+  ]
+}

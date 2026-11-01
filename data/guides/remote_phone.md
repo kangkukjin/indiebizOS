@@ -1,5 +1,9 @@
 # 원격폰 기능 활용 — IBL·셸·Python·Android API
 
+## 빠른 호출
+
+등록된 Android의 device_id와 `registration.capabilities`를 확인한다. OS 제어는 `Android제어`·`Android제어확인`의 빠른 호출(`android_control.md`), 원격 실행은 `limbs:guestpc`의 info·ibl·선언된 shell/python/transfer 계약을 필요한 때 describe로 조회한다. 접수는 완료가 아니며 원 task_ref로 결과를 확인한다. APK 교체는 `self:limb update`와 조종실이 같은 대상별 절차를 쓴다. ABI·SDK·서명이 맞아야 하고 Android의 설치 승인 대기와 설치 후 새 APK 지문 신고를 구분한다. OS 권한은 미관측이면 미확인이다.
+
 ## 등록과 연결
 
 Android 폰은 `setup_phone.sh --limb 삼성1`로 설치·등록한다. 허브가 만든 1회용 자격을
@@ -294,3 +298,7 @@ PIN·패턴이 있으면 원격 창에서 소유자가 입력해야 하며 Andro
 검증: 인증된 PC/폰 스트림·자격 불일치·임대/종료·권한 대기·입력 경계 회귀, Android 제스처 단위검사,
 브라우저 화면/탐색/드래그/키보드/한글 조합을 검사한다. 실제 폰의 설치·OS 승인·화면 전송·조작은
 별도 실기 확인이며 빌드 성공이나 `desktop_stream` 신고만으로 실기 성공이라 판단하지 않는다.
+
+## 드라이버 설치 단위
+
+OS 제어와 원격 실행은 같은 APK를 공유한다. `self:limb list`의 `drivers.components` 또는 손발 패널에서 설치 세대·현재 APK 지문·호환 배포판·승인 대기를 읽는다. 사용자 요청의 `[self:limb]{op:"update",target:"선택한 device_id"}`는 조종실과 같은 `phone_updates.submit` 경로다. 전송 접수나 OS 설치 접수만으로 완료라고 하지 않고 인증된 재접속의 APK 지문과 필요한 동작을 확인한다.

@@ -159,3 +159,64 @@ def test_general_script_brief_reaches_discovery_and_matches_check_ack_semantics(
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_driver_ownership_shares_installation_but_separates_machine_and_phone():
+    user = guides.device_drivers('windows', 'resident-v1', 'user_login')
+    unit, = [c for c in user['components'] if c['location'] == 'device']
+    assert unit['id'] == 'resident-helper'
+    assert set(unit['drivers']) == {'pc_control', 'remote_pc_execution', 'remote_pc_installation'}
+    machine = guides.device_drivers('windows', 'resident-v1', 'machine')
+    assert {c['id'] for c in machine['components']} == {'managed-helper'}
+    assert 'pc_control' not in {d['id'] for d in machine['items']}
+    phone = guides.device_drivers('android', 'indiebiz-v1')
+    assert [c['id'] for c in phone['components']] == ['phone-apk']
+    assert set(phone['components'][0]['drivers']) == {'android_control', 'remote_phone'}
+    tv = guides.device_drivers('tizen', 'network-api')
+    assert all(c['location'] == 'hub' and c.get('updater') is None for c in tv['components'])
+    assert not guides.device_drivers('unobserved', 'resident-v1')['items']
+    # Discovery before enrollment is metadata only; no live registry is needed.
+    before = guides.device_drivers('windows', 'resident-v1', surface='installation')
+    assert [d['file'] for d in before['items']] == ['remote_pc_installation.md']
+
+
+def test_driver_legacy_conflict_is_visible_and_not_chosen(catalog):
+    catalog([{'file': 'one.md', 'control_platforms': ['windows'],
+              'driver': {'id': 'one', 'platforms': ['darwin'], 'primary': True}}],
+            {'one.md': '# One'})
+    assert guides.driver_catalog()['conflicts'] == ['mapping_conflict:one:control_platforms']
+    assert guides.device_drivers('darwin', 'local')['items'] == []
+    assert guides.device_control_guides() == {}
+
+
+def test_driver_mapping_change_invalidates_catalog_revision(catalog):
+    catalog([{'file': 'one.md'}], {'one.md': '# One'})
+    old = guides.catalog_revision()
+    catalog([{'file': 'one.md', 'delivery': 'brief'}], {'one.md': '# One'})
+    assert guides.catalog_revision() != old
+
+
+def test_all_published_driver_calls_resolve_to_current_owned_brief():
+    for driver in guides.driver_catalog()['drivers']:
+        assert len(guides.control_briefs([driver['file']])) == 1
+        for name in driver.get('callables', []):
+            assert [b['file'] for b in guides.callable_control_briefs([name])] == [driver['file']]
+
+
+@pytest.mark.parametrize('fence', ['```', '~~~'])
+def test_section_read_preserves_code_comments_and_following_conditions(fence):
+    source = f'# Guide\n## Transfer\n{fence}ibl\n# comment\n## Also code\nreturn 1\n{fence}\nRequired recovery\n## Next\nOther'
+    result = guides.guide_read_view({'file': 'driver.md', 'content': source}, {'section': 'Transfer'})
+    assert result['sections'] == ['Guide', 'Transfer', 'Next']
+    assert 'Required recovery' in result['content'] and 'Other' not in result['content']
+    assert f'\n{fence}\n' in result['content']
+
+
+def test_only_complete_current_brief_can_replace_primary_summary(catalog):
+    from xml.sax.saxutils import escape
+    catalog([{'file': 'one.md', 'control_brief_section': 'Call'}], {'one.md': '## Call\nCall then verify'})
+    brief = guides.control_briefs(['one.md'])[0]
+    text = '<control_brief file="one.md" section="Call" content_hash="' + brief['content_hash'] + '">' + escape(brief['text']) + '</control_brief>'
+    assert guides.has_current_brief('one.md', text)
+    assert not guides.has_current_brief('one.md', text.replace('Call then verify', 'Call'))
+    assert not guides.has_current_brief('one.md', text.replace(brief['content_hash'], 'old'))

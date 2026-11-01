@@ -92,7 +92,7 @@ def status(rec):
     else:
         import resident_store
         result["state"] = "available"
-        pending = resident_store.pending(rec["device_id"], "phone_update")
+        pending = resident_store.pending(rec["device_id"], "phone_update", generation=reg["generation"])
         if pending:
             result.update(state="updating", job_id=pending)
         else:
@@ -118,7 +118,7 @@ def status(rec):
     return result
 
 
-def submit(target):
+def submit(target, *, expected=None):
     import resident_pcs as pcs
     from phone_remote_execution import require_owner
     require_owner()
@@ -127,6 +127,7 @@ def submit(target):
         if rec["registration"].get("adapter") != "indiebiz-v1":
             raise ValueError("not_registered_phone")
         state = status(rec)
+        binding = pcs.require_update_binding(rec, expected, state.get("sha256"))
         if state["state"] in {"current", "ahead", "updating", "installing", "staged",
                               "awaiting_permission", "awaiting_confirmation"}:
             return {"success": True, **state}
@@ -136,6 +137,7 @@ def submit(target):
         release = release_for(caps)
         if release is None:
             raise ValueError("phone_release_missing")
+        pcs.require_update_binding(rec, binding, release["sha256"])
         source = releases_root() / release["abi"] / (release["sha256"] + ".apk")
         if digest(source) != release["sha256"]:
             raise ValueError("phone_release_hash_mismatch")
@@ -148,7 +150,7 @@ def submit(target):
         pcs.transfer_commit(row["id"])
         receipt = pcs.submit(rec["device_id"], {"op": "phone_update", "transfer_id": row["id"],
                              "release": release, "timeout": 1800}, uuid.uuid4().hex,
-                             allow_phone_update=True)
+                             allow_phone_update=True, update_expected=binding)
         return {**receipt, "state": "updating", "sha256": release["sha256"]}
 
 

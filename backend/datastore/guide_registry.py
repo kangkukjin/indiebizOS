@@ -139,12 +139,135 @@ def resolve_guide_reference(query: str, entries: list, directory: Path,
     out = {"guides": [item], "count": 1, "file": filename, "match": "filename",
            "reference_kind": "alias" if entry and name in entry.get("aliases", []) else "filename",
            "registered": entry is not None, "requested": name}
+    if entry and entry.get("driver"):
+        out["driver"] = entry["driver"]
     if read:
         try:
             out["content"] = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError):
             return failure("GUIDE_READ_FAILED", f"가이드 파일을 읽을 수 없습니다: {filename}")
     return out
+
+
+def driver_catalog() -> dict:
+    """Read one ownership source; conflicts are explicit and never first-wins."""
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"drivers": [], "components": {}, "conflicts": ["catalog_unavailable"]}
+    drivers, conflicts, owners = [], [], {}
+    components = catalog.get("driver_components", {})
+    for filename, entry in _control_entries(catalog):
+        driver = entry.get("driver")
+        if not isinstance(driver, dict):
+            continue
+        driver = {**driver, "file": filename}
+        identifier = driver.get("id")
+        if not isinstance(identifier, str) or not identifier:
+            conflicts.append(f"missing_driver_id:{filename}")
+            continue
+        owners.setdefault(identifier, []).append(filename)
+        for old, new in (("control_platforms", "platforms"), ("control_callables", "callables"),
+                         ("control_brief_section", "brief_section")):
+            if old in entry and entry[old] != driver.get(new):
+                conflicts.append(f"mapping_conflict:{identifier}:{old}")
+        for ref in driver.get("components", []):
+            if ref not in components:
+                conflicts.append(f"missing_component:{identifier}:{ref}")
+        drivers.append(driver)
+    duplicate = {key for key, files in owners.items() if len(files) != 1}
+    conflicts.extend(f"driver_conflict:{key}" for key in sorted(duplicate))
+    invalid = duplicate | {c.split(":")[1] for c in conflicts if c.startswith(("mapping_conflict:", "missing_component:"))}
+    for message in conflicts:
+        logger.warning("드라이버 등록 충돌: %s", message)
+    return {"drivers": [d for d in drivers if d["id"] not in invalid],
+            "components": components, "conflicts": conflicts}
+
+
+def _binding(entry, legacy, field, default=None):
+    driver = entry.get("driver")
+    if not isinstance(driver, dict):
+        return entry.get(legacy, default)
+    value = driver.get(field, default)
+    if legacy in entry and entry[legacy] != value:
+        logger.warning("드라이버 호환 매핑 충돌: %s %s", entry.get("file"), legacy)
+        return default
+    return value
+
+
+def guide_delivery(filename) -> dict:
+    """Automatic delivery policy only. Explicit read_guide always retains full access."""
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        entries = [e for e in catalog.get("guides", []) if e.get("file") == filename]
+        if len(entries) != 1:
+            return {"mode": "reference" if entries else "full"}
+        entry = entries[0]
+        return {"mode": entry.get("delivery", "full"),
+                "driver_owned": bool(entry.get("driver") or entry.get("driver_owned")),
+                "section": _binding(entry, "control_brief_section", "brief_section"),
+                "description": entry.get("description", "")}
+    except (OSError, ValueError):
+        return {"mode": "reference"}
+
+
+def driver_matches(conditions, *, platform, adapter, service_scope="unknown") -> bool:
+    values = {"platforms": platform.lower(), "adapters": adapter, "service_scopes": service_scope}
+    return all(not conditions.get(key) or value in conditions[key] for key, value in values.items())
+
+
+def device_drivers(platform, adapter, service_scope="unknown", *, surface=None) -> dict:
+    """Offline/pre-install discovery does not assert current support or permission."""
+    catalog = driver_catalog()
+    selected, components = [], {}
+    for driver in catalog["drivers"]:
+        if not driver_matches(driver, platform=platform, adapter=adapter, service_scope=service_scope):
+            continue
+        if surface and surface not in driver.get("surfaces", []):
+            continue
+        refs = []
+        for ref in driver.get("components", []):
+            component = catalog["components"][ref]
+            if driver_matches(component.get("conditions", {}), platform=platform,
+                              adapter=adapter, service_scope=service_scope):
+                refs.append(ref)
+                components.setdefault(ref, {"id": ref, **component, "drivers": []})["drivers"].append(driver["id"])
+        selected.append({**driver, "components": refs})
+    return {"items": selected, "components": list(components.values()), "conflicts": catalog["conflicts"]}
+
+
+def has_current_brief(filename, context):
+    """Reuse only an actual, complete brief with matching file/section/content hash."""
+    from xml.etree import ElementTree
+    briefs = control_briefs([filename])
+    if not briefs:
+        return False
+    current = briefs[0]
+    for fragment in re.findall(r"<control_brief\b[^>]*>.*?</control_brief>", context or "", re.S):
+        try:
+            element = ElementTree.fromstring(fragment)
+        except ElementTree.ParseError:
+            continue
+        if (all(element.get(key) == current[key] for key in ("file", "section", "content_hash"))
+                and (element.text or "").strip() == current["text"]):
+            return True
+    return False
+
+
+def deferred_action_guides(names) -> dict:
+    """Selected large actions get a discovery reference; explicit describe stays complete."""
+    try:
+        catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        owners = {}
+        for filename, entry in _control_entries(catalog):
+            if entry.get("delivery") != "brief":
+                continue
+            for name in entry.get("defer_action_contracts", []):
+                if name in names:
+                    owners.setdefault(name, []).append(filename)
+        return {name: files[0] for name, files in owners.items() if len(files) == 1}
+    except (OSError, ValueError):
+        return {}
 
 
 def device_control_guides() -> Dict[str, str]:
@@ -154,15 +277,22 @@ def device_control_guides() -> Dict[str, str]:
         result = {}
         for entry in catalog.get("guides", []):
             filename = entry.get("file", "")
-            platforms = entry.get("control_platforms", [])
+            platforms = _binding(entry, "control_platforms", "platforms", [])
+            if entry.get("driver") and not entry["driver"].get("primary"):
+                continue
             if (not isinstance(filename, str) or Path(filename).name != filename
                     or not filename.endswith(".md") or not (GUIDES_DIR / filename).is_file()
                     or not isinstance(platforms, list)):
                 continue
             for platform in platforms:
                 if isinstance(platform, str) and platform.strip():
-                    result.setdefault(platform.lower(), filename)
-        return result
+                    key = platform.lower()
+                    if key in result and result[key] != filename:
+                        result[key] = None
+                        logger.warning("OS 대표 가이드 충돌: %s", key)
+                    elif key not in result:
+                        result[key] = filename
+        return {k: v for k, v in result.items() if v}
     except (OSError, ValueError, TypeError, AttributeError):
         logger.warning("장치 제어 가이드 목차를 읽지 못했습니다.")
         return {}
@@ -185,7 +315,7 @@ def control_briefs(filenames) -> list:
             matches = [e for e in entries if e.get("file") == filename]
             if len(matches) != 1:
                 continue
-            section = matches[0].get("control_brief_section")
+            section = _binding(matches[0], "control_brief_section", "brief_section")
             path = safe_guide_path(GUIDES_DIR, filename)
             if not isinstance(section, str) or not section or path is None:
                 continue
@@ -215,7 +345,7 @@ def callable_control_briefs(names) -> list:
         catalog = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
         owners = {}
         for filename, entry in _control_entries(catalog):
-            names = entry.get("control_callables", [])
+            names = _binding(entry, "control_callables", "callables", [])
             if not isinstance(names, list):
                 continue
             for name in names:
@@ -311,6 +441,10 @@ def catalog_revision() -> str:
     재확인이 필요하다는 보수적인 계약이며, 모델 호출이나 사용 기록은 만들지 않는다.
     """
     digest = hashlib.sha256()
+    try:
+        digest.update((DATA_PATH / "guide_db.json").read_bytes())
+    except OSError:
+        digest.update(b"<catalog unavailable>")
     for path in sorted(GUIDES_DIR.glob('*.md')):
         name = path.name.encode('utf-8')
         try:
@@ -787,6 +921,25 @@ def read_guide_schema():
             }, "required": ["query"]}}
 
 
+def _markdown_headings(content):
+    """Headings outside fenced examples, with original offsets for complete sections."""
+    fence = None
+    offset = 0
+    for line in content.splitlines(keepends=True):
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        if fence is not None:
+            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence):
+                if not line[marker.end():].strip():
+                    fence = None
+        elif marker:
+            fence = marker[1]
+        else:
+            match = re.compile(r"(?m)^(#{1,6}) +(.+?)[ \t]*$").match(content, offset)
+            if match:
+                yield match
+        offset += len(line)
+
+
 def guide_read_view(result, params):
     """Explicit version/section requests only; ordinary reads always return full text."""
     from hashlib import sha256
@@ -798,7 +951,7 @@ def guide_read_view(result, params):
         return result
     out = dict(result)
     content_hash = sha256(content.encode()).hexdigest()
-    headings = list(re.finditer(r'(?m)^(#{1,6}) +(.+?)\s*$', content))
+    headings = list(_markdown_headings(content))
     out.update(content_hash=content_hash, sections=[m[2] for m in headings],
                read_hint='현재 문맥에 본문이 있으면 재독하지 마세요. 변경 확인은 if_hash, 필요한 절만 다시 볼 때는 section. 본문을 잃었으면 둘 다 생략해 전문을 읽습니다.')
     section = params.get('section')

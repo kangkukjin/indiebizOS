@@ -107,3 +107,34 @@ if __name__ == '__main__':
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_driver_primary_delivers_only_entry_and_full_describe_remains_available(monkeypatch):
+    from pathlib import Path
+    import prompt_builder as pb
+    import guide_registry
+    from model_result_view import describe_actions
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.setattr(pb, 'get_base_path', lambda: root)
+    builder = pb.PromptBuilder(root)
+    monkeypatch.setattr(pb, 'get_prompt_builder', lambda: builder)
+    monkeypatch.setattr(pb, '_repair_turn_block', lambda _: '')
+    for name in ('guest_helper.md', 'remote_pc_execution.md', 'remote_pc_installation.md',
+                 'pc_control.md', 'android_control.md', 'tv_control.md', 'remote_phone.md'):
+        block = builder._guide_block(name)
+        assert '입구·요약' in block
+        assert '전문 제공' not in block
+        assert len(block) < 2000
+    co = {'guide_files': ['remote_pc_execution.md'],
+          'capability_focus': {'highlight_actions': ['limbs:guestpc', 'self:limb']}}
+    command = pb.compile_user_command('원격 진단', co)
+    assert '선택 액션의 계약 조회' in command
+    assert '이번 작업의 상세 계약' not in command
+    assert '요약됐으면 read_guide로 열어' not in command
+    full = describe_actions(['limbs:guestpc', 'self:limb'], ['limbs', 'self'], edition=2)
+    assert all('definition' in a for a in full['actions'])
+    assert len(str(full)) > len(command)
+    view = guide_registry.guide_read_view(
+        {'content': (root / 'data/guides/remote_pc_execution.md').read_text()},
+        {'section': '재관측과 전송 재시도'})
+    assert 'transfer_id' in view['content'] and '원격 read에는 offset·limit가 없다' in view['content']

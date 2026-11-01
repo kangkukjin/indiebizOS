@@ -319,7 +319,7 @@ def test_guide_and_all_seed_examples_compile(pc):
     sources = {definition_name(p.read_text()): p.read_text()
                for p in (ROOT / 'data/idioms').glob('guestpc_*.ibl')}
     seeds = json.loads((ROOT / 'data/idioms/guestpc_seeds.json').read_text())
-    guide = (ROOT / 'data/guides/guest_helper.md').read_text()
+    guide = (ROOT / 'data/guides/remote_pc_execution.md').read_text()
     examples = re.findall(r'<!-- example:guestpc_\w+ -->\s*```ibl\n(.*?)\n```', guide, re.S)
     assert len(examples) == len(sources) == 9
     adapters = load_registry(str(pc.path))

@@ -409,6 +409,7 @@
     "services/execution_trace_scope",
     "services/gen_newspaper",
     "services/generate_newspaper",
+    "services/hardware_driver_status",
     "services/hippocampus_provision",
     "services/indienet",
     "services/indienet_common",
@@ -596,8 +597,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 585,
-    "engine": 553,
+    "total": 586,
+    "engine": 554,
     "blocklist": 32
   }
 }

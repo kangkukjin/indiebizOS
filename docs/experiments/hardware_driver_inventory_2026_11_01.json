@@ -1,0 +1,263 @@
+{
+  "observed_at": "2026-11-01T11:58:07.378195+09:00",
+  "scope": "Read-only view of existing registrations and published artifacts. No remote command, update, install or device restart. Connection and capabilities are last reports, not fresh physical verification.",
+  "items": [
+    {
+      "device": "device_1",
+      "adapter": "resident-v1",
+      "platform": "darwin",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "pc-os-code",
+          "drivers": [
+            "pc_control"
+          ],
+          "support": "unknown",
+          "update_state": "hub_owned",
+          "phase": null,
+          "installed_reported": false,
+          "generation_present": false
+        },
+        {
+          "id": "resident-helper",
+          "drivers": [
+            "pc_control",
+            "remote_pc_execution",
+            "remote_pc_installation"
+          ],
+          "support": "reported",
+          "update_state": "current",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_2",
+      "adapter": "resident-v1",
+      "platform": "windows",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "pc-os-code",
+          "drivers": [
+            "pc_control"
+          ],
+          "support": "unknown",
+          "update_state": "hub_owned",
+          "phase": null,
+          "installed_reported": false,
+          "generation_present": false
+        },
+        {
+          "id": "resident-helper",
+          "drivers": [
+            "pc_control",
+            "remote_pc_execution",
+            "remote_pc_installation"
+          ],
+          "support": "reported",
+          "update_state": "current",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_3",
+      "adapter": "resident-v1",
+      "platform": "darwin",
+      "recent_connection": false,
+      "components": [
+        {
+          "id": "pc-os-code",
+          "drivers": [
+            "pc_control"
+          ],
+          "support": "unknown",
+          "update_state": "hub_owned",
+          "phase": null,
+          "installed_reported": false,
+          "generation_present": false
+        },
+        {
+          "id": "resident-helper",
+          "drivers": [
+            "pc_control",
+            "remote_pc_execution",
+            "remote_pc_installation"
+          ],
+          "support": "reported",
+          "update_state": "current",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_4",
+      "adapter": "indiebiz-v1",
+      "platform": "android",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "phone-apk",
+          "drivers": [
+            "android_control",
+            "remote_phone"
+          ],
+          "support": "reported",
+          "update_state": "available",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_5",
+      "adapter": "resident-v1",
+      "platform": "windows",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "pc-os-code",
+          "drivers": [
+            "pc_control"
+          ],
+          "support": "unknown",
+          "update_state": "hub_owned",
+          "phase": null,
+          "installed_reported": false,
+          "generation_present": false
+        },
+        {
+          "id": "resident-helper",
+          "drivers": [
+            "pc_control",
+            "remote_pc_execution",
+            "remote_pc_installation"
+          ],
+          "support": "reported",
+          "update_state": "current",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_6",
+      "adapter": "indiebiz-v1",
+      "platform": "android",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "phone-apk",
+          "drivers": [
+            "android_control",
+            "remote_phone"
+          ],
+          "support": "reported",
+          "update_state": "available",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_7",
+      "adapter": "indiebiz-v1",
+      "platform": "android",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "phone-apk",
+          "drivers": [
+            "android_control",
+            "remote_phone"
+          ],
+          "support": "reported",
+          "update_state": "available",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_8",
+      "adapter": "resident-v1",
+      "platform": "windows",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "managed-helper",
+          "drivers": [
+            "remote_pc_execution",
+            "remote_pc_installation"
+          ],
+          "support": "reported",
+          "update_state": "current",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_9",
+      "adapter": "resident-v1",
+      "platform": "windows",
+      "recent_connection": true,
+      "components": [
+        {
+          "id": "managed-helper",
+          "drivers": [
+            "remote_pc_execution",
+            "remote_pc_installation"
+          ],
+          "support": "reported",
+          "update_state": "current",
+          "phase": null,
+          "installed_reported": true,
+          "generation_present": true
+        }
+      ],
+      "conflicts": []
+    },
+    {
+      "device": "device_10",
+      "adapter": "network-api",
+      "platform": "tizen",
+      "recent_connection": null,
+      "components": [
+        {
+          "id": "tv-hub",
+          "drivers": [
+            "tv_control"
+          ],
+          "support": "unknown",
+          "update_state": "hub_owned",
+          "phase": null,
+          "installed_reported": false,
+          "generation_present": false
+        }
+      ],
+      "conflicts": []
+    }
+  ]
+}

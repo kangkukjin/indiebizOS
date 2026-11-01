@@ -383,6 +383,9 @@ PC에는 `[limbs:guestpc]`의 셸·파일·작업 명령을 보내고, Android �
 
 ### 조작면 제어 드라이버
 
+하드웨어 드라이버의 가이드·호출·설치 부품 연결은 `guide_db.json`이 소유한다. 드라이버 입구는 짧은 절만 자동 전달하며, 기기별 판본·업데이트·설치 세대는 기존 원장과 업데이트 구현에서 읽는다. PC 공유 바이너리·관리 서비스·폰 APK·허브 실행 TV를 구분하고, 전송 후 설치 세대·배포 지문이 바뀌면 재조회한다. [소유 구조와 검증 범위](../../docs/HARDWARE_DRIVER_OWNERSHIP_REPAIR_2026_11_01.md#10-구현과-검증-기록-2026-11-01).
+
+
 앱과 AI는 같은 등록 스크립트·저장 함수를 사용한다. AI는 대상과 목표를 고르고,
 드라이버는 기기·권한·관측 판본을 확인한 뒤 실행하고 결과를 재조회한다.
 새 IBL 낱말을 늘리지 않고 기존 `self:script`·`[fn:…]`·손발 연결을 조합한다.
@@ -564,7 +567,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 171 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 22)
-- backend **.py 649개**(test 제외, git 추적 기준) — 층 디렉토리 `base 96 · datastore 95 · ibl 97 · cognition 94 · services 95 · surface 98`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **102개**(guide_db 등록 **97**)
+- backend **.py 650개**(test 제외, git 추적 기준) — 층 디렉토리 `base 96 · datastore 95 · ibl 97 · cognition 94 · services 96 · surface 98`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **104개**(guide_db 등록 **99**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 23·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

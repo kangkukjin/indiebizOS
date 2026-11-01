@@ -133,3 +133,39 @@ def test_update_requires_explicit_target(update_pc):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_driver_api_binding_rejects_stale_ui_without_enqueuing(update_pc):
+    import hardware_driver_status
+    pc = update_pc
+    rec = resident_pcs.resolve(pc.rec['device_id'])
+    view = hardware_driver_status.describe(rec)
+    unit, = [c for c in view['components'] if c['location'] == 'device']
+    assert len(unit['drivers']) == 3
+    (pc.path / 'helper/dist/indiebiz-helper-win-resident.exe').write_bytes(b'new publication')
+    with pytest.raises(ValueError, match='driver_update_changed'):
+        resident_pcs.update_helper(rec['device_id'], expected=unit['binding'])
+    assert not pc.history()
+
+
+@pytest.mark.parametrize('change', ['generation', 'installed', 'release'])
+def test_pc_update_rechecks_binding_after_transfer_before_submit(update_pc, monkeypatch, change):
+    pc = update_pc
+    original = resident_pcs.transfer_commit
+    def commit(tid):
+        result = original(tid)
+        if change == 'release':
+            (pc.path / 'helper/dist/indiebiz-helper-win-resident.exe').write_bytes(b'next')
+        elif change == 'installed':
+            resident_pcs.sync(pc.rec['key'], 'a' * 32,
+                              capabilities={**pc.caps, 'helper_sha256': 'f' * 64})
+        else:
+            with limb_keys._lock:
+                record = limb_keys._find_locked(limb_keys._load(), pc.rec['device_id'])
+                record['registration']['generation'] = 'new-generation'
+                limb_keys._save()
+        return result
+    monkeypatch.setattr(resident_pcs, 'transfer_commit', commit)
+    with pytest.raises(ValueError, match='driver_update_changed'):
+        resident_pcs.update_helper(pc.rec['device_id'])
+    assert not pc.history()

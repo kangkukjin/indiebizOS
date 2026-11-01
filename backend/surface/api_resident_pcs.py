@@ -140,13 +140,13 @@ def device_context(req: dict):
 
 @router.post('/remote-pcs/helper-update')
 def helper_update(req: dict):
-    return checked(pcs.update_helper, req.get('target'))
+    return checked(pcs.update_helper, req.get('target'), expected=req.get('expected'))
 
 
 @router.post('/remote-pcs/phone-update')
 def phone_update(req: dict):
     import phone_updates
-    return checked(phone_updates.submit, req.get('target'))
+    return checked(phone_updates.submit, req.get('target'), expected=req.get('expected'))
 
 
 @router.get('/remote-pcs/desktop/{device}')

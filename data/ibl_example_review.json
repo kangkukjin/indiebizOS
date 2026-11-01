@@ -1125,19 +1125,19 @@
   "self:limb": {
    "fields": {
     "description": "03e9b32b065e",
-    "target_description": "d4b913fa09ae",
-    "implementation": "6e21b0239e3e",
+    "target_description": "03a8e18fb0f0",
+    "implementation": "78ef80e7248c",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "params": "348a8b9e4530",
     "aliases": "399fa2f32490",
-    "ops": "0daccb5f7be5",
+    "ops": "dad4e513c887",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "2e81dde1acfc"
    },
-   "reviewed": "2026-10-27",
+   "reviewed": "2026-11-01",
    "examples": 22
   },
   "self:list": {

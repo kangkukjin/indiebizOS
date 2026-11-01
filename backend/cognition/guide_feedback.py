@@ -39,6 +39,7 @@
 """
 
 import json
+import hashlib
 import logging
 import re
 from datetime import date
@@ -272,7 +273,9 @@ def _review_one(guide: str, user_message: str, response: str,
         "  4. 가이드보다 나은 경로를 찾았나\n\n"
         "세 갈래로 나눠 답하라:\n"
         '  · observations: 이번에 실측으로 확인한 함정·사실 (가이드에 없던 것만, 한 줄씩). '
-        "일반론·이미 적힌 내용은 넣지 마라.\n"
+        "일반론·이미 적힌 내용은 넣지 마라. 구조화된 실행 근거에 environment(device_id·generation), "
+        "version, observed_at이 명시된 기기 관측은 그 값을 그대로 보존한 "
+        "{environment,version,observed_at,fact} 객체로 적을 수 있다. 없는 식별자·시각·판본은 추측하지 마라.\n"
         '  · factual_fixes: 죽은 어휘 이름·끊긴 경로처럼 *명백한 사실 오류*. '
         '{"old":"파일에 있는 정확한 문자열","new":"고친 문자열","why":"근거"} — old 는 '
         "가이드에서 **그대로 복사**해야 하고 파일에서 유일해야 한다.\n"
@@ -319,6 +322,45 @@ def _executed_pairs(tool_calls) -> set:
     return pairs
 
 
+def _store_driver_observations(guide, source_hash, observations, tool_calls):
+    """Only attributed observations enter device history; unscoped prose stays a proposal.
+
+    The reviewer must preserve the device, installation generation and observed
+    version from a structured execution result. No alias or current-state inference.
+    """
+    import control_observations
+
+    def environments(value):
+        if isinstance(value, dict):
+            if isinstance(value.get("environment"), dict):
+                yield value["environment"], value.get("version", "unknown"), value.get("observed_at")
+            for child in value.values():
+                yield from environments(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from environments(child)
+
+    evidence = [item for call in (tool_calls or []) if isinstance(call, dict)
+                for item in environments(call.get("result"))]
+    stored = 0
+    for raw in observations or []:
+        if not isinstance(raw, dict):
+            continue
+        env = raw.get("environment") or {}
+        if not isinstance(env, dict) or not env.get("device_id") or not env.get("generation"):
+            continue
+        if (env, raw.get("version", "unknown"), raw.get("observed_at")) not in evidence:
+            continue
+        try:
+            row = {**raw, "source": f"guide:{guide}@{source_hash}", "status": "recheck"}
+            control_observations.record("device:" + env["device_id"], row)
+            stored += 1
+        except (ValueError, TypeError, KeyError):
+            # Keep the unchanged review below, including failures to attribute/store.
+            continue
+    return stored
+
+
 def review_used_guides(guides: List[str], user_message: str, response: str,
                        tool_calls=None) -> Dict:
     """이번 턴에 쓰인 가이드를 검토하고 되돌려 쓴다. 증류 4단계.
@@ -326,7 +368,7 @@ def review_used_guides(guides: List[str], user_message: str, response: str,
     실패는 전부 삼킨다 — 되먹임이 턴을 망치면 안 된다.
     """
     result = {"reviewed": [], "skipped": [], "appended": 0, "fixed": 0,
-              "proposed": 0, "rejected": []}
+              "proposed": 0, "observed": 0, "rejected": []}
     if not guides:
         return result
 
@@ -350,6 +392,11 @@ def review_used_guides(guides: List[str], user_message: str, response: str,
     except Exception as e:
         logger.debug(f"[GuideFeedback] 절 귀속 실패 (무시): {e}")
 
+    attributed = [c.get("result") for c in (tool_calls or [])
+                  if isinstance(c, dict) and isinstance(c.get("result"), dict)
+                  and c["result"].get("environment")]
+    if attributed:
+        tool_summary = json.dumps(attributed, ensure_ascii=False, default=str) + "\n" + tool_summary
     live = _live_actions()
     for guide in list(dict.fromkeys(guides))[:MAX_GUIDES_PER_TURN]:
         path = GUIDES_DIR / guide
@@ -360,6 +407,7 @@ def review_used_guides(guides: List[str], user_message: str, response: str,
             result["skipped"].append(f"{guide}: {why}")
             continue
         try:
+            source_hash = hashlib.sha256(path.read_bytes()).hexdigest()
             out = _review_one(guide, user_message, response, tool_summary, live)
         except Exception as e:
             logger.debug(f"[GuideFeedback] {guide} 검토 실패 (무시): {e}")
@@ -374,6 +422,26 @@ def review_used_guides(guides: List[str], user_message: str, response: str,
         if not out:
             continue
         result["reviewed"].append(guide)
+
+        from guide_registry import guide_delivery
+        try:
+            current_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            current_hash = None
+        policy = guide_delivery(guide)
+        if policy.get("driver_owned") or policy["mode"] == "reference" or current_hash != source_hash:
+            if not any(out.get(key) for key in ("observations", "factual_fixes", "proposals")):
+                continue
+            if current_hash == source_hash:
+                result["observed"] += _store_driver_observations(
+                    guide, source_hash, out.get("observations"), tool_calls)
+            # Strings have no trustworthy device/version attribution. Preserve complete
+            # evidence for review instead of inventing an environment or editing prose.
+            _queue_proposal(guide, "드라이버 관측·개정 제안 (본문 자동 누적 없음)",
+                            feedback={"source_hash": source_hash, "review": out,
+                                      "tool_calls": tool_calls or [], "request": user_message})
+            result["proposed"] += 1
+            continue
 
         if _pending_repair_apply():
             # 내용을 버리거나 적용 후 검사를 무효화하지 않는다. 기존 제안 저장소는

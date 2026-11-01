@@ -7,6 +7,7 @@ import os
 import re
 import socket
 import time
+import threading
 import uuid
 from pathlib import Path, PureWindowsPath
 
@@ -30,12 +31,45 @@ def resolve(target, active=True):
 
 
 def devices():
+    from hardware_driver_status import describe
     from phone_updates import status as phone_update_status
     now = time.time()
-    return [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90,
+    rows = [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90,
              "helper": helper_status(r),
              **({"phone_update": phone_update_status(r)} if r["registration"].get("kind") == "phone" else {})}
             for r in limb_keys.list_keys() if r.get("registration")] + hardware_registry.devices()
+    return [{**r, "drivers": describe(r)} for r in rows]
+
+
+def update_binding(rec, release_sha256):
+    reg = rec["registration"]
+    caps = reg.get("capabilities") or {}
+    # Bind compatibility evidence too; a changed ABI/signer/protocol needs a fresh decision.
+    observed = {k: caps.get(k) for k in ("os", "os_version", "arch", "go", "service_scope", "self_update", "helper_sha256")}
+    apk = caps.get("apk_update") or {}
+    observed["apk_update"] = {k: apk.get(k) for k in
+                              ("contract", "abi", "sdk", "signer_sha256", "installed_sha256", "version_code")}
+    observed.update(adapter=reg.get("adapter"), kind=reg.get("kind"))
+    release_fingerprint = release_sha256
+    if reg.get("adapter") == "indiebiz-v1":
+        from phone_updates import release_for
+        release = release_for(apk)
+        release_fingerprint = (hashlib.sha256(json.dumps(release, sort_keys=True).encode()).hexdigest()
+                               if release else None)
+    return {"device_id": rec["device_id"], "generation": reg["generation"],
+            "installation_id": reg["installation_id"], "release_sha256": release_sha256,
+            "release_fingerprint": release_fingerprint,
+            "observed_fingerprint": hashlib.sha256(json.dumps(observed, sort_keys=True).encode()).hexdigest()}
+
+
+def require_update_binding(rec, expected, release_sha256):
+    actual = update_binding(rec, release_sha256)
+    if expected is not None and expected != actual:
+        raise ValueError("driver_update_changed: 설치 세대·관측 판본·배포물이 바뀌었습니다. 다시 조회하세요")
+    return actual
+
+
+_update_lock = threading.RLock()
 
 
 _DIGESTS = {}
@@ -101,14 +135,19 @@ def helper_status(rec):
         state = "current"
     elif not caps.get("self_update"):
         state = "manual"
-    elif resident_store.pending(rec["device_id"], "update", settle=0 if failed else 120):
+    elif resident_store.pending(rec["device_id"], "update", settle=0 if failed else 120, generation=reg["generation"]):
         state = "updating"  # a reported rollback of this very build ends the wait at once
     else:
         state = "available"
     return {"state": state, "current": current, "latest": latest, "rolled_back": bool(failed and state != "current")}
 
 
-def update_helper(target):
+def update_helper(target, *, expected=None):
+    with _update_lock:
+        return _update_helper(target, expected=expected)
+
+
+def _update_helper(target, *, expected=None):
     """Owner cockpit and AI share the published-helper update procedure."""
     import principal
     import member_runtime
@@ -116,10 +155,11 @@ def update_helper(target):
         raise PermissionError("helper_update_owner_required")
     rec = resolve(target)
     status = helper_status(rec)
+    binding = require_update_binding(rec, expected, status.get("latest"))
     if status["state"] == "current":
         return {"success": True, "state": "current", "sha256": status["latest"]}
     if status["state"] == "updating":
-        job_id = resident_store.pending(rec["device_id"], "update", settle=120)
+        job_id = resident_store.pending(rec["device_id"], "update", settle=120, generation=rec["registration"]["generation"])
         tasks = resident_store.history(device=rec["device_id"], job=job_id, limit=1)["tasks"]
         if not job_id or not tasks:
             raise ValueError("helper_update_receipt_unavailable: 상태를 다시 조회하세요")
@@ -130,6 +170,8 @@ def update_helper(target):
         raise ValueError("helper_update_unavailable: 이 PC의 헬퍼는 스스로 교체하지 못합니다"
                          if status["state"] == "manual" else "helper_update_unavailable: 헬퍼 판을 알 수 없습니다")
     source = helper_binary(rec["registration"]["capabilities"])
+    if source is None or _digest(source) != binding["release_sha256"]:
+        raise ValueError("driver_update_changed: 배포물을 다시 조회하세요")
     row = transfer_create(rec["device_id"], "to_pc", source.name, source.stat().st_size, status["latest"])
     offset = 0
     with source.open("rb") as f:
@@ -137,12 +179,12 @@ def update_helper(target):
             offset = transfer_write(row["id"], offset, chunk)["offset"]
     transfer_commit(row["id"])
     receipt = submit(rec["device_id"], {"op": "update", "transfer_id": row["id"], "sha256": status["latest"],
-                                        "timeout": 900}, uuid.uuid4().hex, allow_update=True)
+                                        "timeout": 900}, uuid.uuid4().hex, allow_update=True, update_expected=binding)
     return {**receipt, "state": "updating", "sha256": status["latest"]}
 
 
 def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False,
-           allow_media=False, allow_phone_update=False):
+           allow_media=False, allow_phone_update=False, update_expected=None):
     rec = resolve(target)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
@@ -235,6 +277,17 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
         raise ValueError("command_too_large_use_transfer")
     with limb_keys._lock:
         rec = limb_keys.resident_auth(rec["key"], rec["registration"]["installation_id"])
+        if update_expected is not None:
+            if allow_phone_update and op == "phone_update":
+                from phone_updates import release_for
+                release = release_for((rec["registration"].get("capabilities") or {}).get("apk_update") or {})
+                latest = (release or {}).get("sha256")
+            elif allow_update and op == "update":
+                latest = helper_status(rec).get("latest")
+            else:
+                raise ValueError("invalid_update_binding")
+            require_update_binding(rec, update_expected, latest)
+            command = {**command, "update_binding": update_expected}
         request_id = request_id or uuid.uuid4().hex
         jid = resident_store.submit(rec, command, request_id)
     import task_receipts

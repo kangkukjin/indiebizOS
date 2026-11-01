@@ -175,7 +175,7 @@ def test_seed_sources_match_files():
 
 @pytest.mark.parametrize('name', ['prepare', 'run', 'check', 'finish'])
 def test_guide_examples_execute_with_real_ibl_adapters(remote, name):
-    text = (ROOT / 'data/guides/guest_helper.md').read_text()
+    text = (ROOT / 'data/guides/remote_pc_execution.md').read_text()
     examples = dict(re.findall(r'<!-- example:guestpc_(\w+) -->\s*```ibl\n(.*?)\n```', text, re.S))
     remote.state.update(state='succeeded', result={'exit': 0, 'stdout': 'HELPER_OK'})
     out = remote(examples[name], 작업=remote.job)

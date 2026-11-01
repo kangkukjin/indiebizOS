@@ -15,9 +15,11 @@ type Registration = {
   paused?: boolean;
   capabilities?: { os?: string; hostname?: string; desktop_stream?: number; media_session?: MediaCapability };
 };
-type Helper = { state: 'unknown' | 'current' | 'manual' | 'available' | 'updating'; rolled_back?: boolean };
+type Helper = { state: string; rolled_back?: boolean };
 type PhoneUpdate = { state: string; current_version?: number; latest_version?: number; current_version_name?: string; latest_version_name?: string; message?: string };
-type PC = { phone_update?: PhoneUpdate; alias: string; device_id: string; connected: boolean | null; revoked?: boolean; registration: Registration; helper?: Helper };
+type DriverComponent = { id: string; location: string; drivers: string[]; generation?: string; installed?: string; approval?: string; binding?: Record<string, unknown>; update?: PhoneUpdate & Helper & { phase?: string; latest?: string; sha256?: string; target_sha256?: string; verification?: string } };
+type Drivers = { items: { id: string; file: string; surfaces: string[] }[]; components: DriverComponent[]; conflicts: string[] };
+type PC = { drivers?: Drivers; phone_update?: PhoneUpdate; alias: string; device_id: string; connected: boolean | null; revoked?: boolean; registration: Registration; helper?: Helper };
 type USB = { folder: string; ready: boolean };
 type PCList = { items: PC[]; usb: USB };
 
@@ -45,7 +47,11 @@ export function LimbSwitch() {
     setLoading(true);
     try {
       const data = await api.request<PCList>('/remote-pcs');
-      setPCs(data.items);
+      setPCs(data.items.map((pc) => {
+        const unit = pc.drivers?.components.find((c) => c.location === 'device' && c.binding);
+        return unit?.update ? { ...pc, ...(pc.registration.kind === 'phone'
+          ? { phone_update: unit.update } : { helper: unit.update }) } : pc;
+      }));
       setUSB(data.usb);
       setErr(null);
     } catch (e) {
@@ -89,7 +95,7 @@ export function LimbSwitch() {
   const updateHelper = async (pc: PC) => {
     setBusy(pc.device_id); setErr(null);
     try {
-      await api.request(pc.registration.kind === 'phone' ? '/remote-pcs/phone-update' : '/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id }) });
+      await api.request(pc.registration.kind === 'phone' ? '/remote-pcs/phone-update' : '/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id, expected: pc.drivers?.components.find((c) => c.binding)?.binding }) });
       await load();
     } catch (e) { setErr(e instanceof Error ? e.message : '기기 업데이트 요청 실패'); }
     finally { setBusy(null); }
@@ -114,6 +120,7 @@ export function LimbSwitch() {
     const published = u.latest_version_name || u.latest_version;
     return ` · ${labels[u.state] || u.state}${installed ? ` · 설치 ${installed}` : ''}${published ? ` · 중앙 배포 ${published}` : ''}${u.message ? ` · ${u.message}` : ''}`;
   };
+  const updatePhase: Record<string, string> = { queued: '전달 대기', replacing: '교체 중', awaiting_reconnect: '재접속 확인 대기' };
   const helperNote = (pc: PC) => pc.registration.state !== 'active' ? ''
     : pc.helper?.state === 'updating' ? ' · 헬퍼 교체 중'
     : pc.helper?.state === 'current' ? ' · 헬퍼 최신'
@@ -193,6 +200,21 @@ export function LimbSwitch() {
               {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}해제
             </button>
           </div>
+          {pc.drivers && <details className="mt-1.5 pl-4 text-[11px] text-stone-500">
+            <summary className="cursor-pointer">드라이버 구성과 업데이트</summary>
+            {pc.drivers.components.map((c) => <div key={c.id} className="mt-1 break-all">
+              {c.id} · {c.location === 'hub' ? '허브 실행' : '대상 기기 설치'} · {c.update?.phase ? (updatePhase[c.update.phase] || c.update.phase) : c.update?.state || '미확인'}
+              {c.installed && <span title={c.installed}> · 판본 {c.installed.slice(0, 12)}</span>}
+              {c.generation && <span title={c.generation}> · 설치 세대 {c.generation.slice(0, 8)}</span>}
+              {(c.update?.target_sha256 || c.update?.latest || c.update?.sha256) && <div>
+                배포 판본: {(c.update.target_sha256 || c.update.latest || c.update.sha256)?.slice(0, 12)}
+              </div>}
+              {c.update?.verification === 'version_reported' && <div>기기 판본 확인됨 · 실제 동작 확인은 별도</div>}
+              <div>공유 드라이버: {c.drivers.join(', ')}</div>
+              {c.approval && <div>승인 조건: {c.approval}</div>}
+            </div>)}
+            {pc.drivers.conflicts.length > 0 && <div role="alert">드라이버 등록 충돌: {pc.drivers.conflicts.join(', ')}</div>}
+          </details>}
           {media && (media.camera || media.microphone || media.speaker || media.playback) && <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-4">
             {media.camera && <button onClick={() => void openMedia(pc, 'camera')} disabled={!mediaOk || mediaOpening !== null}
               title="이 장치의 카메라 영상을 여기서 봅니다" className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">

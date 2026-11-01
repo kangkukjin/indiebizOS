@@ -235,3 +235,33 @@ return $점검
 정의는 충돌로 신고한다. 임베딩 색인 등록은 `register_webapp_idioms.py --seed-file pc_control_seeds.json`을 사용한다.
 구현은 prepare→guestpc→task→검증을 소유한다. 정상 호출에서 이 연결을 다시 작성하지 않는다.
 `PC제어실행`은 두 공개 함수가 공유하는 내부 부품이며 직접 대상 선택을 대신하는 공개 입구로 쓰지 않는다.
+
+## 범용 원격 화면·입력
+
+```ibl
+[limbs:guestpc]{op:"screen",limb:"사무실PC",mode:"interactive"}
+[limbs:guestpc]{op:"click",limb:"사무실PC",mode:"interactive",x:640,y:400}
+[limbs:guestpc]{op:"type",limb:"사무실PC",mode:"interactive",text:"hello"}
+[limbs:guestpc]{op:"key",limb:"사무실PC",mode:"interactive",key:"cmd+s"}
+```
+
+좌표는 **직전 screen 이미지에서 관측한 좌표**다. 예제 숫자를 그대로 사용하지 않는다.
+헬퍼가 축소·레티나 배율을 환산한다. screen → 좌표 선택 → 입력 → 결과 화면 확인 순서다.
+입력은 기본 재캡처(`shot:false`로 끄기), `settle_ms` 기본 700이다. type은 현재 포커스에 입력한다.
+캡처는 `max_width` 기본 1280, `format` png/jpeg/auto, `display` 다중 모니터 선택이며
+최근 20장이 `outputs/limb_screens/<별칭>/`에 남는다. move·scroll·drag도 같은 모드와 좌표 규칙이다.
+셸로 되는 작업은 셸을 쓴다. GUI의 좌표를 관용구에 고정하지 않는다.
+
+| OS | 화면·입력 조건 |
+| --- | --- |
+| Windows | 기본 OS API 사용. 관리자 창 입력은 헬퍼도 관리자 권한 필요 |
+| macOS | 화면 기록·손쉬운 사용 권한. cliclick 설치 시 우클릭·드래그·정밀 이동 지원 |
+| Linux | grim/scrot/ImageMagick 캡처 도구와 xdotool/ydotool 입력 도구 필요 |
+
+권한 변경 뒤 헬퍼를 재실행한다. 실제 GUI 가능 여부는 info와 작업 결과로 확인한다.
+
+## 사람이 직접 다루는 화면 공유
+
+조종실 → 손발 (USB) → **화면 공유**. 새 PC 헬퍼·Android 앱은 짧은 단절을 복구하며 이전 입력을 재전송하지 않는다.
+OS 권한·LAN 경로·기록 정책은 [헬퍼 안내](../../helper/README.md#사람용-화면-공유), 기기별 적용·실측은
+[연결 수리 기록](../../docs/REMOTE_HARDWARE_TRANSPORT_REPAIR_2026_10_31.md)을 따른다.

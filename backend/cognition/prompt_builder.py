@@ -168,7 +168,8 @@ class PromptBuilder:
 
         표식은 실패해도 본문 주입을 막지 않는다(신선도는 부가 정보지 전제가 아니다).
         """
-        from guide_registry import catalog_revision
+        from guide_registry import catalog_revision, guide_delivery, guide_read_view
+        policy = guide_delivery(guide_filename)
         revision = catalog_revision()
         try:
             content = self._load_guide_file(guide_filename)
@@ -177,6 +178,14 @@ class PromptBuilder:
             return ""
         if not content.strip():
             return ""
+        if policy["mode"] != "full":
+            view = guide_read_view({"file": guide_filename, "content": content},
+                                   {"section": policy.get("section")}) if policy.get("section") else {}
+            brief = view.get("content", "") if not view.get("error") else ""
+            return (f"# 가이드: {guide_filename} (입구·요약, catalog_revision={revision})\n"
+                    + (brief or policy.get("description", ""))
+                    + f"\n부족한 동작·인자·조건만 read_guide(query=\"{guide_filename}\",section=\"필요한 절\")로 조회한다. "
+                      "제공된 호출 범위는 전문 재조회 없이 사용한다.")
         note = ""
         try:
             from guide_registry import freshness_note, record_use, mark_injected
@@ -644,7 +653,11 @@ def _build_dynamic_context(
         guide_files = execution_guides(consciousness_output.get("guide_files"))
         if guide_files:
             primary = guide_files[0]
-            block = builder._guide_block(primary)
+            from guide_registry import guide_delivery, has_current_brief
+            if guide_delivery(primary)["mode"] == "brief" and has_current_brief(primary, execution_memory):
+                block = f"# 주 가이드: {primary} — 현재 지문의 control_brief가 위에 제공됐다. 부족한 조건만 해당 절로 조회한다."
+            else:
+                block = builder._guide_block(primary)
             if block:
                 parts.append(block)
             else:
@@ -787,8 +800,18 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
         try:
             from model_result_view import describe_actions
             from thread_context import get_allowed_nodes
-            contracts = describe_actions(list(dict.fromkeys(highlight))[:4], get_allowed_nodes(), edition=2)
-            aug.append("이번 작업의 상세 계약: " + json.dumps(contracts, ensure_ascii=False))
+            from guide_registry import deferred_action_guides
+            selected = list(dict.fromkeys(highlight))[:4]
+            deferred = deferred_action_guides(selected)
+            detailed = [name for name in selected if name not in deferred]
+            if detailed:
+                contracts = describe_actions(detailed, get_allowed_nodes(), edition=2)
+                aug.append("이번 작업의 상세 계약: " + json.dumps(contracts, ensure_ascii=False))
+            if deferred:
+                aug.append("선택 액션의 계약 조회: " + json.dumps([
+                    {"action": name, "guide": filename, "section": "빠른 호출",
+                     "describe": [name]} for name, filename in deferred.items()], ensure_ascii=False)
+                    + " — 현재 드라이버 호출 요약으로 충분하면 바로 사용한다. 필요한 op 인자·권한·실패 의미가 없으면 describe 또는 해당 절을 조회한다.")
         except (ValueError, KeyError, TypeError):
             pass
     hint = (cap_focus.get("hint") or "").strip()
@@ -810,13 +833,15 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
             aug.append(f"실행 초안(검증 실패 — {err}):\n" + draft +
                        "\n이 초안은 그대로 쓰지 말 것. 위 오류를 감안해 직접 재구성하라.")
 
-    from guide_registry import execution_guides
+    from guide_registry import execution_guides, guide_delivery
     guide_files = execution_guides(co.get("guide_files"))
     if guide_files:
         aug.append(
             "주 가이드: " + guide_files[0]
-            + " — 현재 목차의 catalog_revision과 같은 전문이 있으면 그 본문을 따르고, "
-              "지문이 없거나 다르거나 본문이 잘림·요약됐으면 read_guide로 열어 따르라."
+            + (" — 현재 목차의 입구·요약을 사용하고 부족한 동작·인자·조건만 read_guide의 해당 절로 확인한다."
+               if guide_delivery(guide_files[0])["mode"] != "full" else
+               " — 현재 목차의 catalog_revision과 같은 전문이 있으면 그 본문을 따르고, "
+               "지문이 없거나 다르거나 본문이 잘림·요약됐으면 read_guide로 열어 따르라.")
         )
         if guide_files[1:]:
             aug.append("추가 가이드 후보: " + ", ".join(guide_files[1:])

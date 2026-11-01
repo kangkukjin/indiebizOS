@@ -841,6 +841,11 @@ def _limb_list(tool_input: dict) -> dict:
             # Do not infer update availability from helper/dist or connectivity.
             import resident_pcs
             r["helper"] = resident_pcs.helper_status(r)
+        from hardware_driver_status import describe
+        r["drivers"] = describe(r)
+        if (r.get("registration") or {}).get("kind") == "phone":
+            import phone_updates
+            r["phone_update"] = phone_updates.status(r)
         if not r.get("registration"):
             payload_dir = _payload_dir_for(r.get("alias", ""), r["device_id"])
             r["payload_dir"] = payload_dir if os.path.isdir(payload_dir) else None
@@ -852,7 +857,8 @@ def _limb_list(tool_input: dict) -> dict:
                         ("os", "os_version", "hostname", "user", "admin", "gui")
                         if env.get(k) is not None}
     import hardware_registry
-    rows.extend(h for h in hardware_registry.devices()
+    from hardware_driver_status import describe
+    rows.extend({**h, "drivers": describe(h)} for h in hardware_registry.devices()
                 if limb_filter is None or h.get("device_id") == limb_filter or h.get("alias") == limb_filter)
     # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
     # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
@@ -936,7 +942,13 @@ def _limb_update(tool_input):
     if repair_context.active():
         return {"success": False, "error": "helper_update_has_no_repair_sandbox"}
     try:
-        return {**resident_pcs.update_helper(target.strip()), "op": "update", "target": target.strip()}
+        rec = resident_pcs.resolve(target.strip())
+        if rec["registration"].get("adapter") == "indiebiz-v1":
+            import phone_updates
+            updated = phone_updates.submit(rec["device_id"])
+        else:
+            updated = resident_pcs.update_helper(rec["device_id"])
+        return {**updated, "op": "update", "target": rec["device_id"]}
     except (ValueError, PermissionError, OSError, KeyError) as exc:
         return {"success": False, "op": "update", "target": target.strip(), "error": str(exc)}
 

@@ -223,3 +223,31 @@ def test_publisher_keeps_immutable_apk_and_rejects_downgrade(release, tmp_path, 
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('change', ['generation', 'installed', 'release', 'manifest'])
+def test_apk_update_rechecks_binding_after_transfer(device, release, monkeypatch, change):
+    rec, client, native = device
+    manifest, _ = release
+    original = pcs.transfer_commit
+    def commit(tid):
+        result = original(tid)
+        if change == 'release':
+            path = updates.releases_root() / manifest['abi'] / 'current.json'
+            path.unlink()
+        elif change == 'manifest':
+            path = updates.releases_root() / manifest['abi'] / 'current.json'
+            path.write_text(json.dumps({**manifest, 'min_sdk': 29}))
+        elif change == 'installed':
+            native.caps.update(installed_sha256='f' * 64)
+            client.step(inline=True, wait=0)
+        else:
+            with limb_keys._lock:
+                record = limb_keys._find_locked(limb_keys._load(), rec['device_id'])
+                record['registration']['generation'] = 'next-install'
+                limb_keys._save()
+        return result
+    monkeypatch.setattr(pcs, 'transfer_commit', commit)
+    with pytest.raises(ValueError, match='driver_update_changed'):
+        updates.submit(rec['device_id'])
+    assert not resident_store.pending(rec['device_id'], 'phone_update')

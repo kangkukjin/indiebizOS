@@ -18,11 +18,19 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def environment(worktree):
+def environment(worktree, *, search_paths=None, modules=None, include_npm=True):
     from python_environment_lock import fingerprint as python_fingerprint
     npm = Path(worktree) / "frontend/node_modules/.package-lock.json"
-    return digest({"python": python_fingerprint(worktree, details=True)["environment"],
-                   "npm": fingerprint(npm)})
+    return digest({"python": python_fingerprint(worktree, details=True, search_paths=search_paths, modules=modules)["environment"],
+                   "npm": fingerprint(npm) if include_npm else None})
+
+
+def execution_environment(worktree, session, *, search_paths=None):
+    scope = session.get('program_scope') or {}
+    if scope and not scope.get('unresolved'):
+        return environment(worktree, search_paths=search_paths, modules=scope['external_modules'],
+                           include_npm=any(p['kind'] == 'surface' for p in scope['programs']))
+    return environment(worktree, search_paths=search_paths)
 
 
 def target(root, relative):
@@ -117,6 +125,9 @@ def initialize(repo, session):
     session["root_task_id"] = session.get("root_task_id") or session["key"]
     session["execution_checks"] = []
     session["repository_baseline"] = repository_baseline(repo)
+    from execution_turn import current
+    if current() is not None:
+        session['program_policy'] = 1
 
 
 def repository_baseline(repo):
@@ -152,6 +163,9 @@ def collect(repo, session):
     if any(not target(wt, p).is_file() for p in session.get("artifact_paths", [])):
         raise ValueError("등록된 배치 산출물이 사본에서 사라졌습니다")
     current = inventory(wt, session.get("artifact_paths", []))
+    for rel, expected in session.get('derived_files', {}).items():
+        if current.get(rel) != expected:
+            raise PermissionError('호스트 빌드 후 파생 파일이 변경됐습니다: ' + rel)
     files = {}
     for rel in sorted(set(baseline) | set(current)):
         before, after = baseline.get(rel), current.get(rel)
@@ -166,9 +180,27 @@ def collect(repo, session):
                             "op": "write" if after else "delete", "existed": bool(before),
                             "base_sha": (before or {}).get("sha"), "base": before,
                             "candidate": after}
+    if session.get('program_policy'):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('repair_program_derived', Path(__file__).with_name('program_derived.py'))
+        derived = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(derived)
+        derived.accept(__import__('types').SimpleNamespace(**globals()), repo, session,
+                       current, [r['rel'] for r in files.values()])
     from task_repair import check_delta
     check_delta(session, [r['rel'] for r in files.values()])
     session["files"] = files
+    if session.get('program_policy'):
+        from program_dependencies import analyse, with_derived_inputs
+        token = digest(current)
+        if session.get('program_analysis_hash') != token:
+            owned_elsewhere = set(session.get('derived_files', {})) | set(session.get('artifact_paths', []))
+            scope = analyse(wt, [r['rel'] for r in files.values() if r['rel'] not in owned_elsewhere])
+            scope = with_derived_inputs(wt, scope, session.get('derived_files', {}))
+            if scope['protected'] or scope['unmanaged']:
+                raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' +
+                                      ', '.join([*scope['protected'], *scope['unmanaged']]))
+            session.update(program_scope=scope, program_analysis_hash=token)
     from execution_situation import emit, current as current_situation
     if current_situation():
         emit({'kind': 'code_candidate', 'workspace': str(wt.resolve()), 'session': session.get('id')},
@@ -176,14 +208,29 @@ def collect(repo, session):
     return current
 
 
+def register_derived(repo, session, gate):
+    """Only a successful host-owned build can add exact derived bytes to a scope."""
+    if gate and gate.get('passed') and gate.get('gate') == 'body_bundle':
+        paths = gate.get('derived_paths', [])
+        if any(p != 'data/bodies/android.engine.json' for p in paths):
+            raise ValueError('알 수 없는 몸 번들 산출물')
+        session.setdefault('derived_files', {}).update({
+            p: fingerprint(target(Path(repo) / session['worktree'], p)) for p in paths})
+
+
 def conflicts(repo, session, current=None):
     """검사 기준선 이후의 정본 입력 변경을 적용 전에 거절한다."""
-    live = inventory(repo, session.get("artifact_paths", []))
+    paths = session.get("component_dependencies")
+    if paths is None and session.get('program_scope'):
+        from program_dependencies import watched_paths
+        paths = watched_paths(repo, session['program_scope'])
+    live = ({p: fingerprint(target(repo, p)) for p in paths} if paths is not None else
+            inventory(repo, session.get("artifact_paths", [])))
     # 새 파일도 설정 탐색·glob·문서 입력을 바꾼다. 폴더·확장자로 무관함을 추정하지 않는다.
     # inventory의 추적/비무시 파일과 명시한 배치 산출물 전체가 의존 범위다.
     # 관측 로그는 미등록·Git 무시 출력에 보존한다. 충돌 거절 시 몸의 생존은 제어자가 맡는다.
     baseline = session["baseline"]
-    return sorted(p for p in set(baseline) | set(live)
+    return sorted(p for p in (paths if paths is not None else set(baseline) | set(live))
                   if live.get(p) != baseline.get(p))
 
 
@@ -251,14 +298,26 @@ def seal(repo, session, checks, decision, criteria):
     for rel, item in payload.items():
         if item["before_data"] is not None and hashlib.sha256(base64.b64decode(item["before_data"])).hexdigest() != item["before"]["sha"]:
             raise ValueError("고정 중 정본이 변경됐습니다: " + rel)
+    import sys
+    # 검사를 수행한 import 환경을 재관측한다. 제어자의 더 작은 sys.path와
+    # 워커의 pylibs/venv 차이를 설치 변경으로 오인하지 않는다.
+    search_paths = sorted({str(Path(p or os.getcwd()).resolve()) for p in sys.path})
+    if session.get("component_dependencies"):
+        from component_runtime import execution_fingerprint
+        environment_hash = execution_fingerprint()
+    else:
+        environment_hash = execution_environment(Path(repo) / session["worktree"], session, search_paths=search_paths)
     session["sealed"] = payload
     session["readiness"] = {"version": 2 if session.get("repair_policy") == 2 else VERSION, "candidate_hash": digest(current),
-                            "environment_hash": environment(Path(repo) / session["worktree"]),
+                            "environment_hash": environment_hash,
+                            "environment_paths": search_paths,
                             "bundle_hash": digest(payload), "criteria": criteria,
                             "criteria_hash": digest(criteria), "checks": checks,
                             "decision": decision, "owner": session.get("owner"),
                             "root_task_id": session["root_task_id"],
                             "activation_commands": session.get("activation_commands", {})}
+    if session.get("component_dependencies"):
+        session["readiness"].update(environment_paths=None, environment_kind="pure-json/1")
 
 
 def validate(repo, session):
@@ -282,7 +341,13 @@ def validate(repo, session):
     current = inventory(Path(repo) / session["worktree"], session.get("artifact_paths", []))
     if digest(current) != ready["candidate_hash"]:
         raise ValueError("검증 이후 사본이 변경됐습니다. 준비 판정이 무효입니다")
-    if environment(Path(repo) / session["worktree"]) != ready.get("environment_hash"):
+    if ready.get("environment_kind") == "pure-json/1":
+        from component_runtime import execution_fingerprint
+        current_environment = execution_fingerprint()
+    else:
+        current_environment = execution_environment(Path(repo) / session["worktree"], session,
+                                                    search_paths=ready.get("environment_paths"))
+    if current_environment != ready.get("environment_hash"):
         raise ValueError("검증 이후 실행 의존 환경이 변경됐습니다")
     drift = conflicts(repo, session, current)
     if drift:
@@ -407,6 +472,11 @@ def test_weakening(repo, session):
 def active_generation_bytes(base, session):
     """활성 세대(제어자 state 의 generation_dir)가 봉인 묶음과 같은 바이트인지(G4 '활성 바이트 대조').
     반환 (verdict, detail): verdict ∈ matched | mismatch | unknown."""
+    if session.get('program_activation'):
+        from program_versions import activation_matches
+        from runtime_utils import get_code_root
+        matched = activation_matches(base, get_code_root(), session)
+        return ('matched', '프로그램 활성 판본 일치') if matched else ('mismatch', '프로그램 활성 판본 미확인')
     from restart_protocol import control_dir, read_json
     state = read_json(control_dir(base) / "state.json", {}) or {}
     gen_dir = state.get("generation_dir")

@@ -247,6 +247,9 @@ def apply(handler, repo, turn):
     files = session.get('files', {})
     if not files or any(r['rel'] not in by_source or r['op'] == 'delete' for r in files.values()):
         raise PermissionError('등록된 부품 소스만 수정할 수 있습니다. 계약·검사·지침·다른 파일 변경은 적용하지 않습니다')
+    # 의존 범위는 호스트가 등록 계약에서 정한다. 모델이 검사 생략 경로를 지정하지 않는다.
+    session['component_dependencies'] = sorted({p for r in files.values() for p in
+        (r['rel'], str(Path(r['rel']).parent / 'runtime_components.json'))})
     checks, selected = [], []
     for rec in files.values():
         spec = by_source[rec['rel']]
@@ -331,3 +334,20 @@ def finish(handler, repo, session):
             'key': session['key'], 'parent_request': (session.get('component_scope') or {}).get('request'),
             'activated': True, 'restart_required': False, 'versions': versions, 'commit': committed,
             'message': '부품 판본을 활성화했습니다. 원래 업무를 이어가 결과를 확인하세요.'}
+
+
+def apply_registered(st, repo, session):
+    """명시적 수리도 변경 대상이 등록 부품뿐이면 같은 부분 게시 경로를 쓴다."""
+    from runtime_utils import get_code_root
+    turn = binding()
+    allowed = {s['source'] for s in runtime.registry(get_code_root()).values()}
+    files = session.get('files') or {}
+    if not turn or not files or any(r['rel'] not in allowed or r['op'] == 'delete' for r in files.values()):
+        return None
+    from red_apply import _load_handler
+    handler = _load_handler({'repo': str(repo)})
+    turn.component_session = session['key']
+    session.setdefault('component_scope', {**identity(turn), 'request': turn.request,
+                                           'attempt': turn.component_attempt})
+    st._save_session(str(repo), session)
+    return apply(handler, Path(repo), turn)

@@ -1,0 +1,146 @@
+[
+  {
+    "id": "media.web_video_policy",
+    "protocol": "pure-json/1",
+    "source": "data/packages/installed/tools/public-files/public_video_policy.py",
+    "text_fields": [],
+    "portable_baseline": true,
+    "fixtures": [
+      {
+        "input": {
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "width": 1920,
+          "height": 1080
+        },
+        "expected": [
+          {
+            "copy_video": true,
+            "needs_transcode": false,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "video_codec": "h264",
+          "audio_codec": "eac3",
+          "width": 3840,
+          "height": 1608
+        },
+        "expected": [
+          {
+            "copy_video": false,
+            "needs_transcode": true,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "width": 2160,
+          "height": 3840
+        },
+        "expected": [
+          {
+            "copy_video": false,
+            "needs_transcode": true,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "width": 640,
+          "height": 360
+        },
+        "expected": [
+          {
+            "copy_video": true,
+            "needs_transcode": false,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "video_codec": "hevc",
+          "audio_codec": "aac",
+          "width": 1920,
+          "height": 1080
+        },
+        "expected": [
+          {
+            "copy_video": false,
+            "needs_transcode": true,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "video_codec": "h264",
+          "audio_codec": "dts",
+          "width": 1920,
+          "height": 1080
+        },
+        "expected": [
+          {
+            "copy_video": true,
+            "needs_transcode": true,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "extension": "mp4"
+        },
+        "expected": [
+          {
+            "copy_video": false,
+            "needs_transcode": false,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "extension": "mkv"
+        },
+        "expected": [
+          {
+            "copy_video": false,
+            "needs_transcode": true,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      },
+      {
+        "input": {
+          "video_codec": "h264"
+        },
+        "expected": [
+          {
+            "copy_video": false,
+            "needs_transcode": true,
+            "max_edge": 1920,
+            "crf": 24
+          }
+        ]
+      }
+    ]
+  }
+]

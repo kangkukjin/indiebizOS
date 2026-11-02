@@ -27,13 +27,13 @@ from test_conscious_supervisor import supervisor, verdict, finish  # noqa: F401
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     repo = _make_repo(tmp_path / 'repo')
-    path = repo / 'backend/ibl/ibl_v2_parser.py'
+    path = repo / 'backend/services/document_parser.py'
     path.parent.mkdir()
     path.write_text('VALUE = 1\n')
     (repo / 'backend/test_parser_behavior.py').write_text(
-        'def test_parser_value():\n    import runpy\n    assert runpy.run_path("backend/ibl/ibl_v2_parser.py")["VALUE"] == 2\n')
+        'def test_parser_value():\n    import runpy\n    assert runpy.run_path("backend/services/document_parser.py")["VALUE"] == 2\n')
     boot = repo / 'backend/boot_paths.py'
-    boot.write_text(boot.read_text().replace('"base", "cognition"', '"base", "cognition", "ibl"'))
+    boot.write_text(boot.read_text().replace('"base", "cognition"', '"base", "cognition", "services"'))
     subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo, check=True)
     subprocess.run(['git', 'config', 'user.email', 'test@example.test'], cwd=repo, check=True)
     (repo / '.gitignore').write_text('.worktrees/\ndata/system_ai_state/\ndata/restart_control/\nconversations.db*\n')
@@ -84,11 +84,11 @@ def test_propose_preserves_parent_and_stages_without_grant(env):
     assert parent['budget']['input'] + parent['budget']['output'] == 120
     assert parent['status'] == 'waiting_repair' and repair.pending() == parent
     assert child['task_id'] != child['resume_task_id']
-    assert child['task_scope']['paths'] == ['backend/ibl/ibl_v2_parser.py']
+    assert child['task_scope']['paths'] == ['backend/services/document_parser.py']
     assert child['framing']['_repair_policy'] == 2
     assert red_grant.active_grant(task_id='original') is None
     assert env.path.read_text() == 'VALUE = 1\n'
-    candidate = env.repo / child['worktree'] / 'backend/ibl/ibl_v2_parser.py'
+    candidate = env.repo / child['worktree'] / 'backend/services/document_parser.py'
     assert candidate.read_text() == 'VALUE = 2\n'
     parents.finish(env.turn, '수리 대기')
     assert journal.read(parent['task_id'])['status'] == 'waiting_repair'
@@ -104,7 +104,8 @@ def test_invalid_candidate_reports_error_without_arming_parent(env):
 
 @pytest.mark.parametrize('path', ['backend/cognition/agent_pipeline.py', 'backend/datastore/red_grant.py',
     'data/common_prompts/consciousness_prompt.md', 'data/ibl_nodes_src/self.yaml',
-    'data/packages/installed/tools/system_essentials/tool_fake.py',
+    'backend/services/restart_controller.py', 'backend/base/control_base.py',
+    'backend/base/restart_process.py',
     'data/packages/installed/tools/web/tests/test_handler.py', 'backend/test_ibl_v2_parser.py',
     'backend/ibl/../ibl/ibl_v2_parser.py'])
 def test_control_contract_and_checks_are_not_automatic_repair_targets(path):
@@ -112,9 +113,9 @@ def test_control_contract_and_checks_are_not_automatic_repair_targets(path):
 
 
 @pytest.mark.parametrize('path', [
-    'backend/services/restart_controller.py', 'backend/base/control_base.py',
-    'backend/base/restart_process.py', 'data/packages/installed/tools/web/handler.py',
-    'data/packages/installed/tools/web/parsers/news.py', 'backend/ibl/ibl_scanner.py',
+    'data/packages/installed/tools/system_essentials/tool_fake.py',
+    'backend/base/future_program.py', 'data/packages/installed/tools/web/handler.py',
+    'data/packages/installed/tools/web/parsers/news.py', 'backend/services/document_scanner.py',
 ])
 def test_related_runtime_implementations_can_be_repaired(path):
     assert repair.eligible(path)
@@ -126,9 +127,9 @@ def test_runtime_ownership_does_not_include_authority_and_completion(path):
 
 
 def test_diagnostic_request_keeps_original_bytes_and_allows_declared_sibling(env):
-    sibling = env.repo / 'backend/ibl/ibl_scanner.py'
+    sibling = env.repo / 'backend/services/document_scanner.py'
     sibling.write_text('VALUE = 1\n')
-    paths = ['backend/ibl/ibl_v2_parser.py', 'backend/ibl/ibl_scanner.py']
+    paths = ['backend/services/document_parser.py', 'backend/services/document_scanner.py']
     result = invoke(env.handler, env.repo, 'patch_op', {
         'op': 'propose', 'path': str(env.path), 'paths': paths,
         'reason': '입력 처리가 실패하여 파서와 스캐너의 원인 진단 필요'})
@@ -148,10 +149,10 @@ def test_diagnostic_request_keeps_original_bytes_and_allows_declared_sibling(env
     assert env.path.read_text() == sibling.read_text() == 'VALUE = 1\n'
 
 
-@pytest.mark.parametrize('paths', [[], 'backend/ibl/ibl_v2_parser.py',
-    ['backend/ibl/ibl_scanner.py'], ['backend/ibl/ibl_v2_parser.py'] * 2,
-    ['backend/ibl/ibl_v2_parser.py', 'backend/services/restart_controller.py'],
-    ['backend/ibl/ibl_v2_parser.py', 'backend/cognition/final_evaluator.py']])
+@pytest.mark.parametrize('paths', [[], 'backend/services/document_parser.py',
+    ['backend/services/document_scanner.py'], ['backend/services/document_parser.py'] * 2,
+    ['backend/services/document_parser.py', 'backend/services/restart_controller.py'],
+    ['backend/services/document_parser.py', 'backend/cognition/final_evaluator.py']])
 def test_diagnostic_scope_cannot_mix_units_or_add_governance(env, paths):
     result = invoke(env.handler, env.repo, 'patch_op', {'path': str(env.path), 'paths': paths, 'reason': '실패'})
     assert not result['success'] and 'paths' in result['error']
@@ -173,7 +174,7 @@ def test_child_budget_grant_and_candidate_cannot_change_parent_criteria(env, mon
         grant = red_grant.issue_grant('system_ai', child['resume_task_id'])
         assert grant['task_scope'] == child['task_scope']
         with pytest.raises(PermissionError, match='다른 세션'):
-            repair.check_delta({}, ['backend/ibl/ibl_v2_parser.py'])
+            repair.check_delta({}, ['backend/services/document_parser.py'])
         switched = invoke(env.handler, env.repo, 'patch_op', {'op': 'apply', 'proposal_id': 'unscoped'})
         assert not switched['success'] and '다른 제안' in switched['error']
         denied = invoke(env.handler, env.repo, 'write_file',
@@ -333,12 +334,12 @@ def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch
     import repair_policy
     from repair_policy import direct_framing
     from conversation_handoff import Handoff
-    paths = ['backend/ibl/ibl_v2_parser.py']
+    paths = ['backend/services/document_parser.py']
     if diagnostic:
-        paths.append('backend/ibl/ibl_scanner.py')
+        paths.append('backend/services/document_scanner.py')
         (env.repo / paths[1]).write_text('VALUE = 1\n')
         with (env.repo / 'backend/test_parser_behavior.py').open('a') as f:
-            f.write('    assert runpy.run_path("backend/ibl/ibl_scanner.py")["VALUE"] == 2\n')
+            f.write('    assert runpy.run_path("backend/services/document_scanner.py")["VALUE"] == 2\n')
         subprocess.run(['git', 'add', '.'], cwd=env.repo, check=True)
         subprocess.run(['git', 'commit', '-qm', 'related implementation fixture'], cwd=env.repo, check=True)
         result = invoke(env.handler, env.repo, 'patch_op', {
@@ -358,7 +359,7 @@ def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch
     monkeypatch.setattr('supervision_bus.current', lambda *a, **kw: controller)
     command = shlex.quote(sys.executable) + ' -m pytest backend/test_parser_behavior.py'
     session = st.read_session(str(env.repo), child['staging_task_id'])
-    candidate_path = env.repo / session['worktree'] / 'backend/ibl/ibl_v2_parser.py'
+    candidate_path = env.repo / session['worktree'] / 'backend/services/document_parser.py'
     candidate_path.write_text('VALUE = 1\n')
     from repair_check_runner import execute
     failed = execute(str(env.repo), session, st._candidate, command, controller)

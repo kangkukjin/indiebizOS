@@ -149,3 +149,17 @@ assert not support.exists()
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_published_program_watcher_dependencies_survive_old_support_generation(tmp_path):
+    control = sealed_control(tmp_path)
+    run_isolated('''
+import sys
+from pathlib import Path
+control = Path(sys.argv[1])
+sys.path[:0] = [str(control / 'backend/base'), str(control / 'backend/services')]
+from program_versions import covers_changes
+from program_boundary import eligible
+assert covers_changes(sys.argv[2], sys.argv[2], {'ordinary.py'}, {}) == set()
+assert not eligible('backend/base/program_versions.py')
+''', control, tmp_path)

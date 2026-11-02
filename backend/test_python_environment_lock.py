@@ -70,5 +70,44 @@ def test_later_fingerprint_observes_environment_and_source_changes(installation,
     assert (before['environment'] == after['environment']) == (change == 'source')
 
 
+def test_aliases_and_duplicate_search_paths_do_not_change_installation(installation, monkeypatch):
+    base, source, _ = installation
+    alias = base.parent / 'alias.dist-info'
+    alias.symlink_to(base, target_is_directory=True)
+    dist = importlib.metadata.PathDistribution
+    monkeypatch.setattr(environment.metadata, 'distributions', lambda: [dist(base)])
+    before = environment.fingerprint(source)
+    monkeypatch.setattr(environment.metadata, 'distributions', lambda: [dist(alias), dist(base)])
+    assert environment.fingerprint(source) == before
+
+
+def test_explicit_search_paths_survive_different_caller_environment(tmp_path, monkeypatch):
+    folder = tmp_path / 'libs'
+    dist = folder / 'example-1.dist-info'
+    dist.mkdir(parents=True)
+    (dist / 'METADATA').write_text('Name: example\nVersion: 1\n')
+    before = environment.fingerprint(tmp_path, search_paths=[str(folder)])
+    monkeypatch.setattr(sys, 'path', [])
+    assert environment.fingerprint(tmp_path, search_paths=[str(folder)]) == before
+    (dist / 'METADATA').write_text('Name: example\nVersion: 2\n')
+    assert environment.fingerprint(tmp_path, search_paths=[str(folder)]) != before
+
+
+def test_program_environment_tracks_transitive_installs_not_unrelated_packages(tmp_path):
+    def install(name, version, requires=''):
+        root = tmp_path / (name + '.dist-info')
+        root.mkdir(exist_ok=True)
+        (root / 'METADATA').write_text(f'Name: {name}\nVersion: {version}\n' + requires)
+        (root / 'top_level.txt').write_text(name)
+    install('feature', '1', 'Requires-Dist: shared>=1\n')
+    install('shared', '1')
+    install('unrelated', '1')
+    fingerprint = lambda: environment.fingerprint(tmp_path, search_paths=[str(tmp_path)], modules=['feature'])
+    before = fingerprint()
+    install('unrelated', '2')
+    assert fingerprint() == before
+    install('shared', '2')
+    assert fingerprint() != before
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

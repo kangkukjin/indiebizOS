@@ -209,6 +209,8 @@ def plan(request):
                'root': str(root), 'functions': str(functions), 'before': old['revision'],
                'expected': expected, 'expected_description': mutation[1].get('description') if mutation else None, 'files': files, 'probes': probes, 'apply': apply_args,
                'impact': {**impact, 'callers': [r['location'] for r in impact['callers']]}}
+    from program_boundary import managed
+    details['ownership'] = managed(kind, target)
     from thread_context import get_repair_workspace
     details['repair'] = bool(get_repair_workspace() or os.environ.get('INDIEBIZ_REPAIR_CHILD') == '1')
     if kind == 'script':

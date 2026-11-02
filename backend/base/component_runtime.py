@@ -12,6 +12,18 @@ from script_process import run_process, check_invocation
 MAX_BYTES = 4 * 1024 * 1024
 
 
+def execution_fingerprint():
+    """순수 자식은 -I -S로 실행한다. 설치된 앱 라이브러리는 의존성이 아니다."""
+    import coding_process
+    import script_process
+    import file_script
+    import component_registry
+    modules = [Path(__file__), *(Path(m.__file__) for m in
+               (coding_process, script_process, file_script, component_registry))]
+    return sha(json.dumps({'python': sys.version, 'base': str(Path(sys.base_prefix).resolve()),
+                           'runtime': [sha(p.read_bytes()) for p in modules]}, sort_keys=True).encode())
+
+
 def sandbox(command, directory):
     from coding_process import available
     if not available():
@@ -90,6 +102,15 @@ def call(component_id, value):
     spec = registry(code)[component_id]
     source = active_source(repo, code, spec)
     try:
+        from coding_process import available
+        baseline = (Path(code) / spec['source']).read_bytes()
+        if spec.get('portable_baseline') and ((source == baseline and not active(repo, spec)) or not available()):
+            # 배포된 기본 기능은 모듈처럼 실행한다. 게시된 후보만 제한 자식으로
+            # 실행하며 제한 실행 미지원 OS에서는 항상 배포 원본을 유지한다.
+            scope = {}
+            check_invocation()
+            exec(compile(baseline, str(Path(code) / spec['source']), 'exec'), scope)
+            return validate_output(spec, scope['transform'](value))
         return validate_output(spec, run(source, value))
     except (ValueError, RuntimeError) as exc:
         # 요청 원문은 인증 헤더가 없는 변환 입력뿐이다. 실패를 빈 항목으로 바꾸지 않는다.

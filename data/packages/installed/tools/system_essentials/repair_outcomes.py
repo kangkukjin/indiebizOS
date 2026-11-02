@@ -14,6 +14,10 @@ def progress(session):
     complete = bool(applied and session.get("verified") and commit.get("success")
                     and (session.get("readiness") or {}).get("decision", {}).get("status") == "APPROVED"
                     and not missing)
+    programs = session.get('program_activation') or []
+    if programs and any(r.get('activation') != 'active' for r in programs):
+        complete = False
+        missing.append('program_activation')
     stage = ("complete" if complete else "activation" if applied and missing else "commit" if applied
              else "apply" if state in {"apply_scheduled", "applying"} else state)
     action = ("none" if complete else "finish_turn" if state == "apply_scheduled"
@@ -36,6 +40,8 @@ def progress(session):
     elif applied and not complete:
         result["error"] = "정본 반영 후 각인 미완료: " + str(commit.get("error") or commit.get("message") or "커밋 영수증이 없습니다")
     result["root"] = _root_projection(session)
+    result['program_scope'] = session.get('program_scope')
+    result['program_activation'] = programs
     return result
 
 
@@ -55,3 +61,13 @@ def finish(session, result):
     return {**result, **status, "success": status["complete"],
             "message": "정본 반영·활성 확인·커밋 완료" if status["complete"] else
                        status.get("error", "정본 반영 후 완료 영수증을 기다립니다")}
+
+
+def root_note(method, repo, *args):
+    """수리 root 원장 전이(G3). 원장 실패가 수리 동작을 바꾸면 안 되므로 삼키고 한 줄 남긴다."""
+    try:
+        import repair_root
+        return getattr(repair_root, method)(repo, *args)
+    except Exception as exc:
+        print(f"[수리 스테이징] root 원장 {method} 실패(무시): {type(exc).__name__}: {exc}")
+        return None

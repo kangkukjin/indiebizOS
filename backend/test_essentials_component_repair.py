@@ -88,6 +88,48 @@ def test_user_task_repairs_transform_without_grant_restart_or_replay(setup):
     finally: execution_turn._current.reset(token)
 
 
+def test_unrelated_live_edit_and_installed_libraries_do_not_block_component(setup, monkeypatch):
+    repo, source, h, turn = setup
+    assert invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})['staged']
+    (repo / 'frontend/.keep').write_text('another feature changed')
+    st = h._staging_mod()
+    monkeypatch.setattr(st._candidate, 'environment', lambda *a, **kw: pytest.fail('whole app environment'))
+    applied = invoke(h, repo, 'patch_op', {'op': 'apply'})
+    assert applied['success'], applied
+    assert (repo / 'frontend/.keep').read_text() == 'another feature changed'
+    # 일반 최종평가는 원 업무를 판단한다. 전체 세대 교체 영수증은 필요 없다.
+    from repair_readiness import requires_code_receipts
+    assert not requires_code_receipts(NS(task=turn.component_session))
+
+
+def test_registered_contract_change_blocks_component_publication(setup):
+    repo, source, h, turn = setup
+    assert invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})['staged']
+    manifest = source.parent / 'runtime_components.json'
+    manifest.write_text(manifest.read_text() + '\n')
+    applied = invoke(h, repo, 'patch_op', {'op': 'apply'})
+    assert not applied['success'] and ('기준' in applied['error'] or '충돌' in applied['error'])
+
+
+def test_explicit_repair_of_registered_component_uses_partial_apply(setup, monkeypatch):
+    repo, source, h, turn = setup
+    st = h._staging_mod()
+    session = st.ensure_session(str(repo), turn.task)
+    candidate = repo / session['worktree'] / source.relative_to(repo)
+    candidate.write_text(revised(source.read_text()))
+    st._candidate.collect(str(repo), session)
+    st._save_session(str(repo), session)
+    monkeypatch.setattr('supervision_bus.current', lambda: NS(repair_granted=True))
+    monkeypatch.setattr('red_apply._load_handler', lambda *a: h)
+    monkeypatch.setattr(st._gates, 'body_bundle', lambda *a, **kw: pytest.fail('whole body build'))
+    monkeypatch.setattr(st, '_schedule_deferred_apply', lambda *a: pytest.fail('whole worker restart'))
+    result = st.op_apply({'_repo_root': str(repo), '_grant_key': turn.task})
+    assert result['success'] and result['restart_required'] is False, result
+    repeated = st.op_apply({'_repo_root': str(repo), '_grant_key': turn.task})
+    assert repeated['success'] and repeated['commit'] == result['commit']
+    assert runtime.call('web.naver_response', {'type':'news', 'response':{'results':[]}}) == []
+
+
 def test_failed_candidate_and_mixed_control_edit_never_apply(setup):
     repo,source,h,turn=setup
     before=source.read_text()

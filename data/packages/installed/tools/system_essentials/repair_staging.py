@@ -146,15 +146,19 @@ def _resume_staging(repo: str, key: str):
     from principal import is_owner
     from thread_context import get_current_task_id, get_task_origin
     row = current()
+    result = (row or {}).get("result") or {}
+    unapplied = (result.get("controller") == "apply_rejected"
+                 and (result.get("apply") or {}).get("applied") is False)
     if (not row or not is_owner() or get_task_origin() != "user"
             or row.get("resume_task_id") != get_current_task_id()
             or task_key(row.get("resume_task_id")) != key
-            or (row.get("phase") != "execution" and (row.get("result") or {}).get("outcome") != "rolled_back")):
+            or (row.get("phase") != "execution" and result.get("outcome") != "rolled_back"
+                and not (row.get("phase") == "repair_apply" and unapplied))):
         return None
     prior = read_session(repo, task_key(row.get("staging_task_id") or row["task_id"]))
     if not prior or prior.get("reused_by") or prior.get("owner") != _repair_owner():
         return None
-    if row.get("phase") == "execution" and prior.get("status") != "staging":
+    if (row.get("phase") == "execution" or unapplied) and prior.get("status") != "staging":
         return None
     wt = os.path.realpath(os.path.join(repo, prior.get("worktree") or ""))
     if not wt.startswith(os.path.realpath(os.path.join(repo, ".worktrees")) + os.sep) or not os.path.isdir(wt):
@@ -580,20 +584,8 @@ def _reload_triggering(sess: dict) -> bool:
 def _current_episode_id(repo: str = None, agent_id: str = None):
     """지금 턴의 주행기록 행 id — 수행자가 '턴이 닫혔다'를 이 행의 ended_at 으로 판정한다.
 
-    ★contextvar 폴백(2026-08-20 ep1265·1267): apply 가 claude_code 의 MCP→HTTP
-    재진입 스레드로 들어오면 EpisodeLogger.current() 가 None 이다(agent_id·task_id
-    전파 유실과 같은 부류 — task_id 는 그랜트 매칭으로 수리됐지만 episode_id 는
-    빠져 있었다). 그러면 수행자가 10초 유예 후 라이브를 써서 리로드가 아직 열려
-    있는 턴을 끊는다. 폴백: 그 에이전트의 열린(ended_at 없는) 최신 행 = 지금 턴.
-
-    ★agent 필터는 참고일 뿐 최종이 아니다(2026-08-20 ep1282): agent_id 도 같은
-    오염원(재진입 스레드 문맥→그랜트)에서 온다 — 'agent_001' 이 실려 필터가 열린
-    system_ai 턴을 놓치고 null 을 반환, 수행자가 10초 유예로 떨어져 턴을 끊었다.
-    예약은 턴이 열려 있는 동안 일어나므로 무필터 열린 최신 행이 곧 이 턴이다.
-
-    ★단 시험 유래 행은 후보가 아니다(2026-08-22 B18-2): 시험 프로세스가 start 만 하고
-    끝내지 않은 행은 다음 부팅의 고아 회수 전까지 영원히 ended_at NULL 이라, 무필터
-    폴백이 그걸 집으면 수행자가 죽은 턴을 상한까지 기다린다."""
+    실행 문맥이 없으면 실사용 열린 에피소드에서 신원을 회수한다. 시험 기록은 제외한다.
+    """
     try:
         from episode_logger import EpisodeLogger
         eid = getattr(EpisodeLogger.current(), "episode_id", None)
@@ -886,14 +878,14 @@ def op_apply(ti):
                  "이 적용 경로에는 수리 실행 권한이 필요합니다. 일반 업무는 self:patch propose 계약을 확인하세요."),
                 "grant_denial": _why}
     # proposal_id 가 오면 그 제안 세션을, 없으면 이 수리 세션을 적용한다.
-    # 제안도 세션이라 분기는 '어느 키를 여는가'뿐이다(2026-08-18 통합).
     pid = (ti.get("proposal_id") or "").strip()
     if pid:
         sess = read_session(repo, proposal_key(pid))
     else:
-        # ★staging 뿐 아니라 apply_scheduled 도 받는다 — 예약이 좌초하면(수행자 사망)
-        #   다시 apply 가 재검증 후 재예약한다(수행자 중복은 perform 쪽 멱등으로 안전).
         sess = read_session(repo, key) or _resume_staging(repo, key)
+        if sess and sess.get('program_activation') and sess.get('status') == 'applying':
+            handler = __import__('red_apply')._load_handler({'repo': repo})
+            handler._load_sibling('program_apply').recover(__import__('types').SimpleNamespace(**globals()), repo, sess)
         if sess and sess.get("status") == "applied":
             return _complete_immediate(repo, sess, {"success": True, "applied": True}, ti)
         if sess and sess.get("status") not in ("staging", "apply_scheduled"):
@@ -936,12 +928,21 @@ def op_apply(ti):
     controller = current()
     if not controller or not controller.repair_granted:
         return {"success": False, "applied": False, "error": "사본 준비를 판정할 수리 감독이 없습니다"}
+    from red_apply import _load_handler
+    from execution_turn import current as execution
+    component = (_load_handler({"repo": repo})._component_scope().apply_registered(
+        __import__("types").SimpleNamespace(**globals()), repo, sess)
+        if execution() and execution().component_repair_allowed else None)
+    if component is not None:
+        return component
+    sess.pop("component_dependencies", None)
     # 검사·봉인할 후보를 확정하기 전에 파생물을 만든다. verify 안에서 만들면 검사한
     # 후보 지문이 바뀌어 재시험을 요구하거나, 빠진 번들이 각인 관문에서야 발견된다.
     bundle = _gates.body_bundle(os.path.join(repo, sess["worktree"]),
                                [r["rel"] for r in sess["files"].values()],
                                _sandbox_check, regenerate=True)
     if bundle:
+        _candidate.register_derived(repo, sess, bundle)
         _candidate.collect(repo, sess)
         _save_session(repo, sess)
         if not bundle["passed"]:
@@ -958,14 +959,15 @@ def op_apply(ti):
         return approval
     checks = sess["readiness"]["checks"]
     _save_session(repo, sess)
+    program = (_load_handler({"repo": repo})._load_sibling("program_apply").apply(
+        __import__("types").SimpleNamespace(**globals()), repo, sess) if sess.get('program_scope') else None)
+    if program is not None:
+        return program
 
     prepare = ti.get("_red_prepare")
     finalize = ti.get("_red_finalize")
 
-    # ★지연 적용 (2026-08-19): backend/*.py 가 끼면 라이브 쓰기가 uvicorn 리로드를 불러
-    # **이 턴을 실행 중인 워커를 죽인다** — 최종 응답·주행기록 버퍼·증류 스레드가 전부
-    # 그 워커 안에 산다. 검증은 방금 끝났으니 쓰기만 '턴이 닫힌 뒤'로 미뤄 분리 수행자에
-    # 맡긴다. frontend/scripts 만이면 리로드가 없으므로 지금 그대로 적용한다.
+    # 공유 워커 구현은 턴 종료 후 외부 제어자가 교체한다.
     verify_cmd = (ti.get("verify_cmd") or "").strip()
     active_verify_cmd = (ti.get("active_verify_cmd") or "").strip()
     if max(len(verify_cmd), len(active_verify_cmd)) > 2000:
@@ -987,19 +989,19 @@ def op_apply(ti):
     return _complete_immediate(repo, sess, out, ti)
 
 
-def _root_note(method, repo, *args):
-    """수리 root 원장 전이(G3). 원장 실패가 수리 동작을 바꾸면 안 되므로 삼키고 한 줄 남긴다."""
-    try:
-        import repair_root
-        return getattr(repair_root, method)(repo, *args)
-    except Exception as exc:
-        print(f"[수리 스테이징] root 원장 {method} 실패(무시): {type(exc).__name__}: {exc}")
-        return None
+_root_note = _outcomes.root_note
 
 
 def _complete_immediate(repo, sess, result, ti):
     if not result.get("applied"):
         return result
+    if sess.get("program_activation"):
+        handler = __import__("red_apply")._load_handler({"repo": repo})
+        return handler._load_sibling("program_apply").resume(
+            __import__("types").SimpleNamespace(**globals()), repo, sess)
+    if sess.get("component_activation"):
+        handler = __import__("red_apply")._load_handler({"repo": repo})
+        return handler._component_scope().finish(handler, Path(repo), sess)
     from repair_continuation import current
     if _reload_triggering(sess) and ((current() or {}).get("result") or {}).get("outcome") != "healthy":
         return {**result, "complete": False, "message": "기존 적용 영수증의 활성 확인을 기다립니다"}

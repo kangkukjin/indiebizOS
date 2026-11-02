@@ -170,6 +170,8 @@ def list_dir(slug: str, path: str = Query(default=""), x_showcase_secret: str = 
                     "fid": fid, "rel": rel, "title": e.name,
                     "kind": kind or "file", "mtime": int(st.st_mtime),
                     "thumb": kind in ("photo", "video"),
+                    **({"media_version": f"{st.st_mtime_ns}-{thumbnails.video_policy_version()}"}
+                       if kind == "video" else {}),
                 })
         except OSError:
             continue
@@ -265,6 +267,12 @@ async def thumb(slug: str, fid: str, rel: str = Query(...), x_showcase_secret: s
                     headers={"Cache-Control": "public, max-age=86400"})
 
 
+def _video_cache_key(fid, rel, path):
+    stat = os.stat(path)
+    identity = f"{fid}/{rel}:{stat.st_mtime_ns}:{stat.st_size}:{thumbnails.video_policy_version()}"
+    return hashlib.sha256(identity.encode()).hexdigest()[:16]
+
+
 async def _live_stream(first: bytes, proc, tmp: str, cache_dst: str):
     """스트리밍 트랜스코드 본문 — ffmpeg stdout 을 흘리면서 같은 바이트를 tmp(.part)에
     쓴다(파이썬 tee). 완주 시 faststart 리먹스로 캐시 완성, 시청 중단 시엔
@@ -338,20 +346,21 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
     # ⓪ 오프셋 스트림 — 항상 0 기준 fMP4 로 결정론 응답(SPA 스왑 계약).
     #    소스는 완성 캐시가 있으면 캐시(-c copy, 즉시)·없으면 원본(재인코딩).
     if kind == "video" and t > 0:
-        key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
+        key = await run_in_threadpool(_video_cache_key, fid, rel, abspath)
         cache = _WEB_MEDIA / fid / (key + (f".{qual}.mp4" if low else ".mp4"))
         use_cache = cache.exists() and cache.stat().st_size > 0
         src = str(cache) if use_cache else abspath
         total = await run_in_threadpool(thumbnails.probe_video_duration, src)
         # 오프셋 스트림은 캐시가 있어도 재인코딩한다. stream copy는 직전 키프레임부터
         # 영상을 내보내지만 자막은 정확히 t만큼 당겨져 GOP 길이만큼 싱크가 어긋난다.
-        proc = thumbnails.start_offset_stream(src, t, quality=("" if use_cache else qual))
+        proc = await run_in_threadpool(thumbnails.start_offset_stream, src, t,
+                                       quality=("" if use_cache else qual))
         head = await _read_init_segment(proc)
         if not head and use_cache:
             # 캐시 스트림 복사 실패(드묾) — 원본 재인코딩 재시도.
             thumbnails.kill_stream(proc)
             total = await run_in_threadpool(thumbnails.probe_video_duration, abspath)
-            proc = thumbnails.start_offset_stream(abspath, t, quality=qual)
+            proc = await run_in_threadpool(thumbnails.start_offset_stream, abspath, t, quality=qual)
             head = await _read_init_segment(proc)
         if not head:
             thumbnails.kill_stream(proc)
@@ -372,7 +381,7 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
     #    인코딩되는 대로 흘린다(긴 영상도 수 초 안에 재생 시작) — 같은 인코딩이 tee 로
     #    faststart 캐시도 만들어(인코딩 1회) 다음 재생부터는 캐시 직행.
     if kind == "video" and settings.get("transcode_video", True):
-        key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
+        key = await run_in_threadpool(_video_cache_key, fid, rel, abspath)
         cache = _WEB_MEDIA / fid / (key + (f".{qual}.mp4" if low else ".mp4"))
         if cache.exists() and cache.stat().st_size > 0:
             hls_ladder.touch(str(cache))   # LRU 근거 — 재생(HLS 세그먼트 포함)마다 젊어진다
@@ -385,8 +394,8 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
             # 1080p 재인코딩 없이 리먹스 속도로 흘린다. 저대역은 해당 없음.
             vcopy = (False if low
                      else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
-            proc, tmp = thumbnails.start_stream_transcode(abspath, str(cache), video_copy=vcopy,
-                                                          quality=qual)
+            proc, tmp = await run_in_threadpool(thumbnails.start_stream_transcode, abspath,
+                                                str(cache), video_copy=vcopy, quality=qual)
             # init 세그먼트(ftyp+moov)가 통째로 잡힐 때까지 모아 duration 패치 —
             # 안 하면 empty_moov 생방송이 '버퍼된 만큼'을 총 길이로 표시(몇 초짜리로 보임).
             head = await _read_init_segment(proc)
@@ -423,9 +432,10 @@ async def hls_playlist(slug: str, fid: str, rel: str = Query(...), r: str = Quer
     folder, abspath = _resolve(slug, fid, rel, x_showcase_secret)
     if thumbnails.classify(abspath) != "video":
         raise HTTPException(status_code=404, detail="not a video")
-    key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
+    key = await run_in_threadpool(_video_cache_key, fid, rel, abspath)
     orig_cache = str(_WEB_MEDIA / fid / (key + ".mp4"))
-    v = int(os.stat(abspath).st_mtime)
+    policy_version = await run_in_threadpool(thumbnails.video_policy_version)
+    v = f"{os.stat(abspath).st_mtime_ns}-{policy_version}"
     base = f"/s/{quote(slug, safe='')}"
     qs = f"rel={quote(rel, safe='')}&v={v}"
 

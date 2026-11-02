@@ -277,6 +277,7 @@ def body_bundle(worktree, rels, run, *, regenerate=False):
         p = run(args, cwd=worktree, capture_output=True, text=True,
                 timeout=BUILD_TIMEOUT, env=_smoke_env(worktree))
         return {"gate": "body_bundle", "passed": p.returncode == 0,
+                "derived_paths": ["data/bodies/android.engine.json"] if regenerate and p.returncode == 0 else [],
                 "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-1200:]}
     except (OSError, subprocess.SubprocessError) as exc:
         return {"gate": "body_bundle", "passed": False, "detail": str(exc)}

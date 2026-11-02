@@ -106,6 +106,14 @@ def publish(repo, spec, version, *, receipt):
 def active_source(repo, code_root, spec):
     selected = active(repo, spec)
     baseline = (Path(code_root) / spec['source']).read_bytes()
+    # A whole package publication can supersede a pure component's source too.
+    # Both paths still require the published bytes to match the live source.
+    from program_versions import selected as selected_program
+    source = Path(spec['source'])
+    package = source.parts[4]
+    root, published = selected_program(repo, package, Path(code_root).joinpath(*source.parts[:5]))
+    if published:
+        baseline = root.joinpath(*source.parts[5:]).read_bytes()
     if selected and sha(baseline) in {selected['version'], selected.get('baseline_version')}:
         data = object_path(repo, selected['version']).read_bytes()
         if sha(data) != selected['version']:

@@ -23,7 +23,8 @@ _package_handlers_cache: Dict[str, Any] = {}
 # ★왜 (2026-09-01): mtime 무효화가 tool.json 에만 걸려 있어, handler.py 만 고치면
 # /packages/reload 나 재기동 전까지 메모리에 옛 모듈이 그대로 남았다(조용한 부정합).
 # tool.json 의 기존 패턴(_scan_tool_json_mtimes)을 handler.py 로 확장한 것.
-# 형제 모듈(tool_*.py 등)은 여전히 재기동 필요 — 이 무효화는 handler.py 만 본다.
+# 이 mtime 무효화는 handler.py만 본다. 검증된 프로그램 게시에서는 program_runtime이
+# 형제 모듈까지 판본 단위로 교체한다. 직접 편집의 세대 활성화와 구분한다.
 _package_handler_mtimes: Dict[str, float] = {}
 # 도구 이름 -> 패키지 ID 매핑
 _tool_to_package_map: Dict[str, str] = {}
@@ -353,6 +354,12 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+        # Every package has the same call/lifetime boundary, including packages
+        # that have never appeared in a component registration file.
+        from program_runtime import wrap
+        from runtime_utils import get_source_root
+        module = wrap(package_id, handler_path.parent, get_source_root(), module)
+
         # 패키지 캐시와 도구 캐시 모두에 저장
         _package_handlers_cache[package_id] = module
         _package_handler_mtimes[package_id] = _mtime
@@ -636,6 +643,8 @@ def clear_cache():
     global _tool_handlers_cache, _package_handlers_cache, _tool_to_package_map, _tool_json_mtimes, _all_tools_cache, _all_tools_cache_time, _all_tools_cache_mtimes, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
     _tool_handlers_cache.clear()
     _package_handlers_cache.clear()
+    from program_runtime import clear_idle
+    clear_idle()
     _package_handler_mtimes.clear()
     _tool_to_package_map.clear()
     _tool_json_mtimes.clear()

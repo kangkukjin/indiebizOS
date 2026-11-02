@@ -46,6 +46,22 @@ def test_user_followup_keeps_all_criteria_and_reuses_same_workspace(unfinished):
     assert journal.current() is None
 
 
+@pytest.mark.parametrize('applied', [False, True, None])
+def test_rejected_apply_reuses_workspace_only_with_confirmed_no_write(unfinished, applied):
+    root, wt, st, sess, controller = unfinished
+    row = {**journal.read(controller.task), 'resume_task_id': 'next', 'phase': 'repair_apply',
+           'result': {'controller': 'apply_rejected', 'outcome': 'deferred_verify_failed',
+                      'apply': {'applied': applied}}}
+    with journal.resuming(row):
+        continued = st.load_session(str(root), 'next')
+    if applied is False:
+        assert continued['worktree'] == sess['worktree']
+        assert continued['root_task_id'] == sess['root_task_id']
+        assert (wt / 'a.txt').read_text() == 'completed partial work'
+    else:
+        assert continued is None
+
+
 @pytest.mark.parametrize('change', ['new', 'foreign_agent', 'foreign_project', 'no_history', 'not_user'])
 def test_unrelated_or_unauthorized_request_cannot_inherit(unfinished, monkeypatch, change):
     root, wt, st, sess, controller = unfinished

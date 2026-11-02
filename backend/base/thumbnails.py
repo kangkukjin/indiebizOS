@@ -146,33 +146,23 @@ def generate_thumbnail(src: str, dst: str, size: int = 512, kind: str | None = N
 
 # ── 웹 전송(공개 원본) 처리 ─────────────────────────────────────────────
 # 공개 showcase 가 "원본"을 브라우저로 내보낼 때 쓰는 변환. 썸네일과 달리
-# 풀 해상도를 유지하되, ①위치·기기 메타데이터(EXIF/GPS) 제거 ②브라우저가
+# 사진 해상도를 유지하고 동영상은 게시된 호환 정책에 맞춘다. ①위치·기기 메타데이터(EXIF/GPS) 제거 ②브라우저가
 # 못 여는 컨테이너(HEVC .mov 등) H.264 트랜스코드. 캐시·HTTP 는 호출자 몫.
 
 # 카메라·폰이 GPS/EXIF 를 흔히 심는 포맷만 sanitize 대상(그 외 png/gif/webp 는
 # 원본 그대로 두어 도표·스크린샷 화질 보존).
 _EXIF_BEARING_EXTS = {"jpg", "jpeg", "heic", "heif", "tiff", "tif"}
-# 브라우저가 대체로 그대로 재생 가능한 컨테이너(ffprobe 불가 시 폴백용).
-_WEB_PLAYABLE_VIDEO_EXTS = {"mp4", "m4v", "webm"}
-# 브라우저가 직접 디코딩 가능한 비디오 코덱(트랜스코드 불필요).
-# HEVC 는 제외 — Safari 만 재생하고 Chrome/Firefox 는 대체로 못 여니 변환한다.
-_WEB_PLAYABLE_VIDEO_CODECS = {"h264", "vp8", "vp9", "av1"}
-# 브라우저가 직접 디코딩 가능한 오디오 코덱. DTS/AC3/EAC3/TrueHD 는 못 열어
-# 비디오가 h264 여도 화면만 나오고 무음이 된다(BDRip mkv 흔함) — 변환 사유.
-_WEB_PLAYABLE_AUDIO_CODECS = {"aac", "mp3", "opus", "vorbis", "flac"}
-
-
 def needs_exif_strip(path: str) -> bool:
     ext = os.path.splitext(path)[1].lower().lstrip(".")
     return ext in _EXIF_BEARING_EXTS
 
 
-def _probe_av_codecs(path: str) -> tuple[str | None, str | None]:
-    """ffprobe 로 (첫 비디오, 첫 오디오) 스트림 코덱명 반환. 실패 시 (None, None)."""
+def _probe_media(path: str) -> dict:
+    """첫 영상/음성의 코덱과 영상 크기. 해석 정책은 등록 부품이 소유한다."""
     import json
     try:
         r = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name",
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name,width,height",
              "-of", "json", path],
             capture_output=True, timeout=20,
         )
@@ -182,36 +172,54 @@ def _probe_av_codecs(path: str) -> tuple[str | None, str | None]:
                       if s.get("codec_type") == "video" and s.get("codec_name")), None)
             a = next((s.get("codec_name") for s in streams
                       if s.get("codec_type") == "audio" and s.get("codec_name")), None)
-            return v, a
+            size = next((x for x in streams if x.get("codec_type") == "video"), {})
+            return {"video_codec": v, "audio_codec": a, "width": size.get("width"), "height": size.get("height")}
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
         pass
-    return None, None
+    return {}
+
+
+def _web_video_policy(path=None):
+    from component_runtime import call
+    value = _probe_media(path) if path else {}
+    value["extension"] = os.path.splitext(path or "")[1].lower().lstrip(".")
+    rows = call("media.web_video_policy", value)
+    if len(rows) != 1:
+        raise ValueError("동영상 정책 반환은 하나여야 합니다")
+    row = rows[0]
+    if (any(type(row.get(k)) is not bool for k in ("copy_video", "needs_transcode"))
+            or type(row.get("max_edge")) is not int or not 2 <= row["max_edge"] <= 8192
+            or type(row.get("crf")) is not int or not 0 <= row["crf"] <= 51):
+        raise ValueError("동영상 정책의 형식/범위 오류")
+    return row
+
+
+def video_policy_version():
+    from component_registry import registry, active_source, sha
+    from runtime_utils import get_code_root, get_source_root
+    from coding_process import available
+    from pathlib import Path
+    spec = registry(get_code_root())["media.web_video_policy"]
+    source = (active_source(get_source_root(), get_code_root(), spec) if available() else
+              (Path(get_code_root()) / spec['source']).read_bytes())
+    return sha(source)[:16]
+
+
+def _web_encode_args():
+    policy = _web_video_policy()
+    # 부품은 값만 반환한다. 파일/FFmpeg 실행 권한과 명령 구문은 호스트가 소유한다.
+    edge = policy["max_edge"]
+    scale = f"scale=w='min({edge},iw)':h='min({edge},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2"
+    return ["-c:v", "libx264", "-preset", "veryfast", "-crf", str(policy["crf"]),
+            "-vf", scale, "-pix_fmt", "yuv420p"]
 
 
 def needs_video_transcode(path: str) -> bool:
-    """브라우저가 못 여는 동영상이면 True.
-
-    확장자가 아니라 실제 코덱으로 판정한다. `.mp4` 껍데기여도 알맹이가
-    mpeg4/HEVC 면 브라우저는 비디오를 못 읽고, 비디오가 h264 여도 오디오가
-    DTS/AC3 면 화면만 나오고 무음이라(BDRip mkv) 둘 다 봐야 한다.
-    ffprobe 실패 시엔 확장자 기준으로 폴백."""
-    if classify(path) != "video":
-        return False
-    v, a = _probe_av_codecs(path)
-    if v is not None:
-        if v.lower() not in _WEB_PLAYABLE_VIDEO_CODECS:
-            return True
-        return a is not None and a.lower() not in _WEB_PLAYABLE_AUDIO_CODECS
-    # ffprobe 불가 — 확장자 기준 보수적 폴백(기존 동작).
-    ext = os.path.splitext(path)[1].lower().lstrip(".")
-    return ext not in _WEB_PLAYABLE_VIDEO_EXTS
+    return classify(path) == "video" and _web_video_policy(path)["needs_transcode"]
 
 
 def video_codec_web_playable(path: str) -> bool:
-    """비디오 스트림이 이미 웹 코덱(h264 등)이라 트랜스코드 시 -c:v copy 가능하면 True.
-    (오디오만 문제인 파일에서 1080p 재인코딩을 통째로 아낀다.) 실패 시 False(보수적 재인코딩)."""
-    v, _ = _probe_av_codecs(path)
-    return v is not None and v.lower() in _WEB_PLAYABLE_VIDEO_CODECS
+    return _web_video_policy(path)["copy_video"]
 
 
 def sanitize_image_bytes(src: str, quality: int = 92):
@@ -241,8 +249,7 @@ def transcode_video_to_mp4(src: str, dst: str, timeout: int = 180) -> bool:
     try:
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         vcodec = (["-c:v", "copy"] if video_codec_web_playable(src) else
-                  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-                   "-pix_fmt", "yuv420p"])
+                  _web_encode_args())
         cmd = (
             ["ffmpeg", "-y", "-i", src]
             + vcodec
@@ -478,8 +485,7 @@ def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
                _TINY_VIDEO if quality == "tiny" else
                _low_hevc_video() if quality == "lowh" else _LOW_VIDEO) if low else
               (["-c:v", "copy"] if video_copy else
-               ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-                "-pix_fmt", "yuv420p"]))
+               _web_encode_args()))
     acodec = _LOW_AUDIO if low else ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]
     cmd = (
         ["ffmpeg", "-v", "error", "-i", os.path.abspath(src)]
@@ -508,8 +514,7 @@ def start_offset_stream(src: str, t: float, quality: str = ""):
                   _low_hevc_video() if quality == "lowh" else list(_LOW_VIDEO))
                  + list(_LOW_AUDIO))
     else:
-        codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-                 "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ac", "2"]
+        codec = _web_encode_args() + ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]
     cmd = (["ffmpeg", "-v", "error", "-ss", str(max(0.0, t)), "-i", os.path.abspath(src)]
            + codec + ["-map", "0:v:0", "-map", "0:a:0?", "-f", "mp4",
                       "-movflags", "frag_keyframe+empty_moov+default_base_moof", "pipe:1"])

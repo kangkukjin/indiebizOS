@@ -42,6 +42,7 @@ LAYERS = {
         "yaml_content",
         "execution_situation", "situation_delivery",
         "update_maintenance", "component_runtime", "component_registry",
+        "program_boundary", "program_dependencies", "program_runtime", "program_versions",
         "recall_relevance",
         "output_publish", "phone_execution_contract",
         "research_context", "research_review",

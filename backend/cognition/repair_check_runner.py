@@ -12,7 +12,7 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
     from repair_process import run
     wt = Path(repo) / session["worktree"]
     before = candidate.collect(repo, session)
-    env = candidate.environment(wt)
+    env = candidate.execution_environment(wt, session)
     spec = invocation(command, wt)
     def cancelled():
         if controller and controller.cancelled():
@@ -32,7 +32,7 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
         output = "\n".join(x.decode("utf-8", "replace") if isinstance(x, bytes) else x
                            for x in (getattr(exc, "stdout", None), getattr(exc, "stderr", None), str(exc)) if x)
     after = candidate.collect(repo, session)
-    after_env = candidate.environment(wt)
+    after_env = candidate.execution_environment(wt, session)
     report = summary(spec, output, exit_code) if spec else None
     unchanged = before == after and env == after_env
     status = ("passed" if report and report["passed"] and unchanged else
@@ -64,7 +64,7 @@ def check(repo, session, candidate, command, controller):
                 "파이프·복합 셸·빌드는 검사 영수증이 아닙니다. 빌드 뒤 검사를 별도 실행하세요. "
                 "앞머리 환경변수 대입(VAR=값 명령)은 허용되며 시험 프로세스의 환경으로 전달됩니다."}
     current = candidate.digest(candidate.collect(repo, session))
-    env = candidate.environment(wt)
+    env = candidate.execution_environment(wt, session)
     prior = next((r for r in reversed(session.get("execution_checks", []))
                   if r.get("command") == command and r.get("candidate_hash") == current
                   and r.get("before_hash") == current and r.get("environment_hash") == env

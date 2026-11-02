@@ -8,8 +8,10 @@ from pathlib import Path
 import component_continuation as parent_tasks
 import repair_continuation as journal
 
-# 실행 구현의 소유 단위. 권한 발급·적용 승인·완료 판정은 같은 단위로 끌어오지 않는다.
-CORE_IMPLEMENTATIONS = frozenset({'backend/ibl/ibl_v2_parser.py', 'backend/ibl/ibl_scanner.py'})
+from program_boundary import describe
+
+# Compatibility for callers inspecting the former governance set. Ownership is
+# now decided by program_boundary, never by an allow list of implementation names.
 CONTROL_GOVERNANCE = frozenset({
     'backend/boot_paths.py', 'backend/base/component_registry.py',
     'backend/common/completion_contract.py', 'backend/datastore/repair_root.py',
@@ -19,33 +21,18 @@ NOTICE = '필요한 구현 수리를 같은 업무의 사본에서 진행합니�
 
 
 def implementation_unit(relative):
-    if not isinstance(relative, str):
-        return None
-    path = Path(relative)
-    if path.as_posix() != relative or '..' in path.parts or path.is_absolute():
-        return None
-    if relative in CORE_IMPLEMENTATIONS:
-        return 'ibl-syntax'
-    from control_base import CONTROL_FILES
-    control = {entry if isinstance(entry, str) else entry[0] for entry in CONTROL_FILES}
-    if relative in control - CONTROL_GOVERNANCE:
-        return 'restart-control'
-    match = re.fullmatch(
-        r'data/packages/installed/tools/(?!system_essentials/)([A-Za-z0-9_-]+)/'
-        r'(?:[A-Za-z0-9_]+/)*[A-Za-z0-9_]+\.py', relative)
-    if match and not any(p.startswith('test_') or p in {'tests', '__pycache__'} for p in path.parts):
-        return 'package:' + match[1]
-    return None
+    item = describe(relative)
+    return item['owner'] if item and item['mutable'] else None
 
 
 def eligible(relative):
-    return implementation_unit(relative) is not None
+    item = describe(relative)
+    return bool(item and item['mutable'] and item['kind'] not in {'script', 'vocabulary'})
 
 
 def valid_paths(paths):
-    return (isinstance(paths, list) and 1 <= len(paths) <= 8
+    return (isinstance(paths, list) and 1 <= len(paths) <= 64
             and all(eligible(p) for p in paths)
-            and len({implementation_unit(p) for p in paths}) == 1
             and len(set(paths)) == len(paths))
 
 
@@ -63,7 +50,7 @@ def check_delta(session, relatives):
     paths = limit.get('paths')
     if not valid_paths(paths):
         raise PermissionError('업무 수리의 구현 범위가 유효하지 않습니다')
-    outside = set(relatives) - set(paths)
+    outside = set(relatives) - set(paths) - session.get('derived_files', {}).keys()
     if outside:
         raise PermissionError('업무 수리 범위 밖 변경: ' + ', '.join(sorted(outside)))
 
@@ -114,7 +101,7 @@ def request(handler, payload, context, *, framing_factory):
         return None
     paths = payload.get('paths', [relative])
     if not valid_paths(paths) or relative not in paths:
-        raise ValueError('paths는 path를 포함하는 같은 구현 단위의 정규 상대 경로 1~8개여야 합니다')
+        raise ValueError('paths는 path를 포함하는 일반 프로그램의 정규 상대 경로 1~64개여야 합니다. 보호 코어는 제외합니다')
     from execution_turn import current
     from supervision_bus import current as supervisor
     turn, controller = current(), supervisor()
@@ -137,7 +124,7 @@ def request(handler, payload, context, *, framing_factory):
     if content is not None and (not isinstance(content, str) or content == before):
         raise ValueError('실제 구현 변경이 필요합니다')
     try:
-        if content is not None:
+        if content is not None and path.suffix == '.py':
             compile(content, relative, 'exec')
     except (SyntaxError, ValueError) as exc:
         raise ValueError(f'수정안의 Python 구문이 유효하지 않습니다: {exc}') from exc
@@ -165,7 +152,7 @@ def request(handler, payload, context, *, framing_factory):
         if not candidate:
             raise RuntimeError('수리 사본을 준비하지 못했습니다')
         session = st.read_session(str(repo), execution)
-        session.update(task_scope=limit, repair_policy=2, root_task_id=key)
+        session.update(task_scope=limit, repair_policy=2, program_policy=1, root_task_id=key)
         if content is not None:
             st._candidate.target(repo / session['worktree'], relative).write_text(content)
         st._candidate.collect(str(repo), session)

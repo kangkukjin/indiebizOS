@@ -90,6 +90,22 @@ def test_stale_candidate_or_live_or_cancel_never_applies(setup, change):
     assert not result["applied"] and (root / "a.txt").read_bytes() == before
 
 
+def test_scheduled_validator_observes_verifiers_installation_not_its_own_sys_path(setup, monkeypatch, tmp_path):
+    root, wt, st, sess = setup
+    dist = tmp_path / 'worker_libs' / 'worker_fixture-1.dist-info'
+    dist.mkdir(parents=True)
+    (dist / 'METADATA').write_text('Name: worker_fixture\nVersion: 1\n')
+    monkeypatch.syspath_prepend(str(dist.parent))
+    (wt / 'a.txt').write_text('fixed')
+    ready(root, st, sess)
+    # 외부 적용 제어자는 워커의 추가 pylibs 경로를 import하지 않는다.
+    sys.path.remove(str(dist.parent))
+    assert st._candidate.validate(str(root), sess)
+    (dist / 'METADATA').write_text('Name: worker_fixture\nVersion: 2\n')
+    with pytest.raises(ValueError, match='환경'):
+        st._candidate.validate(str(root), sess)
+
+
 def test_prepare_callback_cannot_swap_sealed_bytes(setup):
     root, wt, st, sess = setup
     (wt / "a.txt").write_text("approved")

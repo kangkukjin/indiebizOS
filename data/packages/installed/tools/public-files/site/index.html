@@ -196,10 +196,10 @@ function mediaUrl(it) {
     const m = qmode();
     if (m === "low" || (m === "auto" && lowq())) q = hevcok() ? "&q=lowh" : "&q=low";
   }
-  return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}${q}`);
+  return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.media_version || it.mtime}${q}`);
 }
 function hlsUrl(it) {
-  return api(`hls/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`);
+  return api(`hls/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.media_version || it.mtime}`);
 }
 function subUrl(it, s, shift) {
   return api(`sub/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(s.rel)}&v=${s.mtime || it.mtime}`

@@ -151,10 +151,7 @@ def _red_zone_violation(abs_path: str) -> str | None:
     RED 직접 쓰기를 허용한다 — 쓰기 지점의 기계 안전판(사전 구문검증·백업·워치독
     자동 롤백)이 함께 작동한다. backend/static/ 비-py 정적 자산은 RED 가 아니다.
 
-    ★개정(2026-08-27, 48회차 별건): 기준 루트를 판정자의 집(_REPO_ROOT)이 아니라
-    **과녁이 속한 몸의 루트**(_red_family.body_root_of)에서 유도한다 — 격리 워크트리의
-    RED 도, 워크트리 게이트가 본 라이브의 RED 도 같은 헌법의 보호를 받는다(실측·거울상은
-    red_zone_family.py docstring). 남의 저장소는 가족 판정으로 걸러 종전대로 허용한다."""
+    보호 경계는 호출자의 위치가 아니라 대상이 속한 몸에서 판정한다."""
     if _REPO_ROOT is None:
         return None
     if _component_scope().permits_candidate(abs_path):
@@ -171,6 +168,12 @@ def _red_zone_violation(abs_path: str) -> str | None:
     root = _red_family.body_root_of(real, str(_REPO_ROOT))
     if root is None:
         return None  # 이 몸 밖(남의 저장소·시스템 파일·/tmp) — 종전대로 허용
+    from execution_turn import current as execution_binding
+    from program_boundary import protected_reason
+    protected = protected_reason(os.path.relpath(real, root).replace(os.sep, "/"))
+    if protected and execution_binding() is not None:
+        return ("Error: 보호 코어·기존 검사 계약은 업무 중 에이전트가 변경할 수 없습니다: "
+                + protected + ". 일반 프로그램은 한정 사본에서 수정하며, 코어 개발은 외부 개발 경로가 맡습니다.")
     for pf in _PROTECTED_STATE_FILES:
         if real == os.path.join(root, pf):
             return (

@@ -51,6 +51,10 @@
     "base/phone_execution_contract",
     "base/phone_jobs",
     "base/principal",
+    "base/program_boundary",
+    "base/program_dependencies",
+    "base/program_runtime",
+    "base/program_versions",
     "base/python_environment_lock",
     "base/quantity_checks",
     "base/quiescent_reload",
@@ -600,8 +604,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 589,
-    "engine": 557,
+    "total": 593,
+    "engine": 561,
     "blocklist": 32
   }
 }

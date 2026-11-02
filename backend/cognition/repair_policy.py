@@ -60,7 +60,7 @@ def prepare(controller, repo, session, verify, candidate):
                        missing_criteria=missing_semantic)
     wt = Path(repo) / session["worktree"]
     before = candidate.collect(repo, session)
-    env = candidate.environment(wt)
+    env = candidate.execution_environment(wt, session)
     supporting = {r["result"]["id"] for r in controller.store.tool_index(limit=10000)
                   if not r.get("is_error") and r.get("result", {}).get("id")}
     token = candidate.digest({"candidate": before, "env": env, "contract": contract, "plan": plan,
@@ -108,7 +108,7 @@ def prepare(controller, repo, session, verify, candidate):
                               changed_files=sorted(drift)))
     ok, checks = verify(repo, session)
     after = candidate.collect(repo, session)
-    if before != after or env != candidate.environment(wt):
+    if before != after or env != candidate.execution_environment(wt, session):
         return finish(failure("candidate_changed", "검사 중 후보가 변경됐습니다. 변경 후 관련 검사를 다시 실행하세요",
                               changed_files=sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))))
     if not ok:
@@ -149,7 +149,7 @@ def prepare(controller, repo, session, verify, candidate):
                                   allowed_evidence_ids=anchors))
         decision.update(method="mixed" if coverage else "semantic",
                         workspace_coverage=coverage + decision.get("workspace_coverage", []))
-    if controller.cancelled() or before != candidate.collect(repo, session) or env != candidate.environment(wt):
+    if controller.cancelled() or before != candidate.collect(repo, session) or env != candidate.execution_environment(wt, session):
         return finish(failure("candidate_changed", "검사 이후 후보·환경 변경 또는 취소가 발생했습니다"))
     # activation은 기능 심사로 다루지 않고 실제 적용 서비스의 계획과 영수증으로 확인한다.
     for c in contract["criteria"]:

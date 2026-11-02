@@ -41,6 +41,12 @@ def requires_code_receipts(controller):
         return path.exists() or bool(previous.get("worktree") or previous.get("job_path"))
     if not isinstance(session, dict):
         return True
+    if session.get('program_activation') and program_published(base, session):
+        return False
+    if session.get("component_activation") and component_published(base, session):
+        # 부품 게시 영수증은 이미 완료됐다. 원래 업무/수리 목표는 일반 최종평가가
+        # 새 호출 결과로 판단하며 전체 세대의 교체 영수증을 요구하지 않는다.
+        return False
     if session.get("status") != "staging":
         return True
     try:
@@ -50,6 +56,54 @@ def requires_code_receipts(controller):
         return bool(session["files"])
     except (OSError, ValueError, RuntimeError, KeyError):
         return True  # 사본을 확인하지 못했으면 코드 반영 검사를 생략하지 않는다.
+
+
+def component_published(base, session):
+    import subprocess
+    import component_registry as components
+    from runtime_utils import get_code_root
+    if session.get("status") != "applied" or not session.get("verified"):
+        return False
+    commit = (session.get("commit") or {}).get("commit")
+    if not commit or not session["commit"].get("success"):
+        return False
+    try:
+        specs = components.registry(get_code_root())
+        for entry in session["component_activation"]:
+            spec, version = specs[entry["spec"]["id"]], entry["version"]
+            if components.sha(components.active_source(base, get_code_root(), spec)) != version:
+                return False
+            stored = subprocess.run(["git", "show", commit + ":" + spec["source"]], cwd=base,
+                                    capture_output=True, timeout=30)
+            if stored.returncode or components.sha(stored.stdout) != version:
+                return False
+        return bool(session["component_activation"])
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        return False
+
+
+def program_published(base, session):
+    import hashlib
+    import subprocess
+    from program_versions import activation_matches
+    from runtime_utils import get_code_root
+    committed = session.get('commit') or {}
+    if session.get('status') != 'applied' or not session.get('verified') or not committed.get('success'):
+        return False
+    try:
+        if not activation_matches(base, get_code_root(), session):
+            return False
+        for rel, item in session['sealed'].items():
+            result = subprocess.run(['git', 'show', committed['commit'] + ':' + rel],
+                                    cwd=base, capture_output=True, timeout=30)
+            if item['after'] is None:
+                if result.returncode == 0:
+                    return False
+            elif result.returncode or hashlib.sha256(result.stdout).hexdigest() != item['after']['sha']:
+                return False
+        return True
+    except (OSError, KeyError, ValueError, subprocess.SubprocessError):
+        return False
 
 
 def completion_error(controller):

@@ -55,8 +55,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-10-31",
-        "impl": "1be89e83c777641a"
+        "at": "2026-11-02",
+        "impl": "a8a105b9687bdfd0"
       }
     },
     "self:list": {
@@ -98,8 +98,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-10-31",
-        "impl": "1be89e83c777641a"
+        "at": "2026-11-02",
+        "impl": "a8a105b9687bdfd0"
       }
     },
     "self:record": {
@@ -157,8 +157,8 @@
         "dependencies": "$dependencies"
       },
       "path_audited": {
-        "at": "2026-10-31",
-        "impl": "1be89e83c777641a"
+        "at": "2026-11-02",
+        "impl": "a8a105b9687bdfd0"
       }
     },
     "self:write": {
@@ -172,8 +172,8 @@
         "content": "$content"
       },
       "path_audited": {
-        "at": "2026-10-31",
-        "impl": "1be89e83c777641a"
+        "at": "2026-11-02",
+        "impl": "a8a105b9687bdfd0"
       }
     },
     "sense:crawl": {

@@ -67,7 +67,9 @@ class Watcher:
             from component_registry import covers_changes
             changed = {rel for rel in active['files'].keys() | inventory['files'].keys()
                        if active['files'].get(rel) != inventory['files'].get(rel)}
-            if covers_changes(ctl.code_root, state['generation_dir'], changed, inventory['files']):
+            from program_versions import covers_changes as program_changes
+            changed -= program_changes(ctl.code_root, state['generation_dir'], changed, inventory['files'])
+            if not changed or covers_changes(ctl.code_root, state['generation_dir'], changed, inventory['files']):
                 if watch:
                     ctl.save(watch={})
                 return None

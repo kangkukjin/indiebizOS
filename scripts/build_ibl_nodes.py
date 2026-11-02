@@ -1092,6 +1092,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument('--outputs-json', action='store_true', help='소유 파생물·문서 마커 계약 출력 (빌드 안 함)')
     ap.add_argument(
         "--check",
         action="store_true",
@@ -1113,6 +1114,15 @@ def main(argv: list[str] | None = None) -> int:
         help="가드가 읽는 파일 패턴을 한 줄에 하나씩 출력 (사람 확인용 — 빌드 안 함)",
     )
     args = ap.parse_args(argv)
+    if args.outputs_json:
+        from iblbuild_docs import DOC_TARGETS
+        print(json.dumps({
+            'files': ['data/' + p for p in ('ibl_nodes.yaml', 'phone_manifest.json',
+                      'member_manifest.json', 'package_meta.json', 'ibl_fixtures.json',
+                      'shell_shadow.json', 'core_manifest.json')],
+            'documents': [list(row[:3]) for row in DOC_TARGETS],
+        }))
+        return 0
     if args.inputs_regex:
         print(guard_inputs_regex())
         return 0

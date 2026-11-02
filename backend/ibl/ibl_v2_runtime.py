@@ -534,6 +534,8 @@ class Runtime(ExpressionEvaluator):
         if definition.data.get('annotations'):
             from ibl_v2_requirements import runtime_annotations
             runtime_annotations(self, definition, local)
+        from ibl_function_control import prepare
+        operation = prepare(self, node, definition, local)
         entry = next((e for e in self.plan.dependencies.get('source_map', [])[1:]
                       if e['start'] <= definition.start < e['end']), {})
         function_ref = entry.get('function_ref')
@@ -542,7 +544,7 @@ class Runtime(ExpressionEvaluator):
         try:
             from ibl_v2_component_runtime import execute
             result = execute(self, d['symbol'], node, {k: v.value for k, v in local.items()},
-                             lambda: self.frame(definition.data["body"], local))
+                             operation)
             eid = self.event(node, "function_result", result.evidence | args.evidence,
                              selected_parents=sorted(result.evidence),
                              name=d["action"], definition_start=definition.start, success=True,

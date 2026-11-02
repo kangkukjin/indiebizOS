@@ -1,11 +1,11 @@
 """Scoped next-invocation argument steering, persisted in the existing run journal.
 
-Only statically known adapter calls are exposed. Sequential writes may retarget
-known declared resources; parallel/each writes retain their resource footprint.
+Only static adapter and eligible pure function calls are exposed. Sequential writes may retarget
+known declared resources; parallel writes stay within every admitted branch resource set.
 Repeated sites are addressed within a live execution scope.
 Stopped-run repair replays applied arguments through existing call IDs and
 certifies pure computations using the existing repair dependency projection.
-Running calls and dynamic definitions are not replaced.
+Pure named function bodies can change at a future call; running calls stay intact.
 """
 import json
 import sqlite3
@@ -31,6 +31,7 @@ def publish(journal, plan, project_path):
     from ibl_run_journal import receipt_access_scope
     from thread_context import get_current_task_id
     from task_receipts import ref
+    from ibl_function_control import function_spec
     register()
     targets = {}
     nodes = list(walk([plan.root, plan.functions]))
@@ -51,6 +52,8 @@ def publish(journal, plan, project_path):
     for node in nodes:
         key = f"{node.data.get('node')}:{node.data.get('action')}"
         spec = plan.registry.get(key)
+        function = function_spec(plan, node)
+        spec = function or spec
         if (node.kind != 'call' or not spec or spec.dependency or spec.stateful
                 or node.data.get('target') or spec.specialize):
             continue
@@ -66,8 +69,9 @@ def publish(journal, plan, project_path):
             continue
         targets[node.id] = {'action': key, 'revision': digest(contract), 'contract': contract,
                             'effects': sorted(effects), 'addressing': 'scope' if scoped else 'node',
-                            'resource_policy': ('unchanged' if parallel or each else 'declared') if 'write_external' in effects else
+                            'resource_policy': ('admitted' if parallel or each else 'declared') if 'write_external' in effects else
                                                'admitted' if writes and (each or parallel) else 'read_only'}
+        targets[node.id]['controls'] = ['definition'] if function else ['arguments']
     metadata = {'scoped': scoped, 'root_task': get_current_task_id() or '', 'plan_hash': plan.fingerprint,
                 'access_scope': receipt_access_scope(), 'targets': targets,
                 'task_ref': ref(KIND, journal.run_id, str(Path(project_path).resolve()))}
@@ -282,10 +286,12 @@ def steer(ref, message, request_id):
         raise ValueError('request_id가 필요합니다')
     try:
         payload = json.loads(message) if isinstance(message, str) else message
-        fields = {'root_task', 'plan_hash', 'node_id', 'revision', 'ordinal', 'expected_args_hash', 'changes'}
-        if (not isinstance(payload, dict) or set(payload) not in (fields, fields | {'scope'}) or not isinstance(payload['changes'], dict)
-                or not payload['changes'] or type(payload['ordinal']) is not int or payload['ordinal'] < 1):
-            raise ValueError('지원 범위는 아직 시작하지 않은 호출의 다음 경계 인자 변경입니다')
+        fields = {'root_task', 'plan_hash', 'node_id', 'revision', 'ordinal', 'expected_args_hash'}
+        if (not isinstance(payload, dict) or set(payload) - {'scope', 'changes', 'definition'} != fields
+                or ('changes' in payload) == ('definition' in payload)
+                or ('changes' in payload and (not isinstance(payload['changes'], dict) or not payload['changes']))
+                or type(payload['ordinal']) is not int or payload['ordinal'] < 1):
+            raise ValueError('지원 범위는 다음 호출 경계의 인자 또는 순수 함수 본문 변경입니다')
         encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, allow_nan=False)
         with connection(ref, True) as (db, meta, path):
             previous = db.execute('SELECT payload,state,reason FROM control_requests WHERE request_id=?', (request_id,)).fetchone()
@@ -306,7 +312,14 @@ def steer(ref, message, request_id):
                     raise ValueError('종료됐거나 대상이 다른 실행 scope입니다')
             elif 'scope' in payload:
                 raise ValueError('이 호출은 실행 scope 주소를 지원하지 않습니다')
-            if set(payload['changes']) - target['contract']['params'].keys():
+            if 'definition' in payload:
+                if 'definition' not in target.get('controls', []):
+                    raise ValueError('이 경계는 정의 변경을 지원하지 않습니다')
+                from ibl_function_control import replacement_plan
+                replacement_plan(payload['definition'], target['contract'])
+            elif 'arguments' not in target.get('controls', ['arguments']):
+                raise ValueError('이 경계는 함수 본문 변경만 지원합니다')
+            if set(payload.get('changes', {})) - target['contract']['params'].keys():
                 raise ValueError('계약에 없는 변경 인자입니다')
             linked = db.execute("SELECT 1 FROM sqlite_master WHERE name='control_invocations'").fetchone()
             if linked and invocation(db, payload['node_id'], payload['ordinal'], scope_id):
@@ -332,12 +345,13 @@ def invocation(db, node_id, ordinal, scope_id=None):
 
 
 def check_write_resources(spec, before_contract, before, after_contract, after, *, retain_identity=True):
-    """Both footprints must resolve; parallel/each also retain exact identities.
+    """Both footprints must resolve; callers also enforce ancestor admission.
 
     This does not authorize a resource. The adapter's normal permission and
     source-revision checks still own whether the changed invocation may execute.
     """
     from ibl_run_journal import call_resources
+    changed = False
     for mode in ('read', 'write'):
         if mode == 'read' and not (before_contract.get('read_resources') or after_contract.get('read_resources')
                                    or 'read_external' in before_contract['effects']):
@@ -346,13 +360,16 @@ def check_write_resources(spec, before_contract, before, after_contract, after, 
         new = call_resources(spec, after_contract, after, mode, allow_bare=spec.resource_identity is None)
         if old is None or new is None or (retain_identity and digest(old) != digest(new)):
             raise ValueError('write_resource_changed_or_unknown')
-        if not retain_identity and digest(old) != digest(new):
+        if digest(old) != digest(new):
+            changed = True
+        if not retain_identity and changed:
             # Retargeting must also be knowable to the durable effect owner.
             # In particular, a bare output name may be redirected by adapter
             # output policy; unchanged legacy arguments keep their old contract.
             if (call_resources(spec, before_contract, before, mode) is None
                     or call_resources(spec, after_contract, after, mode) is None):
                 raise ValueError('write_resource_changed_or_unknown')
+    return changed
 
 
 def repair_applications(db, *, different_plan=None, replacement=None, mapping=None):
@@ -412,12 +429,13 @@ def replay_applied(runtime, node, args, spec):
                 or request['revision'] != digest(spec.contract)
                 or request['expected_args_hash'] != digest(args.value)):
             raise Fault('CONTROL_REPLAY_CHANGED', '이미 적용한 조향의 호출·인자·정의 판본이 달라졌습니다.', node, kind='protocol')
-        _, values = checked_values(spec.contract, {**args.value, **request['changes']})
+        _, values = checked_values(spec.contract, {**args.value, **request.get('changes', {})})
         eid = runtime.event(node, 'steer_replayed', args.evidence, request_id=rid, call_id=call_id,
                             original_plan=request['plan_hash'], root_task=runtime.journal.control['root_task'])
-        parts = {k: Binding(v, frozenset({eid})) if k in request['changes'] else
+        parts = {k: Binding(v, frozenset({eid})) if k in request.get('changes', {}) else
                  args.select(k) if k in args.value else Binding(v) for k, v in values.items()}
         args = Binding.record(parts).controlled(args.control | {eid})
+        runtime.local.control_definition = request.get('definition')
         runtime.control_resource_guard = True
         replayed = True
     return args, replayed
@@ -457,6 +475,7 @@ def bind_invocation(runtime, node, call_id):
 def boundary(runtime, node, args, spec):
     journal = runtime.journal
     runtime.local.control_boundary = None
+    runtime.local.control_definition = None
     if not journal or not getattr(journal, 'control', None) or node.id not in journal.control['targets']:
         return args
     args, replayed = replay_applied(runtime, node, args, spec)
@@ -494,23 +513,26 @@ def boundary(runtime, node, args, spec):
                     reason = 'definition_revision_mismatch'
                 elif state == 'accepted' and (replayed or invocation(db, node.id, ordinal, scope_id)):
                     reason = 'already_started'
+                elif 'definition' in request and runtime.local.control_definition is not None:
+                    reason = 'definition_revision_mismatch'
                 elif request['expected_args_hash'] != digest(args.value):
                     reason = 'input_revision_mismatch'
                 else:
                     try:
-                        effective, values = checked_values(spec.contract, {**args.value, **request['changes']})
+                        effective, values = checked_values(spec.contract, {**args.value, **request.get('changes', {})})
                         from ibl_callable_contract import selected
                         original = selected(spec.contract, args.value)
                         if set(effective['effects']) != set(original['effects']):
                             raise ValueError('effect_contract_changed')
+                        retargeted = False
                         if 'write_external' in effective['effects']:
                             policy = journal.control['targets'][node.id].get('resource_policy', 'unchanged')
-                            check_write_resources(spec, original, args.value, effective, values,
-                                                  retain_identity=policy != 'declared')
+                            retargeted = check_write_resources(spec, original, args.value, effective, values,
+                                                              retain_identity=policy not in {'declared', 'admitted'})
                         from ibl_v2_access import ensure_admitted
                         from ibl_v2_ir import Fault
                         try:
-                            ensure_admitted(runtime, spec, effective, values, force=True)
+                            ensure_admitted(runtime, spec, effective, values, force=True, known=retargeted)
                         except Fault as exc:
                             raise ValueError(exc.code) from exc
                     except (ValueError, TypeError) as exc:
@@ -521,9 +543,10 @@ def boundary(runtime, node, args, spec):
                 eid = runtime.event(node, 'steer_applied', args.evidence, request_id=rid,
                                     root_task=journal.control['root_task'], ordinal=ordinal, scope=scope_id,
                                     old_args_hash=digest(args.value), new_args_hash=digest(values))
-                parts = {k: Binding(v, frozenset({eid})) if k in request['changes'] else
+                parts = {k: Binding(v, frozenset({eid})) if k in request.get('changes', {}) else
                          args.select(k) if k in args.value else Binding(v) for k, v in values.items()}
                 args = Binding.record(parts).controlled(args.control | {eid})
+                runtime.local.control_definition = request.get('definition')
                 runtime.control_resource_guard = True
                 db.execute("UPDATE control_requests SET state='applied',reason=NULL WHERE request_id=?", (rid,))
             db.commit()

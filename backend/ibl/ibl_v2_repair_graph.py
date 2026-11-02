@@ -59,6 +59,7 @@ class Projection:
         self.definitions = {n.id: n for n in walk(self.root) if n.kind == 'def'}
         self.effects, self.retained, self.active = {}, set(), set()
         self.controls = {}
+        self.control_revisions = {}
         self.emissions, self.exits = [], []
         self.iterations, self.iteration_effects = [], set()
         self.remaining = 8192
@@ -481,6 +482,16 @@ class Projection:
             finally:
                 del self.exits[exit_scope:]
                 self.active.remove(definition.id)
+            if node.kind == 'call' and not self.plan.node_effects.get(node.id, {'unknown'}) - {'pure'}:
+                # A future pure function body edit is tied to the complete old
+                # definition and its input/control ancestry, never just its output.
+                deps = control | entry | self.complete(args) | self.complete(piped or Value())
+                deps |= {child.id for child in walk(definition)}
+                self.controls.setdefault(node.id, set()).update(deps)
+                from ibl_function_control import function_spec
+                spec = function_spec(self.plan, self.resolved.get(node.id, node))
+                if spec:
+                    self.control_revisions[node.id] = digest(spec.contract)
             return value.with_deps(entry)
         # Primitive and unresolved calls consume their whole argument values.
         # Passing a callable to an opaque provider never certifies it as inert.
@@ -524,9 +535,13 @@ def frontier(plan):
     except (ValueError, RecursionError):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
+    def certificate(nid, deps):
+        dependencies = sorted((address(dep), projection.signature(projection.nodes[dep])) for dep in deps)
+        if nid in projection.control_revisions:
+            return digest({'dependencies': dependencies, 'definition_revision': projection.control_revisions[nid]})
+        return digest(dependencies)
     return {'protocol': 'ibl-repair-frontier/7', 'supported': supported,
-            'controls': {address(nid): digest(sorted((address(dep), projection.signature(projection.nodes[dep]))
-                                                    for dep in deps))
+            'controls': {address(nid): certificate(nid, deps)
                          for nid, deps in projection.controls.items()} if supported else {},
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},

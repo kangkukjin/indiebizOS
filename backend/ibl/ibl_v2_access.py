@@ -166,14 +166,15 @@ def admit(runtime, node, branches):
     return ordered
 
 
-def ensure_admitted(runtime, spec, contract, args, *, force=False):
+def ensure_admitted(runtime, spec, contract, args, *, force=False, known=False):
     """Steering cannot enlarge any enclosing branch's admitted access set.
 
     Admission already rejects unknown cross-branch conflicts. Keep each mode's
     unresolved entry conservative, and require known targets to remain among the
     admitted identities. Inodes may change after an ordinary atomic file write;
     path identity is retained, while original admission still checks hardlinks.
-    This is not a lock against external filesystem mutations.
+    Explicit write retargeting (known=True) cannot use an unresolved reservation
+    as a resource grant. This is not a lock against external filesystem mutations.
     """
     reservations = getattr(runtime.local, 'resource_admissions', ())
     if not reservations or not (force or getattr(runtime, 'control_resource_guard', False)):
@@ -182,9 +183,9 @@ def ensure_admitted(runtime, spec, contract, args, *, force=False):
     for reserved in reservations:
         for access in current:
             same_mode = [item for item in reserved if item.mode == access.mode]
-            if any(item.resources is None for item in same_mode):
+            if not known and any(item.resources is None for item in same_mode):
                 continue  # Already admitted as unknown against every sibling.
-            allowed = {(r, p) for item in same_mode for r, p, _inode in item.resources}
+            allowed = {(r, p) for item in same_mode for r, p, _inode in (item.resources or ())}
             if access.resources is None or any((r, p) not in allowed for r, p, _inode in access.resources):
                 raise Fault('PARALLEL_RESOURCE_CHANGED',
                             '조향 이후의 호출이 병렬 진입 때 확인한 자원 범위를 벗어납니다. 효과를 시작하지 않습니다.',

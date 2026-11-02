@@ -655,7 +655,7 @@ def test_parallel_or_each_with_declared_write_resource_uses_scopes(tmp_path, cod
     with Journal(tmp_path / 'runs', 'test') as journal:
         publish(journal, plan, tmp_path)
         assert journal.control['targets']
-        assert all(t['addressing'] == 'scope' and t['resource_policy'] == 'unchanged'
+        assert all(t['addressing'] == 'scope' and t['resource_policy'] == 'admitted'
                    for t in journal.control['targets'].values())
 
 
@@ -1055,7 +1055,7 @@ def test_parallel_write_cannot_redirect_into_sibling_resource(write_run):
         assert state['out'][0]['success'] and state['out'][0]['value'] == ['old', 'old']
         assert sorted(r['path'] for r in state['effects']) == sorted([a, b])
         row = status(ref)['progress']['requests'][0]
-        assert row['state'] == 'not_applied' and row['reason'] == 'write_resource_changed_or_unknown'
+        assert row['state'] == 'not_applied' and row['reason'] == 'PARALLEL_RESOURCE_CHANGED'
 
 
 def test_parallel_read_change_cannot_escape_admitted_branch(write_run):
@@ -1139,6 +1139,44 @@ def test_parallel_earlier_writes_survive_steering_and_resume(write_run, tmp_path
         resumed = handle_request({**state['request'], 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
         assert resumed['success'] and resumed['value'] == ['new', 'old'], resumed
         assert len(state['effects']) == 4
+
+
+
+
+@pytest.mark.parametrize('parallel', [1, 2])
+def test_each_write_retargets_within_own_admitted_resources(write_run, tmp_path, parallel):
+    code = ('[table:each]{items:[$a,$b],parallel:' + str(parallel) + '}'
+            '{[t:gate]{path:$it};[t:write]{path:$it,content:"first"};'
+            '[t:write]{path:$it+".next",content:"last"}}')
+    with write_run(code, wait_for=('a',) if parallel == 1 else ('a', 'b')) as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        payload = write_change(state, expected={'path': a, 'content': 'first'}, changes={'path': a + '.next'})
+        steer(ref, payload, 'move')
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert state['out'][0]['success'], state['out']
+        assert not Path(a).exists()
+        assert [r['content'] for r in state['effects'] if r['path'] == a + '.next'] == ['first', 'last']
+        assert Path(b).read_text() == 'first'
+        assert status(ref)['progress']['requests'][0]['state'] == 'applied'
+        resumed = handle_request({**state['request'], 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'], resumed
+        assert len(state['effects']) == 4
+
+
+def test_sequential_each_can_retarget_new_declared_resource(write_run):
+    with write_run(WRITE_EACH.replace('parallel:2', 'parallel:1'), wait_for=('a',)) as state:
+        a = state['paths']['a']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state, changes={'path': a + '.new'}), 'new-target')
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert state['out'][0]['success'], state['out']
+        assert not Path(a).exists() and Path(a + '.new').read_text() == 'old'
+        assert status(ref)['progress']['requests'][0]['state'] == 'applied'
 
 
 if __name__ == "__main__":

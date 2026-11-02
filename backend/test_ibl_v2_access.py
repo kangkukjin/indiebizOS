@@ -158,6 +158,21 @@ def test_large_unrelated_value_cannot_hide_known_resource_targets():
     assert out['success'] and len(calls) == 2, out
 
 
+@pytest.mark.parametrize('known', [False, True])
+def test_retarget_does_not_treat_unknown_admission_as_resource_grant(known):
+    from ibl_v2_access import Access, ensure_admitted
+    from ibl_v2_ir import Fault
+    reg = registry(lambda *_: 1, lambda *_: 1)
+    runtime = Runtime(compile_program('[t:write]{key:"new"}', reg))
+    runtime.local.resource_admissions = (frozenset({Access('write', None, 't:unknown', False)}),)
+    if known:
+        with pytest.raises(Fault) as error:
+            ensure_admitted(runtime, reg['t:write'], reg['t:write'].contract, {'key': 'new'}, force=True, known=True)
+        assert error.value.code == 'PARALLEL_RESOURCE_CHANGED'
+    else:
+        ensure_admitted(runtime, reg['t:write'], reg['t:write'].contract, {'key': 'new'}, force=True)
+
+
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))

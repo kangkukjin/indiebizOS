@@ -267,6 +267,27 @@ def test_shared_function_in_parallel_requires_a_live_scope(tmp_path):
         assert boundaries(journal.db, journal.control) == []
 
 
+def test_unused_unknown_writer_does_not_hide_read_only_parallel_controls(tmp_path):
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from ibl_run_journal import Journal
+    from ibl_run_control import publish
+    reg = {'t:write': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['write_external']},
+                              lambda *_: pytest.fail('unused function must not execute')),
+           't:read': Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                              'effects': ['read_external']}, lambda rt, args: args['n'])}
+    plan = compile_program('[def:unused](){return [t:write]{}};'
+                           '[def:read]($n){return [t:read]{n:$n}}; [fn:read]{n:1} & [fn:read]{n:2}', reg)
+    assert not plan.issues and plan.effects == {'read_external'}
+    with Journal(tmp_path / 'runs', 'test') as journal:
+        publish(journal, plan, tmp_path)
+        assert journal.control['targets']
+        assert all(t['action'] == 't:read' for t in journal.control['targets'].values())
+        result = Runtime(plan, journal=journal).run()
+        assert result['success'] and result['value'] == [1, 2], result
+        assert journal.db.execute('SELECT COUNT(*) FROM control_scopes').fetchone()[0] == 2
+
+
 def test_cancel_before_write_boundary_preserves_original_file(launch, tmp_path):
     path = tmp_path / 'cancelled'
     path.write_text('kept')
@@ -304,6 +325,7 @@ def test_late_cancel_preserves_returned_write_receipt(launch, tmp_path):
         row = status(ref)['progress']['requests'][0]
         assert row['state'] == 'applied' and row['effect_state'] == 'returned'
         assert Path(path).read_text() == 'new' and len(calls) == 1
+        assert not out[0]['success'] and out[0]['diagnostic']['code'] == 'CANCELLED'
         handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
         assert len(calls) == 1
 
@@ -337,7 +359,7 @@ def test_steered_write_still_checks_adapter_source_revision(launch, tmp_path):
     '[table:each]{items:["a","b"]}{[t:write]{path:$it,content:"x"}}',
     '[table:each]{items:["a","b"],parallel:2}{[t:write]{path:$it,content:"x"}}',
 ])
-def test_parallel_or_each_with_declared_write_resource_is_not_steerable(tmp_path, code):
+def test_parallel_or_each_with_declared_write_resource_uses_scopes(tmp_path, code):
     from ibl_v2_compile import compile_program
     from ibl_run_journal import Journal
     from ibl_run_control import publish
@@ -345,7 +367,9 @@ def test_parallel_or_each_with_declared_write_resource_is_not_steerable(tmp_path
     assert not plan.issues
     with Journal(tmp_path / 'runs', 'test') as journal:
         publish(journal, plan, tmp_path)
-        assert not journal.control['targets']
+        assert journal.control['targets']
+        assert all(t['addressing'] == 'scope' and t['resource_policy'] == 'unchanged'
+                   for t in journal.control['targets'].values())
 
 
 @pytest.fixture
@@ -530,6 +554,224 @@ def test_legacy_node_address_survives_new_scope_capability_on_resume(launch, tmp
         assert resumed['success'] and resumed['value'] == [7, 3], resumed
         assert sorted(reads) == [3, 7]
         assert steer(ref, payload, 'legacy')['delivery'] == 'applied'
+
+
+@pytest.fixture
+def write_run(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+    class LostWorker(BaseException):
+        pass
+    @contextmanager
+    def start(code, *, wait_for=('a', 'b'), crash=None, extras=None, hold_write=None):
+        paths = {name: str(tmp_path / name) for name in ('a', 'b')}
+        entered = {p: threading.Event() for p in paths.values()}
+        release = {p: threading.Event() for p in paths.values()}
+        done = {p: threading.Event() for p in paths.values()}
+        handles, effects, output, crashes, depths = {}, [], [], [], []
+        write_release = threading.Event()
+        def gate(rt, args):
+            path = args['path']
+            handles[path] = (rt.journal.control['task_ref'], rt.local.control_scope[0])
+            entered[path].set()
+            assert release[path].wait(15)
+            return path
+        def write(rt, args):
+            depths.append(len(getattr(rt.local, 'resource_admissions', ())))
+            Path(args['path']).write_text(args['content'])
+            effects.append(dict(args))
+            if args['path'] in done:
+                done[args['path']].set()
+            if args['path'] == paths.get(crash):
+                raise LostWorker()
+            if args['path'] == paths.get(hold_write):
+                assert write_release.wait(15)
+            return args['content']
+        adapter = writer(write)
+        adapter.contract['pipe_input'] = 'path'
+        reg = {'t:write': adapter,
+               't:gate': Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Text',
+                                  'effects': ['read_external'], 'read_resources': {'file': 'path'}}, gate),
+               **(extras or {})}
+        monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **kw: reg)
+        monkeypatch.setattr('ibl_v2_store.definitions', lambda: {})
+        monkeypatch.setattr('tool_batch.prepared_plan', lambda *a: None)
+        request = {'edition': 2, 'code': code, 'inputs': paths}
+        context = snapshot()
+        def run():
+            restore(context)
+            try:
+                output.append(handle_request(request, str(tmp_path)))
+            except BaseException as exc:
+                crashes.append(exc)
+        worker = threading.Thread(target=run)
+        worker.start()
+        try:
+            for name in wait_for:
+                assert entered[paths[name]].wait(5), (output, crashes)
+            yield {'paths': paths, 'handles': handles, 'release': release, 'done': done, 'entered': entered,
+                   'effects': effects, 'out': output, 'crashes': crashes, 'worker': worker, 'request': request,
+                   'depths': depths, 'write_release': write_release}
+        finally:
+            for event in release.values():
+                event.set()
+            write_release.set()
+            worker.join(15)
+            assert not worker.is_alive()
+            assert not crashes or (crash and all(isinstance(exc, LostWorker) for exc in crashes)), crashes
+    return start
+
+
+def write_change(state, name='a', *, action='t:write', expected=None, changes=None):
+    path = state['paths'][name]
+    ref, scope_id = state['handles'][path]
+    progress = status(ref)['progress']
+    target = next(row for row in progress['boundaries'] if row.get('scope') == scope_id
+                  and row['action'] == action and row['next_ordinal'] == 1)
+    return {'root_task': progress['root_task'], 'plan_hash': progress['plan_hash'],
+            'node_id': target['node_id'], 'revision': target['revision'], 'ordinal': target['next_ordinal'],
+            'scope': scope_id, 'expected_args_hash': digest(expected or {'path': path, 'content': 'old'}),
+            'changes': changes or {'content': 'new'}}
+
+
+WRITE_EACH = '[table:each]{items:[$a,$b],parallel:2}{[t:gate]{path:$it};[t:write]{path:$it,content:"old"}}'
+
+
+@pytest.mark.parametrize('code,nested', [
+    (WRITE_EACH, False),
+    ('[def:work]($p){[t:gate]{path:$p};return [t:write]{path:$p,content:"old"}}; '
+     '[fn:work]{p:$a} & [fn:work]{p:$b}', False),
+    ('[def:work]($p){[t:gate]{path:$p};return [t:write]{path:$p,content:"old"}}; '
+     '[table:each]{items:[$a,$b],parallel:2}{'
+     '[fn:work]{p:$it} & [t:write]{path:$it+".aux",content:"aux"}}', True),
+])
+def test_parallel_write_changes_one_target_content_and_preserves_receipts(write_run, tmp_path, code, nested):
+    with write_run(code) as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state), 'edit')
+        state['release'][b].set()
+        assert state['done'][b].wait(5)
+        state['release'][a].set(); state['worker'].join(10)
+        expected = [['new', 'aux'], ['old', 'aux']] if nested else ['new', 'old']
+        assert state['out'][0]['success'] and state['out'][0]['value'] == expected, state['out']
+        assert Path(a).read_text() == 'new' and Path(b).read_text() == 'old'
+        assert len(state['effects']) == (4 if nested else 2)
+        if nested:
+            assert all(depth == 2 for depth in state['depths'])
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'applied' and row['effect_state'] == 'returned'
+        resumed = handle_request({**state['request'], 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == expected, resumed
+        assert len(state['effects']) == (4 if nested else 2)
+
+
+def test_sequential_each_write_uses_per_item_scope(write_run):
+    with write_run(WRITE_EACH.replace('parallel:2', 'parallel:1'), wait_for=('a',)) as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state), 'edit')
+        state['release'][a].set()
+        assert state['entered'][b].wait(5)
+        state['release'][b].set(); state['worker'].join(10)
+        assert state['out'][0]['success'] and state['out'][0]['value'] == ['new', 'old'], state['out']
+        assert len(state['effects']) == 2 and state['depths'] == [0, 0]
+
+
+def test_parallel_write_cannot_redirect_into_sibling_resource(write_run):
+    with write_run(WRITE_EACH) as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state, changes={'path': b}), 'redirect')
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert state['out'][0]['success'] and state['out'][0]['value'] == ['old', 'old']
+        assert sorted(r['path'] for r in state['effects']) == sorted([a, b])
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'not_applied' and row['reason'] == 'write_resource_changed_or_unknown'
+
+
+def test_parallel_read_change_cannot_escape_admitted_branch(write_run):
+    reads = []
+    reader = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Text',
+                      'effects': ['read_external'], 'read_resources': {'file': 'path'}},
+                     lambda rt, args: reads.append(args['path']) or 'old')
+    code = '[table:each]{items:[$a,$b],parallel:2}{[t:gate]{path:$it};$v=[t:read]{path:$it};[t:write]{path:$it,content:$v}}'
+    with write_run(code, extras={'t:read': reader}) as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state, action='t:read', expected={'path': a}, changes={'path': b}), 'redirect')
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert state['out'][0]['success'] and sorted(reads) == sorted([a, b]), state['out']
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'not_applied' and row['reason'] == 'PARALLEL_RESOURCE_CHANGED'
+
+
+def test_parallel_write_crash_preserves_unknown_effect_and_other_branch_receipt(write_run, tmp_path):
+    with write_run(WRITE_EACH, crash='a') as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state), 'edit')
+        state['release'][b].set()
+        assert state['done'][b].wait(5)
+        state['release'][a].set(); state['worker'].join(10)
+        assert state['crashes'] and not state['out']
+        assert Path(a).read_text() == 'new' and Path(b).read_text() == 'old'
+        assert status(ref)['progress']['requests'][0]['effect_state'] == 'unknown'
+        resumed = handle_request({**state['request'], 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['diagnostic']['code'] == 'EFFECT_UNCERTAIN', resumed
+        assert len(state['effects']) == 2
+
+
+def test_parallel_write_cancel_before_boundary_produces_no_effect(write_run):
+    with write_run(WRITE_EACH) as state:
+        a = state['paths']['a']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state), 'edit')
+        assert cancel(ref)['state'] == 'cancel_requested'
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert not state['out'][0]['success'] and not state['effects']
+        assert status(ref)['progress']['requests'][0]['state'] == 'not_applied'
+
+
+def test_parallel_late_cancel_keeps_written_effect_and_return_receipt(write_run, tmp_path):
+    from ibl_v2_ir import unpack
+    with write_run(WRITE_EACH, hold_write='a') as state:
+        a, b = state['paths']['a'], state['paths']['b']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state), 'edit')
+        for event in state['release'].values():
+            event.set()
+        assert state['done'][a].wait(5) and state['done'][b].wait(5)
+        assert cancel(ref)['state'] == 'cancel_requested'
+        state['write_release'].set(); state['worker'].join(10)
+        assert not state['out'][0]['success']
+        assert unpack(state['out'][0]['partial_wire']['data']) == ['new', 'old']
+        assert Path(a).read_text() == 'new' and Path(b).read_text() == 'old'
+        assert status(ref)['progress']['requests'][0]['effect_state'] == 'returned'
+        handle_request({**state['request'], 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert len(state['effects']) == 2
+
+
+def test_parallel_earlier_writes_survive_steering_and_resume(write_run, tmp_path):
+    code = '[def:work]($p){[t:write]{path:$p,content:"kept"};[t:gate]{path:$p};'
+    code += 'return [t:write]{path:$p,content:"old"}};[fn:work]{p:$a} & [fn:work]{p:$b}'
+    with write_run(code) as state:
+        a = state['paths']['a']
+        ref = state['handles'][a][0]
+        steer(ref, write_change(state), 'edit')
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert state['out'][0]['success'] and state['out'][0]['value'] == ['new', 'old'], state['out']
+        assert sorted(r['content'] for r in state['effects']) == ['kept', 'kept', 'new', 'old']
+        resumed = handle_request({**state['request'], 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == ['new', 'old'], resumed
+        assert len(state['effects']) == 4
 
 
 if __name__ == "__main__":

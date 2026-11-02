@@ -1,8 +1,8 @@
 """Scoped next-invocation argument steering, persisted in the existing run journal.
 
 Only statically known adapter calls are exposed. Writes retain their resource
-footprint and durable receipt; parallel steering is restricted to read-only plans.
-Repeated read-only sites are addressed within a live execution scope.
+footprint and durable receipt; parallel steering retains admitted branch resources.
+Repeated sites are addressed within a live execution scope.
 Running calls and dynamic definitions are not replaced.
 """
 import json
@@ -41,7 +41,11 @@ def publish(journal, plan, project_path):
     for n in nodes:
         if n.kind in {'def', 'lambda'}:
             shared.update(child.id for child in walk(n))
-    scoped = each or (parallel and bool(shared))
+    writes = 'write_external' in plan.effects
+    scoped = each or (parallel and (bool(shared) or writes))
+    unknown_write = any('write_external' in spec.contract['effects'] and not spec.contract.get('write_resources')
+                        for n in nodes if n.kind == 'call'
+                        if (spec := plan.registry.get(f"{n.data.get('node')}:{n.data.get('action')}")))
     for node in nodes:
         key = f"{node.data.get('node')}:{node.data.get('action')}"
         spec = plan.registry.get(key)
@@ -54,13 +58,14 @@ def publish(journal, plan, project_path):
         if not effects <= SUPPORTED or any(
                 set(v.get('effects', contract['effects'])) != effects for v in variants):
             continue
-        if (each or parallel) and not plan.effects <= SAFE:
+        if (each or parallel) and (not plan.effects <= SUPPORTED or (writes and unknown_write)):
             continue
         if 'write_external' in effects and not contract.get('write_resources'):
             continue
         targets[node.id] = {'action': key, 'revision': digest(contract), 'contract': contract,
                             'effects': sorted(effects), 'addressing': 'scope' if scoped else 'node',
-                            'resource_policy': 'unchanged' if 'write_external' in effects else 'read_only'}
+                            'resource_policy': 'unchanged' if 'write_external' in effects else
+                                               'admitted' if writes and (each or parallel) else 'read_only'}
     metadata = {'scoped': scoped, 'root_task': get_current_task_id() or '', 'plan_hash': plan.fingerprint,
                 'access_scope': receipt_access_scope(), 'targets': targets,
                 'task_ref': ref(KIND, journal.run_id, str(Path(project_path).resolve()))}
@@ -396,6 +401,12 @@ def boundary(runtime, node, args, spec):
                             raise ValueError('effect_contract_changed')
                         if 'write_external' in effective['effects']:
                             same_resources(spec, original, args.value, effective, values)
+                        from ibl_v2_access import ensure_admitted
+                        from ibl_v2_ir import Fault
+                        try:
+                            ensure_admitted(runtime, spec, effective, values, force=True)
+                        except Fault as exc:
+                            raise ValueError(exc.code) from exc
                     except (ValueError, TypeError) as exc:
                         reason = str(exc)
                 if reason:
@@ -407,6 +418,7 @@ def boundary(runtime, node, args, spec):
                 parts = {k: Binding(v, frozenset({eid})) if k in request['changes'] else
                          args.select(k) if k in args.value else Binding(v) for k, v in values.items()}
                 args = Binding.record(parts).controlled(args.control | {eid})
+                runtime.control_resource_guard = True
                 db.execute("UPDATE control_requests SET state='applied',reason=NULL WHERE request_id=?", (rid,))
             db.commit()
         except BaseException:

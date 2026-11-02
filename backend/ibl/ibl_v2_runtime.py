@@ -208,7 +208,11 @@ class Runtime(ExpressionEvaluator):
             if cleanup[0] < 0 or time.monotonic() > cleanup[1]:
                 raise Fault("CLEANUP_BUDGET", "정리 예산(100단계·1초)을 초과했습니다.", kind="budget")
             return
-        if self.cancel_check:
+        self.check_cancelled()
+        self.budget.tick(depth=getattr(self.local, "depth", 0), node_id=getattr(self.local, "node_id", None))
+
+    def check_cancelled(self, *, force=False):
+        if self.cancel_check and getattr(self.local, 'cleanup', None) is None:
             # 취소 확인은 걸음마다가 아니라 짧은 간격으로 한다. MCP 경로의 확인은 파일 두 번·프로세스 조회라
             # 30만 걸음짜리 문장이 3초 대신 35초 걸렸다(ep4211, 초당 9천 걸음). 순수 계산 구간의 취소 반응은
             # 최대 20ms 늦고, 액션 호출 직후에는 간격과 무관하게 바로 확인한다.
@@ -216,12 +220,11 @@ class Runtime(ExpressionEvaluator):
                 raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
             now = time.monotonic()
             # One branch must not consume another branch's post-call check.
-            if now >= getattr(self.local, 'next_cancel_check', 0.0):
+            if force or now >= getattr(self.local, 'next_cancel_check', 0.0):
                 self.local.next_cancel_check = now + _CANCEL_CHECK_INTERVAL_S
                 if self.cancel_check():
                     self._cancelled = True
                     raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
-        self.budget.tick(depth=getattr(self.local, "depth", 0), node_id=getattr(self.local, "node_id", None))
 
     def frame(self, body, env):
         from ibl_run_control import scope
@@ -360,8 +363,9 @@ class Runtime(ExpressionEvaluator):
         if kind == "parallel":
             nodes = list(parallel_branches(node))
             from ibl_v2_access import admit
-            admit(self, node, [(n, env) for n in nodes])
-            results = self.fanout(node, len(nodes), lambda i: self.frame(nodes[i], env.copy()), min(8, len(nodes)))
+            admissions = admit(self, node, [(n, env) for n in nodes])
+            results = self.fanout(node, len(nodes), lambda i: self.frame(nodes[i], env.copy()), min(8, len(nodes)),
+                                  admissions=admissions)
             return Binding.sequence(results)
         if kind == "call":
             args = sub(d["params"])
@@ -603,11 +607,12 @@ class Runtime(ExpressionEvaluator):
             if mode == "flat_map":
                 guard(result.value, "List", "flat_map 반환")
             return result
+        admissions = None
         if options.get("parallel", 1) > 1 and len(items) > 1:
             from ibl_v2_access import admit
-            admit(self, node, [(node.data["body"], {**env, "it": Binding(item), "i": Binding(i)})
-                               for i, item in enumerate(items)])
-        results = self.fanout(node, len(items), row, options.get("parallel", 1), collect)
+            admissions = admit(self, node, [(node.data["body"], {**env, "it": Binding(item), "i": Binding(i)})
+                                           for i, item in enumerate(items)])
+        results = self.fanout(node, len(items), row, options.get("parallel", 1), collect, admissions=admissions)
         if mode == "effect":
             value = UNIT
         elif mode == "flat_map":
@@ -620,7 +625,7 @@ class Runtime(ExpressionEvaluator):
             return Binding.sequence([result.select(i) for result in results for i in range(len(result.value))]).controlled(coverage)
         return Binding(value, self.parents(results) | args.evidence)
 
-    def fanout(self, node, count, fn, workers, collect=False):
+    def fanout(self, node, count, fn, workers, collect=False, *, admissions=None):
         results, errors, states = {}, {}, ["pending"] * count
         depth = getattr(self.local, "depth", 0)
         control = getattr(self.local, "control", frozenset())
@@ -628,6 +633,7 @@ class Runtime(ExpressionEvaluator):
         components = getattr(self.local, "components", ())
         pure_required = getattr(self.local, "pure_required", False)
         obligations = getattr(self.local, 'obligations', ())
+        outer_admissions = getattr(self.local, 'resource_admissions', ())
         def run(i):
             previous = getattr(self.local, "parallel", False)
             previous_depth = getattr(self.local, "depth", 0)
@@ -636,6 +642,8 @@ class Runtime(ExpressionEvaluator):
             previous_components = getattr(self.local, "components", ())
             previous_pure = getattr(self.local, "pure_required", False)
             previous_obligations = getattr(self.local, 'obligations', ())
+            previous_admissions = getattr(self.local, 'resource_admissions', ())
+            self.local.resource_admissions = outer_admissions + ((admissions[i],) if admissions else ())
             self.local.obligations = obligations
             self.local.components, self.local.pure_required = components, pure_required
             previous_control = getattr(self.local, "control", frozenset())
@@ -653,6 +661,7 @@ class Runtime(ExpressionEvaluator):
                 self.local.control = previous_control
                 self.local.components, self.local.pure_required = previous_components, previous_pure
                 self.local.obligations = previous_obligations
+                self.local.resource_admissions = previous_admissions
         def accept(i, future=None):
             try:
                 result = future.result() if future else run(i)
@@ -667,6 +676,7 @@ class Runtime(ExpressionEvaluator):
                     return True
                 return False
         bounded_fanout(count, workers, run, accept, role="ibl_v2")
+        self.local.next_cancel_check = 0.0  # Parent resumes after all started calls settle.
         fatal = [i for i, e in errors.items() if not collect or not e.catchable]
         if fatal:
             first = errors[min(fatal)]
@@ -964,6 +974,8 @@ class Runtime(ExpressionEvaluator):
         reusable_read = (read_only or model_only) and not contract.get('per_run', False)
         from ibl_run_journal import call_resources, resources_overlap, request_fingerprints, receipt_access_scope
         state_change = external and not read_only and contract['effects'] != ['model']
+        from ibl_v2_access import ensure_admitted
+        ensure_admitted(self, spec, contract, args.value)
         footprint = call_resources(spec, contract, args.value, 'write' if state_change else 'read')
         if model_only:
             footprint = []  # All source values are arguments; no hidden external reads.
@@ -1282,6 +1294,11 @@ class Runtime(ExpressionEvaluator):
                 else:
                     env[key] = Binding(value)
             result = self.frame(self.plan.root, env)
+            try:
+                self.check_cancelled(force=True)
+            except Fault as exc:
+                exc.partial, exc.evidence = result.value, list(result.evidence)
+                raise  # Keep returned values and durable effects, but do not report success.
             if wire_protocol(result.value) not in self.value_protocols:
                 raise Fault('VALUE_PROTOCOL_UNSUPPORTED', '소비자가 외부 참조 wire를 지원하지 않습니다. 실행 안에서 값/파일로 변환하세요.', kind='protocol', details={'value_preview': projection(result.value)})
             wire = pack(result.value)

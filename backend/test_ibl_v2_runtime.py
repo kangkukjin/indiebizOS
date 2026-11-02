@@ -39,6 +39,22 @@ def test_parallel_cancel_checks_do_not_share_a_throttle_window(monkeypatch):
         runtime.check()  # Once observed, cancellation is terminal for this run.
 
 
+def test_cancel_during_last_call_keeps_returned_value_without_success():
+    import threading
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_ir import unpack
+    cancelled = threading.Event()
+    def read(rt, args):
+        cancelled.set()
+        return 7
+    adapter = Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['read_external']}, read)
+    runtime = Runtime(compile_program('return [t:read]{}', {'t:read': adapter}), cancel_check=cancelled.is_set)
+    result = runtime.run()
+    assert not result['success'] and result['diagnostic']['code'] == 'CANCELLED'
+    assert unpack(result['partial_wire']['data']) == 7
+    assert len(result['recordings']) == 1 and unpack(result['recordings'][0]['value']) == 7
+
+
 def test_parallel_late_receipt_does_not_rewind_progress(monkeypatch):
     """A slower reused branch must not replace the newer branch's coordinate."""
     import threading

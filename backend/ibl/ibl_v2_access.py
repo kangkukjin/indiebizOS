@@ -137,7 +137,7 @@ def admit(runtime, node, branches):
     plan = runtime.plan
     if plan.effects <= {'pure', 'read_external', 'model'}:
         return []
-    summaries = set()
+    summaries, ordered = set(), []
     for branch, env in branches:
         runtime.check()
         compiler = Compiler(plan.source, plan.registry, {}, plan.definitions)
@@ -160,6 +160,32 @@ def admit(runtime, node, branches):
                             '효과를 선언한 등록 스크립트로 바꾸어야 병렬이 됩니다.',
                             node, kind='protocol', details={'actions': sorted(overlap)})
         summaries.add(current)
+        ordered.append(current)
         if len(summaries) > 1024:
             raise Fault('PARALLEL_RESOURCE_LIMIT', '자원 구간이 1024개를 넘습니다. 명시적으로 묶음을 나누세요.', node, kind='budget')
-    return summaries
+    return ordered
+
+
+def ensure_admitted(runtime, spec, contract, args, *, force=False):
+    """Steering cannot enlarge any enclosing branch's admitted access set.
+
+    Admission already rejects unknown cross-branch conflicts. Keep each mode's
+    unresolved entry conservative, and require known targets to remain among the
+    admitted identities. Inodes may change after an ordinary atomic file write;
+    path identity is retained, while original admission still checks hardlinks.
+    This is not a lock against external filesystem mutations.
+    """
+    reservations = getattr(runtime.local, 'resource_admissions', ())
+    if not reservations or not (force or getattr(runtime, 'control_resource_guard', False)):
+        return
+    current = accesses(spec, contract, args, '<invocation>', runtime=True)
+    for reserved in reservations:
+        for access in current:
+            same_mode = [item for item in reserved if item.mode == access.mode]
+            if any(item.resources is None for item in same_mode):
+                continue  # Already admitted as unknown against every sibling.
+            allowed = {(r, p) for item in same_mode for r, p, _inode in item.resources}
+            if access.resources is None or any((r, p) not in allowed for r, p, _inode in access.resources):
+                raise Fault('PARALLEL_RESOURCE_CHANGED',
+                            '조향 이후의 호출이 병렬 진입 때 확인한 자원 범위를 벗어납니다. 효과를 시작하지 않습니다.',
+                            kind='protocol', details={'mode': access.mode})

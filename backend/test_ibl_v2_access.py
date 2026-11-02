@@ -6,6 +6,65 @@ from ibl_v2_compile import compile_program
 from ibl_v2_runtime import Runtime
 
 
+@pytest.mark.parametrize('mode,target,reserved_mode,outer', [
+    ('write', 'other', 'write', None),
+    ('read', 'other', 'read', None),
+    ('write', 'same', 'read', None),
+    ('write', 'same', 'write', 'outer'),
+])
+def test_steered_downstream_call_cannot_enlarge_any_admitted_scope(mode, target, reserved_mode, outer):
+    from ibl_v2_access import Access
+    calls = []
+    reg = registry(lambda rt, a: calls.append(a) or 1, lambda rt, a: calls.append(a) or 1)
+    runtime = Runtime(compile_program(f'[t:{mode}]{{key:"{target}"}}', reg))
+    admitted = frozenset({Access(reserved_mode, (('record', 'same', None),), 't:original', True)})
+    ancestors = (frozenset({Access('write', (('record', outer, None),), 't:outer', True)}),) if outer else ()
+    runtime.local.resource_admissions = ancestors + (admitted,)
+    runtime.control_resource_guard = True  # A preceding invocation applied steering.
+    result = runtime.run()
+    assert result['diagnostic']['code'] == 'PARALLEL_RESOURCE_CHANGED', result
+    assert not calls  # Check runs before the next adapter, not just at the edited site.
+
+
+def test_unknown_downstream_resource_cannot_replace_known_admission():
+    from ibl_v2_access import Access
+    calls = []
+    adapter = Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['write_external']},
+                      lambda *_: calls.append('effect') or 1)
+    runtime = Runtime(compile_program('[t:unknown]{}', {'t:unknown': adapter}))
+    runtime.local.resource_admissions = (frozenset({Access('write', (('record', 'known', None),), 't:known', True)}),)
+    runtime.control_resource_guard = True
+    assert runtime.run()['diagnostic']['code'] == 'PARALLEL_RESOURCE_CHANGED'
+    assert not calls
+
+
+@pytest.mark.parametrize('retarget', [False, True])
+def test_admitted_file_identity_allows_atomic_replacement_but_not_symlink_redirect(tmp_path, retarget):
+    from ibl_v2_access import accesses
+    original, other, link = (tmp_path / name for name in ('original', 'other', 'link'))
+    original.write_text('before'); other.write_text('other')
+    link.symlink_to(original)
+    calls = []
+    adapter = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Number',
+                       'effects': ['write_external'], 'write_resources': {'file': 'path'}},
+                      lambda rt, args: calls.append(args['path']) or 1)
+    reserved = accesses(adapter, adapter.contract, {'path': str(link)}, 't:w', runtime=True)
+    if retarget:
+        link.unlink(); link.symlink_to(other)
+    else:
+        replacement = tmp_path / 'new_inode'
+        replacement.write_text('after')
+        replacement.replace(original)
+    runtime = Runtime(compile_program('[t:w]{path:$path}', {'t:w': adapter}, {'path': str(link)}), {'path': str(link)})
+    runtime.local.resource_admissions = (reserved,)
+    runtime.control_resource_guard = True
+    result = runtime.run()
+    if retarget:
+        assert result['diagnostic']['code'] == 'PARALLEL_RESOURCE_CHANGED' and not calls
+    else:
+        assert result['success'] and calls == [str(link)], result
+
+
 def registry(write, read=lambda rt, a: 1):
     def spec(mode, run):
         return Adapter({'version': 1, 'params': {'key': 'Text'}, 'result': 'Number',

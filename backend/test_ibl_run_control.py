@@ -129,18 +129,104 @@ def test_repair_cas_includes_applied_control_history(running):
     assert observations == [1, 7]
 
 
-def test_unjournaled_pure_steering_repair_is_rejected_before_activation(launch, tmp_path):
+def test_legacy_pure_steering_without_certificate_rejects_repair(launch, tmp_path):
+    from ibl_run_control import connection
     pure = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
                     'effects': ['pure']}, lambda rt, args: args['n'])
     with launch('[t:gate]{}; return [t:pure]{n:2}', {'t:pure': pure}) as (ref, out, release, worker, request, _):
         steer(ref, change(ref, 't:pure', {'n': 2}, {'n': 7}), 'pure-edit')
         release.set(); worker.join(5)
         assert out[0]['success'] and out[0]['value'] == 7, out
+        with connection(ref, True) as (db, _, _):
+            db.execute('DROP TABLE control_pure_bindings')
         blocked = handle_request({**request, 'code': '\n' + request['code'], 'check': True,
                                   'repair': {'run_id': ref['task_id']}}, str(tmp_path))
         assert blocked['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', blocked
         resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
         assert resumed['success'] and resumed['value'] == 7, resumed
+
+
+@pytest.mark.parametrize('effect', [False, True])
+def test_pure_steering_repair_recomputes_and_preserves_external_effects(launch, tmp_path, effect):
+    computations, effects = [], []
+    pure = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['pure']}, lambda rt, args: computations.append(args['n']) or args['n'])
+    send = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['write_external'], 'write_resources': {'delivery': 'n'}},
+                   lambda rt, args: effects.append(args['n']) or args['n'])
+    code = '[t:gate]{}; $v=[t:pure]{n:2}; ' + ('[t:send]{n:$v}; ' if effect else '') + 'return $v'
+    with launch(code, {'t:pure': pure, 't:send': send}) as (ref, out, release, worker, request, _):
+        payload = change(ref, 't:pure', {'n': 2}, {'n': 7})
+        steer(ref, payload, 'pure-edit')
+        release.set(); worker.join(5)
+        assert out[0]['success'] and out[0]['value'] == 7, out
+        for offset in (10, 20):
+            updated = {**request, 'code': '\n' * offset + code.replace('return $v', f'return $v+{offset}')}
+            repair = {'run_id': ref['task_id']}
+            checked = handle_request({**updated, 'check': True, 'repair': repair}, str(tmp_path))
+            assert checked['ok'], checked.get('diagnostic', checked)
+            assert checked['repair']['inherited_controls'][0]['mode'] == 'recompute_pure'
+            result = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+            assert result['success'] and result['value'] == 7 + offset, result
+            resumed = handle_request({**updated, 'resume': repair}, str(tmp_path))
+            assert resumed['success'] and resumed['value'] == result['value'], resumed
+            assert steer(ref, payload, 'pure-edit')['delivery'] == 'applied'
+        assert computations == [7] * 5
+        assert effects == ([7] if effect else [])
+
+
+@pytest.mark.parametrize('replacement', [
+    '$input=3', '$input=2; $input=3',
+])
+def test_pure_steering_repair_rejects_changed_input_producers(launch, tmp_path, replacement):
+    calls = []
+    pure = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['pure']}, lambda rt, args: calls.append(args['n']) or args['n'])
+    code = '[t:gate]{}; $input=2; $v=[t:pure]{n:$input}; return $v'
+    with launch(code, {'t:pure': pure}) as (ref, out, release, worker, request, _):
+        steer(ref, change(ref, 't:pure', {'n': 2}, {'n': 7}), 'pure-edit')
+        release.set(); worker.join(5)
+        assert out[0]['success'], out
+        checked = handle_request({**request, 'code': code.replace('$input=2', replacement),
+                                  'check': True, 'repair': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert checked['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', checked
+        assert calls == [7]
+
+
+@pytest.mark.parametrize('prefix,changed', [
+    ('[def:input](){return 2};', '[def:input](){return 3};'),
+    ('[def:input](){return 2};', '[def:input](){return 2};'),
+])
+def test_pure_steering_repair_rejects_changed_definition_or_condition(launch, tmp_path, prefix, changed):
+    pure = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['pure']}, lambda rt, args: args['n'])
+    body = '[t:gate]{}; [if:2>1]{$v=[t:pure]{n:[fn:input]{}}; return $v}[else]{return 0}'
+    with launch(prefix + body, {'t:pure': pure}) as (ref, out, release, worker, request, _):
+        steer(ref, change(ref, 't:pure', {'n': 2}, {'n': 7}), 'pure-edit')
+        release.set(); worker.join(5)
+        assert out[0]['success'], out
+        code = changed + (body.replace('2>1', '3>1') if prefix == changed else body)
+        checked = handle_request({**request, 'code': code, 'check': True,
+                                  'repair': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert checked['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', checked
+
+
+def test_pure_repair_does_not_freeze_unsteered_computations(launch, tmp_path):
+    calls = []
+    pure = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['pure']}, lambda rt, args: calls.append(args['n']) or args['n'])
+    code = '[t:gate]{}; $v=[t:pure]{n:2}; $other=[t:pure]{n:8}; return [$v,$other]'
+    with launch(code, {'t:pure': pure}) as (ref, out, release, worker, request, _):
+        steer(ref, change(ref, 't:pure', {'n': 2}, {'n': 7}, occurrence=0), 'pure-edit')
+        release.set(); worker.join(5)
+        assert out[0]['value'] == [7, 8], out
+        updated = {**request, 'code': code.replace('n:8', 'n:9')}
+        repair = {'run_id': ref['task_id']}
+        checked = handle_request({**updated, 'check': True, 'repair': repair}, str(tmp_path))
+        assert checked['ok'], checked
+        result = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+        assert result['success'] and result['value'] == [7, 9], result
+        assert calls == [7, 8, 7, 9]
 
 
 def test_cancel_is_requested_and_pending_change_never_applies(running):
@@ -434,7 +520,7 @@ def test_parallel_or_each_with_declared_write_resource_uses_scopes(tmp_path, cod
 def scoped_run(tmp_path, monkeypatch):
     from contextlib import contextmanager
     @contextmanager
-    def start(code, wait_for=(10, 20)):
+    def start(code, wait_for=(10, 20), *, read_effect='read_external'):
         entered = {n: threading.Event() for n in (10, 20)}
         release = {n: threading.Event() for n in entered}
         entered['read_twenty'] = threading.Event()
@@ -453,7 +539,7 @@ def scoped_run(tmp_path, monkeypatch):
                 entered['read_twenty'].set()
             return args['n']
         reg = {'t:gate': Adapter(contract, gate),
-               't:read': Adapter(dict(contract), read)}
+               't:read': Adapter({**contract, 'effects': [read_effect]}, read)}
         monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **kw: reg)
         monkeypatch.setattr('ibl_v2_store.definitions', lambda: {})
         monkeypatch.setattr('tool_batch.prepared_plan', lambda *a: None)
@@ -486,6 +572,53 @@ def scoped_change(handles, n, *, action='t:read', changes=None):
     return {'root_task': progress['root_task'], 'plan_hash': progress['plan_hash'],
             'node_id': target['node_id'], 'revision': target['revision'], 'ordinal': target['next_ordinal'],
             'scope': scope_id, 'expected_args_hash': digest({'n': n}), 'changes': changes or {'n': 99}}
+
+
+@pytest.mark.parametrize('prefix,expression', [
+    ('', '[table:each]{items:[10,20],parallel:2}{[t:gate]{n:$it};[t:read]{n:$it}}'),
+    ('[def:work]($n){[t:gate]{n:$n};return [t:read]{n:$n}};', '[fn:work]{n:10} & [fn:work]{n:20}'),
+    ('[def:work]($n){[t:gate]{n:$n};return [t:read]{n:$n}};',
+     '[table:each]{items:[10,20],parallel:2}{[fn:work]{n:$it}}'),
+])
+def test_scoped_pure_repair_keeps_exact_activation(scoped_run, tmp_path, prefix, expression):
+    code = prefix + '$values=(' + expression + '); return $values'
+    with scoped_run(code, read_effect='pure') as (handles, entered, release, calls, out, worker, request):
+        ref = handles[10][0]
+        payload = scoped_change(handles, 10)
+        steer(ref, payload, 'only-ten')
+        release[20].set()
+        assert entered['read_twenty'].wait(5)
+        release[10].set(); worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == [99, 20], out
+        for label in ('one', 'two'):
+            updated = {**request, 'code': '\n' + code.replace('return $values', f'return {{items:$values,label:"{label}"}}')}
+            repair = {'run_id': ref['task_id']}
+            checked = handle_request({**updated, 'check': True, 'repair': repair}, str(tmp_path))
+            assert checked['ok'], checked.get('diagnostic', checked)
+            result = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+            assert result['success'] and result['value'] == {'items': [99, 20], 'label': label}, result
+            resumed = handle_request({**updated, 'resume': repair}, str(tmp_path))
+            assert resumed['success'] and resumed['value'] == result['value'], resumed
+            assert steer(ref, payload, 'only-ten')['delivery'] == 'applied'
+        assert sorted(calls) == [20] * 5 + [99] * 5
+
+
+def test_pure_repair_can_change_containing_function_result(scoped_run, tmp_path):
+    code = '[def:work]($n){[t:gate]{n:$n};$v=[t:read]{n:$n};return $v}; [fn:work]{n:10} & [fn:work]{n:20}'
+    with scoped_run(code, read_effect='pure') as (handles, _, release, calls, out, worker, request):
+        ref = handles[10][0]
+        steer(ref, scoped_change(handles, 10), 'only-ten')
+        for event in release.values():
+            event.set()
+        worker.join(10)
+        assert out[0]['success'], out
+        updated = {**request, 'code': code.replace('return $v}', 'return $v+1}')}
+        repair = {'run_id': ref['task_id']}
+        checked = handle_request({**updated, 'check': True, 'repair': repair}, str(tmp_path))
+        assert checked['ok'], checked.get('diagnostic', checked)
+        result = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+        assert result['success'] and result['value'] == [100, 21], result
+        assert sorted(calls) == [20, 20, 99, 99]
 
 
 @pytest.mark.parametrize('code', [

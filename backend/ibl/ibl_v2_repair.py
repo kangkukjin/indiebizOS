@@ -105,7 +105,7 @@ def propose(db, record, handle):
     mapping = {new: ancestry.get(prior, prior) for new, prior in mapping.items()}
     original_identity = db.execute('SELECT identity FROM meta').fetchone()[0]
     from ibl_run_control import repair_applications
-    controls = repair_applications(db)
+    controls = repair_applications(db, replacement=record, mapping=mapping)
     fingerprint = digest([original_identity, record, rows, mapping, *([controls] if controls else [])])
     plan = {'protocol': 'ibl-repair/1', 'run_id': handle['run_id'], 'plan_hash': fingerprint,
             'status': 'ready', 'steps': [{'call_id': r[0], 'kind': 'inherit_completed_effect' if r[3] else 'inherit_completed_read'} for r in rows],
@@ -113,8 +113,9 @@ def propose(db, record, handle):
             'new_effects': ('certified_iteration_continuations_only'
                             if record['frontier'].get('iteration_effects') else 'none')}
     if controls:
-        plan['inherited_controls'] = [{'request_id': rid, 'call_id': call_id}
-                                      for rid, _, call_id, _ in controls]
+        plan['inherited_controls'] = [{'request_id': rid, 'call_id': call_id,
+                                      'mode': 'recompute_pure' if binding else 'reuse_receipt'}
+                                     for rid, _, call_id, _, binding in controls]
     return plan, mapping
 
 

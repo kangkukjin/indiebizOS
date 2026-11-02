@@ -89,10 +89,13 @@ return {상태: $c.state}                                                # cance
 
 조향 후 정의를 수정하려면 실행이 종료된 뒤 기존 `repair`의 check/plan_hash 경로를 사용한다.
 효과 의존성과 완료 의무를 유지하는 수정만 가능하다. 검사 결과의 `inherited_controls`는
-계승할 request_id와 기존 call_id를 보여 준다. 완료된 읽기·쓰기의 적용 인자를 원래 호출 ID로
-복원하여 영수증을 재사용하며, 원래 조향의 `applied`·call_ref 이력은 유지한다.
-반환 불명 효과는 `EFFECT_UNCERTAIN`, 원장 호출이 없는 적용 조향(순수 어댑터 포함)은
-`REPAIR_UNSUPPORTED`로 검사에서 거절한다. 후자는 같은 정의의 일반 resume 지원과 별개다.
+계승할 request_id와 기존 call_id, mode를 보여 준다. `reuse_receipt`는 완료된 읽기·쓰기의
+적용 인자를 원래 호출 ID로 복원하여 영수증을 재사용한다. `recompute_pure`는 기존 의존성
+분석으로 입력·조건·호출 신원이 보존된 순수 어댑터를 적용 인자로 다시 계산한다. 결과 캐시나
+외부 효과 영수증을 만드는 것은 아니다. 원래 조향의 `applied`·call_ref 이력은 유지한다.
+반환 불명 효과는 `EFFECT_UNCERTAIN`, 순수 계산의 계승 근거가 없거나 입력·조건·호출 위치가
+달라진 수정은 `REPAIR_UNSUPPORTED`로 검사에서 거절한다. 오래된 기록에 순수 계산 근거가
+없어도 같은 정의의 일반 resume는 유지하며, 확인된 새 실행 경계에서 계승 근거를 기록한다.
 수리 검사 뒤 적용 기록이 바뀌면 plan_hash가 무효가 되며, 실행 중 정의를 교체하지 않는다.
 
 `[self:task]{op:"steer",ref:$ref,request_id:"고유 요청 ID",message:$json}`의 message는

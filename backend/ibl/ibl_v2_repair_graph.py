@@ -2,7 +2,8 @@
 
 This is a source-coordinate projection of an already checked execution plan, not
 another type/effect checker or an evaluator. Values carry dependency sets; only
-external effects demand those sets. Calls substitute arguments (including lexical
+external effects demand those sets for ordinary repair. Applied pure controls
+can additionally retain their own input/control certificates. Calls substitute arguments (including lexical
 callbacks), so a returned computation is fixed only when an effect depends on it.
 Unknown control/targets retain their whole implementation conservatively.
 """
@@ -57,6 +58,7 @@ class Projection:
         self.resolved = {n.id: n for n in walk([plan.root, plan.functions])}
         self.definitions = {n.id: n for n in walk(self.root) if n.kind == 'def'}
         self.effects, self.retained, self.active = {}, set(), set()
+        self.controls = {}
         self.emissions, self.exits = [], []
         self.iterations, self.iteration_effects = [], set()
         self.remaining = 8192
@@ -491,6 +493,10 @@ class Projection:
             deps |= self.complete(value)
         if self.plan.node_effects.get(node.id, {'unknown'}) - {'pure'}:
             self.sink(node, control | deps)
+        elif node.kind == 'call' and isinstance(target.target, str) and target.target in self.plan.registry:
+            # A pure adapter has no effect receipt. Retain its input/control
+            # dependencies separately, only to certify an actually applied edit.
+            self.controls.setdefault(node.id, set()).update(control | deps)
         return Value(deps)
 
     def signature(self, node):
@@ -519,6 +525,9 @@ def frontier(plan):
         supported = False
     address = lambda nid: repr(projection.paths[nid])
     return {'protocol': 'ibl-repair-frontier/7', 'supported': supported,
+            'controls': {address(nid): digest(sorted((address(dep), projection.signature(projection.nodes[dep]))
+                                                    for dep in deps))
+                         for nid, deps in projection.controls.items()} if supported else {},
             'retained': {address(nid): projection.signature(projection.nodes[nid])
                          for nid in projection.retained},
             'iteration_effects': sorted([address(loop), address(call)] for loop, call in projection.iteration_effects),

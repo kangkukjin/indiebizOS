@@ -3,7 +3,8 @@
 Only statically known adapter calls are exposed. Writes retain their resource
 footprint and durable receipt; parallel steering retains admitted branch resources.
 Repeated sites are addressed within a live execution scope.
-Stopped-run repair replays applied arguments through existing durable call IDs.
+Stopped-run repair replays applied arguments through existing call IDs and
+certifies pure computations using the existing repair dependency projection.
 Running calls and dynamic definitions are not replaced.
 """
 import json
@@ -71,6 +72,8 @@ def publish(journal, plan, project_path):
                 'access_scope': receipt_access_scope(), 'targets': targets,
                 'task_ref': ref(KIND, journal.run_id, str(Path(project_path).resolve()))}
     journal.db.executescript('CREATE TABLE IF NOT EXISTS control_meta(data TEXT);'
+                            'CREATE TABLE IF NOT EXISTS control_pure_bindings('
+                            'request_id TEXT PRIMARY KEY,call_id TEXT,source_node TEXT,action TEXT,certificate TEXT);'
                             'CREATE TABLE IF NOT EXISTS control_requests('
                             'request_id TEXT PRIMARY KEY,payload TEXT,state TEXT,reason TEXT);'
                             'CREATE TABLE IF NOT EXISTS control_boundaries(node_id TEXT PRIMARY KEY,ordinal INTEGER);'
@@ -105,9 +108,14 @@ def publish(journal, plan, project_path):
     journal.control = metadata
     journal.control_counts = {}
     journal.control_scope_nodes = {}
+    saved = journal.db.execute("SELECT 1 FROM sqlite_master WHERE name='repair_snapshot'").fetchone()
+    record = json.loads(journal.db.execute('SELECT record FROM repair_snapshot').fetchone()[0]) if saved else {}
+    frontier = record.get('frontier', {})
+    journal.control_pure_sites = {frontier['nodes'][path]: certificate
+                                  for path, certificate in frontier.get('controls', {}).items()}
     journal.control_replay = {}
     if journal.node_map:
-        for rid, payload, call_id, action in repair_applications(journal.db, different_plan=plan.fingerprint):
+        for rid, payload, call_id, action, _ in repair_applications(journal.db, different_plan=plan.fingerprint):
             journal.control_replay.setdefault(call_id, []).append((rid, json.loads(payload), action))
     return metadata['task_ref']
 
@@ -335,12 +343,8 @@ def same_resources(spec, before_contract, before, after_contract, after):
             raise ValueError('write_resource_changed_or_unknown')
 
 
-def repair_applications(db, *, different_plan=None):
-    """Existing applied controls, bound to the original durable call identities.
-
-    No second effect ledger: a control without a durable call cannot yet be
-    certified across definition repair (including pure adapter applications).
-    """
+def repair_applications(db, *, different_plan=None, replacement=None, mapping=None):
+    """Certify applied arguments against durable effects or pure dependencies."""
     from ibl_v2_ir import Fault
     if not db.execute("SELECT 1 FROM sqlite_master WHERE name='control_requests'").fetchone():
         return []
@@ -351,13 +355,35 @@ def repair_applications(db, *, different_plan=None):
             continue
         row = invocation(db, request['node_id'], request['ordinal'], request.get('scope'))
         if not row:
-            raise Fault('REPAIR_UNSUPPORTED', '효과 원장에 연결되지 않은 적용 조향은 정의 수정으로 계승할 수 없습니다.', kind='protocol')
+            binding = None
+            if db.execute("SELECT 1 FROM sqlite_master WHERE name='control_pure_bindings'").fetchone():
+                binding = db.execute('SELECT call_id,source_node,action,certificate FROM control_pure_bindings WHERE request_id=?', (rid,)).fetchone()
+            if not binding or invocation_id(db, request['node_id'], request['ordinal'], request.get('scope')) != binding[0]:
+                raise Fault('REPAIR_UNSUPPORTED', '적용 조향의 효과 영수증 또는 순수 계산 계승 근거가 없습니다.', kind='protocol')
+            record = replacement or json.loads(db.execute('SELECT record FROM repair_snapshot').fetchone()[0])
+            ancestry = mapping if mapping is not None else record.get('node_map', {})
+            frontier = record.get('frontier', {})
+            certificates = [frontier.get('controls', {}).get(path) for path, nid in frontier.get('nodes', {}).items()
+                            if ancestry.get(nid, nid) == binding[1]]
+            if not binding[3] or certificates != [binding[3]]:
+                raise Fault('REPAIR_UNSUPPORTED', '조향한 순수 계산의 입력·조건·호출 위치가 달라졌습니다.', kind='protocol')
+            result.append((rid, payload, binding[0], binding[2], binding))
+            continue
         info = db.execute('SELECT call_info FROM calls WHERE id=?', (row[0],)).fetchone()
         action = (json.loads(info[0]) if info and info[0] else {}).get('action')
         if not action:
             raise Fault('REPAIR_UNSUPPORTED', '적용 조향의 원래 호출 계약을 확인할 수 없습니다.', kind='protocol')
-        result.append((rid, payload, row[0], action))
+        result.append((rid, payload, row[0], action, None))
     return result
+
+
+def invocation_id(db, node_id, ordinal, scope_id=None):
+    if scope_id is None:
+        row = db.execute('SELECT call_id FROM control_invocations WHERE node_id=? AND ordinal=?', (node_id, ordinal)).fetchone()
+    else:
+        row = db.execute('SELECT call_id FROM control_scope_invocations WHERE scope_id=? AND node_id=? AND ordinal=?',
+                         (scope_id, node_id, ordinal)).fetchone()
+    return row[0] if row else None
 
 
 def replay_applied(runtime, node, args, spec):
@@ -405,6 +431,14 @@ def bind_invocation(runtime, node, call_id):
             db.execute('INSERT OR IGNORE INTO control_invocations VALUES(?,?,?)', (node_id, ordinal, call_id))
         else:
             db.execute('INSERT OR IGNORE INTO control_scope_invocations VALUES(?,?,?,?)', (scope_id, node_id, ordinal, call_id))
+        target = runtime.journal.control['targets'][node_id]
+        certificate = runtime.journal.control_pure_sites.get(node_id)
+        if target['effects'] == ['pure'] and certificate:
+            for rid, payload in db.execute("SELECT request_id,payload FROM control_requests WHERE state='applied'").fetchall():
+                request = json.loads(payload)
+                if (request['node_id'], request['ordinal'], request.get('scope')) == coordinate:
+                    db.execute('INSERT OR IGNORE INTO control_pure_bindings VALUES(?,?,?,?,?)',
+                               (rid, call_id, runtime.journal.node_map.get(node_id, node_id), target['action'], certificate))
         db.commit()
 
 

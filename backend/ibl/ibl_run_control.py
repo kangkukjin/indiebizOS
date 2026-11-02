@@ -3,6 +3,7 @@
 Only statically known adapter calls are exposed. Writes retain their resource
 footprint and durable receipt; parallel steering retains admitted branch resources.
 Repeated sites are addressed within a live execution scope.
+Stopped-run repair replays applied arguments through existing durable call IDs.
 Running calls and dynamic definitions are not replaced.
 """
 import json
@@ -104,6 +105,10 @@ def publish(journal, plan, project_path):
     journal.control = metadata
     journal.control_counts = {}
     journal.control_scope_nodes = {}
+    journal.control_replay = {}
+    if journal.node_map:
+        for rid, payload, call_id, action in repair_applications(journal.db, different_plan=plan.fingerprint):
+            journal.control_replay.setdefault(call_id, []).append((rid, json.loads(payload), action))
     return metadata['task_ref']
 
 
@@ -330,6 +335,56 @@ def same_resources(spec, before_contract, before, after_contract, after):
             raise ValueError('write_resource_changed_or_unknown')
 
 
+def repair_applications(db, *, different_plan=None):
+    """Existing applied controls, bound to the original durable call identities.
+
+    No second effect ledger: a control without a durable call cannot yet be
+    certified across definition repair (including pure adapter applications).
+    """
+    from ibl_v2_ir import Fault
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE name='control_requests'").fetchone():
+        return []
+    result = []
+    for rid, payload in db.execute("SELECT request_id,payload FROM control_requests WHERE state='applied' ORDER BY rowid"):
+        request = json.loads(payload)
+        if request['plan_hash'] == different_plan:
+            continue
+        row = invocation(db, request['node_id'], request['ordinal'], request.get('scope'))
+        if not row:
+            raise Fault('REPAIR_UNSUPPORTED', '효과 원장에 연결되지 않은 적용 조향은 정의 수정으로 계승할 수 없습니다.', kind='protocol')
+        info = db.execute('SELECT call_info FROM calls WHERE id=?', (row[0],)).fetchone()
+        action = (json.loads(info[0]) if info and info[0] else {}).get('action')
+        if not action:
+            raise Fault('REPAIR_UNSUPPORTED', '적용 조향의 원래 호출 계약을 확인할 수 없습니다.', kind='protocol')
+        result.append((rid, payload, row[0], action))
+    return result
+
+
+def replay_applied(runtime, node, args, spec):
+    """Restore accepted history, never reinterpret it as a new live request."""
+    entries = getattr(runtime.journal, 'control_replay', {})
+    if not entries:
+        return args, False
+    _, _, call_id = runtime.call_coordinate(node)
+    from ibl_callable_contract import checked_values
+    from ibl_v2_ir import Fault
+    replayed = False
+    for rid, request, action in entries.get(call_id, ()):
+        if (action != f"{node.data['node']}:{node.data['action']}"
+                or request['revision'] != digest(spec.contract)
+                or request['expected_args_hash'] != digest(args.value)):
+            raise Fault('CONTROL_REPLAY_CHANGED', '이미 적용한 조향의 호출·인자·정의 판본이 달라졌습니다.', node, kind='protocol')
+        _, values = checked_values(spec.contract, {**args.value, **request['changes']})
+        eid = runtime.event(node, 'steer_replayed', args.evidence, request_id=rid, call_id=call_id,
+                            original_plan=request['plan_hash'], root_task=runtime.journal.control['root_task'])
+        parts = {k: Binding(v, frozenset({eid})) if k in request['changes'] else
+                 args.select(k) if k in args.value else Binding(v) for k, v in values.items()}
+        args = Binding.record(parts).controlled(args.control | {eid})
+        runtime.control_resource_guard = True
+        replayed = True
+    return args, replayed
+
+
 def bind_invocation(runtime, node, call_id):
     """Link the steering coordinate to the existing durable effect owner."""
     coordinate = getattr(runtime.local, 'control_boundary', None)
@@ -358,6 +413,7 @@ def boundary(runtime, node, args, spec):
     runtime.local.control_boundary = None
     if not journal or not getattr(journal, 'control', None) or node.id not in journal.control['targets']:
         return args
+    args, replayed = replay_applied(runtime, node, args, spec)
     scope_id = None
     if journal.control['targets'][node.id].get('addressing') == 'scope':
         current_scope = getattr(runtime.local, 'control_scope', None)
@@ -381,6 +437,8 @@ def boundary(runtime, node, args, spec):
             rows = db.execute("SELECT request_id,payload,state FROM control_requests WHERE state IN ('accepted','applied') ORDER BY rowid").fetchall()
             for rid, encoded, state in rows:
                 request = json.loads(encoded)
+                if state == 'applied' and request['plan_hash'] != runtime.plan.fingerprint:
+                    continue  # Historical applications use the certified call lineage above.
                 if request['node_id'] != node.id or request['ordinal'] != ordinal or request.get('scope') != scope_id:
                     continue
                 reason = None
@@ -388,7 +446,7 @@ def boundary(runtime, node, args, spec):
                     reason = 'cancelled_before_boundary'
                 elif request['plan_hash'] != runtime.plan.fingerprint or request['revision'] != digest(spec.contract):
                     reason = 'definition_revision_mismatch'
-                elif state == 'accepted' and invocation(db, node.id, ordinal, scope_id):
+                elif state == 'accepted' and (replayed or invocation(db, node.id, ordinal, scope_id)):
                     reason = 'already_started'
                 elif request['expected_args_hash'] != digest(args.value):
                     reason = 'input_revision_mismatch'

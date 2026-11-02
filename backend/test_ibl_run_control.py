@@ -76,6 +76,29 @@ def test_next_read_changes_but_completed_read_and_resume_keep_values(running):
     assert observations == [1, 7]  # neither read is executed again on receipt replay
 
 
+@pytest.mark.parametrize('shift', [0, 2])
+def test_repair_after_steering_preserves_applied_read_and_request_history(running, shift):
+    ref, payload, release, worker, output, observations, request, project = running
+    steer(ref, payload, 'change')
+    release.set(); worker.join(5)
+    assert output[0]['success'], output
+    for offset in (10, 20):
+        code = '\n' * (offset * shift) + request['code'].replace('second:$second}', f'second:$second+{offset}}}')
+        updated = {**request, 'code': code}
+        repair = {'run_id': ref['task_id']}
+        checked = handle_request({**updated, 'check': True, 'repair': repair}, str(project))
+        assert checked['ok'], checked
+        assert checked['repair']['inherited_controls'][0]['request_id'] == 'change'
+        result = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(project))
+        assert result['success'] and result['value'] == {'first': 1, 'second': 7 + offset}, result
+        resumed = handle_request({**updated, 'resume': repair}, str(project))
+        assert resumed['success'] and resumed['value'] == result['value'], resumed
+        assert observations == [1, 7]
+        assert steer(ref, payload, 'change')['delivery'] == 'applied'
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'applied' and row['effect_state'] == 'returned'
+
+
 def test_stale_input_and_duplicate_conflict_are_not_silently_applied(running):
     ref, payload, release, worker, output, observations, *_ = running
     wrong = {**payload, 'expected_args_hash': 'old'}
@@ -86,6 +109,38 @@ def test_stale_input_and_duplicate_conflict_are_not_silently_applied(running):
     assert output[0]['value'] == {'first': 1, 'second': 2}
     row = status(ref)['progress']['requests'][0]
     assert row['state'] == 'not_applied' and row['reason'] == 'input_revision_mismatch'
+
+
+def test_repair_cas_includes_applied_control_history(running):
+    from ibl_run_control import connection
+    ref, payload, release, worker, output, observations, request, project = running
+    steer(ref, payload, 'change')
+    release.set(); worker.join(5)
+    assert output[0]['success']
+    updated = {**request, 'code': '\n' + request['code']}
+    repair = {'run_id': ref['task_id']}
+    checked = handle_request({**updated, 'check': True, 'repair': repair}, str(project))
+    assert checked['ok'], checked
+    with connection(ref, True) as (db, _, _):
+        db.execute('UPDATE control_requests SET payload=? WHERE request_id=?',
+                   (json.dumps({**payload, 'changes': {'n': 9}}), 'change'))
+    blocked = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(project))
+    assert blocked['diagnostic']['code'] == 'REPAIR_CHANGED', blocked
+    assert observations == [1, 7]
+
+
+def test_unjournaled_pure_steering_repair_is_rejected_before_activation(launch, tmp_path):
+    pure = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['pure']}, lambda rt, args: args['n'])
+    with launch('[t:gate]{}; return [t:pure]{n:2}', {'t:pure': pure}) as (ref, out, release, worker, request, _):
+        steer(ref, change(ref, 't:pure', {'n': 2}, {'n': 7}), 'pure-edit')
+        release.set(); worker.join(5)
+        assert out[0]['success'] and out[0]['value'] == 7, out
+        blocked = handle_request({**request, 'code': '\n' + request['code'], 'check': True,
+                                  'repair': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert blocked['diagnostic']['code'] == 'REPAIR_UNSUPPORTED', blocked
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == 7, resumed
 
 
 def test_cancel_is_requested_and_pending_change_never_applies(running):
@@ -231,6 +286,9 @@ def test_crash_after_write_keeps_unknown_effect_and_resume_does_not_resend(launc
         assert crashes and not out and Path(path).read_text() == 'new'
         row = status(ref)['progress']['requests'][0]
         assert row['effect_state'] == 'unknown'
+        checked = handle_request({**request, 'code': '\n' + request['code'], 'check': True,
+                                  'repair': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert checked['diagnostic']['code'] == 'EFFECT_UNCERTAIN', checked
         resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
         assert resumed['diagnostic']['code'] == 'EFFECT_UNCERTAIN', resumed
         assert len(calls) == 1
@@ -634,6 +692,39 @@ def write_change(state, name='a', *, action='t:write', expected=None, changes=No
 
 
 WRITE_EACH = '[table:each]{items:[$a,$b],parallel:2}{[t:gate]{path:$it};[t:write]{path:$it,content:"old"}}'
+
+
+@pytest.mark.parametrize('prefix,body', [
+    ('', WRITE_EACH),
+    ('[def:work]($p){[t:gate]{path:$p};return [t:write]{path:$p,content:"old"}}; ',
+     '[fn:work]{p:$a} & [fn:work]{p:$b}'),
+])
+def test_definition_repair_preserves_scoped_write_and_repeated_lineage(write_run, tmp_path, prefix, body):
+    code = prefix + '[def:result]($v){return $v}; $out=(' + body + '); return [fn:result]{v:$out}'
+    with write_run(code) as state:
+        ref = state['handles'][state['paths']['a']][0]
+        payload = write_change(state)
+        steer(ref, payload, 'edit')
+        for event in state['release'].values():
+            event.set()
+        state['worker'].join(10)
+        assert state['out'][0]['success'], state['out']
+        assert len(state['effects']) == 2
+        before = status(ref)['progress']['requests'][0]['call_ref']
+        for suffix in ('one', 'two'):
+            updated = {**state['request'], 'code': '\n\n' + code.replace('return $v}', f'return {{values:$v,label:"{suffix}"}}}}')}
+            repair = {'run_id': ref['task_id']}
+            checked = handle_request({**updated, 'check': True, 'repair': repair}, str(tmp_path))
+            assert checked['ok'], checked
+            result = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+            assert result['success'] and result['value'] == {'values': ['new', 'old'], 'label': suffix}, result
+            resumed = handle_request({**updated, 'resume': repair}, str(tmp_path))
+            assert resumed['success'] and resumed['value'] == result['value'], resumed
+            assert len(state['effects']) == 2
+            assert Path(state['paths']['a']).read_text() == 'new'
+            row = status(ref)['progress']['requests'][0]
+            assert row['state'] == 'applied' and row['effect_state'] == 'returned' and row['call_ref'] == before
+            assert steer(ref, payload, 'edit')['delivery'] == 'applied'
 
 
 @pytest.mark.parametrize('code,nested', [

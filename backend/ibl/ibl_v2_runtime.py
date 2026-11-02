@@ -747,6 +747,18 @@ class Runtime(ExpressionEvaluator):
         counts[key] = value + 1
         return value
 
+    def call_coordinate(self, node, *, advance=False):
+        """The same lineage address for control replay and durable effects."""
+        route, mapped_node = getattr(self.local, 'route', ()), node.id
+        if self.journal and self.journal.node_map:
+            mapping = self.journal.node_map
+            mapped_node = mapping.get(node.id, node.id)
+            def remap(value):
+                return tuple(remap(v) for v in value) if isinstance(value, tuple) else mapping.get(value, value) if isinstance(value, str) else value
+            route = remap(route)
+        ordinal = self.ordinal(node.id) if advance else getattr(self.local, 'counts', {}).get(node.id, 0)
+        return route, mapped_node, digest([route, mapped_node, ordinal])
+
     def invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
         spec = self.plan.registry[key]
@@ -1000,15 +1012,7 @@ class Runtime(ExpressionEvaluator):
                 self.foreign_evidence = frozenset({failure})
             return exc
 
-        route = getattr(self.local, "route", ())
-        mapped_node = node.id
-        if self.journal and self.journal.node_map:
-            mapping = self.journal.node_map
-            mapped_node = mapping.get(node.id, node.id)
-            def remap(value):
-                return tuple(remap(v) for v in value) if isinstance(value, tuple) else mapping.get(value, value) if isinstance(value, str) else value
-            route = remap(route)
-        call_id = digest([route, mapped_node, self.ordinal(node.id)])
+        route, mapped_node, call_id = self.call_coordinate(node, advance=True)
         from ibl_run_control import bind_invocation
         bind_invocation(self, node, call_id)
         receipt, source = None, "journal"

@@ -87,6 +87,14 @@ return {상태: $c.state}                                                # cance
 기존 자원 충돌 검사를 통과해야 하며, 조향 후에도 확인된 분기별 접근 범위를 유지한다.
 효과 미상·쓰기 자원 선언 누락·동적 의존 부품·실행 중인 호출·정의 교체는 조향하지 않는다.
 
+조향 후 정의를 수정하려면 실행이 종료된 뒤 기존 `repair`의 check/plan_hash 경로를 사용한다.
+효과 의존성과 완료 의무를 유지하는 수정만 가능하다. 검사 결과의 `inherited_controls`는
+계승할 request_id와 기존 call_id를 보여 준다. 완료된 읽기·쓰기의 적용 인자를 원래 호출 ID로
+복원하여 영수증을 재사용하며, 원래 조향의 `applied`·call_ref 이력은 유지한다.
+반환 불명 효과는 `EFFECT_UNCERTAIN`, 원장 호출이 없는 적용 조향(순수 어댑터 포함)은
+`REPAIR_UNSUPPORTED`로 검사에서 거절한다. 후자는 같은 정의의 일반 resume 지원과 별개다.
+수리 검사 뒤 적용 기록이 바뀌면 plan_hash가 무효가 되며, 실행 중 정의를 교체하지 않는다.
+
 `[self:task]{op:"steer",ref:$ref,request_id:"고유 요청 ID",message:$json}`의 message는
 다음 필드가 있는 JSON 문자열이다. boundary에 `scope`가 있으면 그 필드도 필수로 복사한다. 기대 인자는 파이프 주입/별칭 정규화 뒤의 값이다.
 Python 연결에서는 `ibl_v2_ir.digest(expected_args)`로 동일 값 지문을 만든다.

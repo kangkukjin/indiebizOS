@@ -1,7 +1,7 @@
 """Scoped next-invocation argument steering, persisted in the existing run journal.
 
-Only statically known adapter calls are exposed. Writes retain their resource
-footprint and durable receipt; parallel steering retains admitted branch resources.
+Only statically known adapter calls are exposed. Sequential writes may retarget
+known declared resources; parallel/each writes retain their resource footprint.
 Repeated sites are addressed within a live execution scope.
 Stopped-run repair replays applied arguments through existing call IDs and
 certifies pure computations using the existing repair dependency projection.
@@ -66,7 +66,7 @@ def publish(journal, plan, project_path):
             continue
         targets[node.id] = {'action': key, 'revision': digest(contract), 'contract': contract,
                             'effects': sorted(effects), 'addressing': 'scope' if scoped else 'node',
-                            'resource_policy': 'unchanged' if 'write_external' in effects else
+                            'resource_policy': ('unchanged' if parallel or each else 'declared') if 'write_external' in effects else
                                                'admitted' if writes and (each or parallel) else 'read_only'}
     metadata = {'scoped': scoped, 'root_task': get_current_task_id() or '', 'plan_hash': plan.fingerprint,
                 'access_scope': receipt_access_scope(), 'targets': targets,
@@ -331,7 +331,12 @@ def invocation(db, node_id, ordinal, scope_id=None):
                       'WHERE i.node_id=? AND i.ordinal=?', (node_id, ordinal)).fetchone()
 
 
-def same_resources(spec, before_contract, before, after_contract, after):
+def check_write_resources(spec, before_contract, before, after_contract, after, *, retain_identity=True):
+    """Both footprints must resolve; parallel/each also retain exact identities.
+
+    This does not authorize a resource. The adapter's normal permission and
+    source-revision checks still own whether the changed invocation may execute.
+    """
     from ibl_run_journal import call_resources
     for mode in ('read', 'write'):
         if mode == 'read' and not (before_contract.get('read_resources') or after_contract.get('read_resources')
@@ -339,8 +344,15 @@ def same_resources(spec, before_contract, before, after_contract, after):
             continue
         old = call_resources(spec, before_contract, before, mode, allow_bare=spec.resource_identity is None)
         new = call_resources(spec, after_contract, after, mode, allow_bare=spec.resource_identity is None)
-        if old is None or new is None or digest(old) != digest(new):
+        if old is None or new is None or (retain_identity and digest(old) != digest(new)):
             raise ValueError('write_resource_changed_or_unknown')
+        if not retain_identity and digest(old) != digest(new):
+            # Retargeting must also be knowable to the durable effect owner.
+            # In particular, a bare output name may be redirected by adapter
+            # output policy; unchanged legacy arguments keep their old contract.
+            if (call_resources(spec, before_contract, before, mode) is None
+                    or call_resources(spec, after_contract, after, mode) is None):
+                raise ValueError('write_resource_changed_or_unknown')
 
 
 def repair_applications(db, *, different_plan=None, replacement=None, mapping=None):
@@ -492,7 +504,9 @@ def boundary(runtime, node, args, spec):
                         if set(effective['effects']) != set(original['effects']):
                             raise ValueError('effect_contract_changed')
                         if 'write_external' in effective['effects']:
-                            same_resources(spec, original, args.value, effective, values)
+                            policy = journal.control['targets'][node.id].get('resource_policy', 'unchanged')
+                            check_write_resources(spec, original, args.value, effective, values,
+                                                  retain_identity=policy != 'declared')
                         from ibl_v2_access import ensure_admitted
                         from ibl_v2_ir import Fault
                         try:

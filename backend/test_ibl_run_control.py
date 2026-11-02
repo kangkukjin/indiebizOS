@@ -338,24 +338,157 @@ def test_unstarted_write_changes_content_and_resume_never_repeats_completed_effe
         assert steer(ref, payload, 'edit')['delivery'] == 'applied'
 
 
-def test_write_target_change_rejected_without_redirecting_effect(launch, tmp_path):
+def test_sequential_write_retargets_once_and_preserves_prior_effects(launch, tmp_path):
     calls = []
     def write(rt, args):
         calls.append(args)
         Path(args['path']).write_text(args['content'])
         return args['content']
-    path, other = str(tmp_path / 'original'), str(tmp_path / 'other')
-    with launch('[t:gate]{}; [t:write]{path:$path,content:"original"}', {'t:write': writer(write)},
-                {'path': path}) as (ref, out, release, worker, *_):
-        steer(ref, change(ref, 't:write', {'path': path, 'content': 'original'}, {'path': other}), 'redirect')
+    path, other, prior = (str(tmp_path / name) for name in ('original', 'other', 'prior'))
+    Path(path).write_text('kept')
+    code = '[t:write]{path:$prior,content:"earlier"};[t:gate]{};$v=[t:write]{path:$path,content:"original"};return $v'
+    with launch(code, {'t:write': writer(write)}, {'path': path, 'prior': prior}) as (ref, out, release, worker, request, _):
+        targets = [b for b in status(ref)['progress']['boundaries'] if b['action'] == 't:write']
+        assert all(b['resource_policy'] == 'declared' for b in targets)
+        payload = change(ref, 't:write', {'path': path, 'content': 'original'}, {'path': other})
+        steer(ref, payload, 'redirect')
         release.set(); worker.join(10)
-        assert out[0]['success'] and Path(path).read_text() == 'original'
-        assert not Path(other).exists() and len(calls) == 1
+        assert out[0]['success'] and Path(path).read_text() == 'kept'
+        assert Path(other).read_text() == 'original' and Path(prior).read_text() == 'earlier' and len(calls) == 2
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'applied' and row['effect_state'] == 'returned'
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == 'original' and len(calls) == 2, resumed
+        with pytest.raises(ValueError, match='이미 시작'):
+            steer(ref, payload, 'retarget-again')
+        updated = {**request, 'code': '\n' + code.replace('return $v', 'return {content:$v}')}
+        repair = {'run_id': ref['task_id']}
+        checked = handle_request({**updated, 'repair': repair, 'check': True}, str(tmp_path))
+        assert checked['ok'], checked
+        repaired = handle_request({**updated, 'repair': {**repair, 'plan_hash': checked['repair']['plan_hash']}}, str(tmp_path))
+        assert repaired['success'] and repaired['value'] == {'content': 'original'} and len(calls) == 2, repaired
+        assert steer(ref, payload, 'redirect')['delivery'] == 'applied'
+
+
+@pytest.mark.parametrize('field', ['path', 'source'])
+def test_retarget_requires_known_read_and_write_resources(launch, tmp_path, field):
+    from dataclasses import replace
+    calls = []
+    original, unknown = (str(tmp_path / n) for n in ('original', 'unknown'))
+    adapter = writer(lambda rt, args: calls.append(dict(args)) or args['content'])
+    adapter.contract['params']['source'] = 'Text'
+    adapter.contract['read_resources'] = {'file': 'source'}
+    adapter = replace(adapter, resource_identity=lambda realm, value: None if value == unknown else value)
+    expected = {'path': original, 'source': original, 'content': 'old'}
+    with launch('[t:gate]{};[t:write]{path:$path,source:$path,content:"old"}', {'t:write': adapter},
+                {'path': original}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', expected, {field: unknown}), 'redirect')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and calls == [expected], out
         row = status(ref)['progress']['requests'][0]
         assert row['state'] == 'not_applied' and row['reason'] == 'write_resource_changed_or_unknown'
 
 
-def test_crash_after_write_keeps_unknown_effect_and_resume_does_not_resend(launch, tmp_path):
+@pytest.mark.parametrize('bare_before', [False, True])
+def test_retarget_rejects_ambiguous_bare_output_names(launch, tmp_path, bare_before):
+    calls = []
+    before = 'original.txt' if bare_before else str(tmp_path / 'original')
+    after = str(tmp_path / 'destination') if bare_before else 'destination.txt'
+    adapter = writer(lambda rt, args: calls.append(dict(args)) or args['content'])
+    with launch('[t:gate]{};[t:write]{path:$path,content:"old"}', {'t:write': adapter},
+                {'path': before}) as (ref, out, release, worker, *_):
+        expected = {'path': before, 'content': 'old'}
+        steer(ref, change(ref, 't:write', expected, {'path': after}), 'redirect')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and calls == [expected], out
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'not_applied' and row['reason'] == 'write_resource_changed_or_unknown'
+
+
+def test_unchanged_bare_output_keeps_legacy_content_steering(launch):
+    calls = []
+    adapter = writer(lambda rt, args: calls.append(dict(args)) or args['content'])
+    with launch('[t:gate]{};[t:write]{path:"output.txt",content:"old"}', {'t:write': adapter}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', {'path': 'output.txt', 'content': 'old'}, {'content': 'new'}), 'edit')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and calls == [{'path': 'output.txt', 'content': 'new'}], out
+        assert status(ref)['progress']['requests'][0]['state'] == 'applied'
+
+
+def test_retarget_does_not_bypass_adapter_permission(launch, tmp_path):
+    from ibl_v2_ir import Fault
+    old, forbidden = (str(tmp_path / n) for n in ('old', 'forbidden'))
+    Path(old).write_text('kept')
+    attempts = []
+    def write(rt, args):
+        attempts.append(args['path'])
+        if args['path'] == forbidden:
+            raise Fault('TARGET_DENIED', '허용되지 않은 쓰기 대상', kind='permission')
+        pytest.fail('rejected retarget must not fall back to an original write')
+    with launch('[t:gate]{};[t:write]{path:$path,content:"new"}', {'t:write': writer(write)},
+                {'path': old}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', {'path': old, 'content': 'new'}, {'path': forbidden}), 'redirect')
+        release.set(); worker.join(10)
+        assert out[0]['diagnostic']['code'] == 'TARGET_DENIED', out
+        assert attempts == [forbidden] and Path(old).read_text() == 'kept' and not Path(forbidden).exists()
+        assert status(ref)['progress']['requests'][0]['state'] == 'applied'
+
+
+@pytest.mark.parametrize('fresh_revision', [False, True])
+def test_retarget_checks_destination_revision(launch, tmp_path, fresh_revision):
+    from ibl_v2_ir import Fault
+    old, destination = (tmp_path / n for n in ('old', 'destination'))
+    old.write_text('old revision'); destination.write_text('destination revision')
+    expected = digest(old.read_text())
+    def write(rt, args):
+        if digest(Path(args['path']).read_text()) != args['expected']:
+            raise Fault('SOURCE_CHANGED', '대상 판본 불일치')
+        Path(args['path']).write_text(args['content'])
+        return args['content']
+    adapter = writer(write)
+    adapter.contract['params']['expected'] = 'Text'
+    values = {'path': str(old), 'content': 'new', 'expected': expected}
+    with launch('[t:gate]{};[t:write]{path:$path,content:"new",expected:$expected}', {'t:write': adapter},
+                values) as (ref, out, release, worker, *_):
+        changes = {'path': str(destination)}
+        if fresh_revision:
+            changes['expected'] = digest(destination.read_text())
+        steer(ref, change(ref, 't:write', values, changes), 'redirect')
+        release.set(); worker.join(10)
+        assert old.read_text() == 'old revision'
+        if fresh_revision:
+            assert out[0]['success'] and destination.read_text() == 'new', out
+        else:
+            assert out[0]['diagnostic']['code'] == 'SOURCE_CHANGED' and destination.read_text() == 'destination revision', out
+
+
+def test_retarget_invalidates_reads_of_actual_destination(launch, tmp_path):
+    from ibl_run_control import connection
+    original, destination = (str(tmp_path / n) for n in ('original', 'destination'))
+    Path(original).write_text('kept'); Path(destination).write_text('before')
+    read = Adapter({'version': 1, 'params': {'path': 'Text'}, 'result': 'Text',
+                    'effects': ['read_external'], 'read_resources': {'file': 'path'}},
+                   lambda rt, args: Path(args['path']).read_text())
+    def write(rt, args):
+        Path(args['path']).write_text(args['content'])
+        return args['content']
+    code = '$a=[t:read]{path:$original};$b=[t:read]{path:$destination};[t:gate]{};[t:write]{path:$original,content:"after"}'
+    with launch(code, {'t:read': read, 't:write': writer(write)},
+                {'original': original, 'destination': destination}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', {'path': original, 'content': 'after'}, {'path': destination}), 'redirect')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and Path(original).read_text() == 'kept' and Path(destination).read_text() == 'after', out
+        with connection(ref) as (db, _, _):
+            rows = db.execute('SELECT resources,reusable,reuse_exclusion FROM calls WHERE json_extract(call_info,\'$.action\')=?', ('t:read',)).fetchall()
+        by_path = {json.loads(resources)[0][1]: (reusable, json.loads(exclusion) if exclusion else None)
+                   for resources, reusable, exclusion in rows}
+        assert by_path[str(Path(original).resolve())] == (1, None)
+        assert by_path[str(Path(destination).resolve())][0] == 0
+        assert by_path[str(Path(destination).resolve())][1]['reason'] == 'overlapping_write'
+
+
+@pytest.mark.parametrize('redirect', [False, True])
+def test_crash_after_write_keeps_unknown_effect_and_resume_does_not_resend(launch, tmp_path, redirect):
     class LostWorker(BaseException):
         pass
     calls = []
@@ -364,12 +497,14 @@ def test_crash_after_write_keeps_unknown_effect_and_resume_does_not_resend(launc
         Path(args['path']).write_text(args['content'])
         raise LostWorker()
     path = str(tmp_path / 'effect')
+    destination = str(tmp_path / 'redirected') if redirect else path
     with launch('[t:gate]{}; [t:write]{path:$path,content:"old"}', {'t:write': writer(write)},
                 {'path': path}) as (ref, out, release, worker, request, crashes):
-        payload = change(ref, 't:write', {'path': path, 'content': 'old'}, {'content': 'new'})
+        payload = change(ref, 't:write', {'path': path, 'content': 'old'}, {'content': 'new', 'path': destination})
         steer(ref, payload, 'change')
         release.set(); worker.join(10)
-        assert crashes and not out and Path(path).read_text() == 'new'
+        assert crashes and not out and Path(destination).read_text() == 'new'
+        assert not redirect or not Path(path).exists()
         row = status(ref)['progress']['requests'][0]
         assert row['effect_state'] == 'unknown'
         checked = handle_request({**request, 'code': '\n' + request['code'], 'check': True,
@@ -432,24 +567,30 @@ def test_unused_unknown_writer_does_not_hide_read_only_parallel_controls(tmp_pat
         assert journal.db.execute('SELECT COUNT(*) FROM control_scopes').fetchone()[0] == 2
 
 
-def test_cancel_before_write_boundary_preserves_original_file(launch, tmp_path):
+@pytest.mark.parametrize('redirect', [False, True])
+def test_cancel_before_write_boundary_preserves_original_file(launch, tmp_path, redirect):
     path = tmp_path / 'cancelled'
     path.write_text('kept')
+    destination = tmp_path / 'other' if redirect else path
     def write(rt, args):
         pytest.fail('cancelled write must never start')
     with launch('[t:gate]{}; [t:write]{path:$path,content:"old"}', {'t:write': writer(write)},
                 {'path': str(path)}) as (ref, out, release, worker, *_):
-        steer(ref, change(ref, 't:write', {'path': str(path), 'content': 'old'}, {'content': 'new'}), 'edit')
+        steer(ref, change(ref, 't:write', {'path': str(path), 'content': 'old'},
+                          {'content': 'new', 'path': str(destination)}), 'edit')
         assert cancel(ref)['state'] == 'cancel_requested'
         release.set(); worker.join(10)
         assert not out[0]['success'] and path.read_text() == 'kept'
+        assert not redirect or not destination.exists()
         assert status(ref)['progress']['requests'][0]['state'] == 'not_applied'
 
 
-def test_late_cancel_preserves_returned_write_receipt(launch, tmp_path):
+@pytest.mark.parametrize('redirect', [False, True])
+def test_late_cancel_preserves_returned_write_receipt(launch, tmp_path, redirect):
     entered, finish = threading.Event(), threading.Event()
     calls = []
     path = str(tmp_path / 'late')
+    destination = str(tmp_path / 'redirected') if redirect else path
     def write(rt, args):
         calls.append(args)
         Path(args['path']).write_text(args['content'])
@@ -458,7 +599,8 @@ def test_late_cancel_preserves_returned_write_receipt(launch, tmp_path):
         return args['content']
     with launch('[t:gate]{}; [t:write]{path:$path,content:"old"}', {'t:write': writer(write)},
                 {'path': path}) as (ref, out, release, worker, request, _):
-        steer(ref, change(ref, 't:write', {'path': path, 'content': 'old'}, {'content': 'new'}), 'edit')
+        steer(ref, change(ref, 't:write', {'path': path, 'content': 'old'},
+                          {'content': 'new', 'path': destination}), 'edit')
         try:
             release.set()
             assert entered.wait(5)
@@ -468,7 +610,8 @@ def test_late_cancel_preserves_returned_write_receipt(launch, tmp_path):
         worker.join(10)
         row = status(ref)['progress']['requests'][0]
         assert row['state'] == 'applied' and row['effect_state'] == 'returned'
-        assert Path(path).read_text() == 'new' and len(calls) == 1
+        assert Path(destination).read_text() == 'new' and len(calls) == 1
+        assert not redirect or not Path(path).exists()
         assert not out[0]['success'] and out[0]['diagnostic']['code'] == 'CANCELLED'
         handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
         assert len(calls) == 1

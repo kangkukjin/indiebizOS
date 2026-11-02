@@ -57,9 +57,17 @@ def tree(ident):
 
 
 def signal_owned(ident, force=False):
-    if alive(ident):
+    if not ident:
+        return
+    try:
         p = psutil.Process(ident["pid"])
-        p.kill() if force else p.terminate()
+        # Validate and signal the same Process object so psutil's PID-reuse
+        # check retains the birth identity we just observed.
+        if _birth_time(p) == ident["born"] and p.status() != psutil.STATUS_ZOMBIE:
+            p.kill() if force else p.terminate()
+    except psutil.NoSuchProcess:
+        return  # Normal exit may win any observation-to-signal race.
+    # AccessDenied is still an observation/control failure, never confirmed exit.
 
 
 class ProcessAdapter:

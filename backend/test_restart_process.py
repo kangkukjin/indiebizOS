@@ -17,6 +17,56 @@ from restart_protocol import atomic_json, code_manifest, control_dir, read_json,
 pytestmark = pytest.mark.system
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.parametrize('force', [False, True])
+@pytest.mark.parametrize('phase', ['open', 'birth', 'status', 'signal'])
+def test_signal_owned_tolerates_process_exit_race(monkeypatch, force, phase):
+    import restart_process as owner
+    calls = []
+    def observe(current):
+        calls.append(current)
+        if phase == current:
+            raise owner.psutil.NoSuchProcess(123)
+    class Process:
+        def __init__(self, pid):
+            assert pid == 123
+            observe('open')
+        def create_time(self):
+            observe('birth')
+            return 7
+        def status(self):
+            observe('status')
+            return 'running'
+        def kill(self):
+            assert force
+            observe('signal')
+        def terminate(self):
+            assert not force
+            observe('signal')
+    monkeypatch.setattr(owner.psutil, 'Process', Process)
+    monkeypatch.setattr(owner, '_birth_time', lambda proc: proc.create_time())
+    signal_owned({'pid': 123, 'born': 7}, force=force)
+    assert calls == ['open', 'birth', 'status', 'signal'][:calls.index(phase) + 1]
+
+
+@pytest.mark.parametrize('force', [False, True])
+def test_signal_owned_keeps_permission_failure_visible(monkeypatch, force):
+    import restart_process as owner
+    class Process:
+        def __init__(self, pid):
+            self.pid = pid
+        def status(self):
+            return 'running'
+        def kill(self):
+            raise owner.psutil.AccessDenied(self.pid)
+        terminate = kill
+    monkeypatch.setattr(owner.psutil, 'Process', Process)
+    monkeypatch.setattr(owner, '_birth_time', lambda proc: 7)
+    with pytest.raises(owner.psutil.AccessDenied):
+        signal_owned({'pid': 123, 'born': 7}, force=force)
+
+
 SERVER = '''
 import asyncio, os, time
 from pathlib import Path

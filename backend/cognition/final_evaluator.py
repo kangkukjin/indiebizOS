@@ -270,7 +270,7 @@ def prepare(controller, tool_calls=None):
             research_documents.append({'path': path, 'hash': artifact['hash'], 'text': text})
         attachments.append(record(text, subject=path, source_ref=artifact['evidence_id'],
                                   revision=artifact['evidence_id'],
-                                  role='submission' if path in staged.values() else 'support'))
+                                  role='submission'))
         from cognitive_eval import bounded_attachment
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         # 모델엔 비밀이 가려진 증거 본문을 주되, 변경 감지 지문은 디스크 원문 기준이다.

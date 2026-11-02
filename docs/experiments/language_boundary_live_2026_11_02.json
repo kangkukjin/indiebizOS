@@ -1,0 +1,1138 @@
+{
+  "schema": 1,
+  "date": "2026-11-02",
+  "provider": "CodexProvider",
+  "model": "gpt-6-astra:high",
+  "budget_chars": 28000,
+  "fixture": "fictional order ledger; no user records",
+  "tool_calls_authorized": 0,
+  "cases": [
+    {
+      "case": "correct_total",
+      "expected": "ACHIEVED",
+      "input_hash": "f2e1e0435aacdfb964b556e6192e7c2c14e24df66b6fa5510d6c3972686e02d8",
+      "original_chars": 47314,
+      "arms": {
+        "full_evidence": {
+          "status": "ACHIEVED",
+          "elapsed_s": 8.993499,
+          "tokens": {
+            "total_input_tokens": 40896,
+            "total_output_tokens": 121,
+            "total_cache_read_tokens": 8448
+          },
+          "rounds": [
+            {
+              "status": "ACHIEVED",
+              "response": "ACHIEVED\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"제출 보고서의 확정 주문 3건과 순매출 270원이 최신 원장과 일치하여 C1·C2를 충족한다.\",\"evidence\":[\"fixture-document-5의 최신 확정 원장: A=120원, B=80원, C=70원으로 3건, 합계 270원. 취소 주문 Z=900원과 지난 기간 보관 메모는 집계에서 제외된다.\"],\"remaining\":[]}",
+              "failure": null,
+              "usage": {
+                "total_input_tokens": 40896,
+                "total_output_tokens": 121,
+                "total_cache_read_tokens": 8448,
+                "total_requests": 1,
+                "total_retries": 0,
+                "total_errors": 0,
+                "total_tool_calls": 0,
+                "last_request_latency_ms": 8344.49,
+                "avg_request_latency_ms": 8344.49,
+                "reasoning_tokens": null
+              },
+              "elapsed_s": 8.993468,
+              "input": {
+                "chars": 57327,
+                "bytes": 127059,
+                "estimated_tokens": 42353,
+                "limits": {
+                  "input_tokens": 121600,
+                  "transport": {
+                    "chars": 1048576,
+                    "source": "Codex input_too_large, episode 5766 (2026-11-02)"
+                  },
+                  "estimate": "max(text_chars/2, utf8_bytes/3); image reserve 8192 tokens/image"
+                },
+                "sections": [
+                  {
+                    "subject": "fixture-document-0",
+                    "subjects": [
+                      "fixture-document-0"
+                    ],
+                    "role": "support",
+                    "source_ref": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "revision": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-1",
+                    "subjects": [
+                      "fixture-document-1"
+                    ],
+                    "role": "support",
+                    "source_ref": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "revision": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-2",
+                    "subjects": [
+                      "fixture-document-2"
+                    ],
+                    "role": "support",
+                    "source_ref": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "revision": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-3",
+                    "subjects": [
+                      "fixture-document-3"
+                    ],
+                    "role": "support",
+                    "source_ref": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "revision": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-4",
+                    "subjects": [
+                      "fixture-document-4"
+                    ],
+                    "role": "support",
+                    "source_ref": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "revision": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-5",
+                    "subjects": [
+                      "fixture-document-5"
+                    ],
+                    "role": "support",
+                    "source_ref": "6cd77df049b99ef3e7694c315bec57de7aea80719cf20d94e0500189b37302fe",
+                    "revision": "6cd77df049b99ef3e7694c315bec57de7aea80719cf20d94e0500189b37302fe",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 4034,
+                      "total": 4034
+                    },
+                    "completeness": "complete",
+                    "original_chars": 4034,
+                    "shown_chars": 4034
+                  },
+                  {
+                    "subject": "fixture-document-6",
+                    "subjects": [
+                      "fixture-document-6"
+                    ],
+                    "role": "support",
+                    "source_ref": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "revision": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-7",
+                    "subjects": [
+                      "fixture-document-7"
+                    ],
+                    "role": "support",
+                    "source_ref": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "revision": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-8",
+                    "subjects": [
+                      "fixture-document-8"
+                    ],
+                    "role": "support",
+                    "source_ref": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "revision": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-9",
+                    "subjects": [
+                      "fixture-document-9"
+                    ],
+                    "role": "support",
+                    "source_ref": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "revision": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-10",
+                    "subjects": [
+                      "fixture-document-10"
+                    ],
+                    "role": "support",
+                    "source_ref": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "revision": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 4000,
+                      "total": 4000
+                    },
+                    "completeness": "complete",
+                    "original_chars": 4000,
+                    "shown_chars": 4000
+                  },
+                  {
+                    "subject": "fixture-document-11",
+                    "subjects": [
+                      "fixture-document-11"
+                    ],
+                    "role": "support",
+                    "source_ref": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "revision": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 4000,
+                      "total": 4000
+                    },
+                    "completeness": "complete",
+                    "original_chars": 4000,
+                    "shown_chars": 4000
+                  }
+                ],
+                "selected": 12,
+                "omitted": 0,
+                "prepare_s": 0.003466
+              }
+            }
+          ],
+          "measured": true
+        },
+        "budgeted_evidence": {
+          "status": "ACHIEVED",
+          "elapsed_s": 8.949507,
+          "tokens": {
+            "total_input_tokens": 21840,
+            "total_output_tokens": 121,
+            "total_cache_read_tokens": 8448
+          },
+          "rounds": [
+            {
+              "status": "ACHIEVED",
+              "response": "ACHIEVED\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"보고된 확정 주문 3건과 순매출 270원이 최신 원장과 일치하여 C1·C2를 충족한다.\",\"evidence\":[\"fixture-document-5: 최신 확정 원장의 주문은 A=120원, B=80원, C=70원으로 총 3건, 합계 270원이다. 취소 주문 Z=900원과 지난 기간 보관 메모는 집계에서 제외된다.\"],\"remaining\":[]}",
+              "failure": null,
+              "usage": {
+                "total_input_tokens": 21840,
+                "total_output_tokens": 121,
+                "total_cache_read_tokens": 8448,
+                "total_requests": 1,
+                "total_retries": 0,
+                "total_errors": 0,
+                "total_tool_calls": 0,
+                "last_request_latency_ms": 8358.2,
+                "avg_request_latency_ms": 8358.2,
+                "reasoning_tokens": null
+              },
+              "elapsed_s": 8.949402,
+              "input": {
+                "chars": 19808,
+                "bytes": 39184,
+                "estimated_tokens": 13062,
+                "limits": {
+                  "input_tokens": 121600,
+                  "transport": {
+                    "chars": 28000,
+                    "source": "controlled experiment selection cap; same provider/model"
+                  },
+                  "estimate": "max(text_chars/2, utf8_bytes/3); image reserve 8192 tokens/image"
+                },
+                "sections": [
+                  {
+                    "subject": "fixture-document-0",
+                    "subjects": [
+                      "fixture-document-0"
+                    ],
+                    "role": "support",
+                    "source_ref": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "revision": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-1",
+                    "subjects": [
+                      "fixture-document-1"
+                    ],
+                    "role": "support",
+                    "source_ref": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "revision": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-2",
+                    "subjects": [
+                      "fixture-document-2"
+                    ],
+                    "role": "support",
+                    "source_ref": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "revision": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-3",
+                    "subjects": [
+                      "fixture-document-3"
+                    ],
+                    "role": "support",
+                    "source_ref": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "revision": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-4",
+                    "subjects": [
+                      "fixture-document-4"
+                    ],
+                    "role": "support",
+                    "source_ref": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "revision": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-5",
+                    "subjects": [
+                      "fixture-document-5"
+                    ],
+                    "role": "support",
+                    "source_ref": "6cd77df049b99ef3e7694c315bec57de7aea80719cf20d94e0500189b37302fe",
+                    "revision": "6cd77df049b99ef3e7694c315bec57de7aea80719cf20d94e0500189b37302fe",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 1391,
+                      "end": 2209,
+                      "total": 4034
+                    },
+                    "completeness": "partial",
+                    "original_chars": 4034,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-6",
+                    "subjects": [
+                      "fixture-document-6"
+                    ],
+                    "role": "support",
+                    "source_ref": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "revision": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-7",
+                    "subjects": [
+                      "fixture-document-7"
+                    ],
+                    "role": "support",
+                    "source_ref": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "revision": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-8",
+                    "subjects": [
+                      "fixture-document-8"
+                    ],
+                    "role": "support",
+                    "source_ref": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "revision": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-9",
+                    "subjects": [
+                      "fixture-document-9"
+                    ],
+                    "role": "support",
+                    "source_ref": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "revision": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 817,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 817
+                  },
+                  {
+                    "subject": "fixture-document-10",
+                    "subjects": [
+                      "fixture-document-10"
+                    ],
+                    "role": "support",
+                    "source_ref": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "revision": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 4000
+                    },
+                    "completeness": "partial",
+                    "original_chars": 4000,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-11",
+                    "subjects": [
+                      "fixture-document-11"
+                    ],
+                    "role": "support",
+                    "source_ref": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "revision": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 4000
+                    },
+                    "completeness": "partial",
+                    "original_chars": 4000,
+                    "shown_chars": 818
+                  }
+                ],
+                "selected": 12,
+                "omitted": 12,
+                "prepare_s": 0.004081
+              }
+            }
+          ],
+          "measured": true
+        }
+      }
+    },
+    {
+      "case": "incorrect_total",
+      "expected": "NOT_ACHIEVED",
+      "input_hash": "ea0e079d0a046e5ddaebefaddaaa92dfbdf13525e58f4783dffbe6ac430a21dd",
+      "original_chars": 47314,
+      "arms": {
+        "full_evidence": {
+          "status": "NOT_ACHIEVED",
+          "elapsed_s": 12.479151,
+          "tokens": {
+            "total_input_tokens": 40890,
+            "total_output_tokens": 266,
+            "total_cache_read_tokens": 8448
+          },
+          "rounds": [
+            {
+              "status": "NOT_ACHIEVED",
+              "response": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: []\nDEFECTS: [{\"criterion_id\":\"C2\",\"evidence\":\"fixture-document-5의 최신 확정 원장은 A=120원, B=80원, C=60원으로 합계가 260원이다. 취소 주문 Z와 지난 기간 보관 메모는 제외되며, 제출 보고서의 270원은 원장과 불일치한다.\",\"repair\":\"보고서의 순매출 합계를 270원에서 260원으로 정정한다.\"}]\nGOAL_OUTCOME: {\"status\":\"NOT_ACHIEVED\",\"reason\":\"제출 보고서의 순매출 합계가 최신 확정 원장과 일치하지 않는다.\",\"evidence\":[\"fixture-document-5: 확정 주문 금액 합계 120+80+60=260원\",\"제출 보고서: 순매출 270원\"],\"remaining\":[\"C2: 순매출 합계를 260원으로 정정\"]}",
+              "failure": null,
+              "usage": {
+                "total_input_tokens": 40890,
+                "total_output_tokens": 266,
+                "total_cache_read_tokens": 8448,
+                "total_requests": 1,
+                "total_retries": 0,
+                "total_errors": 0,
+                "total_tool_calls": 0,
+                "last_request_latency_ms": 11926.62,
+                "avg_request_latency_ms": 11926.62,
+                "reasoning_tokens": null
+              },
+              "elapsed_s": 12.479111,
+              "input": {
+                "chars": 57327,
+                "bytes": 127059,
+                "estimated_tokens": 42353,
+                "limits": {
+                  "input_tokens": 121600,
+                  "transport": {
+                    "chars": 1048576,
+                    "source": "Codex input_too_large, episode 5766 (2026-11-02)"
+                  },
+                  "estimate": "max(text_chars/2, utf8_bytes/3); image reserve 8192 tokens/image"
+                },
+                "sections": [
+                  {
+                    "subject": "fixture-document-0",
+                    "subjects": [
+                      "fixture-document-0"
+                    ],
+                    "role": "support",
+                    "source_ref": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "revision": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-1",
+                    "subjects": [
+                      "fixture-document-1"
+                    ],
+                    "role": "support",
+                    "source_ref": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "revision": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-2",
+                    "subjects": [
+                      "fixture-document-2"
+                    ],
+                    "role": "support",
+                    "source_ref": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "revision": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-3",
+                    "subjects": [
+                      "fixture-document-3"
+                    ],
+                    "role": "support",
+                    "source_ref": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "revision": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-4",
+                    "subjects": [
+                      "fixture-document-4"
+                    ],
+                    "role": "support",
+                    "source_ref": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "revision": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-5",
+                    "subjects": [
+                      "fixture-document-5"
+                    ],
+                    "role": "support",
+                    "source_ref": "28720eee27497a959008402851357cc8b42081c43ee50774b19cbff799ba3e11",
+                    "revision": "28720eee27497a959008402851357cc8b42081c43ee50774b19cbff799ba3e11",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 4034,
+                      "total": 4034
+                    },
+                    "completeness": "complete",
+                    "original_chars": 4034,
+                    "shown_chars": 4034
+                  },
+                  {
+                    "subject": "fixture-document-6",
+                    "subjects": [
+                      "fixture-document-6"
+                    ],
+                    "role": "support",
+                    "source_ref": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "revision": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-7",
+                    "subjects": [
+                      "fixture-document-7"
+                    ],
+                    "role": "support",
+                    "source_ref": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "revision": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-8",
+                    "subjects": [
+                      "fixture-document-8"
+                    ],
+                    "role": "support",
+                    "source_ref": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "revision": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-9",
+                    "subjects": [
+                      "fixture-document-9"
+                    ],
+                    "role": "support",
+                    "source_ref": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "revision": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 3920,
+                      "total": 3920
+                    },
+                    "completeness": "complete",
+                    "original_chars": 3920,
+                    "shown_chars": 3920
+                  },
+                  {
+                    "subject": "fixture-document-10",
+                    "subjects": [
+                      "fixture-document-10"
+                    ],
+                    "role": "support",
+                    "source_ref": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "revision": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 4000,
+                      "total": 4000
+                    },
+                    "completeness": "complete",
+                    "original_chars": 4000,
+                    "shown_chars": 4000
+                  },
+                  {
+                    "subject": "fixture-document-11",
+                    "subjects": [
+                      "fixture-document-11"
+                    ],
+                    "role": "support",
+                    "source_ref": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "revision": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 4000,
+                      "total": 4000
+                    },
+                    "completeness": "complete",
+                    "original_chars": 4000,
+                    "shown_chars": 4000
+                  }
+                ],
+                "selected": 12,
+                "omitted": 0,
+                "prepare_s": 0.000551
+              }
+            }
+          ],
+          "measured": true
+        },
+        "budgeted_evidence": {
+          "status": "NOT_ACHIEVED",
+          "elapsed_s": 10.51829,
+          "tokens": {
+            "total_input_tokens": 21834,
+            "total_output_tokens": 261,
+            "total_cache_read_tokens": 0
+          },
+          "rounds": [
+            {
+              "status": "NOT_ACHIEVED",
+              "response": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: []\nDEFECTS: [{\"criterion_id\":\"C2\",\"evidence\":\"fixture-document-5의 최신 확정 원장에는 A=120원, B=80원, C=60원으로 합계가 260원이다. 취소 주문 Z와 지난 기간 보관 메모는 집계 대상이 아니다. 제출 보고서의 270원은 원장 합계와 불일치한다.\",\"repair\":\"보고서의 순매출 합계를 270원에서 260원으로 정정한다.\"}]\nGOAL_OUTCOME: {\"status\":\"NOT_ACHIEVED\",\"reason\":\"제출 보고서의 순매출 합계가 최신 확정 원장과 일치하지 않는다.\",\"evidence\":[\"fixture-document-5: 확정 주문 금액 합계 120+80+60=260원\",\"제출 보고서: 순매출 합계 270원\"],\"remaining\":[\"C2: 순매출 합계 정정\"]}",
+              "failure": null,
+              "usage": {
+                "total_input_tokens": 21834,
+                "total_output_tokens": 261,
+                "total_cache_read_tokens": 0,
+                "total_requests": 1,
+                "total_retries": 0,
+                "total_errors": 0,
+                "total_tool_calls": 0,
+                "last_request_latency_ms": 9702.42,
+                "avg_request_latency_ms": 9702.42,
+                "reasoning_tokens": null
+              },
+              "elapsed_s": 10.518192,
+              "input": {
+                "chars": 19808,
+                "bytes": 39184,
+                "estimated_tokens": 13062,
+                "limits": {
+                  "input_tokens": 121600,
+                  "transport": {
+                    "chars": 28000,
+                    "source": "controlled experiment selection cap; same provider/model"
+                  },
+                  "estimate": "max(text_chars/2, utf8_bytes/3); image reserve 8192 tokens/image"
+                },
+                "sections": [
+                  {
+                    "subject": "fixture-document-0",
+                    "subjects": [
+                      "fixture-document-0"
+                    ],
+                    "role": "support",
+                    "source_ref": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "revision": "2f2491647f9bd8e48caf8d8e921f1dfb2b7012523d1496bc121e248c8c514a8b",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-1",
+                    "subjects": [
+                      "fixture-document-1"
+                    ],
+                    "role": "support",
+                    "source_ref": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "revision": "a4f3a9eb0f13edd6452baae9973f70391f54431dd14f52e2a62855d08a62efed",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-2",
+                    "subjects": [
+                      "fixture-document-2"
+                    ],
+                    "role": "support",
+                    "source_ref": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "revision": "06b6a40068b873f47abd4d139a57b9489f9eb0554dc26e301b9083d4a7b5e96d",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-3",
+                    "subjects": [
+                      "fixture-document-3"
+                    ],
+                    "role": "support",
+                    "source_ref": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "revision": "7aa6531c2fb230eebe808d9e05269c7d8a2df02e6bd468b31ab4af46c8ee4531",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-4",
+                    "subjects": [
+                      "fixture-document-4"
+                    ],
+                    "role": "support",
+                    "source_ref": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "revision": "ce2e29620fe04a324033231607de51ea2746a991ea53c5df80c14c76699ef500",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-5",
+                    "subjects": [
+                      "fixture-document-5"
+                    ],
+                    "role": "support",
+                    "source_ref": "28720eee27497a959008402851357cc8b42081c43ee50774b19cbff799ba3e11",
+                    "revision": "28720eee27497a959008402851357cc8b42081c43ee50774b19cbff799ba3e11",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 1391,
+                      "end": 2209,
+                      "total": 4034
+                    },
+                    "completeness": "partial",
+                    "original_chars": 4034,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-6",
+                    "subjects": [
+                      "fixture-document-6"
+                    ],
+                    "role": "support",
+                    "source_ref": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "revision": "5bd401c81dac253f630440089f251a226825621ecc278d34610e3aa4b86955ec",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-7",
+                    "subjects": [
+                      "fixture-document-7"
+                    ],
+                    "role": "support",
+                    "source_ref": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "revision": "5b65a9bda85e2f260fc14a5bbc4352c690b840b2198d4841b29918a5311ea401",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-8",
+                    "subjects": [
+                      "fixture-document-8"
+                    ],
+                    "role": "support",
+                    "source_ref": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "revision": "d84141d00fa9dbed94c0944b38526778610b1de126568c00fdad6065a82afbde",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-9",
+                    "subjects": [
+                      "fixture-document-9"
+                    ],
+                    "role": "support",
+                    "source_ref": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "revision": "480eaaa122e32317fd9c216eaceaa2b16e4cdaf7b12da207804385ffdf0ae887",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 817,
+                      "total": 3920
+                    },
+                    "completeness": "partial",
+                    "original_chars": 3920,
+                    "shown_chars": 817
+                  },
+                  {
+                    "subject": "fixture-document-10",
+                    "subjects": [
+                      "fixture-document-10"
+                    ],
+                    "role": "support",
+                    "source_ref": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "revision": "096a372afc202b5c12977cae07cacdceddf8f2beca9bd399606094505e4e8c0c",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 4000
+                    },
+                    "completeness": "partial",
+                    "original_chars": 4000,
+                    "shown_chars": 818
+                  },
+                  {
+                    "subject": "fixture-document-11",
+                    "subjects": [
+                      "fixture-document-11"
+                    ],
+                    "role": "support",
+                    "source_ref": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "revision": "8bce528c9d29455948638039f622cb23dbbad0352c92b74d9a24c62ebc097a61",
+                    "criterion_ids": [],
+                    "range": {
+                      "unit": "unicode_chars",
+                      "start": 0,
+                      "end": 818,
+                      "total": 4000
+                    },
+                    "completeness": "partial",
+                    "original_chars": 4000,
+                    "shown_chars": 818
+                  }
+                ],
+                "selected": 12,
+                "omitted": 12,
+                "prepare_s": 0.003674
+              }
+            }
+          ],
+          "measured": true
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "One sample per case and arm; order/cache/load affect latency.",
+    "Controlled selection cap, not an observed production transport limit.",
+    "Full evidence and budgeted evidence use the same current renderer and evaluator policy.",
+    "No claim about all research tasks or episode 5766 content quality."
+  ],
+  "expected_verdicts_match": true
+}

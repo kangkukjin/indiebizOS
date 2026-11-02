@@ -1,4 +1,4 @@
-"""Next-boundary steering cannot rewrite active calls, writes or another owner."""
+"""Next-boundary steering preserves effect receipts, actor scope and parallel admission."""
 import boot_paths  # noqa: F401
 import json
 import threading
@@ -109,17 +109,237 @@ def test_changed_definition_active_invocation_and_foreign_owner_rejected(running
         steer(ref, payload, 'other')
 
 
-def test_write_and_parallel_boundaries_not_exposed(tmp_path):
+def test_unknown_writes_parallel_writes_and_each_not_exposed(tmp_path):
     from ibl_v2_compile import compile_program
     from ibl_run_journal import Journal
     from ibl_run_control import publish
     reg = {'t:write': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['write_external']}, lambda *_: 1),
            't:read': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['pure']}, lambda *_: 1)}
-    for code in ('[t:write]{}', '[t:read]{} & [t:read]{}'):
+    for code in ('[t:write]{}', '[t:write]{} & [t:read]{}', '[1,2] >> [table:each]{[t:read]{}}'):
         plan = compile_program(code, reg)
         with Journal(tmp_path / 'runs', 'test') as journal:
             publish(journal, plan, tmp_path)
             assert journal.control['targets'] == {}
+
+
+@pytest.fixture
+def launch(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+    @contextmanager
+    def start(code, extra=None, inputs=None):
+        entered, release = threading.Event(), threading.Event()
+        handles, output, crashes = [], [], []
+        def gate(rt, args):
+            handles.append(rt.journal.control['task_ref'])
+            entered.set()
+            assert release.wait(15)
+            return 2
+        reg = {'t:gate': Adapter({'version': 1, 'params': {}, 'result': 'Number',
+                                  'effects': ['read_external']}, gate), **(extra or {})}
+        monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **k: reg)
+        monkeypatch.setattr('ibl_v2_store.definitions', lambda: {})
+        monkeypatch.setattr('tool_batch.prepared_plan', lambda *a: None)
+        request = {'edition': 2, 'code': code, 'inputs': inputs or {}}
+        context = snapshot()
+        def run():
+            restore(context)
+            try:
+                output.append(handle_request(request, str(tmp_path)))
+            except BaseException as exc:
+                crashes.append(exc)
+        worker = threading.Thread(target=run)
+        worker.start()
+        try:
+            assert entered.wait(8), (output, crashes)
+            yield handles[0], output, release, worker, request, crashes
+        finally:
+            release.set()
+            worker.join(15)
+            assert not worker.is_alive()
+    return start
+
+
+def change(ref, action, expected, updates, *, occurrence=-1):
+    progress = status(ref)['progress']
+    target = [r for r in progress['boundaries'] if r['action'] == action][occurrence]
+    return {'root_task': progress['root_task'], 'plan_hash': progress['plan_hash'],
+            'node_id': target['node_id'], 'revision': target['revision'], 'ordinal': target['next_ordinal'],
+            'expected_args_hash': digest(expected), 'changes': updates}
+
+
+def writer(run):
+    return Adapter({'version': 1, 'params': {'path': 'Text', 'content': 'Text'}, 'result': 'Text',
+                    'effects': ['write_external'], 'write_resources': {'file': 'path'}}, run)
+
+
+def test_unstarted_write_changes_content_and_resume_never_repeats_completed_effects(launch, tmp_path):
+    calls = []
+    def write(rt, args):
+        calls.append(dict(args))
+        Path(args['path']).write_text(args['content'])
+        return args['content']
+    first, second = str(tmp_path / 'first'), str(tmp_path / 'second')
+    code = '[t:write]{path:$first,content:"kept"}; [t:gate]{}; return [t:write]{path:$second,content:"old"}'
+    with launch(code, {'t:write': writer(write)}, {'first': first, 'second': second}) as (ref, out, release, worker, request, _):
+        payload = change(ref, 't:write', {'path': second, 'content': 'old'}, {'content': 'new'})
+        assert steer(ref, payload, 'edit')['delivery'] == 'accepted'
+        release.set(); worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == 'new', out
+        assert [r['content'] for r in calls] == ['kept', 'new']
+        state = status(ref)['progress']['requests'][0]
+        assert state['state'] == 'applied' and state['effect_state'] == 'returned'
+        assert state['call_ref']['run_id'] == ref['task_id']
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == 'new', resumed
+        assert len(calls) == 2
+        with pytest.raises(ValueError, match='이미 시작'):
+            steer(ref, payload, 'new-id-cannot-rewrite-history')
+        assert steer(ref, payload, 'edit')['delivery'] == 'applied'
+
+
+def test_write_target_change_rejected_without_redirecting_effect(launch, tmp_path):
+    calls = []
+    def write(rt, args):
+        calls.append(args)
+        Path(args['path']).write_text(args['content'])
+        return args['content']
+    path, other = str(tmp_path / 'original'), str(tmp_path / 'other')
+    with launch('[t:gate]{}; [t:write]{path:$path,content:"original"}', {'t:write': writer(write)},
+                {'path': path}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', {'path': path, 'content': 'original'}, {'path': other}), 'redirect')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and Path(path).read_text() == 'original'
+        assert not Path(other).exists() and len(calls) == 1
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'not_applied' and row['reason'] == 'write_resource_changed_or_unknown'
+
+
+def test_crash_after_write_keeps_unknown_effect_and_resume_does_not_resend(launch, tmp_path):
+    class LostWorker(BaseException):
+        pass
+    calls = []
+    def write(rt, args):
+        calls.append(args)
+        Path(args['path']).write_text(args['content'])
+        raise LostWorker()
+    path = str(tmp_path / 'effect')
+    with launch('[t:gate]{}; [t:write]{path:$path,content:"old"}', {'t:write': writer(write)},
+                {'path': path}) as (ref, out, release, worker, request, crashes):
+        payload = change(ref, 't:write', {'path': path, 'content': 'old'}, {'content': 'new'})
+        steer(ref, payload, 'change')
+        release.set(); worker.join(10)
+        assert crashes and not out and Path(path).read_text() == 'new'
+        row = status(ref)['progress']['requests'][0]
+        assert row['effect_state'] == 'unknown'
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['diagnostic']['code'] == 'EFFECT_UNCERTAIN', resumed
+        assert len(calls) == 1
+        with pytest.raises(ValueError, match='이미 시작'):
+            steer(ref, payload, 'retry-not-authorized')
+
+
+def test_parallel_read_branch_changes_without_repeating_other_branch(launch, tmp_path):
+    calls = []
+    reader = Adapter({'version': 1, 'params': {'n': 'Number'}, 'pipe_input': 'n',
+                      'result': 'Number', 'effects': ['read_external']}, lambda rt, args: calls.append(args['n']) or args['n'])
+    with launch('([t:gate]{} >> [t:read]{}) & [t:read]{n:3}', {'t:read': reader}) as (ref, out, release, worker, request, _):
+        payload = change(ref, 't:read', {'n': 2}, {'n': 7}, occurrence=0)
+        steer(ref, payload, 'one-branch')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == [7, 3], out
+        assert sorted(calls) == [3, 7]
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == [7, 3], resumed
+        assert sorted(calls) == [3, 7]
+
+
+def test_shared_function_in_parallel_is_not_an_addressable_global_ordinal(tmp_path):
+    from ibl_v2_compile import compile_program
+    from ibl_run_journal import Journal
+    from ibl_run_control import publish
+    reg = {'t:read': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['read_external']}, lambda *_: 1)}
+    plan = compile_program('[def:read](){return [t:read]{}}; [fn:read]{} & [fn:read]{}', reg)
+    assert not plan.issues
+    with Journal(tmp_path / 'runs', 'test') as journal:
+        publish(journal, plan, tmp_path)
+        assert not journal.control['targets']
+
+
+def test_cancel_before_write_boundary_preserves_original_file(launch, tmp_path):
+    path = tmp_path / 'cancelled'
+    path.write_text('kept')
+    def write(rt, args):
+        pytest.fail('cancelled write must never start')
+    with launch('[t:gate]{}; [t:write]{path:$path,content:"old"}', {'t:write': writer(write)},
+                {'path': str(path)}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', {'path': str(path), 'content': 'old'}, {'content': 'new'}), 'edit')
+        assert cancel(ref)['state'] == 'cancel_requested'
+        release.set(); worker.join(10)
+        assert not out[0]['success'] and path.read_text() == 'kept'
+        assert status(ref)['progress']['requests'][0]['state'] == 'not_applied'
+
+
+def test_late_cancel_preserves_returned_write_receipt(launch, tmp_path):
+    entered, finish = threading.Event(), threading.Event()
+    calls = []
+    path = str(tmp_path / 'late')
+    def write(rt, args):
+        calls.append(args)
+        Path(args['path']).write_text(args['content'])
+        entered.set()
+        assert finish.wait(10)
+        return args['content']
+    with launch('[t:gate]{}; [t:write]{path:$path,content:"old"}', {'t:write': writer(write)},
+                {'path': path}) as (ref, out, release, worker, request, _):
+        steer(ref, change(ref, 't:write', {'path': path, 'content': 'old'}, {'content': 'new'}), 'edit')
+        try:
+            release.set()
+            assert entered.wait(5)
+            assert cancel(ref)['state'] == 'cancel_requested'
+        finally:
+            finish.set()
+        worker.join(10)
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'applied' and row['effect_state'] == 'returned'
+        assert Path(path).read_text() == 'new' and len(calls) == 1
+        handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert len(calls) == 1
+
+
+def test_steered_write_still_checks_adapter_source_revision(launch, tmp_path):
+    from ibl_v2_ir import Fault
+    path = tmp_path / 'revision'
+    path.write_text('original')
+    expected = digest('original')
+    calls = []
+    def write(rt, args):
+        if digest(Path(args['path']).read_text()) != args['expected']:
+            raise Fault('SOURCE_CHANGED', '원문 판본이 달라졌습니다')
+        calls.append(args)
+        Path(args['path']).write_text(args['content'])
+        return args['content']
+    adapter = writer(write)
+    adapter.contract['params']['expected'] = 'Text'
+    values = {'path': str(path), 'content': 'old', 'expected': expected}
+    with launch('[t:gate]{}; [t:write]{path:$path,content:"old",expected:$expected}',
+                {'t:write': adapter}, {'path': str(path), 'expected': expected}) as (ref, out, release, worker, *_):
+        steer(ref, change(ref, 't:write', values, {'content': 'new'}), 'edit')
+        path.write_text('external update')
+        release.set(); worker.join(10)
+        assert out[0]['diagnostic']['code'] == 'SOURCE_CHANGED', out
+        assert not calls and path.read_text() == 'external update'
+
+
+def test_parallel_plan_with_declared_write_resource_is_not_steerable(tmp_path):
+    from ibl_v2_compile import compile_program
+    from ibl_run_journal import Journal
+    from ibl_run_control import publish
+    plan = compile_program('[t:write]{path:"a",content:"x"} & [t:write]{path:"b",content:"y"}',
+                           {'t:write': writer(lambda rt, args: args['content'])})
+    assert not plan.issues
+    with Journal(tmp_path / 'runs', 'test') as journal:
+        publish(journal, plan, tmp_path)
+        assert not journal.control['targets']
 
 
 if __name__ == "__main__":

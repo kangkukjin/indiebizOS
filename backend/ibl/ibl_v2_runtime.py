@@ -989,6 +989,8 @@ class Runtime(ExpressionEvaluator):
                 return tuple(remap(v) for v in value) if isinstance(value, tuple) else mapping.get(value, value) if isinstance(value, str) else value
             route = remap(route)
         call_id = digest([route, mapped_node, self.ordinal(node.id)])
+        from ibl_run_control import bind_invocation
+        bind_invocation(self, node, call_id)
         receipt, source = None, "journal"
         if self.journal and external:
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None,

@@ -436,3 +436,20 @@ def test_distinct_mixed_workflows_preserve_completion_and_repair(
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_component_applicability_exposes_the_exact_runtime_constraints():
+    from ibl_v2_component import normalize
+    from ibl_callable_contract import checked_values
+    contract = {'version': 1, 'params': {'limit': 'Number', 'mode': 'Text'}, 'required': ['limit'],
+                'result': 'Number', 'effects': ['pure'], 'minimum': {'limit': 1},
+                'integers': ['limit'], 'enums': {'mode': ['full', 'partial']},
+                'variants': [{'when': {'mode': 'partial'}, 'maximum': {'limit': 3}}]}
+    described = normalize({'name': 'test', 'revision': 'v1'}, contract, producer='vocabulary')
+    assert described['inputs']['constraints'] == {'minimum': {'limit': 1}, 'integers': ['limit'],
+                                                 'enums': {'mode': ['full', 'partial']}}
+    checked_values(contract, {'limit': 2, 'mode': 'partial'})
+    with pytest.raises(ValueError, match='최대'):
+        checked_values(contract, {'limit': 4, 'mode': 'partial'})
+    described['inputs']['constraints']['minimum']['limit'] = 99
+    assert contract['minimum']['limit'] == 1

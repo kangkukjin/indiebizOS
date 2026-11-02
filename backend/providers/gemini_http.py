@@ -146,13 +146,16 @@ class GeminiHTTPProvider(BaseProvider):
             body["system_instruction"] = {"parts": [{"text": self.system_prompt}]}
         if tools:
             body["tools"] = tools
+        from model_request_budget import check_payload
+        check_payload(self, body, ensure_ascii=True)
         r = requests.post(url, json=body, timeout=120)
         if r.status_code != 200:
             # budget 0 거부 모델(flash-latest 부류) → 표식 후 1회 재시도(자가치유).
             # ★거부 응답이 범용 문구("invalid argument"만, 'thinking' 미언급 — 08-01 실측)라
             # 문구 매칭 불가 → 차단을 보낸 상태의 400이면 일단 빼고 재시도한다.
             # 다른 원인의 400이면 재시도도 같은 400 → 정상 raise (여분 요청 1회뿐).
-            if _try_thinking_off and r.status_code == 400:
+            from model_request_budget import failure_kind
+            if _try_thinking_off and r.status_code == 400 and failure_kind(r.text) != "input_too_large":
                 print("[GeminiHTTP] thinkingBudget:0 400 거부 추정 — thinking 차단 포기 후 재시도")
                 self._thinking_off_unsupported = True
                 return self._generate(contents, tools)
@@ -203,11 +206,15 @@ class GeminiHTTPProvider(BaseProvider):
     # ── 메인 루프 ───────────────────────────────────────────
     def process_message(self, message: str, history: List[Dict] = None,
                         images: List[Dict] = None, execute_tool: Callable = None, cancel_check: Callable = None) -> str:
+        self.last_failure_kind = None
+        self.last_failure_details = None
         if not self._client:
+            self.last_failure_kind = "unavailable"
             return "AI가 초기화되지 않았습니다. GEMINI_API_KEY를 확인해주세요."
         try:
             contents = self._build_contents(message, history or [], images)
         except ValueError as e:
+            self.last_failure_kind = "invalid_image"
             # 이미지 계약 위반 — 침묵 폐기 대신 정직 오류로 착지
             return f"[이미지 입력 오류] {e}"
         tools = self._gemini_tools()
@@ -215,6 +222,7 @@ class GeminiHTTPProvider(BaseProvider):
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
             if cancel_check and cancel_check():
+                self.last_failure_kind = "cancelled"
                 return (accumulated + "\n사용자가 작업을 중단했습니다.").strip()
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             # ★보존(요약) 먼저, 삭제는 최후 — deepseek_http 와 대칭(2026-08-19 배선).
@@ -226,11 +234,14 @@ class GeminiHTTPProvider(BaseProvider):
             try:
                 data = self._execute_with_retry(self._generate, contents, tools)
             except Exception as e:
+                from model_request_budget import failure_kind
+                self.last_failure_kind = self.last_failure_kind or failure_kind(e)
                 return (accumulated + f"\n\n[LLM 호출 오류] {e}").strip()
 
             self.metrics.record_usage(0, data.get("usageMetadata"), label="GeminiHTTP")
             cands = data.get("candidates") or []
             if not cands:
+                self.last_failure_kind = "empty_response"
                 fb = data.get("promptFeedback", {})
                 return (accumulated or f"[응답 없음] {json.dumps(fb, ensure_ascii=False)[:200]}").strip()
             parts = (cands[0].get("content") or {}).get("parts") or []

@@ -358,7 +358,7 @@ def cancel(r: dict) -> dict:
 
 def _reset_for_tests() -> None:
     with _LOCK:
-        _STATUS.clear(); _CANCEL.clear(); _RESOLVED.clear()
+        _STATUS.clear(); _CANCEL.clear(); _STEER.clear(); _RESOLVED.clear()
 
 
 def steer(r, message, request_id):

@@ -85,3 +85,29 @@ def test_reset_apis_preserve_failure_result(monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_error_event_exposes_failure_even_if_text_says_achieved(monkeypatch):
+    from providers.codex import CodexProvider
+    p = CodexProvider(api_key='', model='fake', system_prompt='', tools=[])
+    p.last_failure_kind = None
+    monkeypatch.setattr(p, 'process_message_stream', lambda *a: iter([
+        {'type': 'error', 'content': 'input_too_large: ACHIEVED UNKNOWN_REASON: evidence'}]))
+    assert 'ACHIEVED' in p.process_message('test')  # legacy string API
+    assert p.last_failure_kind == 'input_too_large'
+
+
+def test_final_wrapped_cli_limit_stops_before_subprocess(monkeypatch):
+    from providers.codex import CodexProvider
+    p = CodexProvider(api_key='', model='fake', system_prompt='정책' * 1000, tools=[])
+    p._client = {'binary': 'never'}
+    p.disable_session_persistence = p.no_tools = True
+    p.request_limits = {'chars': 3000, 'source': 'fixture'}
+    p.context_window_tokens = 100000
+    monkeypatch.setattr(p, '_mcp_bridge_acquire', lambda: None)
+    monkeypatch.setattr(p, '_mcp_bridge_release', lambda _: None)
+    monkeypatch.setattr(p, '_prepare_launch_context', lambda _: ({}, None))
+    monkeypatch.setattr('subprocess.Popen', lambda *a, **kw: pytest.fail('oversize subprocess'))
+    events = list(p.process_message_stream('본문' * 1000))
+    assert events[-1]['failure_kind'] == 'input_too_large'
+    assert events[-1]['failure_details']['exceeded']['chars']['excess'] > 0

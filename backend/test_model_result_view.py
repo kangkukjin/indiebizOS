@@ -370,3 +370,17 @@ def test_compile_failure_folds_declarations_but_preserves_diagnostic_and_retriev
     # Stored original still owns the complete declarations, not the display copy.
     stored = json.loads((tmp_path / (args['id'] + '.txt')).read_text())
     assert stored['functions'] == original['functions']
+
+
+def test_expansion_keeps_original_observation_and_coordinates(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path / 'observation')
+    monkeypatch.setattr(view, 'evidence_store', lambda: store)
+    ref = store.evidence({'value': {'text': '앞🙂가운데끝', 'revision': 'source-v1'}})
+    page = view.read_result({'id': ref['id'], 'path': ['value', 'text'], 'offset': 1, 'limit': 2})
+    assert page['text'] == '🙂가'
+    assert page['read_scope'] == {'source_ref': ref['id'], 'revision': ref['id'],
+        'observation': 'stored', 'unit': 'unicode_chars', 'path': ['value', 'text'],
+        'start': 1, 'end': 3, 'total_chars': 6, 'complete': False, 'format': 'text'}
+    newer = store.evidence({'value': {'text': '다른 관측', 'revision': 'source-v2'}})
+    assert newer['id'] != ref['id']
+    assert view.read_result({'id': ref['id'], 'path': ['value', 'text']})['text'] == '앞🙂가운데끝'

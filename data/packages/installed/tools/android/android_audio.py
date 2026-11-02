@@ -76,6 +76,8 @@ def _listen_file(args, context, op):
     metadata = probe(source)
     selected = ranges(args, metadata["duration"])
     before = source.stat()
+    from source_observation import file_state
+    observed_before = file_state(source)
     source_hash = file_hash(source)
     cache = get_base_path() / "data" / "audio_cache" / source_hash
     cache.mkdir(parents=True, exist_ok=True)
@@ -203,5 +205,14 @@ def _listen_file(args, context, op):
             break
         preview.append(item)
         size += len(json.dumps(item, ensure_ascii=False))
-    return {**result, "items": preview, "total_items": len(rows),
+    shown = {**result, "items": preview, "total_items": len(rows),
             "truncated": len(preview) < len(rows) or any(i.get("truncated") for i in preview)}  # truncation-scope: preview — 미리듣기 전사 표본; 전체 전사 원장은 별도 보존
+    from source_observation import attach, file_evidence
+    observation = file_evidence(source, observed_before, source_hash,
+                                {'unit': 'seconds', 'coordinate_system': 'source_media_time',
+                                 'ranges': complete, 'requested_ranges': selected,
+                                 'complete': result['coverage'] == 'whole_file'})
+    observation['observation_kind'] = 'audio_ranges'
+    # Whole file bytes identify the source even when only a time range was heard.
+    observation['version']['scope'] = 'whole_source'
+    return attach(shown, observation)

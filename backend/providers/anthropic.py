@@ -79,7 +79,10 @@ class AnthropicProvider(BaseProvider):
         execute_tool: Callable = None
     ) -> str:
         """Claude로 메시지 처리 (동기 모드 - 기존 호환성 유지)"""
+        self.last_failure_kind = None
+        self.last_failure_details = None
         if not self._client:
+            self.last_failure_kind = "unavailable"
             return "AI가 초기화되지 않았습니다. API 키를 확인해주세요."
 
         # 스트리밍 제너레이터를 실행하고 최종 결과만 반환
@@ -89,6 +92,10 @@ class AnthropicProvider(BaseProvider):
                 final_text += event["content"]
             elif event["type"] == "final":
                 final_text = event["content"]
+            elif event['type'] == 'error':
+                from model_request_budget import failure_kind
+                self.last_failure_kind = self.last_failure_kind or failure_kind(event.get('content', ''))
+                return event.get('content', 'provider error')
 
         return final_text
 
@@ -447,6 +454,8 @@ class AnthropicProvider(BaseProvider):
         last_error = None
         from situation_delivery import prepare, observed_stream
         delivery = prepare(create_params['messages'], self)
+        from model_request_budget import check_payload
+        check_payload(self, create_params)
         for attempt in range(self.retry_config.max_retries + 1):
             try:
                 return observed_stream(self._client.messages.stream(**create_params), delivery)

@@ -19,6 +19,26 @@ from test_conversation_handoff import store as conversations  # noqa: F401
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_partial_observation_can_identify_whole_source_without_claiming_full_read(monkeypatch):
+    import situation_evidence as se
+    events = []
+    monkeypatch.setattr(se, 'current', lambda: True)
+    monkeypatch.setattr(se, 'emit', lambda *args, **kwargs: events.append((args, kwargs)))
+    evidence = {'source': {'kind': 'file', 'address': '/tmp/audio.wav'}, 'stable': True,
+                'scope': {'complete': False, 'unit': 'seconds', 'ranges': [[2, 4]]},
+                'version': {'sha256': 'full-bytes', 'scope': 'whole_source'}}
+    se.source_published(evidence, 'observation')
+    assert events[-1][1]['subject_revision'] == 'full-bytes'
+    assert events[-1][0][2]['scope']['complete'] is False
+    del evidence['version']['scope']
+    se.source_published(evidence, 'partial')
+    assert events[-1][1]['subject_revision'] is None
+    evidence['version']['scope'] = 'whole_source'
+    evidence['stable'] = False
+    se.source_published(evidence, 'changed')
+    assert events[-1][1]['subject_revision'] is None
+
+
 @pytest.fixture
 def active(tmp_path):
     runner = SimpleNamespace(project_path=tmp_path, config={'id': 'executor'}, ai=None)

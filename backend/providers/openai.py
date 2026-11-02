@@ -94,6 +94,7 @@ class OpenAIProvider(BaseProvider):
     ) -> str:
         """동기 응답. 스트림 오류·빈 응답은 예외로 전달해 부분 출력을 성공으로 쓰지 않는다."""
         self.last_failure_kind = None
+        self.last_failure_details = None
         if not self._client:
             self.last_failure_kind = "unavailable"
             raise RuntimeError("AI가 초기화되지 않았습니다. API 키를 확인해주세요.")
@@ -106,7 +107,7 @@ class OpenAIProvider(BaseProvider):
             elif event["type"] == "final":
                 final_text = event["content"]
             elif event["type"] == "error":
-                self.last_failure_kind = "provider_error"
+                self.last_failure_kind = self.last_failure_kind or "provider_error"
                 raise RuntimeError(event.get("content") or "AI 호출 실패")
 
         if not final_text.strip():
@@ -536,6 +537,8 @@ class OpenAIProvider(BaseProvider):
         last_error = None
         from situation_delivery import prepare, observed_stream
         delivery = prepare(create_params['messages'], self)
+        from model_request_budget import check_payload
+        check_payload(self, create_params)
         for attempt in range(self.retry_config.max_retries + 1):
             try:
                 return observed_stream(self._client.chat.completions.create(**create_params), delivery)

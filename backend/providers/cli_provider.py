@@ -747,6 +747,10 @@ class CliSubprocessProvider(BaseProvider):
             elif etype == "final":
                 final_text = event.get("content", final_text)
             elif etype == "error":
+                from model_request_budget import failure_kind
+                self.last_failure_kind = (event.get('failure_kind') or self.last_failure_kind
+                                          or failure_kind(event.get('content', '')))
+                self.last_failure_details = event.get('failure_details')
                 return event.get("content", f"[{self.CLI_DISPLAY} 오류]")
         return final_text or f"[{self.CLI_DISPLAY}가 빈 응답을 반환했습니다]"
 
@@ -785,6 +789,7 @@ class CliSubprocessProvider(BaseProvider):
         self._last_context_size = 0
         # 실패 범주도 턴 상태다 — 지난 턴의 마감이 이번 턴 판단에 새면 안 된다.
         self.last_failure_kind = None
+        self.last_failure_details = None
         # 지도 태그 누적 (이전 턴 지도가 새 응답에 새는 것 방지)
         self._pending_map_tags = []
         self._seam = SeamTracker()          # 이 턴의 셸↔IBL 이음매(인접·모델 경유)
@@ -885,6 +890,15 @@ class CliSubprocessProvider(BaseProvider):
                 if situation_delivery:
                     full_prompt += '\n\n' + situation_messages[-1]['content']
 
+                from model_request_budget import check, InputTooLarge
+                checked_text = full_prompt if getattr(self, 'system_in_stdin', False) else (self.system_prompt or '') + full_prompt
+                try:
+                    check(self, checked_text, images=images, model=getattr(self, '_evaluation_budget', False))
+                except InputTooLarge as exc:
+                    self.last_failure_kind, self.last_failure_details = exc.kind, exc.details
+                    yield {'type': 'error', 'content': str(exc), 'failure_kind': exc.kind,
+                           'failure_details': exc.details}
+                    return
                 cmd = self._build_command(
                     mcp_config_path=mcp_config_path,
                     stream=True,

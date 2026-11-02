@@ -848,10 +848,12 @@ class Runtime(ExpressionEvaluator):
     def _invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
         spec = self.plan.registry[key]
-        from ibl_callable_contract import normalize, selected, problems
-        args = Binding(normalize(spec.contract, args.value), args.evidence)
+        from ibl_callable_contract import normalize_binding, selected, problems
+        args = normalize_binding(spec.contract, args)
         from ibl_callable_contract import pipe_receiver
         args = self.inject(node, args, pipe_receiver(spec.contract, args.value), piped)
+        from ibl_run_control import boundary
+        args = boundary(self, node, args, spec)
         if spec.contract.get("adapter", {}).get("protocol") == "core-table/2" and "items" in args.value:
             from ibl_v2_types import rows_value
             args = Binding({**args.value, "items": rows_value(args.value["items"])}, args.evidence)

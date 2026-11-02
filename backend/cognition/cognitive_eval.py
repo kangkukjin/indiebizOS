@@ -162,7 +162,8 @@ class CognitiveEvalMixin:
 
     def _collect_created_files(self, response: str,
                                 tool_calls: Optional[List[Dict[str, Any]]] = None, *,
-                                exclude_paths=(), snapshots=None, full_content=False) -> str:
+                                exclude_paths=(), snapshots=None, full_content=False,
+                                attachments=None, evidence_store=None) -> str:
         """생성/수정된 파일 경로를 찾아 내용을 읽는다.
 
         1차: tool_calls(있으면)에서 Write/Edit/MultiEdit/NotebookEdit 같은 파일 변경 도구의
@@ -224,6 +225,12 @@ class CognitiveEvalMixin:
                     if snapshots is not None:
                         from supervision_store import digest
                         snapshots[path] = digest(content)
+                    if evidence_store is not None:
+                        ref = evidence_store.evidence(content)
+                        content = evidence_store.read_evidence(ref['id'], 0, None)['text']
+                        if attachments is not None:
+                            from evaluation_input import record
+                            attachments.append(record(content, subject=path, source_ref=ref['id'], revision=ref['id']))
                     if not full_content and len(content) > 10000:
                         content = content[:10000] + "\n\n... (10000자 초과, 생략됨)"
                     elif full_content:
@@ -425,7 +432,8 @@ class CognitiveEvalMixin:
                                visual_artifacts: list = None,
                                evaluation_context: str = "", evaluation_policy: str = "",
                                full_response: bool = False,
-                               conversation_history: list = None) -> tuple:
+                               conversation_history: list = None,
+                               evaluation_attachments: list = None) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
         의식의 명시적 기준만 판정한다. 실행 원장·결과는 증거이며 별도 평가 축이 아니다.
@@ -435,6 +443,10 @@ class CognitiveEvalMixin:
             severity: 0=N/A(achieved), 1=경미, 2=중대, 3=치명
         """
         self.goal_outcome = parse_goal_outcome("")
+        self.evaluation_failure = None
+        self.evaluation_retryable = False
+        from evaluation_input import EvaluationPrompt, context_sections, record
+        sections = []
         try:
             contract = json.loads(criteria)
         except (TypeError, ValueError):
@@ -459,19 +471,11 @@ class CognitiveEvalMixin:
         # 미실측"을 미달 사유로 삼아 재실행 루프를 헛돌리지 않게 한다(ep2386 실측).
         prompt += self._scheduled_repair_note()
 
-        # 검증용 액션 원장 — 기준 직후에 배치(인접성). 에이전트의 '서술'이 아니라
-        # 실제 호출 로그에서 추출한 '사실'. 안 한 일의 부재를 평가자가 볼 수 있게 한다.
         if action_ledger:
-            prompt += (
-                "## 실제 실행된 액션 원장 (전수 · 검증 기준)\n"
-                "아래는 에이전트가 *실제로 호출한* 액션의 전수 목록이다 — 에이전트의 서술이 아니라 "
-                "도구 호출 로그에서 추출한 사실. 달성 기준이 특정 액션을 요구하면(예: 특정 파일 읽기, "
-                "grep/검색, 특정 도구 실행), **그 액션이 이 목록에 실제로 있는지로 판정하라.** "
-                "목록에 없으면 그 단계는 *수행되지 않은 것*이다 — 에이전트 응답이 '했다'고 말해도 "
-                "이 원장에 없으면 안 한 것으로 간주하라. 화살표(→) 뒤는 그 액션에 실제로 넘어간 대상이다. "
-                "대상 표시에 '생략'이 있으면 보이지 않는 대상의 부재를 단정하지 말고 도구 실행 결과와 함께 판단하라.\n"
-                f"{action_ledger}\n\n"
-            )
+            sections.append(record(action_ledger, subject="실제 실행된 액션 원장"))
+        prompt += ("실행 원장·파일·도구 결과는 선택된 표시다. 생략된 액션·대상의 부재는 "
+                   "미실행의 증거가 아니다. manifest의 존재는 본문 검토가 아니다. "
+                   "핵심 근거가 부족하면 UNKNOWN_REASON: evidence와 필요한 판본·범위를 적는다.\n\n")
 
         # 규정과 독립된 사용자 정정으로 기준의 의미·충돌을 확인한다.
         from research_planning import evaluation_block
@@ -490,14 +494,18 @@ class CognitiveEvalMixin:
             prompt += f"## 기준 해석용 이전 대화\n{consciousness_output['history_summary']}\n\n"
 
         if tool_results_str:
-            prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"
+            sections.append(record(tool_results_str, subject="도구 실행 결과"))
 
         prompt += f"## 에이전트 응답\n{response if full_response else response[:8000]}\n\n"
         if evaluation_context:
-            prompt += f"## 하네스가 수집한 평가 맥락\n{evaluation_context}\n\n"
+            required_context, selected_context = context_sections(evaluation_context)
+            prompt += f"## 하네스가 수집한 평가 맥락\n{required_context}\n\n"
+            sections.extend(selected_context)
 
-        if created_files:
-            prompt += f"## 생성된 파일 내용\n{created_files}\n\n"
+        if evaluation_attachments is not None:
+            sections.extend(evaluation_attachments)
+        elif created_files:
+            sections.append(record(created_files, subject="생성된 파일 내용"))
 
         if visual_artifacts:
             import os as _os
@@ -508,7 +516,20 @@ class CognitiveEvalMixin:
                 "직접 보고 명시된 달성 기준에 해당하는 부분만 판단하라. 일반적인 미적 개선을 새 조건으로 만들지 않는다.\n\n"
             )
 
+        # User corrections are mandatory even if the display excerpt omitted them.
+        user_turns = [m for m in (conversation_history or []) if isinstance(m, dict) and m.get('role') == 'user']
+        if user_turns:
+            prompt += "\n## 사용자 원문·정정 (제공된 이력 전체)\n" + json.dumps(user_turns, ensure_ascii=False)
         prompt += "위 증거로 명시된 기준의 충족 여부만 판정하세요."
+        store = getattr(self, 'evaluation_store', None)
+        if store is not None:
+            for section in sections:
+                if section['source_ref'] is None:
+                    ref = store.evidence(section['text'])
+                    section.update(text=store.read_evidence(ref['id'], 0, None)['text'],
+                                   source_ref=ref['id'], revision=ref['id'], total=ref['chars'])
+        self.evaluation_sources = [{k: r[k] for k in ('source_ref', 'revision', 'total')} for r in sections]
+        prompt = EvaluationPrompt(prompt, sections, criteria)
 
         # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.
         # 어제 208번 같은 오판(도구 결과가 평가자에 부족하게 전달되어 "상상 보고" 판정) 검출용.
@@ -524,7 +545,8 @@ class CognitiveEvalMixin:
 
         try:
             # 기존 평가 축의 도구 없는 원샷. 별도 모델 호출을 추가하지 않는다.
-            from consciousness_agent import system_ai_call
+            from consciousness_agent import system_ai_call, clear_oneshot_failure, oneshot_failure_details
+            clear_oneshot_failure()
 
             eval_images = None
             if visual_artifacts:
@@ -532,6 +554,11 @@ class CognitiveEvalMixin:
                                for a in visual_artifacts]
             eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
                                            images=eval_images, role="evaluate")
+            failure = oneshot_failure_details()
+            self.evaluation_metrics = prompt.metrics
+            if failure:
+                self.evaluation_failure = failure
+                return None, "평가 전달 실패 — " + failure['kind'], 0
             if eval_response is None or not eval_response.strip():
                 self.evaluation_retryable = True
                 self._log("[GoalEval] AI 응답 없음 — 검수 미완료")

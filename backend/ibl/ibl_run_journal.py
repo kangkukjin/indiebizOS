@@ -288,6 +288,8 @@ class Journal:
         if member_runtime.is_member():
             return
         data = {"edition": 2, "resume": {"run_id": self.run_id}, "plan_hash": plan_hash}
+        if getattr(self, "control", None):
+            data["task_ref"] = self.control["task_ref"]
         try:
             # 표면 티켓은 아직 집히기 전이다(claim 은 Runtime._run) — 소유 슬롯이 비었으면 이 실행은 바깥 실행 안에서
             # 도는 것이라 바깥 티켓에 내 손잡이를 쓰지 않는다. 종전의 progress_ticket 읽기는 이 시점엔 항상 None 이어서

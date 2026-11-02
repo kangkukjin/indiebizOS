@@ -90,7 +90,9 @@ def read_result(request):
                          if page["next_offset"] is not None else None)
     # 끝 페이지와 전체 읽기는 다르다. 현재 응답이 전달한 범위만 표시한다.
     complete = offset == 0 and page["next_offset"] is None
-    page["read_scope"] = {"path": path if path is not None else [],
+    page["read_scope"] = {"source_ref": request.get("id"), "revision": request.get("id"),
+                          "observation": "stored", "unit": "unicode_chars",
+                          "path": path if path is not None else [],
                           "start": offset, "end": offset + len(page["text"]),
                           "total_chars": page["chars"], "complete": complete,
                           # text = 선택한 문자열의 원문 글자, json = 선택 값의 JSON, stored = 저장본 그대로

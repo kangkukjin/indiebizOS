@@ -708,6 +708,16 @@ def _oneshot_lock_for(provider):
 _oneshot_failure = _threading.local()
 
 
+def clear_oneshot_failure():
+    _oneshot_failure.kind = None
+    _oneshot_failure.details = None
+
+
+def oneshot_failure_details():
+    kind = last_oneshot_failure()
+    return {'kind': kind, 'details': getattr(_oneshot_failure, 'details', None)} if kind else None
+
+
 def last_oneshot_failure() -> Optional[str]:
     """이 스레드의 직전 oneshot_ai_call 실패 범주 (None | "deadline")."""
     return getattr(_oneshot_failure, "kind", None)
@@ -941,11 +951,22 @@ def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, 
             provider.system_prompt = system_prompt
         token = _current_role.set(step_role or f"oneshot:{role}")
         purpose_token = set_purpose(role)
-        _oneshot_failure.kind = None
+        clear_oneshot_failure()
+        provider.last_failure_kind = None
+        provider.last_failure_details = None
         try:
+            prepare = getattr(prompt, 'prepare_request', None)
+            if callable(prepare):
+                prompt = prepare(provider, images)
+                provider._evaluation_budget = True
+                provider._evaluation_images = images
             return provider.process_message(message=prompt, history=[], images=images, execute_tool=None)
         except Exception as exc:
-            logger.warning("[oneshot] %s 호출 실패: %s", role, exc)
+            from model_request_budget import failure_kind
+            kind = getattr(exc, 'kind', None) or failure_kind(exc)
+            provider.last_failure_kind = kind if callable(prepare) else provider.last_failure_kind or kind
+            provider.last_failure_details = getattr(exc, 'details', None) or provider.last_failure_details
+            logger.warning("[oneshot] %s 호출 실패: %s", role, provider.last_failure_kind)
             return None
         finally:
             if usage_sink is not None:
@@ -954,6 +975,7 @@ def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, 
                 usage_sink.update(data if data.get("total_requests") else {"measured": False})
                 usage_sink["reasoning_tokens"] = None  # 미계측 값을 0으로 보고하지 않는다.
             _oneshot_failure.kind = getattr(provider, "last_failure_kind", None)
+            _oneshot_failure.details = getattr(provider, "last_failure_details", None)
             _current_role.reset(token)
             reset_purpose(purpose_token)
 

@@ -248,6 +248,10 @@ def clear_session_for_agent(session_key: str):
 class CodexProvider(CliSubprocessProvider):
     """Codex CLI(`codex exec`)를 subprocess로 호출하는 provider."""
 
+    # Provider rejection observed in episode 5766; chars, not tokens/UTF-8 bytes.
+    request_limits = {'chars': 1048576, 'source': 'Codex input_too_large, episode 5766 (2026-11-02)'}
+    system_in_stdin = True
+
     CLI_LABEL = "Codex"
     CLI_DISPLAY = "Codex"
     STATE_PREFIX = "codex"

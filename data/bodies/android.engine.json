@@ -46,6 +46,7 @@
     "base/mime_compat",
     "base/model_call_context",
     "base/model_context",
+    "base/model_request_budget",
     "base/model_resolver",
     "base/output_publish",
     "base/phone_execution_contract",
@@ -131,6 +132,7 @@
     "cognition/distill_memory_adapters",
     "cognition/distill_queue",
     "cognition/doc_drift",
+    "cognition/evaluation_input",
     "cognition/final_evaluator",
     "cognition/fixture_sweeps",
     "cognition/forage_consolidation",
@@ -324,6 +326,7 @@
     "ibl/ibl_result_transport",
     "ibl/ibl_retyping",
     "ibl/ibl_routing",
+    "ibl/ibl_run_control",
     "ibl/ibl_run_journal",
     "ibl/ibl_safety",
     "ibl/ibl_scanner",
@@ -606,8 +609,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 595,
-    "engine": 563,
+    "total": 598,
+    "engine": 566,
     "blocklist": 32
   }
 }

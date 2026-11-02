@@ -92,7 +92,9 @@ def test_complete_parent_read_covers_children_without_blocking_reread(result_vie
     ref = result_view.project_result(raw)["result_ref"]
     page = result_view.read_result({"id": ref["id"], "path": ["value"]})
     assert json.loads(page["text"]) == raw["value"]
-    assert page["read_scope"] == {"path": ["value"], "start": 0,
+    assert page["read_scope"] == {"source_ref": ref["id"], "revision": ref["id"],
+                                  "observation": "stored", "unit": "unicode_chars",
+                                  "path": ["value"], "start": 0,
                                   "end": len(page["text"]),
                                   "total_chars": len(page["text"]), "complete": True,
                                   "format": "json"}

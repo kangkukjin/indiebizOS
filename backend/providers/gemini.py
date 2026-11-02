@@ -266,7 +266,10 @@ class GeminiProvider(BaseProvider):
         execute_tool: Callable = None
     ) -> str:
         """Gemini로 메시지 처리 (동기 모드)"""
+        self.last_failure_kind = None
+        self.last_failure_details = None
         if not self._genai_client:
+            self.last_failure_kind = "unavailable"
             return "AI가 초기화되지 않았습니다. API 키를 확인해주세요."
 
         # 스트리밍 제너레이터를 실행하고 최종 결과만 반환
@@ -276,6 +279,10 @@ class GeminiProvider(BaseProvider):
                 final_text += event["content"]
             elif event["type"] == "final":
                 final_text = event["content"]
+            elif event['type'] == 'error':
+                from model_request_budget import failure_kind
+                self.last_failure_kind = self.last_failure_kind or failure_kind(event.get('content', ''))
+                return event.get('content', 'provider error')
 
         return final_text
 
@@ -606,8 +613,9 @@ class GeminiProvider(BaseProvider):
     def _create_stream_with_retry(self, contents: List, config, max_retries: int = 3):
         """스트림 생성 (500 에러 재시도, 캐시 만료 시 자동 복구)"""
         last_error = None
-
+        from model_request_budget import check_payload
         for attempt in range(max_retries):
+            check_payload(self, {'model': self.model, 'contents': contents, 'config': config})
             try:
                 return self._genai_client.models.generate_content_stream(
                     model=self.model,
@@ -617,6 +625,9 @@ class GeminiProvider(BaseProvider):
             except Exception as e:
                 last_error = e
                 error_str = str(e)
+                from model_request_budget import failure_kind
+                if getattr(self, '_evaluation_budget', False) and failure_kind(e) == 'input_too_large':
+                    raise
                 if "500" in error_str or "INTERNAL" in error_str:
                     print(f"[Gemini] 500 에러, 재시도 {attempt + 1}/{max_retries}...")
                     time.sleep(1 * (attempt + 1))

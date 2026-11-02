@@ -413,6 +413,9 @@ class RetryConfig:
 
     def is_retryable(self, error: Exception) -> bool:
         """재시도 가능한 에러인지 확인"""
+        from model_request_budget import failure_kind
+        if failure_kind(error) == 'input_too_large':
+            return False
         error_str = str(error).lower()
         return any(err in error_str for err in self.retryable_errors)
 

@@ -20,8 +20,8 @@ def context_window(provider):
     explicit = getattr(provider, "context_window_tokens", None)
     if explicit and int(explicit) > 0:
         return int(explicit)
-    kind = provider.CONTEXT_PROVIDER
-    model = (provider.model or "").lower()
+    kind = getattr(provider, "CONTEXT_PROVIDER", "unknown")
+    model = (getattr(provider, "model", "") or "").lower()
     catalog = _catalog()
     # OpenRouter도 실제 모델의 창을 따른다. 공급자 메타데이터가 없을 때만 공개 규칙 사용.
     if kind == "openrouter" and "/" in model:

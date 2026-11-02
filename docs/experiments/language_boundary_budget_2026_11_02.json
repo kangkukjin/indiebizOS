@@ -1,0 +1,509 @@
+{
+  "date": "2026-11-02",
+  "kind": "offline_synthetic_request_assembly",
+  "model_calls": 0,
+  "source_profile": {
+    "episode": 5766,
+    "user_chars": 1116531,
+    "system_chars": 5594,
+    "attachment_chars": 1030646,
+    "fixture_files": 24,
+    "file_distribution": "synthetic; original per-file attribution not inferred"
+  },
+  "original_status": "input_too_large",
+  "final_status": "within_budget",
+  "metrics": {
+    "chars": 1040384,
+    "bytes": 1976558,
+    "estimated_tokens": 658853,
+    "limits": {
+      "input_tokens": 1900000,
+      "transport": {
+        "chars": 1048576,
+        "source": "Codex input_too_large, episode 5766 (2026-11-02)"
+      },
+      "estimate": "max(text_chars/2, utf8_bytes/3); image reserve 8192 tokens/image"
+    },
+    "sections": [
+      {
+        "subject": "fixture-0",
+        "subjects": [
+          "fixture-0"
+        ],
+        "role": "support",
+        "source_ref": "fixture-0",
+        "revision": "eb1c41b2511aa354998f9b55e08cf8c4e27b8fd32c06fe6a57c195567b9c5c72",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-1",
+        "subjects": [
+          "fixture-1"
+        ],
+        "role": "support",
+        "source_ref": "fixture-1",
+        "revision": "ccae16f0140e0019f239ddf022d1f9b222944aede60179215e64956cbe33863e",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-2",
+        "subjects": [
+          "fixture-2"
+        ],
+        "role": "support",
+        "source_ref": "fixture-2",
+        "revision": "16650023be5bdc7e52da7b1f041ca970377a8b654c38588d16795a3efa45cc11",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-3",
+        "subjects": [
+          "fixture-3"
+        ],
+        "role": "support",
+        "source_ref": "fixture-3",
+        "revision": "aceb05569f19523313a92421e1c931b58d0b8657aedc87f793a0bbe66c2c2dc3",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-4",
+        "subjects": [
+          "fixture-4"
+        ],
+        "role": "support",
+        "source_ref": "fixture-4",
+        "revision": "665693a675de30c39436ccf080f1338bb832320be0f7f97a53c1632a294154e0",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-5",
+        "subjects": [
+          "fixture-5"
+        ],
+        "role": "support",
+        "source_ref": "fixture-5",
+        "revision": "4f6a8069c8d7848803bd3e53d671669a14990be563b33d8d8fe9403ee6f41d11",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-6",
+        "subjects": [
+          "fixture-6"
+        ],
+        "role": "support",
+        "source_ref": "fixture-6",
+        "revision": "b21bd285370c11ce85ed678329301409dd5ab8baaa8362d897ff640645aa96fa",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-7",
+        "subjects": [
+          "fixture-7"
+        ],
+        "role": "support",
+        "source_ref": "fixture-7",
+        "revision": "4c9274746f6b813f979c12c7fad94b34630e81f7e8610bb1c116e3f9974a1124",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-8",
+        "subjects": [
+          "fixture-8"
+        ],
+        "role": "support",
+        "source_ref": "fixture-8",
+        "revision": "93442a89687b02957e2e6335859d553f843296b35f32b733ac926ec329072c2e",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-9",
+        "subjects": [
+          "fixture-9"
+        ],
+        "role": "support",
+        "source_ref": "fixture-9",
+        "revision": "7575346e4ca9ab22d2edce28421fd03554b3a607a8ef3f0d134bc9f4f3ab1252",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-10",
+        "subjects": [
+          "fixture-10"
+        ],
+        "role": "support",
+        "source_ref": "fixture-10",
+        "revision": "38f87268ef11d71618e717cb60bb3d40761f2eeba049c52bc88dd43e7e91c9d3",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-11",
+        "subjects": [
+          "fixture-11"
+        ],
+        "role": "support",
+        "source_ref": "fixture-11",
+        "revision": "38a7dce77aa38cbac078d570583d7a0dd2f2d0546a19f43b4e60880bb9164b92",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-12",
+        "subjects": [
+          "fixture-12"
+        ],
+        "role": "support",
+        "source_ref": "fixture-12",
+        "revision": "ceee4e3db986f7565cdcd2bcda3339e66157c05219e2be5dfb8fc483a60f52ca",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-13",
+        "subjects": [
+          "fixture-13"
+        ],
+        "role": "support",
+        "source_ref": "fixture-13",
+        "revision": "609baaf2671001b4cbaca911f6b8aff8e1a449e49251aea707c3356d60b91c5e",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-14",
+        "subjects": [
+          "fixture-14"
+        ],
+        "role": "support",
+        "source_ref": "fixture-14",
+        "revision": "30c23a8a2c044eef0beab95a83cc51be619efe98b5860c20a3d9af7e807ad129",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-15",
+        "subjects": [
+          "fixture-15"
+        ],
+        "role": "support",
+        "source_ref": "fixture-15",
+        "revision": "81d8265b82cafb467d7e1a81aee81fa5aec14ed55e98f7c9157bf8a6d0d34751",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39229,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39229
+      },
+      {
+        "subject": "fixture-16",
+        "subjects": [
+          "fixture-16"
+        ],
+        "role": "support",
+        "source_ref": "fixture-16",
+        "revision": "5165b586278da2012760191e045194ddaa1f1ae215bd183a05dfaa57238192b4",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-17",
+        "subjects": [
+          "fixture-17"
+        ],
+        "role": "support",
+        "source_ref": "fixture-17",
+        "revision": "f191152cc9aec5d914731c68f1131601ca6a4372165999027f122cf2a28877bf",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-18",
+        "subjects": [
+          "fixture-18"
+        ],
+        "role": "support",
+        "source_ref": "fixture-18",
+        "revision": "54abc822579f16fb2407e75ca50384bc0ef689f020881101ca16b6a257e39733",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-19",
+        "subjects": [
+          "fixture-19"
+        ],
+        "role": "support",
+        "source_ref": "fixture-19",
+        "revision": "eb18eacdf71e918f0f51f6dcc3da9fe8188c6549a0770b7bddbe8b8cd91af75e",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-20",
+        "subjects": [
+          "fixture-20"
+        ],
+        "role": "support",
+        "source_ref": "fixture-20",
+        "revision": "aaefd5a686e5f7264552df4f95a5238f1e4d4bd0edf9158b4e025a381ee4b0b9",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-21",
+        "subjects": [
+          "fixture-21"
+        ],
+        "role": "support",
+        "source_ref": "fixture-21",
+        "revision": "66541c2a043e4c407a830aee1d30ecf4e65b5655abd3ac8073a26999ed099a1b",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-22",
+        "subjects": [
+          "fixture-22"
+        ],
+        "role": "support",
+        "source_ref": "fixture-22",
+        "revision": "7ac55ef97a1d0792ee12e285673bf2850f19bea0e071d20658f0c69a6ac52e32",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42943
+        },
+        "completeness": "partial",
+        "original_chars": 42943,
+        "shown_chars": 39228
+      },
+      {
+        "subject": "fixture-23",
+        "subjects": [
+          "fixture-23"
+        ],
+        "role": "support",
+        "source_ref": "fixture-23",
+        "revision": "83f85158a79ba25f19a7cd419551778afa0d3d4d1dac8f27ce7e8bc63dd4d510",
+        "criterion_ids": [],
+        "range": {
+          "unit": "unicode_chars",
+          "start": 0,
+          "end": 39228,
+          "total": 42957
+        },
+        "completeness": "partial",
+        "original_chars": 42957,
+        "shown_chars": 39228
+      }
+    ],
+    "selected": 24,
+    "omitted": 24,
+    "prepare_s": 0.035977
+  },
+  "quality_comparison": null,
+  "total_model_tokens": null,
+  "completion_latency_comparison": null,
+  "limitations": [
+    "No original research or external effects replayed",
+    "Token counts are estimates",
+    "Fixture context window 2000000 isolates observed transport cap",
+    "No live model approval or performance claim"
+  ],
+  "regression": {
+    "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile --ff",
+    "includes_system": true,
+    "passed": 12028,
+    "skipped": 24,
+    "warnings": 80,
+    "errors": 0,
+    "failures": 0,
+    "elapsed_seconds": 396.68,
+    "exit_code": 0
+  }
+}

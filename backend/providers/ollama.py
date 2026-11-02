@@ -128,7 +128,10 @@ class OllamaProvider(BaseProvider):
         execute_tool: Callable = None
     ) -> str:
         """Ollama로 메시지 처리 (동기 모드 - 기존 호환성 유지)"""
+        self.last_failure_kind = None
+        self.last_failure_details = None
         if not self._client:
+            self.last_failure_kind = "unavailable"
             return "AI가 초기화되지 않았습니다."
 
         # 스트리밍 제너레이터를 실행하고 최종 결과만 반환
@@ -138,6 +141,10 @@ class OllamaProvider(BaseProvider):
                 final_text += event["content"]
             elif event["type"] == "final":
                 final_text = event["content"]
+            elif event['type'] == 'error':
+                from model_request_budget import failure_kind
+                self.last_failure_kind = self.last_failure_kind or failure_kind(event.get('content', ''))
+                return event.get('content', 'provider error')
 
         return final_text
 
@@ -260,6 +267,9 @@ class OllamaProvider(BaseProvider):
             from situation_delivery import prepare, observed_stream
             delivery = prepare(messages, self)
 
+            from model_request_budget import check_payload
+            check_payload(self, {'model': self.model, 'messages': messages, 'stream': True,
+                                 'stream_options': {'include_usage': True}})
             # 재시도 로직으로 스트림 생성
             stream = None
             for attempt in range(self.retry_config.max_retries + 1):

@@ -27,6 +27,9 @@ pending_delivery의 초안 내용·알림도 결과물이다. 공개/알림은 �
 UNKNOWN에는 UNKNOWN_REASON: evidence|criteria|blocked를 적는다. 발췌·누락 증거는 evidence,
 기준과 요청의 충돌은 criteria, 권한·외부 조건 때문에 진행할 수 없으면 blocked다.
 evidence이면 부족한 기준 id와 기존 evidence_index에서 확인할 증거 id를 함께 적는다.
+정확한 원문 범위를 알면 선택적으로 한 줄 JSON을 적는다:
+EVIDENCE_REQUESTS: [{"criterion_id":"C1","evidence_id":"기존 id","revision":"선택 manifest의 revision 또는 증거 id","start":0,"end":1000}]
+start/end는 저장된 마스킹 원문의 Unicode 문자 좌표다. 새 URL 수집이나 검사 실행 요청이 아니다.
 NOT_ACHIEVED면 SEVERITY: 1|2|3 다음에 REPAIR_SCOPE: local|research를 적는다.
 기존 증거로 문구·수치만 고칠 수 있으면 local, 새 조사·실행이 필요하면 research다.
 REPAIR_BLOCK_IDS: ["블록 id"]도 적고, DEFECTS 한 줄 JSON 배열에 기준 id·구체적 증거·최소 보완을 적는다.
@@ -256,12 +259,17 @@ def prepare(controller, tool_calls=None):
     from research_review import submission_paths, review_text, claims
     submitted = submission_paths(artifact_response, controller.project_path)
     research_documents = []
+    from evaluation_input import record
+    attachments = []
     files, snapshots = [], {}
     for artifact in controller.content_artifacts:
         path = artifact["path"]
         text = controller.store.read_evidence(artifact["evidence_id"], 0, None)["text"]
         if path in submitted:
             research_documents.append({'path': path, 'hash': artifact['hash'], 'text': text})
+        attachments.append(record(text, subject=path, source_ref=artifact['evidence_id'],
+                                  revision=artifact['evidence_id'],
+                                  role='submission' if path in staged.values() else 'support'))
         from cognitive_eval import bounded_attachment
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         # 모델엔 비밀이 가려진 증거 본문을 주되, 변경 감지 지문은 디스크 원문 기준이다.
@@ -334,13 +342,15 @@ def prepare(controller, tool_calls=None):
     extra_snapshots = {}
     # 이미 공개된 옛 파일 대신 이번 턴의 비공개 초안을 평가한다.
     other_files = evaluator._collect_created_files(artifact_response, tool_calls=calls,
-        exclude_paths=set(snapshots) | set(staged), snapshots=extra_snapshots, full_content=True)
+        exclude_paths=set(snapshots) | set(staged), snapshots=extra_snapshots, full_content=True,
+        attachments=attachments, evidence_store=controller.store)
     snapshots.update({p: {"hash": h, "mode": "text"} for p, h in extra_snapshots.items()})
     if other_files:
         files.append(other_files)
     controller._evaluation_packet = {
         "response": "\n".join(f'<block id="{b["id"]}">{b["text"]}</block>' for b in controller.store.blocks),
-        "files": "\n\n".join(files), "images": images, "calls": calls, "context": context,
+        "files": "\n\n".join(files), "attachments": attachments,
+        "images": images, "calls": calls, "context": context,
         "criteria": json.dumps(criteria, ensure_ascii=False),
         "conversation_history": copy.deepcopy(getattr(controller, "history", [])),
     }
@@ -398,6 +408,7 @@ def invoke(controller, prompt="", *, phase="final"):
     controller.log("evaluation.started", role="evaluate", tools=0)
     evaluator = Evaluator()
     evaluator.project_path = getattr(controller, "project_path", None)
+    evaluator.evaluation_store = controller.store
     achieved, feedback, severity = evaluator._evaluate_achievement(
         controller.message, packet["criteria"], packet["response"], packet["files"],
         consciousness_output=controller.framing,
@@ -409,13 +420,20 @@ def invoke(controller, prompt="", *, phase="final"):
         evaluation_policy=POLICY + (APPLY_POLICY + WORKSPACE_POLICY if phase == "workspace" else
                                     APPLY_POLICY + SEMANTIC_POLICY if phase == "semantic" else FINAL_POLICY)
                           + (RESEARCH_POLICY if packet['context'].get('research_citations') else ''),
-        full_response=True,
+        full_response=True, evaluation_attachments=packet.get('attachments'),
     )
+    packet["selection_sources"] = getattr(evaluator, "evaluation_sources", [])
     manifest = controller._evaluation_snapshot["response"]
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],
               "response_hash": manifest["hash"], "instruction": "",
               **getattr(evaluator, "goal_outcome", {"goal_status": "UNKNOWN"})}
+    failure = getattr(evaluator, 'evaluation_failure', None)
+    if failure:
+        result['failure'] = failure
+        controller.log('evaluation.finished', role='evaluate', elapsed_s=round(time.monotonic() - started, 3),
+                       decision=result)
+        return json.dumps(result, ensure_ascii=False)
     if phase in {"workspace", "semantic"}:
         match = re.search(r"(?m)^WORKSPACE_COVERAGE:\s*(\[.*\])\s*$", feedback)
         try:
@@ -472,6 +490,13 @@ def invoke(controller, prompt="", *, phase="final"):
                       instruction="판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 "
                       "출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. "
                       "확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n" + feedback)
+    if result.get('recoverable'):
+        from evaluation_input import evidence_requests
+        requests = evidence_requests(feedback, packet)
+        if requests is not None:
+            result['evidence_requests'] = requests
+            if not requests:
+                result.update(recoverable=False, reason=feedback + '\n증거 요청의 참조·판본·범위가 유효하지 않습니다')
     controller.log("evaluation.finished", role="evaluate", elapsed_s=round(time.monotonic() - started, 3),
                    decision=result)
     return json.dumps(result, ensure_ascii=False)

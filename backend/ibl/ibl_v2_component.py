@@ -55,6 +55,9 @@ def normalize(identity, contract, *, producer, completion=None):
             'inputs': {'types': copy.deepcopy(contract.get('param_contracts', contract.get('params', {}))),
                        'required': list(contract.get('required', contract.get('params', {}))),
                        'relations': copy.deepcopy(contract.get('requirements', {})),
+                       'constraints': {k: copy.deepcopy(contract[k]) for k in
+                           ('required_any', 'requires', 'exclusive', 'forbidden', 'enums', 'integers',
+                            'integer_values', 'minimum', 'maximum', 'nonempty') if k in contract},
                        'style': contract.get('argument_style', 'named'),
                        'pipe_input': contract.get('pipe_input'),
                        'defaults': copy.deepcopy(contract.get('defaults', contract.get('default_expressions', {}))),

@@ -422,3 +422,24 @@ def test_script_local_module_edit_is_new_attempt_and_replay_keeps_original(ibl):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('value', [None, [], {}, {'missing_is_absent': None, 'empty': [], 'flag': False,
+                                              'number': 1.25, 'literal': '한글 ${x}'}])
+def test_direct_saved_registered_and_turn_script_preserve_json_values(ibl, tmp_path, monkeypatch, value):
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from test_ibl_v2_boundaries import script_module
+    # The saved function has the same body and must not reinterpret business keys.
+    direct = Runtime(compile_program('return $x', inputs={'x': value}), {'x': value}).run()
+    saved = Runtime(compile_program('[fn:identity]{x:$x}', inputs={'x': value},
+                                   definitions={'identity': '[def:identity]($x){return $x}'}), {'x': value}).run()
+    work, source = create(tmp_path, RESULT.replace("json.dumps(args,", "json.dumps(args[\"x\"],"))
+    turn = file_script.execute(source, json.dumps({"x": value}, ensure_ascii=False).encode(), work)
+    registered = script_module()
+    contract = {'version': 1, 'params': {'x': 'Unknown'}, 'result': 'Unknown', 'effects': ['pure'],
+                'adapter': {'protocol': 'ibl-script/2'}}
+    raw, error = registered._runtime.v2_output(json.dumps({'protocol': 'ibl-script/2', 'ok': True, 'value': value}), contract)
+    assert error is None
+    assert direct['success'] and saved['success'] and turn['ok']
+    assert direct['value'] == saved['value'] == turn['value'] == raw

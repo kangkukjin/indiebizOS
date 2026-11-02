@@ -71,3 +71,26 @@ return {상태: $c.state}                                                # cance
 처리 중 프로세스가 죽으면 재전달될 수 있다. 원격 효과에 보편적인 exactly-once를 약속하지 않는다.
 취소는 상주 에이전트 전체를 정지하지 않는다. 자식 작업을 취소하려면 그 자식의 접수증으로
 별도 요청한다. 실행기가 실제로 종료를 확인하기 전에는 `cancel_requested`다.
+
+
+## IBL의 다음 읽기 호출 인자 변경
+
+실행 중인 `ibl_run`의 `status.progress`는 `root_task`, `plan_hash`, `boundaries`,
+`requests`를 제공한다. boundary의 `node_id`, `revision`, `next_ordinal`을 그대로 사용한다.
+지원 대상이 없으면 boundaries는 빈 목록이다. 시작한 호출을 바꾸거나 재실행하지 않는다.
+순차 읽기·순수 호출만 지원하며 병렬/each 계획·동적 의존 부품·쓰기·정의 교체는 거절한다.
+
+`[self:task]{op:"steer",ref:$ref,request_id:"고유 요청 ID",message:$json}`의 message는
+다음 정확한 필드가 있는 JSON 문자열이다. 기대 인자는 파이프 주입/별칭 정규화 뒤의 값이다.
+Python 연결에서는 `ibl_v2_ir.digest(expected_args)`로 동일 값 지문을 만든다.
+
+```json
+{"root_task":"status에서 받은 값","plan_hash":"status에서 받은 값",
+ "node_id":"boundary의 값","revision":"boundary의 값","ordinal":1,
+ "expected_args_hash":"기대 인자의 digest","changes":{"변경할인자":"새 값"}}
+```
+
+`delivery:accepted`는 접수만 뜻한다. 적용 후 `status.progress.requests`의 state는
+`applied`, 입력/판본 불일치·취소·미도달이면 `not_applied`와 reason이다.
+같은 request_id와 같은 요청은 기존 상태를 반환하고 다른 요청의 재사용은 거절한다.
+`status.result`와 대기·완료·취소의 뜻은 기존 접수증 계약을 유지한다.

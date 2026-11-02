@@ -72,18 +72,19 @@ def task_status(ref):
         return T.view(ref, T.UNKNOWN)
     path = journal_root(ref.get('owner') or '.') / (ref['task_id'] + '.sqlite')
     row = _read(path.absolute())
+    from ibl_run_control import enrich
     if not row:
-        return T.view(ref, T.UNKNOWN)
+        return enrich(ref, T.view(ref, T.UNKNOWN))
     result = row[1]
     state = T.SUCCEEDED if result.get('success') else T.WAITING_CHILDREN if result.get('suspended') else T.FAILED
     if (result.get('diagnostic') or {}).get('kind') == 'cancelled':
         state = T.CANCELLED
     elif state not in T.TERMINAL and path.with_suffix('.cancel').exists():
         state = T.CANCEL_REQUESTED
-    return T.view(ref, state, result=result.get('value'), error=None if result.get('success') else result.get('error'),
+    return enrich(ref, T.view(ref, state, result=result.get('value'), error=None if result.get('success') else result.get('error'),
                   accepted_at=(result.get('_run_times') or [None, None])[0],
                   ended_at=(result.get('_run_times') or [None, None])[1] if state in T.TERMINAL else None,
-                  progress={'resume': result.get('resume'), 'waiting': result.get('waiting')})
+                  progress={'resume': result.get('resume'), 'waiting': result.get('waiting')}))
 
 
 def completed_call(ref, source):
@@ -113,6 +114,9 @@ def task_cancel(ref):
     current = task_status(ref)
     if current['state'] in T.TERMINAL or current['state'] == T.UNKNOWN:
         return current
+    from ibl_run_control import mark_cancel
+    if mark_cancel(ref):
+        return task_status(ref)
     path = journal_root(ref.get('owner') or '.') / (ref['task_id'] + '.cancel')
     path.touch(mode=0o600)
     # A suspended owner wait is picked up by the same worker, even if its child
@@ -174,7 +178,8 @@ def sweep():
 def start():
     global _worker
     import task_receipts as T
-    T.register('ibl_run', task_status, task_cancel)
+    from ibl_run_control import register
+    register()
     if _worker and _worker.is_alive():
         return
     _stop.clear()

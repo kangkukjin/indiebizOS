@@ -15,6 +15,24 @@ def normalize(contract, args):
     return out
 
 
+def normalize_binding(contract, binding):
+    from dataclasses import replace
+    aliases = contract.get('aliases', {})
+    values = normalize(contract, binding.value)
+    if not aliases or values.keys() == binding.value.keys():
+        return replace(binding, value=values)
+    from common.expression_eval import Binding
+    parts = {aliases.get(k, k): (binding.parts or {}).get(k, Binding(
+        v, binding.evidence, origins=tuple((eid, (*path, k)) for eid, path in binding.origins)))
+             for k, v in binding.value.items()}
+    # Field certificates follow renamed fields; an entire-record certificate
+    # cannot certify the changed record shape.
+    certificates = tuple({**c, 'scope': [aliases.get(c['scope'][0], c['scope'][0]), *c['scope'][1:]]}
+                         for c in binding.certificates if c.get('scope'))
+    return replace(binding, value=values, parts=parts, certificates=certificates)
+
+
+
 def pipe_receiver(contract, present):
     """파이프 값이 들어갈 인자. `pipe_input_with:{명시 인자: 받는 자리}` 선언이 있고 그 인자가 명시됐으면
     그 자리가 받는다 — 예: join 은 right 를 명시하면 파이프 값이 left 다($왼쪽 >> [table:join]{right:…})."""

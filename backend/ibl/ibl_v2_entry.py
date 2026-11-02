@@ -156,6 +156,8 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                 journal.db.execute('INSERT INTO function_snapshot VALUES(?,?)',
                                    (json.dumps(plan.dependencies.get('function_refs', [])), receipt_access_scope()))
                 journal.db.commit()
+            from ibl_run_control import publish
+            publish(journal, plan, project_path)
             journal.announce(plan.fingerprint)
             from ibl_continuations import remember, finished
             remember(journal, request, project_path, agent_id, input_evidence)
@@ -167,6 +169,8 @@ def _handle_request(request, project_path=".", agent_id=None, cancel_check=None,
                              input_evidence=input_evidence, value_protocols=protocols,
                              reuse_models=reuse.get("models", True) if reuse else True)
             result = runtime.run()
+            from ibl_run_control import finish as finish_control
+            finish_control(journal, result)
             finished(journal, result, project_path)
         try:
             from ibl_v2_learning import record_functions

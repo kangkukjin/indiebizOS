@@ -209,3 +209,17 @@ def test_original_cannot_be_overwritten_with_transcript(audio, monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_media_coordinates_and_source_revision_are_owned_by_audio_producer(audio):
+    import source_observation
+    api, ctx, directory = audio
+    result = api.listen_file({'path': 'tone.wav', 'start': 2, 'end': 4}, ctx, 'inspect')
+    assert result['success'], result
+    observation = source_observation.resolve(result['source_observation_ref'], locus=str(directory / 'tone.wav'))
+    assert observation['version']['sha256'] == result['source_hash']
+    assert observation['scope']['unit'] == 'seconds'
+    assert observation['scope']['coordinate_system'] == 'source_media_time'
+    assert observation['scope']['ranges'] == [[2, 4]]
+    assert not observation['scope']['complete']
+    assert observation['stable']

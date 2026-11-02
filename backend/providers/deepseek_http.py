@@ -97,6 +97,8 @@ class DeepSeekHTTPProvider(BaseProvider):
             body["tools"] = tools
         if self.disable_thinking or force_thinking_off:
             body["thinking"] = {"type": "disabled"}
+        from model_request_budget import check_payload
+        check_payload(self, body, ensure_ascii=True)
         r = requests.post(url, json=body, timeout=180,
                           headers={"Authorization": f"Bearer {self.api_key}"})
         if r.status_code != 200:
@@ -141,7 +143,10 @@ class DeepSeekHTTPProvider(BaseProvider):
     def process_message(self, message: str, history: List[Dict] = None,
                         images: List[Dict] = None, execute_tool: Callable = None, cancel_check: Callable = None) -> str:
         # images 는 무시 — 딥시크 비전 없음(이미지 파트=400). gemini_http v1 과 동급.
+        self.last_failure_kind = None
+        self.last_failure_details = None
         if not self._client:
+            self.last_failure_kind = "unavailable"
             return "AI가 초기화되지 않았습니다. DEEPSEEK_API_KEY를 확인해주세요."
         messages = self._build_messages(message, history or [])
         tools = self._openai_tools()
@@ -150,6 +155,7 @@ class DeepSeekHTTPProvider(BaseProvider):
         force_thinking_off = False
         while iteration < self.MAX_TOOL_ITERATIONS:
             if cancel_check and cancel_check():
+                self.last_failure_kind = "cancelled"
                 return (accumulated + "\n사용자가 작업을 중단했습니다.").strip()
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             # ★보존(요약) 먼저, 삭제는 최후 — 순서가 곧 정책이다(base 의 임계값 주석 참조).
@@ -165,6 +171,7 @@ class DeepSeekHTTPProvider(BaseProvider):
                 data = self._execute_with_retry(
                     self._chat, messages, tools, force_thinking_off)
             except Exception as e:
+                from model_request_budget import failure_kind
                 if (not force_thinking_off and "reasoning_content" in str(e)
                         and "passed back" in str(e)):
                     print("[DeepSeekHTTP] reasoning_content 400 — thinking을 끄고 1회 복구")
@@ -173,8 +180,10 @@ class DeepSeekHTTPProvider(BaseProvider):
                         data = self._execute_with_retry(
                             self._chat, messages, tools, force_thinking_off)
                     except Exception as retry_error:
+                        self.last_failure_kind = self.last_failure_kind or failure_kind(retry_error)
                         return (accumulated + f"\n\n[LLM 호출 오류] {retry_error}").strip()
                 else:
+                    self.last_failure_kind = self.last_failure_kind or failure_kind(e)
                     return (accumulated + f"\n\n[LLM 호출 오류] {e}").strip()
 
             # 토큰·캐시 적중 원장 (2026-09-02) — 그전엔 이 경로가 usage 를 아예 안 읽었다.
@@ -182,6 +191,7 @@ class DeepSeekHTTPProvider(BaseProvider):
 
             choices = data.get("choices") or []
             if not choices:
+                self.last_failure_kind = "empty_response"
                 return (accumulated or "[응답 없음]").strip()
             msg = choices[0].get("message") or {}
             text = msg.get("content") or ""

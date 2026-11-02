@@ -103,3 +103,20 @@ def test_parallel_parent_resource_and_explicit_child_conflict():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_alias_binding_preserves_selected_origins_control_and_certificates():
+    from common.expression_eval import Binding
+    from ibl_callable_contract import normalize_binding
+    cert = {'scope': ['old'], 'value_hash': 'value-revision', 'id': 'C1'}
+    original = Binding.record({'old': Binding(None, frozenset({1}), origins=((1, ('value',)),)),
+                               'empty': Binding([], frozenset({2}))}).controlled({3})
+    from dataclasses import replace
+    original = replace(original, certificates=(cert,))
+    normalized = normalize_binding({'aliases': {'old': 'new'}}, original)
+    assert normalized.value == {'new': None, 'empty': []}
+    selected = normalized.select('new')
+    assert selected.evidence == {1, 3} and selected.origins == ((1, ('value',)),)
+    assert selected.certificates == ({**cert, 'scope': []},)
+    assert normalized.select('empty').evidence == {2, 3}
+    assert original.value == {'old': None, 'empty': []}

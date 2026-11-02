@@ -99,3 +99,72 @@ def test_small_local_window_still_has_usable_input_budget():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_transport_bytes_json_escaping_and_images_are_separate_from_tokens():
+    from model_request_budget import payload_text, check, InputTooLarge
+    p = provider('openai', 'gpt-4.1')
+    p.request_limits = {'bytes': 1000, 'source': 'test transport contract'}
+    wire = payload_text({'messages': [{'content': '한글\\"' * 180}], 'image': {'base64': 'a' * 500}})
+    assert len(wire.encode()) > len(wire)
+    with pytest.raises(InputTooLarge) as exc:
+        check(p, wire, images=[{}])
+    assert 'bytes' in exc.value.details['exceeded']
+    p.request_limits = {}
+    metrics = check(p, payload_text({'images': [{'base64': 'a' * 100000}]}), images=[{}])
+    assert metrics['chars'] > 100000 and metrics['estimated_tokens'] < 9000
+
+
+@pytest.mark.parametrize('kind', ['deepseek_http', 'gemini_http', 'ollama', 'openai', 'anthropic'])
+def test_final_api_assembly_blocks_transport_before_network(kind, monkeypatch):
+    from types import SimpleNamespace
+    p = provider(kind, 'fixture')
+    p._client = SimpleNamespace()  # no network methods; gate must win
+    p._evaluation_budget = True
+    p.request_limits = {'bytes': 1, 'source': 'fixture'}
+    p.context_window_tokens = 100000
+    monkeypatch.setattr('requests.post', lambda *a, **k: pytest.fail('network must not run'))
+    monkeypatch.setattr('situation_delivery.prepare', lambda *a, **k: None)
+    try:
+        p.process_message('가\\"\n')
+    except RuntimeError:
+        assert kind == 'openai'
+    assert p.last_failure_details['exceeded']['bytes']['limit'] == 1
+    assert p.last_failure_kind == 'input_too_large'
+
+
+@pytest.mark.parametrize('kind', ['deepseek_http', 'gemini_http'])
+def test_rest_transport_error_with_verdict_is_failure_without_size_retry(kind, monkeypatch):
+    from types import SimpleNamespace
+    p = provider(kind, 'fixture')
+    p._client = True
+    p.disable_thinking = True
+    p._evaluation_budget = True
+    requests = []
+    def post(*a, **kw):
+        requests.append(kw)
+        return SimpleNamespace(status_code=400, text='input_too_large ACHIEVED')
+    monkeypatch.setattr('requests.post', post)
+    monkeypatch.setattr('situation_delivery.prepare', lambda *a, **k: None)
+    p.process_message('기준')
+    assert p.last_failure_kind == 'input_too_large'
+    assert len(requests) == 1
+
+
+def test_input_size_counts_do_not_match_retryable_http_status_substrings():
+    from providers.base import RetryConfig
+    from model_request_budget import InputTooLarge
+    assert not RetryConfig().is_retryable(InputTooLarge({'chars': {'used': 500000}}))
+    assert not RetryConfig().is_retryable(RuntimeError('input_too_large: 503000 characters'))
+
+
+def test_gemini_sdk_final_config_is_checked_before_client_call():
+    from types import SimpleNamespace
+    from model_request_budget import InputTooLarge
+    from providers.gemini import GeminiProvider
+    p = provider('gemini', 'fixture')
+    p._genai_client = SimpleNamespace()
+    p._evaluation_budget = True
+    p.request_limits = {'bytes': 1}
+    with pytest.raises(InputTooLarge):
+        GeminiProvider._create_stream_with_retry(p, [{'text': '가'}], {'system_instruction': '정책'})

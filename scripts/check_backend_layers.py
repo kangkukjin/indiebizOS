@@ -53,7 +53,7 @@ LAYERS = {
         "generation_store", "control_base",
         "desktop_notify", "device_registry", "doc_ir", "document_converter", "control_conditions",
         "member_jobs", "member_enrollment", "member_runtime", "member_model_settings", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys", "hardware_registry",
-        "ai_candidates", "imap_reader", "logging_utils", "mime_compat", "model_resolver", "model_context", "nip17", "nip44",
+        "ai_candidates", "imap_reader", "logging_utils", "mime_compat", "model_resolver", "model_context", "model_request_budget", "nip17", "nip44",
         "resident_store", "phone_jobs", "principal", "approval_tokens", "action_requires", "task_receipts", "warehouse_paths", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
         "steer_inbox", "thread_context", "execution_turn", "thumbnails", "window_requests", "write_ledger",
@@ -85,7 +85,7 @@ LAYERS = {
         "ibl_situation",
         "reusable_catalog", "function_library", "function_revalidation", "function_consumers", "function_install",
         "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
-        "ibl_v2_case", "ibl_v2_exits", "ibl_v2_recovery", "ibl_v2_repeat", "ibl_v2_semantic", "ibl_v2_semantic_store", "ibl_v2_binding", "ibl_v2_component", "ibl_v2_component_runtime", "ibl_v2_repair_graph", "ibl_v2_repair", "ibl_v2_completion", "ibl_v2_access", "ibl_v2_requirements", "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_call_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies", "ibl_contract_drift",
+        "ibl_v2_case", "ibl_v2_exits", "ibl_v2_recovery", "ibl_v2_repeat", "ibl_v2_semantic", "ibl_v2_semantic_store", "ibl_v2_binding", "ibl_v2_component", "ibl_v2_component_runtime", "ibl_v2_repair_graph", "ibl_v2_repair", "ibl_v2_completion", "ibl_v2_access", "ibl_v2_requirements", "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_call_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_run_control", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies", "ibl_contract_drift",
         "member_bridge", "member_profile", "member_files",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
@@ -116,7 +116,7 @@ LAYERS = {
         "weekly_audits",
         "agent_pipeline", "dialogue_continuation", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view", "model_value_preview",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
-        "cognitive_eval", "final_evaluator", "repair_readiness", "repair_policy", "repair_check_runner", "repair_resume", "cognitive_recall", "cognitive_trace", "history_checkpoint",
+        "cognitive_eval", "final_evaluator", "evaluation_input", "repair_readiness", "repair_policy", "repair_check_runner", "repair_resume", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "health_probes", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "checked_program_sources", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value", "ibl_v2_experience",
         "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "supervisor_interventions", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope", "reflex_execution",

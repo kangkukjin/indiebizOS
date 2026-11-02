@@ -1011,6 +1011,25 @@ class Supervisor:
                 self.log("repair.admitted", role="harness", expected_recheck_input=expected,
                          allocation_extension=max(0, expected - remaining), budget_policy=self.config["budget_mode"])
                 self.last_decision = decision
+                if evidence_missing and decision.get('evidence_requests'):
+                    from evaluation_input import recover
+                    recovery_started = time.monotonic()
+                    try:
+                        with self.evaluation_stage('recover'):
+                            recovered = recover(self, decision['evidence_requests'])
+                        changed = snapshot_error(self)
+                        if changed:
+                            raise ValueError(changed)
+                        self._evaluation_packet['attachments'] = [
+                            *self._evaluation_packet.get('attachments', []), *recovered]
+                        self._resume_evaluation = True
+                        self.log('evaluation.evidence_recovered', role='harness',
+                                 requests=decision['evidence_requests'],
+                                 elapsed_s=round(time.monotonic() - recovery_started, 6))
+                    except (ValueError, OSError) as exc:
+                        decision = {'status': 'UNKNOWN', 'reason': str(exc)}
+                        break
+                    continue
                 if not hasattr(self, "_repair_evidence_since"):
                     self._repair_evidence_since = self.store.sequence
                 self.phase = "repair"

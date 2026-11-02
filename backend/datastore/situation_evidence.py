@@ -134,7 +134,8 @@ def source_published(evidence, ref):
     source = evidence['source']
     version = evidence.get('version') or {}
     complete = bool((evidence.get('scope') or {}).get('complete'))
-    revision = version.get('sha256') if complete and evidence.get('stable') else None
+    whole_version = complete or version.get('scope') == 'whole_source'
+    revision = version.get('sha256') if whole_version and evidence.get('stable') else None
     from runtime_utils import file_resource_identity
     emit({'kind': source['kind'], 'device': source.get('device_id'), 'address': file_resource_identity(source['address'])},
          'version' if revision else 'partial_read',

@@ -290,9 +290,10 @@ def project_memory(row, *, view=None):
         if current is None or ref.get('scope_id') != current.get('scope_id'):
             raise ValueError('현재 소유 범위에 참조한 관용구가 없습니다.')
         from ibl_edition import pin_source
+        evidence_revision = provenance.get('evidence_revision', ref['revision'])
         result.update(ibl_code=pin_source(current['source'], 2), alias=current['name'],
-                      function_ref=reference(current), evidence_revision=ref['revision'],
-                      evidence_stale=current['revision'] != ref['revision'])
+                      function_ref=reference(current), evidence_revision=evidence_revision,
+                      evidence_stale=current['revision'] != evidence_revision)
         from capability_history import function_statistics
         from ibl_signature_slot import signature_of
         result.update(function_statistics(reference(current)))
@@ -300,7 +301,8 @@ def project_memory(row, *, view=None):
         if result['evidence_stale']:
             result.update(returns='', avg_ms=-1, avg_tokens=-1)
         result['provenance'] = json.dumps({**provenance, 'function_ref': reference(current),
-                                         'evidence_revision': ref['revision']}, ensure_ascii=False)
+                                         'evidence_revision': evidence_revision,
+                                         'evidence_stale': result['evidence_stale']}, ensure_ascii=False)
     except (OSError, ValueError, KeyError) as exc:
         result['function_problem'] = str(exc)
     return result

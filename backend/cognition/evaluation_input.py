@@ -1,6 +1,7 @@
 """One evaluation budget, immutable evidence, explicit selection and bounded recovery."""
 import hashlib
 import json
+import re
 import time
 
 from model_request_budget import InputTooLarge, check, serialized
@@ -51,9 +52,10 @@ class EvaluationPrompt(str):
         def render(budget):
             # Recoveries and explicit staged submissions get a first share; the
             # remaining budget is shared across every other file/context/trace.
-            preferred = {str(i): len(r['text']) for i, r in enumerate(rows)
-                         if r['role'] in {'recovered', 'submission'}}
-            sizes = allocate(preferred, budget // 2, cap=budget) if preferred else {}
+            recovered = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == 'recovered'}
+            sizes = allocate(recovered, budget, cap=budget) if recovered else {}
+            preferred = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == 'submission'}
+            sizes.update(allocate(preferred, (budget - sum(sizes.values())) // 2, cap=budget) if preferred else {})
             left = budget - sum(sizes.values())
             rest = allocate({k: n - sizes.get(k, 0) for k, n in lengths.items()}, left, cap=budget)
             sizes = {k: sizes.get(k, 0) + rest.get(k, 0) for k in lengths}
@@ -108,6 +110,10 @@ class EvaluationPrompt(str):
                         'prepare_s': round(time.monotonic() - started, 6)}
         from episode_logger import record_trajectory_event
         record_trajectory_event('evaluation.input_budget', self.metrics)
+        incomplete = [r for r in manifest if r['role'] == 'recovered' and r['shown_chars'] < r['original_chars']]
+        if incomplete:
+            raise InputTooLarge({'reason': '회수 요청 구간을 평가 입력에 전부 전달할 수 없습니다',
+                                 'references': [r['source_ref'] for r in incomplete]})
         return prompt
 
 
@@ -132,34 +138,85 @@ def context_sections(context):
     return dumps(required), sections
 
 
+def evidence_references(packet):
+    """One projection for presentation and validation; never overwrite conflicting versions."""
+    refs = {}
+
+    def add(key, revision, total, subject, criteria=()):
+        if not isinstance(key, str) or not key:
+            return
+        item = {'evidence_id': key, 'revision': revision, 'total': total,
+                'unit': 'unicode_chars', 'subjects': [subject], 'criterion_ids': list(criteria),
+                'availability': 'not_read', 'ambiguous': False}
+        prior = refs.get(key)
+        if prior:
+            prior['ambiguous'] |= (prior['revision'] != revision or
+                                   prior['total'] is not None and total is not None and prior['total'] != total)
+            if prior['total'] is None:
+                prior['total'] = total
+            prior['subjects'] = list(dict.fromkeys([*prior['subjects'], subject]))
+            prior['criterion_ids'] = sorted(set(prior['criterion_ids']) | set(criteria))
+        else:
+            refs[key] = item
+
+    for row in [*packet.get('attachments', []), *packet.get('selection_sources', [])]:
+        add(row.get('source_ref'), row.get('revision'), row.get('total'),
+            row.get('subject', 'selected_section'), row.get('criterion_ids', []))
+    for index, call in enumerate(packet.get('context', {}).get('evidence_index', [])):
+        for field in ('input', 'result'):
+            ref = call.get(field) or {}
+            add(ref.get('id'), ref.get('id'), ref.get('chars'), f'evidence_index[{index}].{field}')
+    for row in refs.values():
+        row['recoverable'] = bool(not row['ambiguous'] and re.fullmatch(r'[0-9a-f]{64}', row['evidence_id'])
+                                  and row['revision'] == row['evidence_id'])
+    return list(refs.values())
+
+
 def evidence_requests(feedback, packet):
-    """Validate requests against the exact turn/criteria, never arbitrary paths or URLs."""
-    import re
-    match = re.search(r'(?m)^EVIDENCE_REQUESTS:\s*(\[.*\])\s*$', feedback)
-    if not match:
-        return None
+    """Classify protocol errors separately from missing evidence; normalize only immutable IDs."""
+    result = {'status': 'absent', 'requests': [], 'errors': [], 'normalizations': []}
+    matches = re.findall(r'(?m)^EVIDENCE_REQUESTS:[ \t]*(.*)$', feedback)
+    if not matches:
+        return result
+    result['status'] = 'invalid'
     try:
-        rows = json.loads(match[1])
-        allowed = {r['source_ref']: r for r in [*packet.get('attachments', []), *packet.get('selection_sources', [])] if r.get('source_ref')}
-        for call in packet['context'].get('evidence_index', []):
-            for field in ('input', 'result'):
-                ref = call.get(field) or {}
-                if ref.get('id'):
-                    allowed.setdefault(ref['id'], {'source_ref': ref['id'], 'revision': ref['id'],
-                                                    'total': ref.get('chars')})
-        criteria = {r['id'] for r in packet['context']['criteria_contract']['criteria']}
+        if len(matches) != 1:
+            raise ValueError('요청 선언은 하나여야 합니다')
+        rows = json.loads(matches[0])
         if not isinstance(rows, list) or not 1 <= len(rows) <= 16:
-            raise ValueError('요청 수')
-        for row in rows:
-            ref = allowed.get(row.get('evidence_id'))
-            start, end = row.get('start'), row.get('end')
-            if (not ref or row.get('criterion_id') not in criteria or row.get('revision') != ref['revision']
-                    or type(start) is not int or type(end) is not int or not 0 <= start < end
-                    or (ref.get('total') is not None and end > ref['total'])):
-                raise ValueError('참조·판본·범위 불일치')
-        return rows
-    except (ValueError, KeyError, TypeError, AttributeError):
-        return []
+            raise ValueError('요청은 1~16개 배열이어야 합니다')
+    except ValueError as exc:
+        result['errors'].append({'code': 'format', 'reason': str(exc)})
+        return result
+    allowed = {r['evidence_id']: r for r in evidence_references(packet)}
+    criteria = {r['id'] for r in packet['context']['criteria_contract']['criteria']}
+    for index, row in enumerate(rows):
+        error = None
+        ref = allowed.get(row.get('evidence_id')) if isinstance(row, dict) and isinstance(row.get('evidence_id'), str) else None
+        if not isinstance(row, dict):
+            error = 'format'
+        elif not ref or not ref['recoverable']:
+            error = 'reference_conflict' if ref and ref['ambiguous'] else 'reference'
+        elif not isinstance(row.get('criterion_id'), str) or row['criterion_id'] not in criteria:
+            error = 'criterion'
+        elif 'revision' in row and row['revision'] != ref['revision']:
+            error = 'revision'
+        elif (type(row.get('start')) is not int or type(row.get('end')) is not int
+              or not 0 <= row['start'] < row['end']
+              or ref['total'] is not None and row['end'] > ref['total']):
+            error = 'range'
+        if error:
+            result['errors'].append({'index': index, 'code': error})
+            continue
+        normalized = {k: row[k] for k in ('criterion_id', 'evidence_id', 'start', 'end')}
+        normalized['revision'] = ref['revision']
+        result['requests'].append(normalized)
+        if 'revision' not in row:
+            result['normalizations'].append({'index': index, 'field': 'revision',
+                                              'value': ref['revision'], 'reason': 'immutable_turn_evidence'})
+    if not result['errors']:
+        result['status'] = 'normalized' if result['normalizations'] else 'valid'
+    return result
 
 
 def recover(controller, requests):

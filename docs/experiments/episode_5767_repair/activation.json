@@ -1,0 +1,82 @@
+{
+  "phase": "ACTIVE",
+  "generation": "93c6249a3f6a203187dd1b30ae413291",
+  "code_digest": "04ea81623b6bd9b2df3593f0f8763d12",
+  "files": [
+    {
+      "path": "backend/base/corpus_policy.py",
+      "same": true,
+      "sha256": "ef95fd9348727fce294e8437e9c05ebcd115e5b63bbeb9a871f94e9e009ac309"
+    },
+    {
+      "path": "backend/cognition/associative_recall.py",
+      "same": true,
+      "sha256": "2fcef4736c4f36d2e26be368db808fd400d48c407e032a45f61c913251a59c7a"
+    },
+    {
+      "path": "backend/cognition/cognitive_eval.py",
+      "same": true,
+      "sha256": "aac5a36c33b92299322e628708251285dfe9d54a230c659bd7c4996f3e0525c0"
+    },
+    {
+      "path": "backend/cognition/conscious_supervisor.py",
+      "same": true,
+      "sha256": "0ea6a465991fb91b6010bce21e6a70ecfd1ac313a6f40bb4030643c3a1683d10"
+    },
+    {
+      "path": "backend/cognition/evaluation_input.py",
+      "same": true,
+      "sha256": "da6fb2dde4ebdf4d074ae06e28d8a45e8eb1b93b4837fe6941ec1290fac25151"
+    },
+    {
+      "path": "backend/cognition/final_evaluator.py",
+      "same": true,
+      "sha256": "5218b83e02dcc664daba75c5b89a3fc515a6439c9649ddecfb8d56a4bc1cd3fa"
+    },
+    {
+      "path": "backend/cognition/ibl_usage_rag.py",
+      "same": true,
+      "sha256": "8fdbd177c31f8e38e5d1d3e2c9671e1e24a3b09f7ae3936b1bfca15f10195320"
+    },
+    {
+      "path": "backend/cognition/repair_policy.py",
+      "same": true,
+      "sha256": "20ca026577dd8626d6e19bc28689b11836e6cddd186e9094af7f887b08ab8446"
+    },
+    {
+      "path": "backend/datastore/function_store.py",
+      "same": true,
+      "sha256": "454f5d4a4b7b76f66695f747c5321610b277e6679100da2d1a69c0507887d668"
+    },
+    {
+      "path": "backend/datastore/ibl_usage_db.py",
+      "same": true,
+      "sha256": "a691c6f066993647ef0a8ee673b3da4d8386959609f2a7e730dc4622581f60df"
+    },
+    {
+      "path": "backend/datastore/repair_continuation.py",
+      "same": true,
+      "sha256": "67ce1322e4193bdbcd539d1e81a68749d5f3acaf5d414a0f47d911d6fbdcfef8"
+    },
+    {
+      "path": "backend/ibl/ibl_run_control.py",
+      "same": true,
+      "sha256": "57ad01d6912dfc313bb7321dbf68aa02337ac6cf2a20bc1b6cd0294f2bf900c4"
+    },
+    {
+      "path": "backend/ibl/ibl_v2_runtime.py",
+      "same": true,
+      "sha256": "7d6f886ff83bdc1c00597eb6c0ba40b9c82817a7c5892cee3815a019c1df85d1"
+    },
+    {
+      "path": "data/ibl_nodes.yaml",
+      "same": true,
+      "sha256": "780d2b7a556515acc460d1af7683d094ef91b78cc4cde72382673c2b82f008b5"
+    },
+    {
+      "path": "data/ibl_nodes_src/self.yaml",
+      "same": true,
+      "sha256": "c2ad1c222aed4c0959955a464bde7970bcc617250835dd92cc1534c0e33a27f0"
+    }
+  ]
+}

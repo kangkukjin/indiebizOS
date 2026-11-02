@@ -16,6 +16,24 @@ ROOT = Path(__file__).resolve().parents[1]
 LESSONS = json.loads((ROOT / 'data/idioms/current_call_lessons.json').read_text())['idioms']
 
 
+def test_cached_search_observes_new_revision_and_retirement(memory, monkeypatch):
+    from function_library import register, retire
+    from ibl_usage_db import IBLUsageDB
+    db = IBLUsageDB()
+    monkeypatch.setattr(db, 'hippo_disabled', lambda: False)
+    monkeypatch.setattr(db, '_rented_mode', lambda: False)
+    monkeypatch.setattr(db, 'is_semantic_available', lambda: False)
+    query = lambda: db.search_hybrid('calibration', aliased_only=True, alpha=0)
+    assert not query()
+    first = register('calibration', '#!ibl edition=2\n[def:calibration]($x){return $x*2}')
+    assert query()[0].alias == 'calibration'
+    second = register('calibration', '#!ibl edition=2\n[def:calibration]($x){return $x*3}',
+                      expected_revision=first['revision'])
+    assert json.loads(query()[0].provenance)['function_ref']['revision'] == second['revision']
+    retire('calibration')
+    assert not query()
+
+
 def db():
     conn = sqlite3.connect(':memory:')
     conn.execute('CREATE TABLE ibl_examples(intent,ibl_code,success_count,fail_count,topic,alias,returns,signature,always_on,updated_at)')

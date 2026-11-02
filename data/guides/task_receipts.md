@@ -78,6 +78,9 @@ return {상태: $c.state}                                                # cance
 실행 중인 `ibl_run`의 `status.progress`는 `root_task`, `plan_hash`, `boundaries`,
 `requests`를 제공한다. boundary의 `node_id`, `revision`, `next_ordinal`을 그대로 사용한다.
 지원 대상이 없으면 boundaries는 빈 목록이다. 시작한 호출을 바꾸거나 재실행하지 않는다.
+각 경계의 `input_contract`는 인자 형식·기본값 계약이다. `input_state: unresolved_until_boundary`와
+`expected_args_hash: null`은 실제 입력이 아직 해소되지 않았다는 뜻이다. status는 미래 표현식을
+실행하거나 현재 비밀 값을 노출하지 않는다. 원래 프로그램의 기대 입력을 확인할 수 없으면 조향을 보류한다.
 읽기·순수 호출과 **자원 선언이 있는 아직 시작하지 않은 쓰기**를 지원한다.
 병렬·each가 없는 순차 계획의 쓰기는 `resource_policy:declared`로 표시한다. 변경 전후
 선언된 읽기/쓰기 자원을 모두 확인할 수 있으면 경로·수신자 등의 대상 인자도 바꿀 수 있다.

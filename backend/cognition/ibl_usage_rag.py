@@ -218,9 +218,12 @@ class IBLUsageRAG:
         # 회상 캐시는 활성 선택 변경과 함께 세대가 바뀐다.
         from vocabulary_state import revision
         active_revision = revision()
+        from function_store import catalog
+        functions = catalog()
+        function_generation = (functions['scope_id'], functions['generation'])
         # 캐시 키에 요청 주체 — 주인이 데운 캐시를 다른 주체가 받지 않는다(2026-09-14).
         cache_key = hashlib.md5(
-            f"{user_query}_{k}_{allowed_nodes}_{active_revision}_{_principal_key()}".encode()
+            f"{user_query}_{k}_{allowed_nodes}_{active_revision}_{function_generation}_{_principal_key()}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -387,6 +390,10 @@ class IBLUsageRAG:
             except Exception:
                 names, known = [], False
             attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}" name="{_xml_attr(alias)}"'
+            from corpus_policy import function_reference
+            ref = function_reference(getattr(ex, 'provenance', '{}'))
+            if ref:
+                attrs += f' function_id="{_xml_attr(ref["function_id"])}" revision="{_xml_attr(ref["revision"])}"'
             from corpus_policy import applicability_note
             condition = applicability_note(getattr(ex, 'provenance', '{}'))
             if condition:
@@ -591,9 +598,12 @@ def build_execution_memory_detail(user_message: str, allowed_nodes: set = None, 
 
 
 def _exec_detail(xml: str, top_score: float, top_code: str, words=(), phrases=()) -> dict:
-    presented = [{"id": str(getattr(ex, "id", "")), "code": ex.ibl_code, "kind": "word", "alias": getattr(ex, "alias", "") or ""}
+    from corpus_policy import function_reference
+    presented = [{"id": str(getattr(ex, "id", "")), "code": ex.ibl_code, "kind": "word", "alias": getattr(ex, "alias", "") or "",
+                  **({'function_ref': ref} if (ref := function_reference(getattr(ex, 'provenance', '{}'))) else {})}
                  for ex in (words or [])]
-    presented += [{"id": str(getattr(ex, "id", "")), "code": ex.ibl_code, "kind": "phrase", "alias": getattr(ex, "alias", "") or ""}
+    presented += [{"id": str(getattr(ex, "id", "")), "code": ex.ibl_code, "kind": "phrase", "alias": getattr(ex, "alias", "") or "",
+                   'function_ref': function_reference(getattr(ex, 'provenance', '{}'))}
                   for ex in (phrases or [])]
     return {"xml": xml, "top_score": top_score, "top_code": top_code, "presented": presented}
 

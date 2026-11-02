@@ -253,7 +253,16 @@ def review_checkpoint(controller, packet, snapshot, base=None):
     """평가 호출 직전에 작업·증거를 저장한다. 프로세스가 죽어도 실행을 반복하지 않는다."""
     from principal import is_owner
     from thread_context import get_task_origin
-    if not controller.repair_granted or get_task_origin() != "user" or not is_owner() or controller.cancelled():
+    if controller.cancelled():
+        return None
+    if not controller.repair_granted or get_task_origin() != "user" or not is_owner():
+        # Ordinary reviews persist their budget and snapshot in the same turn
+        # store without scheduling a repair or acquiring a repair grant.
+        atomic_json(controller.store.directory / 'repair_review.json', {
+            'packet': packet, 'snapshot': snapshot, 'blocks': controller.store.blocks,
+            'version': controller.store.version, 'sequence': controller.store.sequence,
+            'store': str(controller.store.directory),
+            'repair_counts': getattr(controller, '_final_repair_counts', [0, 0])})
         return None
     previous = current()
     config = controller.runner.config

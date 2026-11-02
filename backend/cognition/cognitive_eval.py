@@ -528,7 +528,17 @@ class CognitiveEvalMixin:
                     ref = store.evidence(section['text'])
                     section.update(text=store.read_evidence(ref['id'], 0, None)['text'],
                                    source_ref=ref['id'], revision=ref['id'], total=ref['chars'])
-        self.evaluation_sources = [{k: r[k] for k in ('source_ref', 'revision', 'total')} for r in sections]
+        self.evaluation_sources = [{k: r[k] for k in ('source_ref', 'revision', 'total', 'subject', 'criterion_ids')} for r in sections]
+        from evaluation_input import evidence_references
+        try:
+            reference_context = json.loads(evaluation_context) if evaluation_context else {}
+        except (ValueError, TypeError):
+            reference_context = {}
+        self.evaluation_references = evidence_references({'context': reference_context,
+                                                          'selection_sources': self.evaluation_sources})
+        if self.evaluation_references:
+            prompt += ('\n## 회수 가능한 원문 주소 (표시 구획과 그 안의 원문은 별개; 참조는 열람 증명이 아님)\n'
+                       + json.dumps(self.evaluation_references, ensure_ascii=False))
         prompt = EvaluationPrompt(prompt, sections, criteria)
 
         # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.

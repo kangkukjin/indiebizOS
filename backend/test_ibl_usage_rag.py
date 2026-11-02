@@ -110,3 +110,14 @@ def test_explicit_choice_change_cancel_and_permission_survive_executor_refresh(m
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+@pytest.mark.parametrize('channel', ['words', 'phrases'])
+def test_reference_identity_survives_both_recall_channels(channel):
+    from types import SimpleNamespace
+    from ibl_usage_rag import _exec_detail
+    ref = {'scope_id': 'scope', 'function_id': 'function', 'revision': 'revision'}
+    row = SimpleNamespace(id=1, ibl_code='[fn:value]{}', alias='value',
+                          provenance=json.dumps({'function_ref': ref}))
+    detail = _exec_detail('', 0, '', **{channel: [row]})
+    assert detail['presented'][0]['function_ref'] == ref

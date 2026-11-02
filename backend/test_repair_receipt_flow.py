@@ -231,8 +231,12 @@ def test_semantic_only_checks_selected_condition_and_retrieves_original(repair, 
         assert [r['id'] for r in packet['context']['criteria_contract']['criteria']] == ['C2']
         seen.append(packet)
         if len(seen) == 1:
-            return json.dumps({'status': 'UNKNOWN', 'recoverable': True, 'reason': ref['id']})
-        assert 'tail proof' in packet['context']['recovered_evidence'][0]['text']
+            return json.dumps({'status': 'UNKNOWN', 'recoverable': True, 'reason': ref['id'],
+                'evidence_requests': [{'criterion_id': 'C2', 'evidence_id': ref['id'],
+                                       'revision': ref['id'], 'start': 0, 'end': ref['chars']}]})
+        recovered = [r for r in packet['attachments'] if r['role'] == 'recovered']
+        assert len(recovered) == 1 and 'tail proof' in recovered[0]['text']
+        assert recovered[0]['revision'] == ref['id'] and recovered[0]['total'] == ref['chars']
         return json.dumps({'status': 'APPROVED', 'workspace_coverage': [
             {'criterion_id': 'C2', 'status': 'passed', 'evidence_ids': ['observation']}]})
     monkeypatch.setattr('final_evaluator.invoke', invoke)

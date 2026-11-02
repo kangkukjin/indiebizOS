@@ -8,12 +8,27 @@ def applicability_note(raw):
     """Shared compact applicability projection; private provenance stays in storage."""
     try:
         data = json.loads(raw) if isinstance(raw, str) else raw
+        if data.get('evidence_stale'):
+            return ''  # Old applicability is evidence about the old definition only.
         condition = data.get('applicability')
         if isinstance(condition, str):
             return condition[:240] + ('…(조건 발췌)' if len(condition) > 240 else '')
     except (ValueError, TypeError, AttributeError):
         pass
     return ''
+
+
+def function_reference(raw):
+    """Identity from the owner's projection, not a name or a second definition."""
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else raw
+        ref = data.get('function_ref')
+        if isinstance(ref, dict) and all(isinstance(ref.get(k), str) and ref[k]
+                                         for k in ('scope_id', 'function_id', 'revision')):
+            return {k: ref[k] for k in ('scope_id', 'function_id', 'revision')}
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return None
 
 
 def field(row, key, default=None):

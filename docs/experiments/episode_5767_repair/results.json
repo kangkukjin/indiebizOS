@@ -1,0 +1,766 @@
+{
+  "runs": [
+    {
+      "label": "initial",
+      "artifact": {
+        "path": "data/outputs/episode5767_acceptance_20261103/result.json",
+        "sha256": "79db163e06ef0587e2ab7f0e378ba5e425c199c19a4d4ea9b3baf9ce245fb10a"
+      },
+      "elapsed_s": 153.46965908259153,
+      "provider": "CodexProvider",
+      "model": "gpt-6-astra:high",
+      "calls": 7,
+      "limits": {
+        "model_calls": 10,
+        "per_call_seconds": 180,
+        "total_seconds": 1500,
+        "input_bytes_per_call": 32000,
+        "observed_tokens_stop": 100000,
+        "output_chars": 12000
+      },
+      "input": 100262,
+      "output": 1535,
+      "cache_read_subset": 59136
+    },
+    {
+      "label": "followup",
+      "artifact": {
+        "path": "data/outputs/episode5767_acceptance_followup_20261103/result.json",
+        "sha256": "86cb8361dacb1ba1e8f6ca10ab2507a9bb0ef2ce429a79765ddeb3dbf2c173f8"
+      },
+      "elapsed_s": 53.879660334438086,
+      "provider": "CodexProvider",
+      "model": "gpt-6-astra:high",
+      "calls": 5,
+      "limits": {
+        "model_calls": 10,
+        "per_call_seconds": 180,
+        "total_seconds": 1500,
+        "input_bytes_per_call": 32000,
+        "observed_tokens_stop": 100000,
+        "output_chars": 12000
+      },
+      "input": 78930,
+      "output": 1046,
+      "cache_read_subset": 42240
+    }
+  ],
+  "calls": [
+    {
+      "run": "initial",
+      "index": 0,
+      "elapsed_s": 13.298674000427127,
+      "usage": {
+        "total_input_tokens": 12438,
+        "total_output_tokens": 219,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 12793.4,
+        "avg_request_latency_ms": 12793.4,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "0a903ce81a2e43f1b909df1b187459b6",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 12793,
+          "input": 12438,
+          "output": 219,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "initial",
+      "index": 1,
+      "elapsed_s": 10.40694591589272,
+      "usage": {
+        "total_input_tokens": 15949,
+        "total_output_tokens": 57,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 9905.62,
+        "avg_request_latency_ms": 9905.62,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "ba12a7fb6c1c44ad9e3a5e14255f49ca",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 9906,
+          "input": 15949,
+          "output": 57,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "initial",
+      "index": 2,
+      "elapsed_s": 19.418674124404788,
+      "usage": {
+        "total_input_tokens": 15978,
+        "total_output_tokens": 254,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 18911.63,
+        "avg_request_latency_ms": 18911.63,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "60a294d8c5fc4af696468e59090d67e3",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 18912,
+          "input": 15978,
+          "output": 254,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "initial",
+      "index": 3,
+      "elapsed_s": 16.40622483380139,
+      "usage": {
+        "total_input_tokens": 14135,
+        "total_output_tokens": 187,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 15967.64,
+        "avg_request_latency_ms": 15967.64,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "5d034c10a0384599891ad9e66dd3c2a2",
+          "parent_call_id": null,
+          "role": "unified_distill",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 15968,
+          "input": 14135,
+          "output": 187,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "initial",
+      "index": 4,
+      "elapsed_s": 19.02103175036609,
+      "usage": {
+        "total_input_tokens": 12402,
+        "total_output_tokens": 210,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 18598.96,
+        "avg_request_latency_ms": 18598.96,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "6f08652d38434624aa30d26473fc334a",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 18599,
+          "input": 12402,
+          "output": 210,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "initial",
+      "index": 5,
+      "elapsed_s": 59.63235520943999,
+      "usage": {
+        "total_input_tokens": 13100,
+        "total_output_tokens": 311,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 59133.8,
+        "avg_request_latency_ms": 59133.8,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "c2316cf0f80545449c0b495cdb79f881",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 59134,
+          "input": 13100,
+          "output": 311,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "initial",
+      "index": 6,
+      "elapsed_s": 9.968585249967873,
+      "usage": {
+        "total_input_tokens": 16260,
+        "total_output_tokens": 297,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 9556.67,
+        "avg_request_latency_ms": 9556.67,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "28b531fc40174e999193d7ec010598ea",
+          "parent_call_id": null,
+          "role": "oneshot:evaluate",
+          "phase": "evaluate",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 9557,
+          "input": 16260,
+          "output": 297,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "followup",
+      "index": 0,
+      "elapsed_s": 11.758174708113074,
+      "usage": {
+        "total_input_tokens": 13280,
+        "total_output_tokens": 160,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 11322.94,
+        "avg_request_latency_ms": 11322.94,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "a629336883d54b46bcd866a0a4d10b21",
+          "parent_call_id": null,
+          "role": "oneshot:execution",
+          "phase": "execution",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 11323,
+          "input": 13280,
+          "output": 160,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "followup",
+      "index": 1,
+      "elapsed_s": 12.266224917024374,
+      "usage": {
+        "total_input_tokens": 16266,
+        "total_output_tokens": 296,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 11853.56,
+        "avg_request_latency_ms": 11853.56,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "6fa9637ee6b94ccd93d3f6555fcb2a42",
+          "parent_call_id": null,
+          "role": "oneshot:evaluate",
+          "phase": "evaluate",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 11854,
+          "input": 16266,
+          "output": 296,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "followup",
+      "index": 2,
+      "elapsed_s": 7.832814708352089,
+      "usage": {
+        "total_input_tokens": 16572,
+        "total_output_tokens": 104,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 7395.48,
+        "avg_request_latency_ms": 7395.48,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "55c71fe2e7ba4fcfbe4d193c8692d61f",
+          "parent_call_id": null,
+          "role": "oneshot:evaluate",
+          "phase": "evaluate",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 7395,
+          "input": 16572,
+          "output": 104,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "followup",
+      "index": 3,
+      "elapsed_s": 10.912315040826797,
+      "usage": {
+        "total_input_tokens": 16258,
+        "total_output_tokens": 303,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 10457.53,
+        "avg_request_latency_ms": 10457.53,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "4b9920afbede4586844668ccddf6569b",
+          "parent_call_id": null,
+          "role": "oneshot:evaluate",
+          "phase": "evaluate",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 10458,
+          "input": 16258,
+          "output": 303,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    },
+    {
+      "run": "followup",
+      "index": 4,
+      "elapsed_s": 10.96972749941051,
+      "usage": {
+        "total_input_tokens": 16554,
+        "total_output_tokens": 183,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 10556.18,
+        "avg_request_latency_ms": 10556.18,
+        "reasoning_tokens": null
+      },
+      "billable": [
+        {
+          "call_id": "280f8fede0654c0588f8752e08680747",
+          "parent_call_id": null,
+          "role": "oneshot:evaluate",
+          "phase": "evaluate",
+          "provider": "Codex",
+          "model": "gpt-6-astra:high",
+          "round_index": 1,
+          "tier": "고급",
+          "source": "gear:최대|평가→고급",
+          "measured": true,
+          "elapsed_ms": 10556,
+          "input": 16554,
+          "output": 183,
+          "cache_read": 8448,
+          "cache_create": 0
+        }
+      ],
+      "error": null,
+      "failure": null
+    }
+  ],
+  "results": {
+    "author": {
+      "correct": true,
+      "value": 60,
+      "expected": 60,
+      "reuse": null
+    },
+    "changed_input": {
+      "correct": true,
+      "value": 72,
+      "expected": 72,
+      "reuse": {
+        "used": [
+          "-1366645583593"
+        ],
+        "evidence": "executed",
+        "ibl_calls": 1,
+        "attempted": [
+          "-1366645583593"
+        ],
+        "successful": [
+          "-1366645583593"
+        ],
+        "function_receipts": [
+          {
+            "id": "-1366645583593",
+            "function_ref": {
+              "scope_id": "390413b0f290b586aef4ef28aa96766ff576475a6bee74d6177972c70d20e17e",
+              "function_id": "013e326caee948f2a3c90886f95ac078",
+              "revision": "3df203b0afaaadb81b0fdc1621acd1e3d20e18a42973cf94e5b39675a47fafc7",
+              "name": "calibrate",
+              "edition": 2
+            },
+            "run_id": "ec7d32dfd0c5455daef0f233d8349b3d",
+            "call_id": 11,
+            "success": true,
+            "source_complete": true
+          }
+        ],
+        "quality_contribution": "not_inferred"
+      }
+    },
+    "baseline": {
+      "correct": true,
+      "value": 72,
+      "expected": 72,
+      "reuse": null
+    },
+    "composition": {
+      "correct": true,
+      "value": {
+        "first": 72,
+        "second": 45,
+        "rate": 3.0
+      },
+      "expected": {
+        "first": 72,
+        "second": 45,
+        "rate": 3
+      },
+      "reuse": {
+        "used": [
+          "-1366645583593"
+        ],
+        "evidence": "executed",
+        "ibl_calls": 1,
+        "attempted": [
+          "-1366645583593"
+        ],
+        "successful": [
+          "-1366645583593"
+        ],
+        "function_receipts": [
+          {
+            "id": "-1366645583593",
+            "function_ref": {
+              "scope_id": "390413b0f290b586aef4ef28aa96766ff576475a6bee74d6177972c70d20e17e",
+              "function_id": "013e326caee948f2a3c90886f95ac078",
+              "revision": "3df203b0afaaadb81b0fdc1621acd1e3d20e18a42973cf94e5b39675a47fafc7",
+              "name": "calibrate",
+              "edition": 2
+            },
+            "run_id": "7559a66f5fee4d7a935759625ac37cae",
+            "call_id": 12,
+            "success": true,
+            "source_complete": true
+          },
+          {
+            "id": "-1366645583593",
+            "function_ref": {
+              "scope_id": "390413b0f290b586aef4ef28aa96766ff576475a6bee74d6177972c70d20e17e",
+              "function_id": "013e326caee948f2a3c90886f95ac078",
+              "revision": "3df203b0afaaadb81b0fdc1621acd1e3d20e18a42973cf94e5b39675a47fafc7",
+              "name": "calibrate",
+              "edition": 2
+            },
+            "run_id": "7559a66f5fee4d7a935759625ac37cae",
+            "call_id": 25,
+            "success": true,
+            "source_complete": true
+          }
+        ],
+        "quality_contribution": "not_inferred"
+      },
+      "original_harness_correct": false,
+      "oracle_note": "Initial oracle accepted scalar 3 only; request allowed a record. Audit checks all three independently calculated values; original artifact remains intact."
+    },
+    "distillation": {
+      "skip_reasons": {
+        "deep": "surface_or_evaluation_gate",
+        "forage": "surface_or_evaluation_gate"
+      },
+      "saved": [],
+      "decision": {
+        "schema_version": 1,
+        "execution": [],
+        "deep": [],
+        "forage": [],
+        "skip_reasons": {
+          "execution": "일회성 수치 보정·산술 실행으로, 저장할 만한 새 재사용 절차나 지속적 이익이 확인되지 않는다.",
+          "deep": "선택 가능한 사용자 원문이 제공되지 않았다.",
+          "forage": "재사용할 공간 관습을 뒷받침하는 관측이 제공되지 않았다."
+        }
+      },
+      "stored_rows": []
+    },
+    "initial_steering": {
+      "status": "rejected",
+      "reason": "ValueError: 교체 본문은 인자만 사용하는 순수 값 계산이어야 합니다 (외부 호출·정의·람다 불가)",
+      "guide_in_prompt": false
+    },
+    "initial_completion": {
+      "statuses": [
+        "UNKNOWN",
+        "UNKNOWN"
+      ],
+      "final_reason": "평가 오류로 검수를 마치지 못했습니다: model budget exhausted"
+    },
+    "initial_contradiction": {
+      "statuses": [
+        "UNKNOWN"
+      ],
+      "final_reason": "평가 오류로 검수를 마치지 못했습니다: model budget exhausted"
+    },
+    "steering": {
+      "correct": true,
+      "guide_in_prompt": true,
+      "decision": {
+        "payload": {
+          "root_task": "steering-acceptance",
+          "plan_hash": "faeb42ce7ebc49d16062fa4a8ee4e202c0146b7a3bcb5dbde6781fb8a1875dba",
+          "node_id": "call:65:80",
+          "revision": "1cdcd686492161b048c77e4f531e693424be88ed5b5c9702efdbfad168f9732d",
+          "ordinal": 1,
+          "definition": "return $n*4"
+        },
+        "expected_args": {
+          "n": 5
+        }
+      },
+      "accepted": {
+        "success": true,
+        "accepted": true,
+        "delivery": "accepted",
+        "task_ref": {
+          "kind": "ibl_run",
+          "task_id": "47b4a7de50514a468eb32a60e1b4adc6",
+          "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/outputs/episode5767_acceptance_followup_20261103"
+        }
+      },
+      "requests": [
+        {
+          "request_id": "model-decision",
+          "state": "applied",
+          "reason": null
+        }
+      ],
+      "value": 20,
+      "effects": [
+        41
+      ],
+      "original_run": {
+        "run_id": "47b4a7de50514a468eb32a60e1b4adc6"
+      },
+      "resumed_run": {
+        "run_id": "47b4a7de50514a468eb32a60e1b4adc6"
+      },
+      "same_effect_coordinate": true,
+      "effect_coordinates": [
+        [
+          "invoke",
+          4,
+          "t:send"
+        ]
+      ]
+    },
+    "completion": {
+      "correct": true,
+      "statuses": [
+        "UNKNOWN",
+        "APPROVED"
+      ],
+      "recovered": [
+        {
+          "seq": 16,
+          "kind": "evaluation.evidence_recovered",
+          "role": "harness",
+          "phase": "final",
+          "time": 1793638933.9031549,
+          "task_id": "completion",
+          "requests": [
+            {
+              "criterion_id": "C1",
+              "evidence_id": "b260f33d61727a830a1ae76db9a208dcfd5014fdaf7ac0eea6b89bf59a64f4f8",
+              "start": 20031,
+              "end": 20076,
+              "revision": "b260f33d61727a830a1ae76db9a208dcfd5014fdaf7ac0eea6b89bf59a64f4f8"
+            }
+          ],
+          "elapsed_s": 0.000758
+        }
+      ]
+    },
+    "contradiction": {
+      "correct": true,
+      "statuses": [
+        "UNKNOWN",
+        "REWORK"
+      ],
+      "recovered": [
+        {
+          "seq": 16,
+          "kind": "evaluation.evidence_recovered",
+          "role": "harness",
+          "phase": "final",
+          "time": 1793638952.666309,
+          "task_id": "contradiction",
+          "requests": [
+            {
+              "criterion_id": "C1",
+              "evidence_id": "2df12a617de8efca100e08f172cd21ee503a4516a2bd5892d69bc1e67f31aa3d",
+              "start": 20031,
+              "end": 20076,
+              "revision": "2df12a617de8efca100e08f172cd21ee503a4516a2bd5892d69bc1e67f31aa3d"
+            }
+          ],
+          "elapsed_s": 0.000727
+        }
+      ]
+    }
+  },
+  "total_observed_tokens": 181773,
+  "unmeasured_calls": 0,
+  "limits": [
+    "Synthetic tasks; production primitives with isolated data, not a full user-agent benchmark.",
+    "Lexical discovery uses production search_aliased(alpha=0), not semantic-embedding quality.",
+    "No claim of automatic growth: distillation selected no examples.",
+    "One baseline pair; no general cost or long-term learning improvement claim.",
+    "Actual user corrections, money and reasoning tokens were not measured."
+  ]
+}

@@ -130,6 +130,27 @@ def test_stale_memory_is_a_reference_not_a_definition():
     assert store.resolve('value')['source'] != 'obsolete'
 
 
+def test_repeated_projection_does_not_launder_old_applicability():
+    from corpus_policy import applicability_note
+    first = register('value', source())
+    second = register('value', source(value=2), expected_revision=first['revision'])
+    original = {'provenance': {'function_ref': first, 'applicability': '옛 단위만 허용'}}
+    row = store.project_memory(original)
+    row = store.project_memory(row)
+    assert row['function_ref'] == second and row['evidence_revision'] == first['revision']
+    assert row['evidence_stale'] and applicability_note(row['provenance']) == ''
+    assert '옛 단위만 허용' in row['provenance']  # historical evidence is retained, not relabeled
+
+
+def test_interface_only_execution_reports_exact_reuse_identity():
+    ref = register('value', source())
+    output = run('[fn:value]{}')
+    assert output['success']
+    usage = next(r for r in output['capability_usage'] if r['function_ref'] == ref)
+    assert usage['success'] and usage['call_id'] and usage['run_id']
+    assert usage['source_complete'] is True
+
+
 def test_scope_is_not_selected_by_untrusted_reference(tmp_path, monkeypatch):
     ref = register('value', source())
     import workflow_store

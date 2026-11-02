@@ -1248,9 +1248,12 @@ class IBLUsageDB:
         if self.hippo_disabled():
             return []
 
-        # 캐시 확인
+        # 저장·개정·폐기 직후 같은 검색도 현재 함수 카탈로그를 읽는다.
+        from function_store import catalog
+        functions = catalog()
+        function_generation = (functions['scope_id'], functions['generation'])
         cache_key = hashlib.md5(
-            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}_{exclude_category}_{aliased_only}".encode()
+            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}_{exclude_category}_{aliased_only}_{function_generation}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:

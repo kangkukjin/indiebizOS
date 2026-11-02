@@ -207,6 +207,11 @@ def boundaries(db, meta):
         spec = {k: v for k, v in meta['targets'][node_id].items() if k != 'contract'}
         current = boundary_count(db, node_id, scope_id)
         spec.update(node_id=node_id, next_ordinal=(current[0] if current else 0) + 1)
+        contract = meta['targets'][node_id]['contract']
+        spec['input_contract'] = {k: contract[k] for k in
+                                  ('params', 'defaults', 'default_expressions', 'pipe_input', 'required') if k in contract}
+        spec['input_state'] = 'unresolved_until_boundary'
+        spec['expected_args_hash'] = None  # status does not evaluate future expressions or disclose live values.
         if scope_id is not None:
             spec.update(scope=scope_id, scope_context=context)
         return spec

@@ -64,6 +64,9 @@ def running(tmp_path, monkeypatch):
 
 def test_next_read_changes_but_completed_read_and_resume_keep_values(running):
     ref, payload, release, worker, output, observations, request, project = running
+    target = status(ref)['progress']['boundaries'][-1]
+    assert target['input_contract']['params'] == {'n': 'Number'}
+    assert target['input_state'] == 'unresolved_until_boundary' and target['expected_args_hash'] is None
     assert steer(ref, json.dumps(payload), 'change')['delivery'] == 'accepted'
     assert steer(ref, json.dumps(payload), 'change')['delivery'] == 'accepted'
     release.set(); worker.join(5)

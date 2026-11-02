@@ -248,20 +248,17 @@ def semantic_review(controller, contract, criteria, session, evidence):
         packet["context"].update(candidate.artifact_review_context(session))
         result = json.loads(invoke(controller, phase="semantic"))
         # 원문 부족이면 이미 저장된 같은 턴 증거만 한 번 보충한다. 새 개발은 시작하지 않는다.
-        if result.get("recoverable"):
-            refs = __import__("re").findall(r"\b[a-f0-9]{64}\b", result.get("reason", ""))
-            recovered = []
-            for ref in dict.fromkeys(refs[:8]):
-                try:
-                    page = controller.store.read_evidence(ref, 0, None)
-                    if len(page["text"]) > 120000:
-                        page["text"] = page["text"][:30000] + "\n…\n" + page["text"][-90000:]
-                    recovered.append(page)
-                except (OSError, ValueError, KeyError):
-                    pass
-            if recovered:
-                packet["context"]["recovered_evidence"] = recovered
+        if result.get("recoverable") and result.get('evidence_requests'):
+            from evaluation_input import recover
+            try:
+                recovered = recover(controller, result['evidence_requests'])
+                changed = snapshot_error(controller)
+                if changed:
+                    raise ValueError(changed)
+                packet['attachments'] = [*packet.get('attachments', []), *recovered]
                 result = json.loads(invoke(controller, phase="semantic"))
+            except (OSError, ValueError, KeyError) as exc:
+                result.update(status='UNKNOWN', reason=str(exc), recoverable=False)
         error = snapshot_error(controller)
         if error:
             return {"status": "UNKNOWN", "reason": error}

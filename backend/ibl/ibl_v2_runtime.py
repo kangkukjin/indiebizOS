@@ -1341,9 +1341,19 @@ class Runtime(ExpressionEvaluator):
             out['component_certificates'] = certificates
         checks = [e for e in self.trace if e.get('kind') == 'assertion']
         entries = self.plan.dependencies.get('source_map', [])[1:]
-        used = [{'id': 'fn:' + e['name'], 'success': e['success'], 'source_hash': digest(self.plan.source[source['start']:source['end']]), 'function_ref': source.get('function_ref')}
-                for e in self.trace if e.get('kind') == 'function_result'
-                for source in entries if source['start'] <= e['definition_start'] < source['end']]
+        used = []
+        for event in self.trace:
+            if event.get('kind') != 'function_result':
+                continue
+            source = next((r for r in entries if r['start'] <= event.get('definition_start', -1) < r['end']), {})
+            ref = event.get('function_ref') or source.get('function_ref')
+            if not ref and not source:
+                continue
+            used.append({'id': 'fn:' + event['name'], 'success': event['success'],
+                         'function_ref': ref, 'call_id': event['id'],
+                         'run_id': self.journal.run_id if self.journal else None,
+                         'source_complete': out.get('source_complete'),
+                         **({'source_hash': digest(self.plan.source[source['start']:source['end']])} if source else {})})
         used += [{'id': e['capability_id'], 'success': e['success']} for e in self.trace if e.get('kind') == 'capability_result']
         if used:
             out['capability_usage'] = used

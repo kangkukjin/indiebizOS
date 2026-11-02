@@ -1002,7 +1002,10 @@ class Supervisor:
                 from providers.base import remaining_turn_tokens
                 task_remaining = remaining_turn_tokens()
                 last_input = (getattr(getattr(self.runner.ai, "_provider", None), "_last_prompt_usage", {}) or {}).get("input", 0)
-                cycle_expected = expected + max(last_input, self.config["repair_context_chars"] // 2)
+                direct_recovery = evidence_missing and bool(decision.get('evidence_requests'))
+                recovery_chars = sum(r['end'] - r['start'] for r in decision.get('evidence_requests', []))
+                cycle_expected = (expected + recovery_chars if direct_recovery else
+                                  expected + max(last_input, self.config["repair_context_chars"] // 2))
                 if ((self.config["budget_mode"] == "hard" and remaining < expected)
                         or (task_remaining is not None and task_remaining < cycle_expected)):
                     self.log("repair.skipped", role="harness", reason="재검수 여력 부족", expected_input=expected)
@@ -1011,7 +1014,9 @@ class Supervisor:
                 self.log("repair.admitted", role="harness", expected_recheck_input=expected,
                          allocation_extension=max(0, expected - remaining), budget_policy=self.config["budget_mode"])
                 self.last_decision = decision
-                if evidence_missing and decision.get('evidence_requests'):
+                self._final_repair_counts = [repairs_used, evidence_reads]
+                review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
+                if direct_recovery:
                     from evaluation_input import recover
                     recovery_started = time.monotonic()
                     try:
@@ -1023,6 +1028,7 @@ class Supervisor:
                         self._evaluation_packet['attachments'] = [
                             *self._evaluation_packet.get('attachments', []), *recovered]
                         self._resume_evaluation = True
+                        review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
                         self.log('evaluation.evidence_recovered', role='harness',
                                  requests=decision['evidence_requests'],
                                  elapsed_s=round(time.monotonic() - recovery_started, 6))

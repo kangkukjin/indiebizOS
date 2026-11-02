@@ -28,7 +28,8 @@ UNKNOWN에는 UNKNOWN_REASON: evidence|criteria|blocked를 적는다. 발췌·�
 기준과 요청의 충돌은 criteria, 권한·외부 조건 때문에 진행할 수 없으면 blocked다.
 evidence이면 부족한 기준 id와 기존 evidence_index에서 확인할 증거 id를 함께 적는다.
 정확한 원문 범위를 알면 선택적으로 한 줄 JSON을 적는다:
-EVIDENCE_REQUESTS: [{"criterion_id":"C1","evidence_id":"기존 id","revision":"선택 manifest의 revision 또는 증거 id","start":0,"end":1000}]
+EVIDENCE_REQUESTS: [{"criterion_id":"C1","evidence_id":"원문 주소의 evidence_id","revision":"그 원문 주소의 revision","start":0,"end":1000}]
+표시 구획의 지문을 그 안에서 참조한 도구 원문의 판본과 혼동하지 않는다. 범위를 모르면 필요한 기준·근거 id만 적는다.
 start/end는 저장된 마스킹 원문의 Unicode 문자 좌표다. 새 URL 수집이나 검사 실행 요청이 아니다.
 NOT_ACHIEVED면 SEVERITY: 1|2|3 다음에 REPAIR_SCOPE: local|research를 적는다.
 기존 증거로 문구·수치만 고칠 수 있으면 local, 새 조사·실행이 필요하면 research다.
@@ -492,11 +493,16 @@ def invoke(controller, prompt="", *, phase="final"):
                       "확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n" + feedback)
     if result.get('recoverable'):
         from evaluation_input import evidence_requests
-        requests = evidence_requests(feedback, packet)
-        if requests is not None:
-            result['evidence_requests'] = requests
-            if not requests:
-                result.update(recoverable=False, reason=feedback + '\n증거 요청의 참조·판본·범위가 유효하지 않습니다')
+        parsed = evidence_requests(feedback, packet)
+        result['evidence_request_validation'] = parsed
+        controller.log('evaluation.evidence_request', role='harness', validation=parsed)
+        if parsed['status'] in {'valid', 'normalized'}:
+            result['evidence_requests'] = parsed['requests']
+        elif parsed['status'] == 'invalid':
+            # A malformed request is not absent evidence. Use the same bounded
+            # executor handoff; never grant arbitrary references or new authority.
+            result['instruction'] += ('\n원문 요청 형식/참조 검사: ' + json.dumps(parsed['errors'], ensure_ascii=False)
+                                      + '\n현재 작업의 허용 원문과 판본을 조회해 보완하세요. 잘못된 주소·판본을 추정하지 마세요.')
     controller.log("evaluation.finished", role="evaluate", elapsed_s=round(time.monotonic() - started, 3),
                    decision=result)
     return json.dumps(result, ensure_ascii=False)

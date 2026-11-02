@@ -1,0 +1,58 @@
+{
+  "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile --ff",
+  "runs": [
+    {
+      "log": "/tmp/episode5767-full.log",
+      "sha256": "b0f447e53fa646da4be524a16b7cf330f11128fe3fed107667400d29830c586c",
+      "exit_code": 1,
+      "passed": 11874,
+      "failed": 207,
+      "errors": 76,
+      "skipped": 28
+    },
+    {
+      "log": "/tmp/episode5767-full-authorized-first.log",
+      "sha256": "e88c7f8d18b45cf83cbdd29095837c142370168e154e282b4d10a099b1a2f47a",
+      "exit_code": 1,
+      "passed": 12159,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 24
+    },
+    {
+      "log": "/tmp/episode5767-full-authorized-change-guard.log",
+      "sha256": "eab46b56db6e88d94e07833e6e8857460a166311ebc5eb3365bd1b7148d18cb9",
+      "exit_code": 1,
+      "passed": 12162,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 24
+    },
+    {
+      "log": "/tmp/episode5767-full-authorized-compatibility.log",
+      "sha256": "b5b28515419810050f9ad4a43d0779008d679def47ac8ff64641840b4946903b",
+      "exit_code": 1,
+      "passed": 12163,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 24
+    },
+    {
+      "log": "/tmp/episode5767-full-authorized.log",
+      "sha256": "d6cf625aec4202c79c010072043a7f88a7f8ec99fb607aa0c62973c6f5aa240b",
+      "exit_code": 0,
+      "passed": 12164,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 24
+    }
+  ],
+  "final_elapsed_s": 424.21,
+  "final_warnings": 80,
+  "related_recall_tests": 68,
+  "builds": [
+    "build_ibl_nodes.py --check",
+    "check_backend_layers.py",
+    "build_body_bundle.py android"
+  ]
+}

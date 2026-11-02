@@ -10,6 +10,25 @@ import hardware_registry
 import pytest
 
 
+def test_function_use_requires_current_identity_and_separates_success():
+    ref = {'scope_id': 'owner', 'function_id': 'function', 'revision': 'v2'}
+    item = {'id': '5', 'alias': '재사용', 'code': '[fn:재사용]{}', 'function_ref': ref}
+    ev = {'ibl_codes': ['#!ibl edition=2\n[fn:재사용]{}'], 'tool_calls': []}
+    assert recall._used_hippocampus(['5'], {'items': [item]}, ev)['used'] == []
+    def usage(**fields):
+        return {'result': {'capability_usage': [{'function_ref': {**ref, 'name': '재사용'},
+                                                'call_id': '1', 'run_id': 'run', **fields}]}}
+    ev['tool_calls'] = [usage(success=False)]
+    result = recall._used_hippocampus(['5'], {'items': [item]}, ev)
+    assert result['attempted'] == ['5'] and result['successful'] == []
+    ev['tool_calls'] = [usage(success=True, source_complete=True)]
+    result = recall._used_hippocampus(['5'], {'items': [item]}, ev)
+    assert result['used'] == result['successful'] == ['5']
+    assert result['function_receipts'][0]['call_id'] == '1'
+    ev['tool_calls'][0]['result']['capability_usage'][0]['function_ref']['revision'] = 'v1'
+    assert recall._used_hippocampus(['5'], {'items': [item]}, ev)['used'] == []
+
+
 @pytest.fixture(autouse=True)
 def isolated_hardware(monkeypatch):
     monkeypatch.setattr(hardware_registry, "devices", lambda: [])

@@ -93,11 +93,11 @@ def test_structured_recovery_validates_revision_range_and_masking(supervisor):
     packet['attachments'] = [record('앞\n중간 반례\n끝', subject='file', source_ref=ref['id'], revision=ref['id'])]
     cid = packet['context']['criteria_contract']['criteria'][0]['id']
     request = {'criterion_id': cid, 'evidence_id': ref['id'], 'revision': ref['id'], 'start': 2, 'end': 7}
-    assert evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([request]), packet) == [request]
+    assert evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([request]), packet)['requests'] == [request]
     rows = recover(supervisor, [request])
     assert rows[0]['text'] == '중간 반례' and rows[0]['start'] == 2
     for changed in ({'revision': 'other'}, {'evidence_id': 'f' * 64}, {'end': 999}, {'start': -1}):
-        assert evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([{**request, **changed}]), packet) == []
+        assert evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([{**request, **changed}]), packet)['status'] == 'invalid'
     (supervisor.store.directory / (ref['id'] + '.txt')).write_text('다른 판본')
     with pytest.raises(ValueError, match='판본'):
         recover(supervisor, [request])
@@ -132,6 +132,100 @@ def test_dedup_keeps_subjects_and_every_explicit_criterion_relation():
     section, = prompt.metrics['sections']
     assert section['subjects'] == ['first', 'second']
     assert section['criterion_ids'] == ['C1', 'C2']
+
+
+def request_packet(supervisor):
+    from final_evaluator import prepare
+    supervisor.run_tool('read', {}, lambda: '앞🙂\n정답 7\n끝')
+    supervisor.store.put_response('응답')
+    packet = prepare(supervisor)
+    ref = packet['context']['evidence_index'][0]['result']
+    return packet, {'criterion_id': packet['context']['criteria_contract']['criteria'][0]['id'],
+                    'evidence_id': ref['id'], 'start': 3, 'end': 7}
+
+
+def test_missing_immutable_revision_is_normalized_but_conflicts_are_not(supervisor):
+    from evaluation_input import evidence_references
+    packet, request = request_packet(supervisor)
+    result = evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([request]), packet)
+    assert result['status'] == 'normalized'
+    assert result['requests'][0]['revision'] == request['evidence_id']
+    assert result['normalizations'][0]['reason'] == 'immutable_turn_evidence'
+    assert recover(supervisor, result['requests'])[0]['text'] == '정답 7'
+    packet['attachments'].append(record('other', subject='conflict', source_ref=request['evidence_id'], revision='different'))
+    refs = {r['evidence_id']: r for r in evidence_references(packet)}
+    assert refs[request['evidence_id']]['ambiguous']
+    result = evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([request]), packet)
+    assert result['status'] == 'invalid' and result['errors'][0]['code'] == 'reference_conflict'
+
+
+@pytest.mark.parametrize('value', ['{', '{}', '[]', '[1]', '[null]', '["x"]', '[[]]', 'null', 'true'])
+def test_malformed_request_is_a_protocol_result(supervisor, value):
+    packet, _ = request_packet(supervisor)
+    result = evidence_requests('EVIDENCE_REQUESTS: ' + value, packet)
+    assert result['status'] == 'invalid' and result['errors'] and not result['requests']
+    assert evidence_requests('UNKNOWN_REASON: evidence', packet)['status'] == 'absent'
+
+
+@pytest.mark.parametrize('change,code', [({'revision': None}, 'revision'), ({'revision': 'wrong'}, 'revision'),
+    ({'start': True}, 'range'), ({'end': '7'}, 'range'), ({'end': 9999}, 'range'),
+    ({'criterion_id': []}, 'criterion'), ({'evidence_id': []}, 'reference'),
+    ({'evidence_id': 'a' * 64}, 'reference')])
+def test_invalid_items_do_not_silently_recover_the_valid_subset(supervisor, change, code):
+    packet, request = request_packet(supervisor)
+    result = evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([request, {**request, **change}]), packet)
+    assert result['status'] == 'invalid' and result['errors'] == [{'index': 1, 'code': code}]
+    assert len(result['requests']) == 1  # retained for diagnosis, not automatic dispatch
+
+
+def test_three_omitted_revisions_recover_and_persist_once(supervisor, monkeypatch):
+    from supervisor_handoff import criteria_contract
+    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
+    requests = []
+    for text in ['정상 합계 7', '반례 합계 6', '부품 호출 5회']:
+        supervisor.run_tool('read', {}, lambda text=text: text)
+        ref = supervisor.store.evidence(text)
+        requests.append({'criterion_id': cid, 'evidence_id': ref['id'], 'start': 0, 'end': len(text)})
+    calls = []
+    def evaluate(prompt, **kw):
+        calls.append(prompt)
+        if len(calls) == 1:
+            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps(requests)
+        saved = json.loads((supervisor.store.directory / 'repair_review.json').read_text())
+        assert saved['repair_counts'] == [0, 1]
+        assert len([r for r in saved['packet']['attachments'] if r['role'] == 'recovered']) == 3
+        # Even another valid request must not trigger another recovery.
+        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps(requests)
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('duplicate executor recovery')
+    finish(supervisor, '응답')
+    assert len(calls) == 2 and supervisor._final_repair_counts == [0, 1]
+
+
+def test_protocol_failure_uses_existing_bounded_handoff(supervisor, monkeypatch):
+    calls, repairs = [], []
+    def evaluate(prompt, **kw):
+        calls.append(prompt)
+        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: [42]'
+    def repair(prompt, **kw):
+        repairs.append(prompt)
+        assert 'format' in prompt
+        assert json.loads((supervisor.store.directory / 'repair_review.json').read_text())['repair_counts'] == [0, 1]
+        supervisor.repair_kept = True
+        yield {'type': 'final', 'content': '기존 결과 유지'}
+    supervisor.runner.ai.process_message_stream = repair
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    finish(supervisor, '응답')
+    assert len(calls) == 2 and len(repairs) == 1
+
+
+def test_recovered_segment_is_never_silently_retruncated():
+    prompt = EvaluationPrompt('기준', [record('원문' * 12000, subject='r', role='recovered')])
+    with pytest.raises(InputTooLarge, match='회수 요청 구간'):
+        prompt.prepare_request(provider(request_limits={'chars': 15000}))
+    prompt = EvaluationPrompt('기준', [record('짧은 반례', subject='r', role='recovered'),
+                                       record('잡음' * 10000, subject='s')])
+    assert '짧은 반례' in prompt.prepare_request(provider(request_limits={'chars': 15000}))
 
 
 if __name__ == "__main__":

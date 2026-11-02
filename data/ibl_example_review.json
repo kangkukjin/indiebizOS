@@ -1544,17 +1544,17 @@
   },
   "self:task": {
    "fields": {
-    "description": "109923052459",
-    "target_description": "67df72e15507",
+    "description": "bf2555d203cf",
+    "target_description": "0f5c571aa4cb",
     "implementation": "22e22b80a762",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
     "params": "bc7a8204c8bf",
-    "ops": "8fa70108ab57",
+    "ops": "1ef77a9d7bc6",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-10-31",
+   "reviewed": "2026-11-03",
    "examples": 15
   },
   "self:time": {

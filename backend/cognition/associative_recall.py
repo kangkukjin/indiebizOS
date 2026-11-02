@@ -476,13 +476,39 @@ def _used_hippocampus(ids, join, ev) -> Dict[str, Any]:
     """동작 선택 인자와 호출 순서를 대조한다. 이름 호출도 같은 구문 관문을 쓴다."""
     from ibl_distill_gates import recall_used
     codes = ev.get("ibl_codes") or []
-    used = []
+    used, attempted, successful, receipts = [], [], [], []
+    actual = []
+    import json
+    for call in ev.get('tool_calls') or []:
+        if '_t0' in call or (call.get('input') or {}).get('check'):
+            continue
+        try:
+            raw = call.get('result')
+            raw = json.loads(raw) if isinstance(raw, str) else raw
+            if isinstance(raw, dict):
+                actual.extend(raw.get('capability_usage') or [])
+        except (ValueError, TypeError):
+            continue
     for it in join.get("items") or []:
         alias = it.get("alias") or ""
+        if it.get('function_ref'):
+            matches = [r for r in actual if isinstance(r, dict) and isinstance(r.get('function_ref'), dict)
+                       and all(r['function_ref'].get(k) == it['function_ref'].get(k)
+                               for k in ('scope_id', 'function_id', 'revision'))]
+            if matches:
+                used.append(it['id'])
+                attempted.append(it['id'])
+                if any(r.get('success') is True and r.get('source_complete') is not False for r in matches):
+                    successful.append(it['id'])
+                receipts.extend({'id': it['id'], **{k: r[k] for k in
+                    ('function_ref', 'run_id', 'call_id', 'success', 'source_complete') if k in r}} for r in matches)
+            continue  # A name or a copied body cannot prove use of this revision.
         if (recall_used(it.get("code"), codes)
                 or (alias and recall_used(f'[fn:{alias}]{{}}', codes))):
             used.append(it["id"])
-    return {"used": used, "evidence": "executed", "ibl_calls": len(codes)}
+    return {"used": used, "evidence": "executed", "ibl_calls": len(codes),
+            'attempted': attempted, 'successful': successful, 'function_receipts': receipts,
+            'quality_contribution': 'not_inferred'}
 
 
 

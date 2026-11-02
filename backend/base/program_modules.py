@@ -311,7 +311,15 @@ class LiveModule(types.ModuleType):
                 return namespace
             if name in namespace:
                 return namespace[name]
-        return types.ModuleType.__getattribute__(self, name)
+        try:
+            return types.ModuleType.__getattribute__(self, name)
+        except AttributeError:
+            # PEP 562 exports live in the selected namespace, not the raw
+            # module dictionary consulted by ModuleType's attribute fallback.
+            dynamic = namespace.get('__getattr__') if owner is not None else None
+            if dynamic is None:
+                raise
+            return dynamic(name)
 
     def __setattr__(self, name, value):
         owner = types.ModuleType.__getattribute__(self, '__dict__').get('__program_owner__')

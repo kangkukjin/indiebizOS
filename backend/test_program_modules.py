@@ -59,6 +59,34 @@ class Counter:
     assert module.state == [1, 1, 1]
 
 
+def test_module_dynamic_exports_follow_revision_and_from_import(owner, monkeypatch):
+    source = '''VALUE = 1
+def __getattr__(name):
+ if name == 'DYNAMIC': return VALUE
+ raise AttributeError(name)
+def stream():
+ from test_live_example import DYNAMIC
+ yield DYNAMIC
+ from test_live_example import DYNAMIC
+ yield DYNAMIC
+'''
+    module, path = owner(source)
+    monkeypatch.setitem(sys.modules, 'test_live_example', module)
+    assert module.__class__ is modules.LiveModule
+    assert module.DYNAMIC == 1
+    with pytest.raises(AttributeError, match='missing'):
+        getattr(module, 'missing')
+    stream = module.stream()
+    assert next(stream) == 1
+    replace(path, source.replace('VALUE = 1', 'VALUE = 2'))
+    assert module.DYNAMIC == 2
+    assert next(stream) == 1
+    stream.close()
+    namespace = {}
+    exec('from test_live_example import DYNAMIC', namespace)
+    assert namespace['DYNAMIC'] == 2
+
+
 def test_async_call_retains_revision_across_await(owner):
     source = '''FACTOR = 1
 def helper(): return FACTOR

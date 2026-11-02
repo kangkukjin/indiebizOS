@@ -271,6 +271,10 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 
 **경로 관측**: 기존 사건 원장의 `cognition.supervisor_selected`·`cognition.route`·`cognition.evaluation`이 감독 선택 사유·실행 차선·실제 검수 경로를 구분한다. `model.input`은 호출별 텍스트 크기만, `model.usage`는 실제 토큰·캐시 사용량을 기록한다. `context.result_read`는 저장된 원문 조회의 왕복을 계수한다. 미측정 과거 기록은 미사용으로 간주하지 않는다. 한 작업의 기록은 여러 원장(에피소드·궤적 사건·쓰기 원장·검수 저장소·실행 신원·대화 DB, 과거 실행은 보존된 과제 기록 포함)에 나뉘어 있고, 물리 통합 대신 읽기 전용 **실행 통합 조회**(`services/execution_trace.py`, `/world-pulse/episodes/{id}/trace`)가 한 응답으로 연결해 미관측·누락·충돌을 드러낸다 — 주행기록 상세 화면이 소비자다. [실행 통합 조회 설계](../../docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md). IBL에서는 `[self:body]{op:"trajectory",view:"episodes"}`로 종료 목록을 고르고 `trace`·`document`로 기존 통합 기록과 원문을 읽는다. 식별자 생략 시 진행 중인 자기 턴을 고르지 않는다.
 
+**관측·판단·재사용의 후속 수리안**: 근거 요청 형식 오류가 원문 회수를 끊는 결함과 능력 설명 불일치를 먼저 고치고,
+계약·판본·검증 근거를 축적·회상·부분 제어까지 잇는 [에피소드 5767 수리 설계](../../docs/EPISODE_5767_CAPABILITY_CONTINUITY_REPAIR_DESIGN_2026_11_02.md)가 있다.
+구현 전 설계이며, 실제 활용 인수와 품질·전체 비용 측정을 구분한다.
+
 주행기록의 라운드와 IBL 호출 횟수는 별개다. Codex는 로컬 롤아웃의 응답 ID로 라운드를 관측하고, 한 응답에 포함된 여러 도구를 라운드로 중복 집계하지 않는다. 1라운드도 표시하며 원본을 못 읽은 경우는 미측정으로 남긴다. [Codex 주행기록 수리](../../docs/CODEX_JOURNAL_2026_09_12.md).
 
 주행기록의 `ACHIEVED`는 이번 응답의 **검수 승인**(`review_status`)이다. 원 요청의 **목표 달성**(`goal_status`)은

@@ -554,3 +554,39 @@ def test_real_boot_verifier_accepts_rejected_session_as_rejection(setup, monkeyp
              'payload': {'job_path': str(job_path), 'reservation': {**reservation(job), 'scheduled_at': 'other'}}}}
     with pytest.raises(ValueError, match='판본'):
         verify_after_boot(ctl.base, state)
+
+
+@pytest.mark.parametrize('next_handover', [None, {'token': 'following-transfer'}])
+def test_handover_exits_when_successor_already_advanced(setup, monkeypatch, next_handover):
+    from types import SimpleNamespace
+    ctl, adapter, _ = setup
+    ctl.save(controller=identity(os.getpid()), control_base='old')
+    ctl.control_base_id = 'old'
+    ctl.lock = SimpleNamespace(close=lambda: None,
+                               acquire=lambda: pytest.fail('departed owner must not reclaim lock'))
+    def spawn(*args, **kwargs):
+        state = {**ctl.state, 'controller': {'pid': 999123, 'born': 100},
+                 'control_base': 'grandchild', 'control_handover': next_handover}
+        atomic_json(ctl.home / 'state.json', state)
+        return SimpleNamespace(pid=999122, poll=lambda: 0)
+    monkeypatch.setattr('restart_controller.subprocess.Popen', spawn)
+    with pytest.raises(SystemExit) as stopped:
+        ctl.handover('child')
+    assert stopped.value.code == 0
+    from restart_protocol import read_json
+    assert read_json(ctl.home / 'state.json')['control_base'] == 'grandchild'
+
+
+def test_failed_transfer_retries_after_backoff_without_source_edit(setup, monkeypatch):
+    ctl, _, clock = setup
+    ctl.control_base_id = 'old'
+    ctl.save(control_update={'digest': 'new', 'status': 'takeover_failed', 'at': 90})
+    monkeypatch.setattr('control_base.inventory', lambda *a: {'digest': 'new'})
+    monkeypatch.setattr('control_base.ensure', lambda *a, **kw: ('new', 'verified'))
+    transfers = []
+    monkeypatch.setattr(ctl, 'handover', lambda revision: transfers.append(revision))
+    ctl._control_watch()
+    assert transfers == []
+    clock[0] = 151
+    ctl._control_watch()
+    assert transfers == ['new']

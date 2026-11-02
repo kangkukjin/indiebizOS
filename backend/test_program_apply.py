@@ -84,3 +84,17 @@ def test_partial_write_crash_restores_exact_previous_bytes(setup, monkeypatch):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_busy_package_finishes_without_another_user_apply(setup):
+    import time
+    repo, root, st, session, apply, runtime = setup
+    with runtime.lease():
+        result = apply.apply(st, str(repo), session)
+        assert result['applied'] and not result['activated']
+        assert not result['restart_required']
+    deadline = time.monotonic() + 15
+    while not (session.get('commit') or {}).get('success') and time.monotonic() < deadline:
+        time.sleep(0.1)
+    assert session['commit']['success']
+    assert runtime.execute({}, None) == 2

@@ -1076,18 +1076,17 @@ def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> L
     return peers
 
 
-def _get_nodes_path() -> Path:
-    """원본 사전집(ibl_nodes.yaml)의 경로. 경로 앵커는 runtime_utils.get_base_path 하나 —
-    INDIEBIZ_BASE_PATH 해석을 여기서 다시 짜지 않는다 (2026-08-24 앵커 단일화).
-    ★이 함수는 test_corrupt_not_absent 의 몽키패치 지점이므로 모듈 수준을 유지한다."""
-    from runtime_utils import get_vocabulary_path
-    return get_vocabulary_path()
+def _get_nodes_path():
+    """Raw and installed catalogs share the worker's publication-aware path."""
+    from ibl_registry import vocabulary_path as catalog_path
+    return catalog_path()
 
 
 def load_nodes_raw() -> dict:
     """ibl_nodes.yaml 전체 로드 (캐시)"""
-    global _nodes_data_cache
-    if _nodes_data_cache is not None:
+    global _nodes_data_cache, _nodes_data_path
+    path = _get_nodes_path()
+    if _nodes_data_cache is not None and globals().get('_nodes_data_path') == str(path):
         return _nodes_data_cache
 
     path = _get_nodes_path()
@@ -1107,6 +1106,7 @@ def load_nodes_raw() -> dict:
             f"`python3 scripts/build_ibl_nodes.py` 로 재생성하세요."
         ) from e
     _nodes_data_cache = data
+    _nodes_data_path = str(path)
     return data
 
 

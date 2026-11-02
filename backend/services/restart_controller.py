@@ -673,8 +673,11 @@ class Controller:
         if inv["digest"] == self.control_base_id:
             return
         update = self.state.get("control_update") or {}
-        if update.get("digest") == inv["digest"] and update.get("status") in {"failed", "takeover_failed"}:
-            return  # 같은 입력을 반복하지 않는다
+        if update.get('digest') == inv['digest']:
+            if update.get('status') == 'failed':
+                return  # the same rejected code cannot become valid by waiting
+            if update.get('status') == 'takeover_failed' and self.clock() - update.get('at', 0) < 60:
+                return  # transient ownership contention gets a bounded backoff
         self.save(control_update={"digest": inv["digest"], "status": "preparing", "at": self.clock()})
         new_id, note = control_base.ensure(self.code_root, self.base, support_root=self.state.get("generation_dir") or self.code_root)
         if not new_id:
@@ -699,7 +702,7 @@ class Controller:
         deadline = time.monotonic() + HANDOVER_WAIT_S
         while time.monotonic() < deadline:
             observed = read_json(self.home / "state.json", {}) or {}
-            if observed.get("control_base") == new_id and not observed.get("control_handover"):
+            if self._successor_owns(observed) or (observed.get("control_base") == new_id and not observed.get("control_handover")):
                 log(self.home, f"제어 기반 인계 완료 → {new_id}; 이전 제어자 종료")
                 raise SystemExit(0)
             if child.poll() is not None:
@@ -707,16 +710,26 @@ class Controller:
             time.sleep(0.2)
         # 인계 실패 — 잠금을 되찾고 계속 소유한다. 새 기반은 실패로 기록한다.
         while not self.lock.acquire():
+            if self._successor_owns(read_json(self.home / 'state.json', {}) or {}):
+                raise SystemExit(0)
             if child.poll() is None and time.monotonic() > deadline + HANDOVER_WAIT_S:
                 log(self.home, "인계 대상이 잠금을 쥔 채 인수를 끝내지 않음 — 양보")
                 raise SystemExit(0)
             time.sleep(0.1)
-        self.state = read_json(self.home / "state.json") or self.state
+        observed = read_json(self.home / 'state.json') or self.state
+        if self._successor_owns(observed):
+            raise SystemExit(0)
+        self.state = observed
         note = f"takeover_failed rc={child.poll()}"
         control_base.mark_failed(self.base, new_id, note)
         self.save(control_handover=None, controller=identity(os.getpid()),
                   control_update={"digest": new_id, "status": "takeover_failed", "note": note, "at": self.clock()})
         log(self.home, f"제어 기반 인계 실패 — 이전 기반 {self.control_base_id} 유지: {note}")
+
+    def _successor_owns(self, observed):
+        """An accepted successor may already have handed off again."""
+        owner = observed.get('controller')
+        return bool(owner and owner != identity(os.getpid()) and self.adapter.alive(owner))
 
     def _takeover(self, token):
         handover = self.state.get("control_handover") or {}
@@ -805,6 +818,9 @@ class Controller:
                 # 기본 동작(무음 종료) 대신 기록하고 계속 돈다.
                 signal.signal(signal.SIGHUP, lambda signum, frame: log(self.home, "신호 SIGHUP 수신 — 무시하고 계속"))
             while self.state["phase"] != "STOPPED":
+                if self._successor_owns(read_json(self.home / 'state.json', {}) or {}):
+                    log(self.home, '다른 제어자가 인수함 — 상태를 덮어쓰지 않고 종료')
+                    return 0
                 try:
                     self.tick()
                 except SystemExit:

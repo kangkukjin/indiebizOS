@@ -16,13 +16,10 @@ from source_observation import observed_tool
 _CURRENT_DIR = Path(__file__).parent
 
 def _load_sibling(module_name):
-    """패키지 형제 모듈 spec-load (real-estate load_module 선례)."""
-    spec = importlib.util.spec_from_file_location(module_name, _CURRENT_DIR / f"{module_name}.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """Protected gates stay fixed; ordinary siblings share a stable call boundary."""
+    from program_modules import load_sibling
+    return load_sibling(module_name, _CURRENT_DIR)
 
-# 파일 찾기 하부는 형제 모듈이 안다 — handler 에는 분기와 봉투만 (2026-08-29 분리).
 _file_io = _load_sibling("essentials_file_io")
 _fs_find = _load_sibling("fs_find")
 _FIND_DEADLINE_S = _fs_find.FIND_DEADLINE_S

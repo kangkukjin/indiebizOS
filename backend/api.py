@@ -458,6 +458,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from program_modules import bind_app
+bind_app(app)
+
 # IBL MCP over HTTP — warm 엔드포인트 /mcp (additive, stdio 병행). 세션 매니저는 lifespan 에서 켠다.
 if _ibl_mcp_app is not None:
     app.mount("/mcp", _ibl_mcp_app)

@@ -29,6 +29,14 @@ def install() -> None:
 
 install()
 
+# Only the managed worker owns these module lifetimes. The control base and
+# candidate/test subprocesses keep their own import environment.
+if (os.environ.get('INDIEBIZ_RUNTIME_GENERATION') and os.environ.get('INDIEBIZ_CODE_ROOT')
+        and Path(_HERE).parent.resolve() == Path(os.environ['INDIEBIZ_CODE_ROOT']).resolve()):
+    from program_modules import install as install_program_boundaries
+    install_program_boundaries(Path(_HERE).parent,
+                               os.environ.get('INDIEBIZ_SOURCE_ROOT', os.environ.get('INDIEBIZ_BASE_PATH', Path(_HERE).parent)))
+
 
 def wire_ledger_syntax_gate() -> None:
     """해마 원장 문(ibl_usage_db)에 구문 검증자를 꽂는다 — 조립 뿌리(composition root)의 배선.

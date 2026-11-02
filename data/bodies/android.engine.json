@@ -53,6 +53,8 @@
     "base/principal",
     "base/program_boundary",
     "base/program_dependencies",
+    "base/program_modules",
+    "base/program_publication",
     "base/program_runtime",
     "base/program_versions",
     "base/python_environment_lock",
@@ -604,8 +606,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 593,
-    "engine": 561,
+    "total": 595,
+    "engine": 563,
     "blocklist": 32
   }
 }

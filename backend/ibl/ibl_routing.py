@@ -822,10 +822,9 @@ def _install_lib(params: dict) -> dict:
 #  POST /packages/reload 와 [self:package]{op:"reload"} 가 같은 문장을 낸다(한 절차, 한 진실).
 RELOAD_COVERS = ["어휘 카탈로그(ibl_nodes.yaml 재독)", "api_registry", "실행기 노드 표", "의식 캐시",
                  "패키지 handler.py(다음 호출 때 새로 로드)"]
-RELOAD_DOES_NOT_COVER = ["패키지 형제 모듈(tool_*.py·*_ops.py — 세대 교체 필요)",
-                         "backend/*.py·패키지·어휘 파일(저장하면 재기동 제어자가 정본에서 봉인 세대 후보를 만들어 "
-                         "자동 교체한다 — 현역 세대의 실행 바이트는 저장으로 바뀌지 않는다, 2026-10-27 G1)",
-                         "mcp_server.py(별도 프로세스 — touch 로 재시작)"]
+RELOAD_DOES_NOT_COVER = ["구현 변경은 검증 후보 apply로 게시해야 한다(캐시 reload만으로 활성화되지 않음)",
+                         "보호 코어 변경은 외부 개발·세대 교체 계약을 따른다",
+                         "mcp_server.py(별도 프로세스 — 해당 프로세스 재시작)"]
 
 
 def invalidate_runtime_caches() -> list:

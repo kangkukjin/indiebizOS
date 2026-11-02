@@ -30,6 +30,7 @@ CONTROL_FILES = (
     "backend/base/component_registry.py",
     "backend/base/program_boundary.py",
     "backend/base/program_versions.py",
+    "backend/base/program_publication.py",
     "backend/base/control_base.py",
     "backend/base/update_maintenance.py",
     ("backend/common/completion_contract.py", "backend/base/completion_contract.py"),

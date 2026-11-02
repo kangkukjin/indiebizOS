@@ -7,7 +7,11 @@ from program_boundary import protected_reason
 
 def apply(st, repo, session):
     with st._candidate.locked(repo, 'application'):
-        return _apply(st, repo, session)
+        result = _apply(st, repo, session)
+        if result is not None:
+            return result
+        from red_apply import _load_handler
+        return _load_handler({'repo': str(repo)})._load_sibling('program_host_apply').apply(st, repo, session)
 
 
 def _apply(st, repo, session):
@@ -63,6 +67,9 @@ def resume(st, repo, session):
 
 
 def finish(st, repo, session):
+    if session.get('module_publication'):
+        from red_apply import _load_handler
+        return _load_handler({'repo': str(repo)})._load_sibling('program_host_apply').finish(st, repo, session)
     from red_apply import _load_handler
     from runtime_utils import get_code_root
     from program_runtime import load
@@ -85,15 +92,21 @@ def finish(st, repo, session):
     for row in session['program_activation']:
         versions.publish(repo, row['manifest'], row['baseline'], {'session': session['key'], 'commit': committed})
     st._save_session(repo, session)
+    if not active:
+        from program_runtime import finish_later
+        finish_later((str(repo), session['key']), lambda: resume(st, repo, session))
     return {'success': bool(committed.get('success') and active), 'applied': True,
-            'activated': active, 'restart_required': False, 'key': session['key'], 'commit': committed,
+            'activated': active, 'stage': 'complete' if active else 'activation', 'restart_required': False, 'key': session['key'], 'commit': committed,
             'programs': session['program_activation'],
             'message': ('프로그램 판본을 교체했습니다. 원래 업무를 새 호출로 확인하세요.' if active else
-                        '해당 프로그램의 진행 호출이 끝나기를 기다립니다. 같은 apply로 활성 판본을 확인하세요.')}
+                        '해당 프로그램의 진행 호출이 끝나기를 기다립니다. 종료 후 자동으로 활성 확인·각인합니다.')}
 
 
 def recover(st, repo, session):
     """Restore only our exact applied bytes; never overwrite a concurrent edit."""
+    if session.get('module_publication'):
+        from red_apply import _load_handler
+        return _load_handler({'repo': str(repo)})._load_sibling('program_host_apply').recover(st, repo, session)
     import base64
     import os
     from tempfile import NamedTemporaryFile

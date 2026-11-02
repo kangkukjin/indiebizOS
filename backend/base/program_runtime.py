@@ -304,3 +304,29 @@ def clear_idle():
                 with _lock:
                     if _programs.get(key) is program:
                         _programs.pop(key, None)
+
+
+_pending_finishes = set()
+
+
+def finish_later(key, callback):
+    """Drain-driven completion belongs to the runtime, not to another AI turn."""
+    with _lock:
+        if key in _pending_finishes:
+            return
+        _pending_finishes.add(key)
+    def run():
+        import time
+        try:
+            while True:
+                time.sleep(0.2)
+                result = callback()
+                if result.get('activated') or result.get('error') or result.get('stage') != 'activation':
+                    return
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception('Program completion failed: %s', key)
+        finally:
+            with _lock:
+                _pending_finishes.discard(key)
+    threading.Thread(target=run, name='program-finish', daemon=True).start()

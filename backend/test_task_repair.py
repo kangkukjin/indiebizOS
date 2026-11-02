@@ -329,7 +329,7 @@ def test_supervisor_revision_suspends_before_another_evaluation(supervisor, monk
 
 @pytest.mark.system
 @pytest.mark.parametrize('diagnostic', [False, True])
-def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch, diagnostic):
+def test_scoped_candidate_real_check_and_component_apply(env, monkeypatch, diagnostic):
     """별도 적용 프로세스가 허용 델타만 각인한다. 실제 백엔드 재기동은 기존 프로세스 배터리 담당."""
     import repair_policy
     from repair_policy import direct_framing
@@ -372,20 +372,9 @@ def test_scoped_candidate_real_check_and_separate_process_apply(env, monkeypatch
         red_grant.issue_grant('system_ai', child['resume_task_id'])
         result = st.op_apply({'_repo_root': str(env.repo), '_grant_key': child['resume_task_id'],
                              'verification_plan': [{'criterion_id': 'C1', 'command': command}]})
-    assert result.get('scheduled'), result
-    assert env.path.read_text() == 'VALUE = 1\n'
+    assert result.get('applied') and result.get('activated') and not result.get('restart_required'), result
     Handoff().finish(True, repair.NOTICE)
     env.store.finish(env.turn.conversation)
-    # 새 프로세스는 부모·사본 원장의 경계와 취소를 다시 검사한다.
-    code = ('import sys,json; from pathlib import Path; sys.path.insert(0,sys.argv[1]); import boot_paths; '
-            'import runtime_utils; runtime_utils.get_base_path=lambda:Path(sys.argv[2]); '
-            'from test_repair_staging import _load_handler; h=_load_handler(); h._REPO_ROOT=Path(sys.argv[2]); '
-            'print(json.dumps(h._staging_mod().perform_scheduled_apply(sys.argv[2],sys.argv[3])))')
-    applied = subprocess.run([sys.executable, '-c', code, str(Path(__file__).parent), str(env.repo), child['resume_task_id']],
-                             capture_output=True, text=True, timeout=60)
-    assert applied.returncode == 0, applied.stdout + applied.stderr
-    result = json.loads(applied.stdout.splitlines()[-1])
-    assert result.get('applied'), result
     assert env.path.read_text() == 'VALUE = 2\n'
     session = st.read_session(str(env.repo), child['staging_task_id'])
     committed = st._candidate.commit(str(env.repo), session, env.handler._load_sibling('body_ops'))

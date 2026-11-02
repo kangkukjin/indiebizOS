@@ -125,6 +125,16 @@ def publish(repo, manifest, baseline, receipt):
 def selected(repo, package, baseline_root):
     """Only exact, published live bytes may supersede a sealed baseline."""
     package = package_id(package)
+    from program_publication import selected as module_selected
+    prefix = 'data/packages/installed/tools/' + package
+    baseline_root = Path(baseline_root)
+    code = baseline_root.parents[4]
+    module_root, publication = module_selected(repo, code)
+    if publication and any(p.startswith(prefix + '/') for p in publication['files']):
+        from program_publication import package_files
+        files = package_files(repo, code, publication, package)
+        if not any(protected_reason(prefix + '/' + p) for p in files if p.endswith('.py')):
+            return module_root / prefix, {'package': package, 'version': digest(files), 'files': files}
     row = read(repo).get(package)
     if not row:
         return Path(baseline_root), None
@@ -157,6 +167,9 @@ def covers_changes(repo, code_root, changes, inventory):
 
 
 def activation_matches(repo, code_root, session):
+    if session.get('module_publication'):
+        from program_publication import activation_matches as module_matches
+        return module_matches(repo, code_root, session)
     entries = session.get('program_activation') or []
     if not entries or any(r.get('activation') != 'active' for r in entries):
         return False

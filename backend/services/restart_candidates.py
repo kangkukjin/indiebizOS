@@ -69,6 +69,8 @@ class Watcher:
                        if active['files'].get(rel) != inventory['files'].get(rel)}
             from program_versions import covers_changes as program_changes
             changed -= program_changes(ctl.code_root, state['generation_dir'], changed, inventory['files'])
+            from program_publication import covers_changes as module_changes
+            changed -= module_changes(ctl.code_root, state['generation_dir'], changed, inventory['files'])
             if not changed or covers_changes(ctl.code_root, state['generation_dir'], changed, inventory['files']):
                 if watch:
                     ctl.save(watch={})

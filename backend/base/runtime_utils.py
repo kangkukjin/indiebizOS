@@ -115,7 +115,13 @@ def live_state_path(path) -> Path:
 
 def get_code_data_root(root=None) -> Path:
     """Frozen vocabulary/packages, separate from the Windows live-data junction."""
-    root = Path(root) if root is not None else get_code_root()
+    if root is None:
+        from program_modules import pinned_root
+        from program_publication import selected
+        root = pinned_root()
+        if root is None:
+            root, _ = selected(get_source_root(), get_code_root())
+    root = Path(root)
     alternate = root / "_code_data"
     return alternate if alternate.is_dir() else root / "data"
 
@@ -126,14 +132,14 @@ def in_generation() -> bool:
 
 def get_installed_packages_root() -> Path:
     """실행이 읽는 설치 패키지 root(data/packages/installed). 세대에서는 봉인 사본, 아니면 데이터 root."""
-    if in_generation():
+    if in_generation() or (get_source_root() / "data/restart_control/programs/modules.json").is_file():
         return get_code_data_root() / "packages" / "installed"
     return get_base_path() / "data" / "packages" / "installed"
 
 
 def get_vocabulary_path() -> Path:
     """실행이 읽는 어휘 사전(data/ibl_nodes.yaml). 쓰기(빌드)는 get_source_root() 아래로 간다."""
-    if in_generation():
+    if in_generation() or (get_source_root() / "data/restart_control/programs/modules.json").is_file():
         return get_code_data_root() / "ibl_nodes.yaml"
     return get_base_path() / "data" / "ibl_nodes.yaml"
 

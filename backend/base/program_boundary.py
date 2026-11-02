@@ -2,7 +2,7 @@
 
 Ordinary implementations are discovered from the existing source layout, not
 registered in an allow list. A program's right to change is distinct from its
-activation mechanism. Shared-process code is never labelled hot-swappable.
+activation mechanism. Shared modules use stable call boundaries and explicit state contracts.
 """
 from pathlib import PurePosixPath
 
@@ -10,7 +10,7 @@ from pathlib import PurePosixPath
 # These are authority/validation/lifetime enforcement, not a list of features.
 # Keep the reason alongside the boundary so additions remain reviewable.
 CORE_MODULES = {
-    'boot_paths': 'bootstrap', 'runtime_utils': 'code and data ownership',
+    'boot_paths': 'bootstrap', 'api': 'composition root', 'runtime_utils': 'code and data ownership',
     'principal': 'caller authority', 'approval_tokens': 'approval authority',
     'action_requires': 'operation authority', 'thread_context': 'caller binding',
     'execution_turn': 'execution authority', 'tool_context': 'path authority',
@@ -37,6 +37,7 @@ CORE_MODULES = {
     'restart_helper': 'recovery authority', 'generation_store': 'code activation',
     'component_registry': 'component publication', 'component_runtime': 'component isolation',
     'program_boundary': 'program ownership', 'program_dependencies': 'validation scope',
+    'program_modules': 'module activation', 'program_publication': 'module publication',
     'program_runtime': 'program activation', 'program_versions': 'program publication',
     'python_environment_lock': 'execution identity', 'execution_commit': 'publication evidence',
     'completion_contract': 'completion authority', 'completion_lease': 'completion authority',
@@ -45,6 +46,7 @@ CORE_MODULES = {
     'function_store': 'definition publication', 'function_library': 'definition validation',
     'function_consumers': 'consumer validation', 'script_mutation': 'script publication',
     'vocabulary_policy': 'vocabulary authority', 'vocabulary_state': 'vocabulary publication',
+    'value_semantics': 'language values', 'ibl_registry': 'vocabulary loading',
     'ibl_v2_parser': 'language grammar', 'ibl_v2_runtime': 'language execution',
     'ibl_v2_compile': 'language validation', 'ibl_edition': 'language edition',
     'vocabulary_import': 'vocabulary publication',
@@ -57,7 +59,7 @@ CORE_MODULES = {
 ESSENTIALS_CORE = frozenset({
     'handler', 'red_zone_family', 'essentials_file_io', 'essentials_workspace',
     'essentials_component_repair', 'repair_tool_scope', 'repair_staging',
-    'repair_candidate', 'repair_gates', 'repair_outcomes', 'repair_surfaces', 'program_apply',
+    'program_host_apply', 'repair_candidate', 'repair_gates', 'repair_outcomes', 'repair_surfaces', 'program_apply',
     'vocab_write_gate', 'body_ops', 'script_ops', 'script_runtime', 'script_session', 'program_derived',
 })
 CORE_PREFIXES = {
@@ -128,7 +130,7 @@ def describe(relative):
                 'root': '/'.join(parts[:5]), 'mutable': True, 'activation': 'package'}
     if parts[0] == 'backend':
         return {'kind': 'module', 'owner': 'module:' + path.stem,
-                'mutable': True, 'activation': 'shared-worker'}
+                'mutable': True, 'activation': 'module-publication'}
     if parts[0] == 'frontend':
         return {'kind': 'surface', 'owner': 'surface:' + '/'.join(parts[1:3]),
                 'mutable': True, 'activation': 'surface-owner'}

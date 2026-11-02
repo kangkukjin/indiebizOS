@@ -95,11 +95,19 @@ def get_service_config(service_name: str) -> Optional[Dict]:
 def _get_nodes_path() -> Path:
     """ibl_nodes.yaml 경로 — 앵커는 runtime_utils.get_base_path 하나(2026-08-24)."""
     global _nodes_path
-    if _nodes_path:
-        return _nodes_path
-    from runtime_utils import get_vocabulary_path
-    _nodes_path = get_vocabulary_path()
+    from runtime_utils import get_vocabulary_path, get_source_root
+    # Baseline belongs to this worker, not a task's temporary data-root override.
+    # An explicit program publication selects a new immutable catalog path.
+    if (get_source_root() / 'data/restart_control/programs/modules.json').is_file():
+        return get_vocabulary_path()
+    if _nodes_path is None:
+        _nodes_path = get_vocabulary_path()
     return _nodes_path
+
+
+
+def vocabulary_path() -> Path:
+    return _get_nodes_path()
 
 
 # 폰 프로파일(#3 runs_on) — runnable 액션 집합 캐시.
@@ -144,7 +152,7 @@ def _load_nodes_installed() -> Dict:
     """
     global _nodes, _nodes_revision
     from vocabulary_state import revision
-    current_revision = revision()
+    current_revision = (revision(), str(_get_nodes_path()))
     if _nodes is not None and _nodes_revision == current_revision:
         return _nodes
 

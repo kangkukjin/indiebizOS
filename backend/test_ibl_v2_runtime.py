@@ -17,6 +17,28 @@ from ibl_v2_runtime import Budget, Runtime
 ROUND = Path(__file__).resolve().parents[1] / 'docs/experiments/long_sentence_imagination/round_39'
 
 
+def test_parallel_cancel_checks_do_not_share_a_throttle_window(monkeypatch):
+    import threading
+    from ibl_v2_ir import Fault
+    cancelled = threading.Event()
+    runtime = Runtime(compile_program('return 1', {}), cancel_check=cancelled.is_set)
+    monkeypatch.setattr('ibl_v2_runtime._CANCEL_CHECK_INTERVAL_S', 3600.0)
+    runtime.check()  # This worker just checked; another worker must still check.
+    cancelled.set()
+    failures = []
+    def branch():
+        try:
+            runtime.check()
+        except Fault as exc:
+            failures.append(exc.code)
+    worker = threading.Thread(target=branch)
+    worker.start(); worker.join(5)
+    assert not worker.is_alive() and failures == ['CANCELLED']
+    cancelled.clear()
+    with pytest.raises(Fault, match='취소'):
+        runtime.check()  # Once observed, cancellation is terminal for this run.
+
+
 def test_parallel_late_receipt_does_not_rewind_progress(monkeypatch):
     """A slower reused branch must not replace the newer branch's coordinate."""
     import threading

@@ -2,7 +2,8 @@
 
 Only statically known adapter calls are exposed. Writes retain their resource
 footprint and durable receipt; parallel steering is restricted to read-only plans.
-Running calls, ambiguous repeated parallel sites and dynamic definitions are not replaced.
+Repeated read-only sites are addressed within a live execution scope.
+Running calls and dynamic definitions are not replaced.
 """
 import json
 import sqlite3
@@ -40,6 +41,7 @@ def publish(journal, plan, project_path):
     for n in nodes:
         if n.kind in {'def', 'lambda'}:
             shared.update(child.id for child in walk(n))
+    scoped = each or (parallel and bool(shared))
     for node in nodes:
         key = f"{node.data.get('node')}:{node.data.get('action')}"
         spec = plan.registry.get(key)
@@ -52,14 +54,14 @@ def publish(journal, plan, project_path):
         if not effects <= SUPPORTED or any(
                 set(v.get('effects', contract['effects'])) != effects for v in variants):
             continue
-        if each or (parallel and (not plan.effects <= SAFE or node.id in shared)):
+        if (each or parallel) and not plan.effects <= SAFE:
             continue
         if 'write_external' in effects and not contract.get('write_resources'):
             continue
         targets[node.id] = {'action': key, 'revision': digest(contract), 'contract': contract,
-                            'effects': sorted(effects),
+                            'effects': sorted(effects), 'addressing': 'scope' if scoped else 'node',
                             'resource_policy': 'unchanged' if 'write_external' in effects else 'read_only'}
-    metadata = {'root_task': get_current_task_id() or '', 'plan_hash': plan.fingerprint,
+    metadata = {'scoped': scoped, 'root_task': get_current_task_id() or '', 'plan_hash': plan.fingerprint,
                 'access_scope': receipt_access_scope(), 'targets': targets,
                 'task_ref': ref(KIND, journal.run_id, str(Path(project_path).resolve()))}
     journal.db.executescript('CREATE TABLE IF NOT EXISTS control_meta(data TEXT);'
@@ -67,25 +69,130 @@ def publish(journal, plan, project_path):
                             'request_id TEXT PRIMARY KEY,payload TEXT,state TEXT,reason TEXT);'
                             'CREATE TABLE IF NOT EXISTS control_boundaries(node_id TEXT PRIMARY KEY,ordinal INTEGER);'
                             'CREATE TABLE IF NOT EXISTS control_invocations('
-                            'node_id TEXT,ordinal INTEGER,call_id TEXT,PRIMARY KEY(node_id,ordinal));')
+                            'node_id TEXT,ordinal INTEGER,call_id TEXT,PRIMARY KEY(node_id,ordinal));'
+                            'CREATE TABLE IF NOT EXISTS control_scopes('
+                            'scope_id TEXT PRIMARY KEY,route TEXT,targets TEXT,active INTEGER);'
+                            'CREATE TABLE IF NOT EXISTS control_scope_boundaries('
+                            'scope_id TEXT,node_id TEXT,ordinal INTEGER,PRIMARY KEY(scope_id,node_id));'
+                            'CREATE TABLE IF NOT EXISTS control_scope_invocations('
+                            'scope_id TEXT,node_id TEXT,ordinal INTEGER,call_id TEXT,PRIMARY KEY(scope_id,node_id,ordinal));')
     previous = journal.db.execute('SELECT data FROM control_meta').fetchone()
     if previous:
         old = json.loads(previous[0])
         metadata['root_task'] = old['root_task']
+        if old['plan_hash'] == plan.fingerprint:
+            # Previously addressable sites keep their wire coordinate on resume.
+            # New scoped sites must not orphan an already applied legacy request.
+            for node_id, target in targets.items():
+                if node_id in old['targets']:
+                    target['addressing'] = old['targets'][node_id].get('addressing', 'node')
         if old['plan_hash'] != plan.fingerprint:
             # Definition repair is owned by the existing stopped-run repair path.
             journal.db.execute("UPDATE control_requests SET state='not_applied',reason='definition changed' WHERE state='accepted'")
+    metadata['scoped'] = any(t['addressing'] == 'scope' for t in targets.values())
     journal.db.execute('DELETE FROM control_meta')
     journal.db.execute('INSERT INTO control_meta VALUES(?)', (json.dumps(metadata),))
     journal.db.execute('DELETE FROM control_boundaries')
+    journal.db.execute('DELETE FROM control_scope_boundaries')
+    journal.db.execute('UPDATE control_scopes SET active=0')
     journal.db.commit()
     journal.control = metadata
     journal.control_counts = {}
+    journal.control_scope_nodes = {}
     return metadata['task_ref']
 
 
 class UnsupportedControl(ValueError):
     pass
+
+
+def scope_nodes(value):
+    """Calls in this frame only; child frames own their own live coordinates."""
+    from ibl_v2_ir import Node
+    if isinstance(value, Node):
+        if value.kind in {'def', 'lambda', 'parallel'}:
+            return
+        yield value
+        for key, child in value.data.items():
+            if (key == 'body' and value.kind == 'call'
+                    and (value.data.get('node'), value.data.get('action')) == ('table', 'each')):
+                continue
+            yield from scope_nodes(child)
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from scope_nodes(child)
+    elif isinstance(value, (tuple, list)):
+        for child in value:
+            yield from scope_nodes(child)
+
+
+@contextmanager
+def scope(runtime, body):
+    """A live frame is an address, never a new task/effect owner or permission."""
+    journal = runtime.journal
+    if not journal or not getattr(journal, 'control', {}).get('scoped'):
+        yield
+        return
+    with journal.lock:
+        cache = getattr(journal, 'control_scope_nodes', None)
+        if cache is None:
+            journal.control_scope_nodes = cache = {}
+        if body.id not in cache:
+            cache[body.id] = sorted({n.id for n in scope_nodes(body)
+                                    if journal.control['targets'].get(n.id, {}).get('addressing') == 'scope'})
+        targets = cache[body.id]
+    previous = getattr(runtime.local, 'control_scope', None)
+    runtime.local.control_scope = None
+    scope_id = None
+    try:
+        if targets:
+            route = getattr(runtime.local, 'route', ())
+            entry = runtime.ordinal('control_scope:' + body.id)
+            context = {'route': route, 'body_id': body.id, 'entry_ordinal': entry}
+            scope_id = digest(context)
+            with journal.lock:
+                journal.db.execute('INSERT OR REPLACE INTO control_scopes VALUES(?,?,?,1)',
+                                   (scope_id, json.dumps(context), json.dumps(targets)))
+                journal.db.commit()
+            runtime.local.control_scope = (scope_id, targets)
+        yield
+    finally:
+        runtime.local.control_scope = previous
+        if scope_id:
+            with journal.lock:
+                db = journal.db
+                db.execute('BEGIN IMMEDIATE')
+                try:
+                    db.execute('UPDATE control_scopes SET active=0 WHERE scope_id=?', (scope_id,))
+                    for rid, payload in db.execute("SELECT request_id,payload FROM control_requests WHERE state='accepted'").fetchall():
+                        if json.loads(payload).get('scope') == scope_id:
+                            db.execute("UPDATE control_requests SET state='not_applied',reason='scope_closed' WHERE request_id=?", (rid,))
+                    db.commit()
+                except BaseException:
+                    db.rollback()
+                    raise
+
+
+def boundary_count(db, node_id, scope_id=None):
+    if scope_id is not None:
+        return db.execute('SELECT ordinal FROM control_scope_boundaries WHERE scope_id=? AND node_id=?',
+                          (scope_id, node_id)).fetchone()
+    return db.execute('SELECT ordinal FROM control_boundaries WHERE node_id=?', (node_id,)).fetchone()
+
+
+def boundaries(db, meta):
+    def target(node_id, scope_id=None, context=None):
+        spec = {k: v for k, v in meta['targets'][node_id].items() if k != 'contract'}
+        current = boundary_count(db, node_id, scope_id)
+        spec.update(node_id=node_id, next_ordinal=(current[0] if current else 0) + 1)
+        if scope_id is not None:
+            spec.update(scope=scope_id, scope_context=context)
+        return spec
+    result = [target(n) for n, spec in meta['targets'].items() if spec.get('addressing') != 'scope']
+    if meta.get('scoped'):
+        for scope_id, context, targets in db.execute('SELECT scope_id,route,targets FROM control_scopes WHERE active=1 ORDER BY scope_id'):
+            result.extend(target(n, scope_id, json.loads(context)) for n in json.loads(targets) if n in meta['targets'])
+    return result
 
 
 @contextmanager
@@ -121,14 +228,14 @@ def enrich(ref, base):
     from task_receipts import view
     try:
         with connection(ref) as (db, meta, path):
-            counts = dict(db.execute('SELECT node_id,ordinal FROM control_boundaries'))
+            targets = boundaries(db, meta)
             requests = []
             linked = db.execute("SELECT 1 FROM sqlite_master WHERE name='control_invocations'").fetchone()
             for rid, state, reason, payload in db.execute(
                     'SELECT request_id,state,reason,payload FROM control_requests ORDER BY rowid'):
                 item = {'request_id': rid, 'state': state, 'reason': reason}
                 request = json.loads(payload)
-                row = invocation(db, request['node_id'], request['ordinal']) if linked else None
+                row = invocation(db, request['node_id'], request['ordinal'], request.get('scope')) if linked else None
                 if row:
                     receipt = json.loads(row[1]) if row[1] else None
                     item.update(call_ref={'run_id': ref['task_id'], 'call_id': row[0]},
@@ -145,9 +252,8 @@ def enrich(ref, base):
     if observed.get('locked'):
         state = 'cancel_requested' if path.with_suffix('.cancel').exists() else 'running'
         base = view(ref, state, accepted_at=observed.get('created_at'))
-    targets = [{k: v for k, v in spec.items() if k != 'contract'} |
-               {'node_id': node, 'next_ordinal': counts.get(node, 0) + 1}
-               for node, spec in meta['targets'].items()] if base['state'] == 'running' else []
+    if base['state'] != 'running':
+        targets = []
     base['progress'] = {**(base.get('progress') or {}), 'root_task': meta['root_task'],
                         'plan_hash': meta['plan_hash'], 'boundaries': targets, 'requests': requests}
     return base
@@ -159,7 +265,7 @@ def steer(ref, message, request_id):
     try:
         payload = json.loads(message) if isinstance(message, str) else message
         fields = {'root_task', 'plan_hash', 'node_id', 'revision', 'ordinal', 'expected_args_hash', 'changes'}
-        if (not isinstance(payload, dict) or set(payload) != fields or not isinstance(payload['changes'], dict)
+        if (not isinstance(payload, dict) or set(payload) not in (fields, fields | {'scope'}) or not isinstance(payload['changes'], dict)
                 or not payload['changes'] or type(payload['ordinal']) is not int or payload['ordinal'] < 1):
             raise ValueError('지원 범위는 아직 시작하지 않은 호출의 다음 경계 인자 변경입니다')
         encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, allow_nan=False)
@@ -173,12 +279,21 @@ def steer(ref, message, request_id):
             if (payload['root_task'] != meta['root_task'] or payload['plan_hash'] != meta['plan_hash']
                     or not target or payload['revision'] != target['revision']):
                 raise ValueError('대상·정의 판본이 다르거나 지원하지 않는 경계입니다')
+            scope_id = payload.get('scope')
+            if target.get('addressing') == 'scope':
+                if not isinstance(scope_id, str):
+                    raise ValueError('반복·공유 호출은 status의 실행 scope가 필요합니다')
+                active = db.execute('SELECT targets FROM control_scopes WHERE scope_id=? AND active=1', (scope_id,)).fetchone()
+                if not active or payload['node_id'] not in json.loads(active[0]):
+                    raise ValueError('종료됐거나 대상이 다른 실행 scope입니다')
+            elif 'scope' in payload:
+                raise ValueError('이 호출은 실행 scope 주소를 지원하지 않습니다')
             if set(payload['changes']) - target['contract']['params'].keys():
                 raise ValueError('계약에 없는 변경 인자입니다')
             linked = db.execute("SELECT 1 FROM sqlite_master WHERE name='control_invocations'").fetchone()
-            if linked and invocation(db, payload['node_id'], payload['ordinal']):
+            if linked and invocation(db, payload['node_id'], payload['ordinal'], scope_id):
                 raise ValueError('이미 시작한 호출은 영수증 재사용만 가능하며 다시 조향할 수 없습니다')
-            current = db.execute('SELECT ordinal FROM control_boundaries WHERE node_id=?', (payload['node_id'],)).fetchone()
+            current = boundary_count(db, payload['node_id'], scope_id)
             if payload['ordinal'] != (current[0] if current else 0) + 1:
                 raise ValueError('이미 시작한 호출 또는 다음 경계가 아닌 호출은 변경할 수 없습니다')
             if db.execute('SELECT status FROM lifecycle').fetchone()[0] != 'running' or path.with_suffix('.cancel').exists():
@@ -189,8 +304,11 @@ def steer(ref, message, request_id):
         raise ValueError('부분 조향 요청 형식이 올바르지 않습니다') from exc
 
 
-def invocation(db, node_id, ordinal):
+def invocation(db, node_id, ordinal, scope_id=None):
     """An existing effect marker is authoritative even without a return receipt."""
+    if scope_id is not None:
+        return db.execute('SELECT c.id,c.receipt FROM control_scope_invocations i JOIN calls c ON c.id=i.call_id '
+                          'WHERE i.scope_id=? AND i.node_id=? AND i.ordinal=?', (scope_id, node_id, ordinal)).fetchone()
     return db.execute('SELECT c.id,c.receipt FROM control_invocations i JOIN calls c ON c.id=i.call_id '
                       'WHERE i.node_id=? AND i.ordinal=?', (node_id, ordinal)).fetchone()
 
@@ -214,11 +332,19 @@ def bind_invocation(runtime, node, call_id):
         return
     with runtime.journal.lock:
         db = runtime.journal.db
-        old = db.execute('SELECT call_id FROM control_invocations WHERE node_id=? AND ordinal=?', coordinate).fetchone()
+        node_id, ordinal, scope_id = coordinate
+        if scope_id is None:
+            old = db.execute('SELECT call_id FROM control_invocations WHERE node_id=? AND ordinal=?', (node_id, ordinal)).fetchone()
+        else:
+            old = db.execute('SELECT call_id FROM control_scope_invocations WHERE scope_id=? AND node_id=? AND ordinal=?',
+                             (scope_id, node_id, ordinal)).fetchone()
         if old and old[0] != call_id:
             from ibl_v2_ir import Fault
             raise Fault('CONTROL_COORDINATE_CHANGED', '부분 개입의 호출 좌표가 달라졌습니다. 효과를 시작하지 않습니다.', kind='protocol')
-        db.execute('INSERT OR IGNORE INTO control_invocations VALUES(?,?,?)', (*coordinate, call_id))
+        if scope_id is None:
+            db.execute('INSERT OR IGNORE INTO control_invocations VALUES(?,?,?)', (node_id, ordinal, call_id))
+        else:
+            db.execute('INSERT OR IGNORE INTO control_scope_invocations VALUES(?,?,?,?)', (scope_id, node_id, ordinal, call_id))
         db.commit()
 
 
@@ -227,27 +353,37 @@ def boundary(runtime, node, args, spec):
     runtime.local.control_boundary = None
     if not journal or not getattr(journal, 'control', None) or node.id not in journal.control['targets']:
         return args
+    scope_id = None
+    if journal.control['targets'][node.id].get('addressing') == 'scope':
+        current_scope = getattr(runtime.local, 'control_scope', None)
+        if not current_scope or node.id not in current_scope[1]:
+            return args
+        scope_id = current_scope[0]
     from ibl_callable_contract import checked_values
     with journal.lock:
-        ordinal = journal.control_counts.get(node.id, 0) + 1
-        journal.control_counts[node.id] = ordinal
-        runtime.local.control_boundary = (node.id, ordinal)
+        key = (scope_id, node.id)
+        ordinal = journal.control_counts.get(key, 0) + 1
+        journal.control_counts[key] = ordinal
+        runtime.local.control_boundary = (node.id, ordinal, scope_id)
         # Serialize acceptance and application across processes, including cancel.
         db = journal.db
         db.execute('BEGIN IMMEDIATE')
         try:
-            db.execute('INSERT OR REPLACE INTO control_boundaries VALUES(?,?)', (node.id, ordinal))
+            if scope_id is None:
+                db.execute('INSERT OR REPLACE INTO control_boundaries VALUES(?,?)', (node.id, ordinal))
+            else:
+                db.execute('INSERT OR REPLACE INTO control_scope_boundaries VALUES(?,?,?)', (scope_id, node.id, ordinal))
             rows = db.execute("SELECT request_id,payload,state FROM control_requests WHERE state IN ('accepted','applied') ORDER BY rowid").fetchall()
             for rid, encoded, state in rows:
                 request = json.loads(encoded)
-                if request['node_id'] != node.id or request['ordinal'] != ordinal:
+                if request['node_id'] != node.id or request['ordinal'] != ordinal or request.get('scope') != scope_id:
                     continue
                 reason = None
                 if (journal.root / (journal.run_id + '.cancel')).exists() or (runtime.cancel_check and runtime.cancel_check()):
                     reason = 'cancelled_before_boundary'
                 elif request['plan_hash'] != runtime.plan.fingerprint or request['revision'] != digest(spec.contract):
                     reason = 'definition_revision_mismatch'
-                elif state == 'accepted' and invocation(db, node.id, ordinal):
+                elif state == 'accepted' and invocation(db, node.id, ordinal, scope_id):
                     reason = 'already_started'
                 elif request['expected_args_hash'] != digest(args.value):
                     reason = 'input_revision_mismatch'
@@ -266,7 +402,7 @@ def boundary(runtime, node, args, spec):
                     db.execute("UPDATE control_requests SET state='not_applied',reason=? WHERE request_id=?", (reason, rid))
                     continue
                 eid = runtime.event(node, 'steer_applied', args.evidence, request_id=rid,
-                                    root_task=journal.control['root_task'], ordinal=ordinal,
+                                    root_task=journal.control['root_task'], ordinal=ordinal, scope=scope_id,
                                     old_args_hash=digest(args.value), new_args_hash=digest(values))
                 parts = {k: Binding(v, frozenset({eid})) if k in request['changes'] else
                          args.select(k) if k in args.value else Binding(v) for k, v in values.items()}

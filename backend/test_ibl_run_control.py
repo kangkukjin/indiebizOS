@@ -109,13 +109,13 @@ def test_changed_definition_active_invocation_and_foreign_owner_rejected(running
         steer(ref, payload, 'other')
 
 
-def test_unknown_writes_parallel_writes_and_each_not_exposed(tmp_path):
+def test_unknown_writes_parallel_writes_and_effectful_each_not_exposed(tmp_path):
     from ibl_v2_compile import compile_program
     from ibl_run_journal import Journal
     from ibl_run_control import publish
     reg = {'t:write': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['write_external']}, lambda *_: 1),
            't:read': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['pure']}, lambda *_: 1)}
-    for code in ('[t:write]{}', '[t:write]{} & [t:read]{}', '[1,2] >> [table:each]{[t:read]{}}'):
+    for code in ('[t:write]{}', '[t:write]{} & [t:read]{}', '[1,2] >> [table:each]{[t:write]{}}'):
         plan = compile_program(code, reg)
         with Journal(tmp_path / 'runs', 'test') as journal:
             publish(journal, plan, tmp_path)
@@ -253,16 +253,18 @@ def test_parallel_read_branch_changes_without_repeating_other_branch(launch, tmp
         assert sorted(calls) == [3, 7]
 
 
-def test_shared_function_in_parallel_is_not_an_addressable_global_ordinal(tmp_path):
+def test_shared_function_in_parallel_requires_a_live_scope(tmp_path):
     from ibl_v2_compile import compile_program
     from ibl_run_journal import Journal
-    from ibl_run_control import publish
+    from ibl_run_control import publish, boundaries
     reg = {'t:read': Adapter({'version': 1, 'params': {}, 'result': 'Number', 'effects': ['read_external']}, lambda *_: 1)}
     plan = compile_program('[def:read](){return [t:read]{}}; [fn:read]{} & [fn:read]{}', reg)
     assert not plan.issues
     with Journal(tmp_path / 'runs', 'test') as journal:
         publish(journal, plan, tmp_path)
-        assert not journal.control['targets']
+        assert journal.control['targets']
+        assert all(t['addressing'] == 'scope' for t in journal.control['targets'].values())
+        assert boundaries(journal.db, journal.control) == []
 
 
 def test_cancel_before_write_boundary_preserves_original_file(launch, tmp_path):
@@ -330,16 +332,204 @@ def test_steered_write_still_checks_adapter_source_revision(launch, tmp_path):
         assert not calls and path.read_text() == 'external update'
 
 
-def test_parallel_plan_with_declared_write_resource_is_not_steerable(tmp_path):
+@pytest.mark.parametrize('code', [
+    '[t:write]{path:"a",content:"x"} & [t:write]{path:"b",content:"y"}',
+    '[table:each]{items:["a","b"]}{[t:write]{path:$it,content:"x"}}',
+    '[table:each]{items:["a","b"],parallel:2}{[t:write]{path:$it,content:"x"}}',
+])
+def test_parallel_or_each_with_declared_write_resource_is_not_steerable(tmp_path, code):
     from ibl_v2_compile import compile_program
     from ibl_run_journal import Journal
     from ibl_run_control import publish
-    plan = compile_program('[t:write]{path:"a",content:"x"} & [t:write]{path:"b",content:"y"}',
-                           {'t:write': writer(lambda rt, args: args['content'])})
+    plan = compile_program(code, {'t:write': writer(lambda rt, args: args['content'])})
     assert not plan.issues
     with Journal(tmp_path / 'runs', 'test') as journal:
         publish(journal, plan, tmp_path)
         assert not journal.control['targets']
+
+
+@pytest.fixture
+def scoped_run(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+    @contextmanager
+    def start(code, wait_for=(10, 20)):
+        entered = {n: threading.Event() for n in (10, 20)}
+        release = {n: threading.Event() for n in entered}
+        entered['read_twenty'] = threading.Event()
+        handles, calls, output, crashes = {}, [], [], []
+        def gate(rt, args):
+            n = args['n']
+            handles[n] = (rt.journal.control['task_ref'], rt.local.control_scope[0])
+            entered[n].set()
+            assert release[n].wait(15)
+            return n
+        contract = {'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                    'effects': ['read_external'], 'pipe_input': 'n'}
+        def read(rt, args):
+            calls.append(args['n'])
+            if args['n'] == 20:
+                entered['read_twenty'].set()
+            return args['n']
+        reg = {'t:gate': Adapter(contract, gate),
+               't:read': Adapter(dict(contract), read)}
+        monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **kw: reg)
+        monkeypatch.setattr('ibl_v2_store.definitions', lambda: {})
+        monkeypatch.setattr('tool_batch.prepared_plan', lambda *a: None)
+        request = {'edition': 2, 'code': code}
+        context = snapshot()
+        def run():
+            restore(context)
+            try:
+                output.append(handle_request(request, str(tmp_path)))
+            except BaseException as exc:
+                crashes.append(exc)
+        worker = threading.Thread(target=run)
+        worker.start()
+        try:
+            for n in wait_for:
+                assert entered[n].wait(5), (output, crashes)
+            yield handles, entered, release, calls, output, worker, request
+        finally:
+            for event in release.values():
+                event.set()
+            worker.join(15)
+            assert not worker.is_alive() and not crashes, crashes
+    return start
+
+
+def scoped_change(handles, n, *, action='t:read', changes=None):
+    ref, scope_id = handles[n]
+    progress = status(ref)['progress']
+    target = next(row for row in progress['boundaries'] if row.get('scope') == scope_id and row['action'] == action)
+    return {'root_task': progress['root_task'], 'plan_hash': progress['plan_hash'],
+            'node_id': target['node_id'], 'revision': target['revision'], 'ordinal': target['next_ordinal'],
+            'scope': scope_id, 'expected_args_hash': digest({'n': n}), 'changes': changes or {'n': 99}}
+
+
+@pytest.mark.parametrize('code', [
+    '[table:each]{items:[10,20],parallel:2}{[t:gate]{n:$it};[t:read]{n:$it}}',
+    '[def:work]($n){[t:gate]{n:$n};return [t:read]{n:$n}}; [fn:work]{n:10} & [fn:work]{n:20}',
+    '$f=($n)=>([t:gate]{n:$n} >> [t:read]{}); return $f{n:10} & $f{n:20}',
+    '[def:work]($n){[t:gate]{n:$n};return [t:read]{n:$n}}; '
+    '[table:each]{items:[10,20],parallel:2}{[fn:work]{n:$it}}',
+])
+def test_scoped_read_changes_only_one_activation_and_resume_reuses_both(scoped_run, tmp_path, code):
+    with scoped_run(code) as (handles, entered, release, calls, out, worker, request):
+        ref, selected_scope = handles[10]
+        payload = scoped_change(handles, 10)
+        other = scoped_change(handles, 20)
+        assert payload['node_id'] == other['node_id'] and selected_scope != other['scope']
+        with pytest.raises(ValueError, match='scope'):
+            steer(ref, {k: v for k, v in payload.items() if k != 'scope'}, 'ambiguous')
+        with pytest.raises(ValueError, match='scope'):
+            steer(ref, {**payload, 'scope': 'foreign-scope'}, 'forged')
+        assert steer(ref, payload, 'only-ten')['delivery'] == 'accepted'
+        assert steer(ref, payload, 'only-ten')['delivery'] == 'accepted'
+        release[20].set()  # Completion order must not select the target.
+        assert entered['read_twenty'].wait(5)
+        release[10].set()
+        worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == [99, 20], out
+        assert sorted(calls) == [20, 99]
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'applied' and row['effect_state'] == 'returned'
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == [99, 20], resumed
+        assert sorted(calls) == [20, 99]
+        assert steer(ref, payload, 'only-ten')['delivery'] == 'applied'
+        with pytest.raises(ValueError, match='scope'):
+            steer(ref, payload, 'closed-activation')
+
+
+def test_each_scope_ends_before_next_sequential_item(scoped_run):
+    code = '[table:each]{items:[10,20]}{[t:gate]{n:$it};[t:read]{n:$it}}'
+    with scoped_run(code, wait_for=(10,)) as (handles, entered, release, calls, out, worker, _):
+        ref = handles[10][0]
+        old = scoped_change(handles, 10)
+        release[10].set()
+        assert entered[20].wait(5)
+        with pytest.raises(ValueError, match='scope'):
+            steer(ref, old, 'old-item')
+        steer(ref, scoped_change(handles, 20), 'new-item')
+        release[20].set(); worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == [10, 99], out
+
+
+def test_wrong_scoped_input_does_not_spill_into_other_item(scoped_run):
+    code = '[table:each]{items:[10,20],parallel:2}{[t:gate]{n:$it};[t:read]{n:$it}}'
+    with scoped_run(code) as (handles, entered, release, calls, out, worker, _):
+        ref = handles[10][0]
+        ten, twenty = scoped_change(handles, 10), scoped_change(handles, 20)
+        steer(ref, {**twenty, 'expected_args_hash': ten['expected_args_hash']}, 'stale')
+        for event in release.values():
+            event.set()
+        worker.join(10)
+        assert out[0]['value'] == [10, 20]
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'not_applied' and row['reason'] == 'input_revision_mismatch'
+
+
+def test_scoped_cancel_preserves_running_reads_and_drops_pending_changes(scoped_run):
+    code = '[table:each]{items:[10,20],parallel:2}{[t:gate]{n:$it};[t:read]{n:$it}}'
+    with scoped_run(code) as (handles, entered, release, calls, out, worker, _):
+        ref = handles[10][0]
+        payload = scoped_change(handles, 10)
+        steer(ref, payload, 'cancelled')
+        with pytest.raises(ValueError, match='이미 시작'):
+            gate = scoped_change(handles, 10, action='t:gate')
+            steer(ref, {**gate, 'ordinal': 1}, 'active')
+        assert cancel(ref)['state'] == 'cancel_requested'
+        for event in release.values():
+            event.set()
+        worker.join(10)
+        assert not out[0]['success'] and not calls
+        assert status(ref)['progress']['requests'][0]['state'] == 'not_applied'
+
+
+def test_unreached_scoped_change_expires_at_frame_exit(scoped_run):
+    code = '[table:each]{items:[10,20]}{[t:gate]{n:$it};[if:$it==20]{[t:read]{n:$it}}[else]{0}}'
+    with scoped_run(code, wait_for=(10,)) as (handles, entered, release, calls, out, worker, _):
+        ref = handles[10][0]
+        steer(ref, scoped_change(handles, 10), 'unreached')
+        release[10].set()
+        assert entered[20].wait(5)
+        row = status(ref)['progress']['requests'][0]
+        assert row['state'] == 'not_applied' and row['reason'] == 'scope_closed'
+        release[20].set(); worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == [0, 20], out
+        assert calls == [20]
+
+
+def test_legacy_node_address_survives_new_scope_capability_on_resume(launch, tmp_path, monkeypatch):
+    import ibl_run_control as control
+    from ibl_v2_repair_graph import walk
+    original = control.publish
+    def legacy_publish(journal, plan, project):
+        ref = original(journal, plan, project)
+        shared = {n.id for n in walk(plan.functions)}
+        metadata = journal.control
+        metadata.pop('scoped')
+        metadata['targets'] = {n: t for n, t in metadata['targets'].items() if n not in shared}
+        for target in metadata['targets'].values():
+            target.pop('addressing')
+        journal.db.execute('UPDATE control_meta SET data=?', (json.dumps(metadata),))
+        journal.db.commit()
+        return ref
+    monkeypatch.setattr(control, 'publish', legacy_publish)
+    reads = []
+    reader = Adapter({'version': 1, 'params': {'n': 'Number'}, 'result': 'Number',
+                      'effects': ['read_external']}, lambda rt, args: reads.append(args['n']) or args['n'])
+    code = '[def:unused](){return [t:read]{n:0}};[t:gate]{};[t:read]{n:2} & [t:read]{n:3}'
+    with launch(code, {'t:read': reader}) as (ref, out, release, worker, request, _):
+        payload = change(ref, 't:read', {'n': 2}, {'n': 7}, occurrence=0)
+        steer(ref, payload, 'legacy')
+        release.set(); worker.join(10)
+        assert out[0]['success'] and out[0]['value'] == [7, 3], out
+        monkeypatch.setattr(control, 'publish', original)
+        resumed = handle_request({**request, 'resume': {'run_id': ref['task_id']}}, str(tmp_path))
+        assert resumed['success'] and resumed['value'] == [7, 3], resumed
+        assert sorted(reads) == [3, 7]
+        assert steer(ref, payload, 'legacy')['delivery'] == 'applied'
 
 
 if __name__ == "__main__":

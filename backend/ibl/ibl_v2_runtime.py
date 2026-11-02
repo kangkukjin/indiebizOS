@@ -137,7 +137,7 @@ class Runtime(ExpressionEvaluator):
         self.input_evidence = copy.deepcopy(input_evidence or {})
         self.reuse_writes = []
         self.cancel_check = cancel_check
-        self._next_cancel_check = 0.0   # 첫 걸음에서는 바로 확인한다
+        self._cancelled = False
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
         self.tool_time = {}   # node_id → [호출 수, 초, 액션, 구간들] — 걸음 수가 세지 않는 도구 시간을 줄별로 보인다
@@ -212,18 +212,24 @@ class Runtime(ExpressionEvaluator):
             # 취소 확인은 걸음마다가 아니라 짧은 간격으로 한다. MCP 경로의 확인은 파일 두 번·프로세스 조회라
             # 30만 걸음짜리 문장이 3초 대신 35초 걸렸다(ep4211, 초당 9천 걸음). 순수 계산 구간의 취소 반응은
             # 최대 20ms 늦고, 액션 호출 직후에는 간격과 무관하게 바로 확인한다.
+            if self._cancelled:
+                raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
             now = time.monotonic()
-            if now >= self._next_cancel_check:
-                self._next_cancel_check = now + _CANCEL_CHECK_INTERVAL_S
+            # One branch must not consume another branch's post-call check.
+            if now >= getattr(self.local, 'next_cancel_check', 0.0):
+                self.local.next_cancel_check = now + _CANCEL_CHECK_INTERVAL_S
                 if self.cancel_check():
+                    self._cancelled = True
                     raise Fault("CANCELLED", "실행이 취소되었습니다.", kind="cancelled")
         self.budget.tick(depth=getattr(self.local, "depth", 0), node_id=getattr(self.local, "node_id", None))
 
     def frame(self, body, env):
-        try:
-            return self.eval(body, env)
-        except Returned as returned:
-            return returned.binding
+        from ibl_run_control import scope
+        with scope(self, body):
+            try:
+                return self.eval(body, env)
+            except Returned as returned:
+                return returned.binding
 
     def eval(self, node, env, piped=None, *, control=()):
         if node is None:
@@ -501,7 +507,9 @@ class Runtime(ExpressionEvaluator):
         depth = getattr(self.local, 'depth', 0)
         self.local.depth = depth + 1
         try:
-            return super().callback(fn, args)
+            from ibl_run_control import scope
+            with scope(self, fn.body):
+                return super().callback(fn, args)
         finally:
             self.local.depth = depth
 
@@ -1114,7 +1122,7 @@ class Runtime(ExpressionEvaluator):
                     finally:
                         # 호출 뒤 첫 걸음은 바로 취소를 확인한다 — 호출 도중 들어온 취소가
                         # 간격에 가려 성공으로 끝나지 않게(걸음 간격 확인은 순수 계산 구간에만 적용된다).
-                        self._next_cancel_check = 0.0
+                        self.local.next_cancel_check = 0.0
                         with self.lock:
                             self.model_usage.extend(usage)
                         if usage:

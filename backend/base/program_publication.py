@@ -119,7 +119,15 @@ def selected(repo, code):
         row = row.get('previous_active', {})
     if not compatible(row, code):
         return Path(code), None
-    return verify_object(repo, row), row
+    root = verify_object(repo, row)
+    # A fresh generation already containing every published byte supersedes the
+    # sparse overlay. Do not retain symlinks to a retired generation forever.
+    from generation_store import sealed, _excluded
+    generation = sealed(code)
+    if all((generation and _excluded(p)) or file_hash(Path(code) / p) == sha
+           for p, sha in row['files'].items()):
+        return Path(code), row
+    return root, row
 
 
 def selected_path(repo, code, relative):

@@ -244,3 +244,19 @@ def test_cancel_during_active_check_prevents_model_resume(tmp_path, monkeypatch,
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_applied_repair_can_read_live_report_without_reopening_candidate(bundle):
+    repo, package, handler, staging, key = bundle
+    session = staging.ensure_session(str(repo), key)
+    report = repo / 'data/outputs/repair/report.md'
+    report.parent.mkdir(parents=True)
+    report.write_text('original report')
+    session['status'] = 'applied'
+    staging._save_session(str(repo), session)
+    before = staging._session_path(str(repo), key)
+    original = Path(before).read_bytes()
+    assert handler._red_stage(str(report), False) == str(report)
+    assert Path(before).read_bytes() == original
+    with pytest.raises(RuntimeError, match='적용·복구'):
+        handler._red_stage(str(package / 'handler.py'), True)

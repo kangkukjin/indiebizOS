@@ -92,6 +92,9 @@ def finish(st, repo, session):
                         'stage': 'activation', 'error': '프로그램 활성 검사 미통과', 'key': session['key']}
     committed = (st._candidate.commit(repo, session, handler._load_sibling('body_ops')) if active else
                  {'success': False, 'pending_activation': True})
+    recovered = recover_commit_failure(st, repo, session, committed) if active else None
+    if recovered:
+        return recovered
     session['commit'] = committed
     for row in session['program_activation']:
         versions.publish(repo, row['manifest'], row['baseline'], {'session': session['key'], 'commit': committed})
@@ -104,6 +107,29 @@ def finish(st, repo, session):
             'programs': session['program_activation'],
             'message': ('프로그램 판본을 교체했습니다. 원래 업무를 새 호출로 확인하세요.' if active else
                         '해당 프로그램의 진행 호출이 끝나기를 기다립니다. 종료 후 자동으로 활성 확인·각인합니다.')}
+
+
+def recover_commit_failure(st, repo, session, committed):
+    """A rejected commit returns to the same editable candidate, without replay.
+
+    Never roll back an uncertain/successful commit or a concurrent source edit.
+    Recovery uses the existing publication owner and exact before-images.
+    """
+    if committed.get('success') or not committed.get('commit_not_created'):
+        return None
+    for rel, item in session['sealed'].items():
+        if st._candidate.fingerprint(st._candidate.target(repo, rel)) != item['after']:
+            return None
+    recover(st, repo, session)
+    session['commit'] = committed
+    session.pop('activation_checks', None)
+    session.pop('applied_at', None)
+    st._save_session(repo, session)
+    return {'success': False, 'applied': False, 'activated': False, 'rolled_back': True,
+            'stage': 'staging', 'key': session['key'], 'commit': committed,
+            'error': committed.get('message') or committed.get('error'),
+            'message': '커밋 관문 실패로 이번 적용을 복구했습니다. 같은 사본에서 오류를 수정하고 '
+                       '원래 전체 기준으로 다시 검사·적용하세요. 기존 검사·활성 영수증은 재사용하지 않습니다.'}
 
 
 def recover(st, repo, session):

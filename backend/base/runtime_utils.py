@@ -130,16 +130,23 @@ def in_generation() -> bool:
     return bool(os.environ.get("INDIEBIZ_CODE_ROOT"))
 
 
+def uses_program_view() -> bool:
+    # An explicitly selected independent body must not inherit this repository's
+    # publication catalog. A generation keeps its declared code/data split.
+    return in_generation() or (get_base_path().resolve() == get_source_root().resolve()
+        and (get_source_root() / "data/restart_control/programs/modules.json").is_file())
+
+
 def get_installed_packages_root() -> Path:
     """실행이 읽는 설치 패키지 root(data/packages/installed). 세대에서는 봉인 사본, 아니면 데이터 root."""
-    if in_generation() or (get_source_root() / "data/restart_control/programs/modules.json").is_file():
+    if uses_program_view():
         return get_code_data_root() / "packages" / "installed"
     return get_base_path() / "data" / "packages" / "installed"
 
 
 def get_vocabulary_path() -> Path:
     """실행이 읽는 어휘 사전(data/ibl_nodes.yaml). 쓰기(빌드)는 get_source_root() 아래로 간다."""
-    if in_generation() or (get_source_root() / "data/restart_control/programs/modules.json").is_file():
+    if uses_program_view():
         return get_code_data_root() / "ibl_nodes.yaml"
     return get_base_path() / "data" / "ibl_nodes.yaml"
 

@@ -263,3 +263,20 @@ def test_runner_does_not_certify_all_failed_fixtures(health, monkeypatch):
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_boot_and_patrol_only_observe_drift_never_regenerate(tmp_path, monkeypatch):
+    from derived_freshness import enforce_derived_freshness
+    import runtime_utils
+    script = tmp_path / 'scripts/build_ibl_nodes.py'
+    script.parent.mkdir()
+    artifact = tmp_path / 'candidate.json'
+    artifact.write_text('verified applied candidate')
+    script.write_text("import sys\nfrom pathlib import Path\n"
+                      "if '--check' in sys.argv:\n print('untracked candidate input'); sys.exit(1)\n"
+                      "Path('candidate.json').write_text('overwritten by patrol')\n")
+    monkeypatch.setattr(runtime_utils, 'get_source_root', lambda: tmp_path)
+    result = enforce_derived_freshness()
+    assert result['success'] is False
+    assert 'untracked candidate input' in result['error_message']
+    assert artifact.read_text() == 'verified applied candidate'

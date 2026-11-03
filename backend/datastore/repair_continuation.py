@@ -76,7 +76,14 @@ def resuming(row):
 
 
 def current():
-    return _current.get()
+    row = _current.get()
+    if row is not None:
+        return row
+    # HTTP/MCP already resolves its task through the active supervisor. Reuse
+    # that binding instead of inventing another transport/context registry.
+    from supervision_bus import current as supervisor_current
+    controller = supervisor_current()
+    return getattr(controller, 'repair_continuation', None) if controller else None
 
 
 def inherited_framing(message):
@@ -132,7 +139,7 @@ def defer(controller, response, base=None):
     session = read_json(job_path.with_name(key(task) + ".json")) or {}
     if session.get("status") != "apply_scheduled":
         return None
-    previous = _current.get() or {}
+    previous = current() or {}
     if previous and cancelled(previous, base):
         return None
     config = controller.runner.config

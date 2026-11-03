@@ -473,7 +473,7 @@ def _red_stage(path: str, for_write: bool) -> str:
         if not staged:
             raise RuntimeError("수리 사본을 확보하지 못했습니다. 라이브 쓰기를 거절합니다")
         return staged
-    session = st.ensure_session(repo, key)
+    session = st.read_session(repo, key) or st.ensure_session(repo, key)
     if not session:
         raise RuntimeError("수리 사본을 읽을 수 없습니다")
     return str(_load_sibling("repair_tool_scope").source_path(

@@ -49,6 +49,8 @@ class Supervisor:
         self.cancel_check = cancel_check
         self.project_path = getattr(runner.ai, "project_path", ".")
         self.context = snapshot()
+        from repair_continuation import current as repair_current
+        self.repair_continuation = repair_current()
         from episode_logger import EpisodeLogger
         self.episode_id = getattr(EpisodeLogger.current(), "episode_id", None)
         from member_runtime import is_member, private_path

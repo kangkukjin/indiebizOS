@@ -98,3 +98,57 @@ def test_busy_package_finishes_without_another_user_apply(setup):
         time.sleep(0.1)
     assert session['commit']['success']
     assert runtime.execute({}, None) == 2
+
+
+@pytest.mark.parametrize('host_program', [False, True])
+def test_commit_rejection_recovers_same_candidate_then_finishes(setup, monkeypatch, host_program):
+    repo, root, st, session, apply, runtime = setup
+    if host_program:
+        relative = 'data/scripts/commit_retry.py'
+        target = repo / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('VALUE = 1\n')
+        subprocess.run(['git', 'add', relative], cwd=repo, check=True)
+        subprocess.run(['git', 'commit', '-qm', 'script baseline'], cwd=repo, check=True)
+        candidate = st.stage_file(str(repo), 'host-retry', str(target))
+        Path(candidate).write_text('VALUE = 2\n')
+        session = st.read_session(str(repo), 'host-retry')
+        session.update(program_policy=1, repair_policy=2)
+        st._candidate.seal(str(repo), session, [{'gate': 'fixture', 'passed': True}],
+                           {'status': 'APPROVED'}, {'criteria': [{'id': 'C1', 'text': 'script correction'}]})
+        st._save_session(str(repo), session)
+    else:
+        target = root / 'helper.py'
+    old = target.read_bytes()
+    head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo)
+    hook = repo / '.git/hooks/pre-commit'
+    hook.write_text('#!/bin/sh\necho "missing runner entrypoint"\nexit 1\n')
+    hook.chmod(0o755)
+    result = apply.apply(st, str(repo), session)
+    assert result['rolled_back'] and not result['applied'], result
+    assert session['status'] == 'staging' and not session['verified']
+    assert target.read_bytes() == old
+    assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo) == head
+    assert 'missing runner entrypoint' in result['error']
+    assert 'readiness' not in session and not session.get('activation_checks')
+    candidate = repo / session['worktree'] / target.relative_to(repo)
+    assert '2' in candidate.read_text()
+    candidate.write_text(candidate.read_text().replace('2', '3'))
+    hook.write_text('#!/bin/sh\nexit 0\n')
+    st._candidate.seal(str(repo), session, [{'gate': 'fixture', 'passed': True}],
+                       {'status': 'APPROVED'}, {'criteria': [{'id': 'C1', 'text': 'correction'}]})
+    st._save_session(str(repo), session)
+    result = apply.apply(st, str(repo), session)
+    assert result['success'] and result['activated'], result
+    assert '3' in target.read_text()
+    assert subprocess.check_output(['git', 'show', result['commit']['commit'] + ':' +
+                                   target.relative_to(repo).as_posix()], cwd=repo) == target.read_bytes()
+
+
+def test_commit_uncertainty_and_concurrent_edits_never_trigger_recovery(setup):
+    repo, root, st, session, apply, runtime = setup
+    before = (root / 'helper.py').read_bytes()
+    assert apply.recover_commit_failure(st, str(repo), session, {'success': False}) is None
+    assert apply.recover_commit_failure(st, str(repo), session,
+                                       {'success': False, 'commit_not_created': True}) is None
+    assert (root / 'helper.py').read_bytes() == before

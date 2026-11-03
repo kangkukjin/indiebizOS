@@ -358,9 +358,8 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=runtime_work.bind_boot(_deferred_world_pulse), daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
 
-    # 파생물 신선도 순찰(2026-09-01, ep2519 사슬 수리) — 백엔드가 죽어 있던 사이의
-    # 아웃오브프로세스 편집(Claude Code 세션·스크립트)이 남긴 드리프트를 부팅에서
-    # 재생성으로 닫는다. 부팅을 블로킹하지 않게 별도 스레드(빌드 ~수 초).
+    # 파생물 점검은 읽기 전용이다. 생성은 기존 수리/빌드가 소유하며,
+    # 부팅이 이미 검사·적용된 변경을 독립적으로 다시 쓰지 않는다.
     def _deferred_derived_freshness():
         try:
             from derived_freshness import enforce_derived_freshness

@@ -300,3 +300,75 @@ def test_host_prepare_uses_restart_for_layout_change_only(tmp_path, monkeypatch,
         assert not session.get('module_publication')
     finally:
         modules._TABLE, modules._OWNERS = old_table, old_owners
+
+
+def test_independent_body_does_not_read_hosts_publication_catalog(tmp_path, monkeypatch):
+    import runtime_utils as runtime
+    host, body = tmp_path / 'host', tmp_path / 'independent'
+    catalog = host / 'data/restart_control/programs/modules.json'
+    catalog.parent.mkdir(parents=True)
+    catalog.write_text('{}')
+    body.mkdir()
+    monkeypatch.delenv('INDIEBIZ_CODE_ROOT', raising=False)
+    monkeypatch.setattr(runtime, 'get_source_root', lambda: host)
+    monkeypatch.setattr(runtime, 'get_code_root', lambda: host)
+    monkeypatch.setattr(runtime, 'get_base_path', lambda: body)
+    assert runtime.get_vocabulary_path() == body / 'data/ibl_nodes.yaml'
+    assert runtime.get_installed_packages_root() == body / 'data/packages/installed'
+
+
+def test_new_generation_absorbs_publication_without_retired_generation_links(tmp_path):
+    repo, old, fresh = tmp_path / 'repo', tmp_path / 'old', tmp_path / 'fresh'
+    repo.mkdir()
+    (old / 'data/scripts').mkdir(parents=True)
+    (old / 'data/scripts/change.py').write_text('VALUE = 1\n')
+    (old / 'data/ibl_nodes.yaml').write_text('nodes: {self: {}}\n')
+    session = session_for(repo, old, {'data/scripts/change.py': 'VALUE = 2\n'})
+    row = pub.snapshot(repo, old, session)
+    row['activation'] = 'active'
+    pub.publish(repo, row)
+    shutil.copytree(old, fresh)
+    (fresh / 'data/scripts/change.py').write_text('VALUE = 2\n')
+    shutil.rmtree(old)
+    selected, receipt = pub.selected(repo, fresh)
+    assert selected == fresh and receipt['version'] == row['version']
+    assert (selected / 'data/ibl_nodes.yaml').read_text() == 'nodes: {self: {}}\n'
+    assert (selected / 'data/scripts/change.py').read_text() == 'VALUE = 2\n'
+
+
+def test_sealed_generation_absorbs_runtime_bytes_without_test_artifacts(tmp_path):
+    import generation_store as gens
+    repo, old = tmp_path / 'repo', tmp_path / 'old'
+    (repo / 'backend/services').mkdir(parents=True)
+    (repo / 'backend/services/feature.py').write_text('VALUE = 1\n')
+    shutil.copytree(repo, old)
+    changes = {'backend/services/feature.py': 'VALUE = 2\n',
+               'backend/test_feature.py': 'def test_feature(): pass\n'}
+    session = session_for(repo, old, changes)
+    row = pub.snapshot(repo, old, session)
+    row['activation'] = 'active'
+    pub.publish(repo, row)
+    for rel, text in changes.items():
+        (repo / rel).write_text(text)
+    manifest = gens.snapshot(repo, tmp_path / 'generations')
+    fresh = tmp_path / 'generations' / manifest['generation']
+    assert not (fresh / 'backend/test_feature.py').exists()
+    shutil.rmtree(old)
+    root, receipt = pub.selected(repo, fresh)
+    assert root == fresh and receipt['version'] == row['version']
+    assert pub.selected_path(repo, fresh, 'backend/services/feature.py').read_text() == 'VALUE = 2\n'
+
+
+def test_missing_body_catalog_does_not_poison_previous_catalog_cache(tmp_path, monkeypatch):
+    import ibl_registry as registry
+    catalog = tmp_path / 'ibl_nodes.yaml'
+    catalog.write_text('nodes: {fixture: {actions: {read: {}}}}\n')
+    monkeypatch.setattr(registry, '_nodes', None)
+    monkeypatch.setattr(registry, '_nodes_revision', None)
+    monkeypatch.setattr(registry, '_nodes_path', catalog)
+    expected = registry.load_nodes_installed()
+    assert 'fixture' in expected['nodes']
+    monkeypatch.setattr(registry, '_nodes_path', tmp_path / 'missing.yaml')
+    assert registry.load_nodes_installed() == {'nodes': {}}
+    monkeypatch.setattr(registry, '_nodes_path', catalog)
+    assert registry.load_nodes_installed() == expected

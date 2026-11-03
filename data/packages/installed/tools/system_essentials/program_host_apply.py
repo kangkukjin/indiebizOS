@@ -155,6 +155,9 @@ def finish(st, repo, session, prepared=None):
                     'error': '프로그램 활성 검사 미통과', 'key': session['key']}
     handler = _load_handler({'repo': str(repo)})
     committed = st._candidate.commit(repo, session, handler._load_sibling('body_ops'))
+    recovered = handler._load_sibling('program_apply').recover_commit_failure(st, repo, session, committed)
+    if recovered:
+        return recovered
     session['commit'] = committed
     if committed.get('success'):
         program_modules.accept(row['version'])

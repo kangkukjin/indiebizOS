@@ -96,3 +96,34 @@ def test_verified_component_publication_does_not_restart_worker(managed):
     path.write_text('def transform(x): return [x]\n')
     scan(ctl, clock)
     assert ctl.pending()
+
+
+def test_failed_boot_recovers_on_corrected_source_without_new_protocol(setup):
+    ctl, adapter, clock = setup
+    adapter.running = False
+    ctl.save(phase='FAILED', worker=None)
+    original = ctl.state['source_digest']
+    for _ in range(3):
+        clock[0] += 3
+        ctl.tick()
+    assert not ctl.pending() and not adapter.spawns
+    (ctl.base / 'backend/app.py').write_text('VALUE = 2\n')
+    for _ in range(8):
+        clock[0] += 3
+        ctl.tick()
+    assert ctl.state['phase'] == 'ACTIVE' and adapter.spawns == 1
+    assert ctl.state['source_digest'] != original
+
+
+def test_failed_boot_does_not_retry_rejected_or_unchanged_source(setup):
+    import generation_store as gens
+    ctl, adapter, clock = setup
+    adapter.running = False
+    ctl.save(phase='FAILED', worker=None)
+    (ctl.base / 'backend/app.py').write_text('VALUE = 2\n')
+    bad = gens.execution_inventory(ctl.code_root)['digest']
+    ctl.record_failed_source(bad, 'boot_failed', 'fixture')
+    for _ in range(4):
+        clock[0] += 3
+        ctl.tick()
+    assert ctl.state['phase'] == 'FAILED' and not ctl.pending() and not adapter.spawns

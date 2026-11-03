@@ -634,6 +634,25 @@ _LOCK_STALE_S = 600       # 이보다 오래된 잠금 = 죽은 소유자로 보
 _LOCK_WAIT_S = 30
 
 
+def _commit_diagnostic(root, detail):
+    """Keep the fatal tail and a complete masked log, not just successful gates."""
+    from pathlib import Path
+    from uuid import uuid4
+    from logging_utils import mask_secrets
+    detail = mask_secrets(detail)
+    if len(detail) <= 4000:
+        return detail
+    excerpt = detail[:800] + "\n… 중간 출력 생략 …\n" + detail[-3200:]
+    try:
+        folder = Path(root) / "data/system_ai_state/repair_check_outputs"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / ("commit-" + uuid4().hex + ".log")
+        path.write_text(detail, encoding="utf-8")
+        return f"전체 관문 출력: {path}\n{excerpt}"
+    except OSError as exc:
+        return f"{excerpt}\n전체 출력 저장 실패: {exc}"
+
+
 def _git_env(root, args, env, timeout=_COMMIT_TIMEOUT_S, input_text=None):
     """각인 전용 실행기 — 임시 인덱스 env 와 긴 timeout. 반환 규약은 _git 과 동일하되
     관문(pre-commit) 거부문이 stdout 으로 나오는 경우가 많아 stdout·stderr 둘 다 싣는다."""
@@ -650,7 +669,7 @@ def _git_env(root, args, env, timeout=_COMMIT_TIMEOUT_S, input_text=None):
         return None, f"git 실행 실패: {e}"
     if proc.returncode != 0:
         detail = ((proc.stdout or "").strip() + "\n" + (proc.stderr or "").strip()).strip()
-        return None, f"git 오류 (exit {proc.returncode}): {detail[:1000]}"
+        return None, f"git 오류 (exit {proc.returncode}): {_commit_diagnostic(root, detail)}"
     return proc.stdout, None
 
 
@@ -819,8 +838,10 @@ def op_commit(tool_input, *, index_patch=None, trusted_root=None):
             # porcelain commit — pre-commit 관문이 같은 env(임시 인덱스)를 상속해 정확히 검사한다
             _, gerr = _git_env(root, ["commit", "-m", message], env)
             if gerr:
-                return {"success": False,
-                        "message": f"커밋되지 않았습니다 (관문 pre-commit 거부 또는 git 오류) — {gerr}"}
+                observed, observation_error = _git(root, ["rev-parse", "--verify", "HEAD"])
+                unchanged = not observation_error and (observed or "").strip() == start_head
+                return {"success": False, "commit_not_created": unchanged,
+                        "message": f"커밋 실행 실패 (관문 거부 또는 git 오류) — {gerr}"}
 
             new_head, gerr = _git(root, ["rev-parse", "HEAD"])
             if gerr:

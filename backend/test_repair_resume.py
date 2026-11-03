@@ -167,3 +167,35 @@ def test_workspace_transfer_rejects_changed_ownership(unfinished, field):
     st._save_session(str(root), {**sess, 'key': 'latest', 'resumed_from': sess['key'], field: 'foreign'})
     with pytest.raises(ValueError, match='소유권'):
         journal.staging_session(sess['key'])
+
+
+def test_applied_resume_follows_existing_task_binding_across_http_thread(unfinished, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    import thread_context as tc
+    import supervision_bus
+    from repair_context import activation_only
+    from test_repair_staging import _load_handler
+    root, wt, st, sess, controller = unfinished
+    sess['status'] = 'applied'
+    st._save_session(str(root), sess)
+    resume.preserve_unfinished(controller, sess, 'commit rejected', 'hook failed')
+    handler = _load_handler()
+    handler._REPO_ROOT = root
+    monkeypatch.setattr(handler, '_red_grant_active', lambda: {'task_id': 'next'})
+    def invoke(task):
+        with tc.actor_context(agent_id='owner', task_id=task):
+            return journal.current(), activation_only(), handler._staging_key()
+    with resume.user_resume(controller.runner, '수리를 완료해줘', ['previous']):
+        binding = SimpleNamespace(task='next', repair_continuation=journal.current())
+        monkeypatch.setattr(tc, 'get_current_task_id', lambda: getattr(tc._thread_local, 'task_id', None))
+        supervision_bus.register(binding, ['owner'])
+        try:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                row, activation, key = pool.submit(invoke, 'next').result()
+                assert row['staging_task_id'] == sess['key'] and activation
+                assert key == sess['key']
+                assert st.read_session(str(root), 'next') is None
+                row, activation, key = pool.submit(invoke, 'unrelated').result()
+                assert row is None and not activation and key == 'next'
+        finally:
+            supervision_bus.unregister(binding)

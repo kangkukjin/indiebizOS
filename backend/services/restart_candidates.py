@@ -40,7 +40,7 @@ def verify_candidate(candidate, *, files=None):
 
 
 class Watcher:
-    """ACTIVE 에서만 도는 정본 변경 감시. 상태는 제어자 state 의 watch 칸에 영속한다."""
+    """실행 중 또는 부팅 실패 뒤의 정본 변경 감시. 같은 실패 지문은 반복하지 않는다."""
 
     def __init__(self, controller):
         self.controller = controller
@@ -115,7 +115,7 @@ class Watcher:
             ctl.save(watch={})
             return None
         from restart_protocol import request
-        rid = "files-" + state["generation"] + "-" + prepared["generation"][:24]
+        rid = "files-" + (state.get("generation") or "cold") + "-" + prepared["generation"][:24]
         req = request(ctl.base, "development_files", request_id=rid,
                       artifact_digest=prepared["generation"],
                       payload={"generation_dir": prepared["generation_dir"],

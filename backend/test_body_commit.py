@@ -153,7 +153,8 @@ def test_c6_precommit_gate_rejection():
             f.write("v2\n")
         before = _head_count(root)
         out = mod.op_commit({"message": "m", "paths": ["tracked.py"]})
-        assert out["success"] is False and "커밋되지 않았습니다" in out["message"]
+        assert out["success"] is False and "커밋 실행 실패" in out["message"]
+        assert out["commit_not_created"] is True
         assert "관문 거부: 시험용" in out["message"]   # 거부문 원문 동봉 — 침묵 실패 금지
         assert _head_count(root) == before
     finally:
@@ -204,3 +205,17 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
     raise SystemExit(_pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_long_gate_output_preserves_fatal_tail_and_full_log():
+    from pathlib import Path
+    mod, root = _fresh()
+    try:
+        detail = 'successful check\n' * 1000 + 'FATAL: missing test entrypoint'
+        result = mod._commit_diagnostic(root, detail)
+        assert 'FATAL: missing test entrypoint' in result
+        logs = list((Path(root) / 'data/system_ai_state/repair_check_outputs').glob('commit-*.log'))
+        assert len(logs) == 1 and logs[0].read_text() == detail
+        assert str(logs[0]) in result
+    finally:
+        shutil.rmtree(root, ignore_errors=True)

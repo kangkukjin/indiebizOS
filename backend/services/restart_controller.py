@@ -307,8 +307,9 @@ class Controller:
                 return
             self.save(request=pending, rollback_attempted=False, candidate=candidate)
             self.start_generation(candidate)
-            break
-        return  # 자동 무한 재기동 금지. 명시적 요청만 재시도한다.
+            return
+        if not self.adapter.alive(s.get("worker")):
+            self._watch_development()
 
     def _serve_tick(self):
         """현역을 지키는 공통 조치. 관측 불가면 False(아무것도 바꾸지 않는다)."""
@@ -342,6 +343,11 @@ class Controller:
                       recovery_reason=None, publish_attempts=0,
                       interrupted_owners=[], effect_unknown=False, previous_digest=s["code_digest"])
             return
+        self._watch_development()
+
+    def _watch_development(self):
+        # Failed boot and ordinary saves share one watcher. Its source digest
+        # prevents retries of unchanged failures; a corrected source can recover.
         if self._development():
             self._control_watch()
             if self._watcher is None:

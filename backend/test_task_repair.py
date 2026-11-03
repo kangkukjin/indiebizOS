@@ -129,8 +129,7 @@ def test_invalid_candidate_reports_error_without_arming_parent(env):
 
 @pytest.mark.parametrize('path', ['backend/cognition/agent_pipeline.py', 'backend/datastore/red_grant.py',
     'data/common_prompts/consciousness_prompt.md', 'data/ibl_nodes_src/self.yaml',
-    'backend/services/restart_controller.py', 'backend/base/control_base.py',
-    'backend/base/restart_process.py',
+    'backend/base/program_boundary.py', 'backend/base/repair_process.py',
     'data/packages/installed/tools/web/tests/test_handler.py', 'backend/test_ibl_v2_parser.py',
     'backend/ibl/../ibl/ibl_v2_parser.py'])
 def test_control_contract_and_checks_are_not_automatic_repair_targets(path):
@@ -148,13 +147,20 @@ def test_related_runtime_implementations_can_be_repaired(path):
 
 
 @pytest.mark.parametrize('path', [
-    'backend/boot_paths.py', 'backend/base/component_registry.py',
-    'backend/common/completion_contract.py', 'backend/datastore/repair_root.py',
-    'backend/datastore/restart_red.py', 'backend/cognition/cognitive_consciousness.py',
-    'backend/cognition/consciousness_agent.py', 'backend/cognition/prompt_builder.py',
-    'backend/cognition/reframe.py', 'backend/cognition/framing_inheritance.py'])
+    'backend/common/completion_contract.py', 'backend/datastore/restart_red.py'])
 def test_runtime_ownership_does_not_include_authority_and_completion(path):
     assert not repair.eligible(path)
+
+
+@pytest.mark.parametrize('path', [
+    'backend/boot_paths.py', 'backend/base/component_registry.py',
+    'backend/datastore/repair_root.py', 'backend/cognition/cognitive_consciousness.py',
+    'backend/cognition/consciousness_agent.py', 'backend/cognition/prompt_builder.py',
+    'backend/cognition/reframe.py', 'backend/cognition/framing_inheritance.py'])
+def test_host_implementation_can_be_repaired_through_restart(path):
+    from program_boundary import describe
+    assert repair.eligible(path)
+    assert describe(path)['activation'] == 'generation-restart'
 
 
 def test_diagnostic_request_keeps_original_bytes_and_allows_declared_sibling(env):
@@ -182,8 +188,8 @@ def test_diagnostic_request_keeps_original_bytes_and_allows_declared_sibling(env
 
 @pytest.mark.parametrize('paths', [[], 'backend/services/document_parser.py',
     ['backend/services/document_scanner.py'], ['backend/services/document_parser.py'] * 2,
-    ['backend/services/document_parser.py', 'backend/services/restart_controller.py'],
-    ['backend/services/document_parser.py', 'backend/cognition/final_evaluator.py']])
+    ['backend/services/document_parser.py', 'backend/base/program_boundary.py'],
+    ['backend/services/document_parser.py', 'backend/common/completion_contract.py']])
 def test_diagnostic_scope_cannot_mix_units_or_add_governance(env, paths):
     result = invoke(env.handler, env.repo, 'patch_op', {'path': str(env.path), 'paths': paths, 'reason': '실패'})
     assert not result['success'] and 'paths' in result['error']

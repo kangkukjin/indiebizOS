@@ -26,8 +26,10 @@ def guidance():
     return (
         '수리 경계 정본: backend/base/program_boundary.py의 describe/change. '
         '대상이 불명확하면 [self:patch]{op:"status",path:"정본 상대 경로"}로 현재 소유권을 조회한다. '
-        '코어는 기본 지침·권한·격리·언어·목표와 완료 판정을 집행하는 보호 구현이다. '
+        '자기 변경 금지는 요청 신원·권한, 격리, 적용 권한과 완료 계약·영수증, 기본 지침의 최소 경계다. '
         '보호 코어는 수리 그랜트가 있어도 내부에서 변경할 수 없다. '
+        '코어라는 이름이나 backend 위치만으로 수리를 금지하지 않는다. '
+        '수리 가능한 실행 기반은 검사 후 기존 외부 제어자의 세대 교체·복구로 반영한다. '
         '일반 프로그램(backend 모듈·frontend·scripts·도구 패키지·data/scripts·개인 사전)은 '
         '공통 소유권 판정에 따라 사본 수정→관련 검사→self:patch apply→활성 확인·각인으로 수리한다. '
         'needs_repair는 이 프로그램 사본 작업의 필요 여부이며 코어 변경 여부가 아니다. '
@@ -38,75 +40,144 @@ def guidance():
     )
 
 
-# These are authority/validation/lifetime enforcement, not a list of features.
-# Keep the reason alongside the boundary so additions remain reviewable.
+# A publication transaction never changes its own authority or evidence store.
+# Other host implementation is repairable, but switches at a generation boundary.
+# These two maps are the single policy: consumers must use the predicates below.
 CORE_MODULES = {
-    'boot_paths': 'bootstrap', 'api': 'composition root', 'runtime_utils': 'code and data ownership',
-    'principal': 'caller authority', 'approval_tokens': 'approval authority',
-    'action_requires': 'operation authority', 'thread_context': 'caller binding',
-    'execution_turn': 'execution authority', 'tool_context': 'path authority',
-    'tool_loader': 'implementation loading', 'ibl_routing': 'call authority',
-    'ibl_access': 'call authority', 'ibl_principal': 'call authority',
+    'principal': 'caller authority',
+    'approval_tokens': 'approval authority',
+    'action_requires': 'operation authority',
+    'thread_context': 'caller binding',
+    'execution_turn': 'execution authority',
+    'tool_context': 'path authority',
+    'ibl_access': 'call authority',
+    'ibl_principal': 'call authority',
     'agent_pipeline': 'execution and grant issuance',
-    'cognitive_consciousness': 'repair routing', 'consciousness_agent': 'goal framing',
-    'prompt_builder': 'agent instructions', 'prompt_composition': 'agent instructions',
-    'reframe': 'goal revision', 'framing_inheritance': 'goal and authority inheritance',
-    'final_evaluator': 'completion criteria', 'supervisor_handoff': 'goal ownership',
-    'consciousness': 'goal ownership', 'conscious_supervisor': 'goal ownership',
-    'supervision_bus': 'supervision authority', 'supervision_hook': 'supervision authority',
-    'supervision_watch': 'supervision authority', 'supervision_delivery': 'approved publication',
-    'red_grant': 'repair authority', 'red_apply': 'publication authority',
-    'red_watchdog': 'repair recovery', 'restart_red': 'publication authority',
-    'repair_policy': 'repair acceptance', 'repair_readiness': 'repair acceptance',
-    'repair_check_runner': 'test evidence', 'repair_test_results': 'test evidence',
-    'repair_process': 'candidate isolation', 'repair_process_bridge': 'candidate isolation', 'coding_process': 'candidate isolation',
-    'script_process': 'execution isolation', 'file_script': 'script authority',
-    'script_workspace': 'execution isolation', 'shell_shadow_gate': 'execution isolation',
-    'task_repair': 'repair scope', 'repair_continuation': 'repair lifetime',
-    'component_continuation': 'repair lifetime', 'repair_root': 'repair lifetime',
-    'task_cancellation': 'cancellation authority', 'task_tree_budget': 'execution budget',
-    'control_base': 'control activation', 'restart_protocol': 'activation protocol',
-    'restart_process': 'process ownership', 'restart_child': 'process ownership',
-    'restart_controller': 'process ownership', 'restart_candidates': 'activation authority',
-    'restart_helper': 'recovery authority', 'generation_store': 'code activation',
-    'component_registry': 'component publication', 'component_runtime': 'component isolation',
-    'program_boundary': 'program ownership', 'program_dependencies': 'validation scope',
-    'program_modules': 'module activation', 'program_publication': 'module publication',
-    'program_runtime': 'program activation', 'program_versions': 'program publication',
-    'python_environment_lock': 'execution identity', 'execution_commit': 'publication evidence',
-    'completion_contract': 'completion authority', 'completion_lease': 'completion authority',
-    'install_approvals': 'installation authority', 'body_trust': 'body authority',
-    'capability_change_checks': 'change validation', 'capability_changes': 'change planning',
-    'function_store': 'definition publication', 'function_library': 'definition validation',
-    'function_consumers': 'consumer validation', 'script_mutation': 'script publication',
-    'vocabulary_policy': 'vocabulary authority', 'vocabulary_state': 'vocabulary publication',
-    'value_semantics': 'language values', 'ibl_registry': 'vocabulary loading',
-    'ibl_v2_parser': 'language grammar', 'ibl_v2_runtime': 'language execution',
-    'ibl_v2_compile': 'language validation', 'ibl_edition': 'language edition',
-    'vocabulary_import': 'vocabulary publication',
-    'control_launcher': 'control activation', 'update_maintenance': 'process ownership',
-    'member_profile': 'member authority', 'member_bridge': 'member authority',
-    'member_files': 'member path authority', 'member_runtime': 'member isolation',
-    'member_device_auth': 'device authority', 'member_enrollment': 'member identity',
-    'portal_auth': 'portal authority', 'auth_manager': 'authentication authority',
+    'red_grant': 'repair authority',
+    'red_apply': 'publication authority',
+    'restart_red': 'publication authority',
+    'repair_readiness': 'repair acceptance',
+    'repair_process': 'candidate isolation',
+    'repair_process_bridge': 'candidate isolation',
+    'coding_process': 'candidate isolation',
+    'script_process': 'execution isolation',
+    'script_workspace': 'execution isolation',
+    'shell_shadow_gate': 'execution isolation',
+    'task_repair': 'repair scope',
+    'task_cancellation': 'cancellation authority',
+    'generation_store': 'code activation',
+    'program_boundary': 'program ownership',
+    'program_publication': 'module publication',
+    'program_versions': 'program publication',
+    'execution_commit': 'publication evidence',
+    'completion_contract': 'completion authority',
+    'completion_lease': 'completion authority',
+    'install_approvals': 'installation authority',
+    'body_trust': 'body authority',
+    'script_mutation': 'script publication',
+    'member_device_auth': 'device authority',
+    'member_enrollment': 'member identity',
+    'portal_auth': 'portal authority',
+    'auth_manager': 'authentication authority',
 }
+
+RESTART_MODULES = {
+    'boot_paths': 'bootstrap',
+    'api': 'composition root',
+    'runtime_utils': 'code and data ownership',
+    'tool_loader': 'implementation loading',
+    'ibl_routing': 'call authority',
+    'cognitive_consciousness': 'repair routing',
+    'consciousness_agent': 'goal framing',
+    'prompt_builder': 'agent instructions',
+    'prompt_composition': 'agent instructions',
+    'reframe': 'goal revision',
+    'framing_inheritance': 'goal and authority inheritance',
+    'final_evaluator': 'completion criteria',
+    'supervisor_handoff': 'goal ownership',
+    'consciousness': 'goal ownership',
+    'conscious_supervisor': 'goal ownership',
+    'supervision_bus': 'supervision authority',
+    'supervision_hook': 'supervision authority',
+    'supervision_watch': 'supervision authority',
+    'supervision_delivery': 'approved publication',
+    'red_watchdog': 'repair recovery',
+    'repair_policy': 'repair acceptance',
+    'repair_check_runner': 'test evidence',
+    'repair_test_results': 'test evidence',
+    'file_script': 'script authority',
+    'repair_continuation': 'repair lifetime',
+    'component_continuation': 'repair lifetime',
+    'repair_root': 'repair lifetime',
+    'task_tree_budget': 'execution budget',
+    'control_base': 'control activation',
+    'restart_protocol': 'activation protocol',
+    'restart_process': 'process ownership',
+    'restart_child': 'process ownership',
+    'restart_controller': 'process ownership',
+    'restart_candidates': 'activation authority',
+    'restart_helper': 'recovery authority',
+    'component_registry': 'component publication',
+    'component_runtime': 'component isolation',
+    'program_dependencies': 'validation scope',
+    'program_modules': 'module activation',
+    'program_runtime': 'program activation',
+    'python_environment_lock': 'execution identity',
+    'capability_change_checks': 'change validation',
+    'capability_changes': 'change planning',
+    'function_store': 'definition publication',
+    'function_library': 'definition validation',
+    'function_consumers': 'consumer validation',
+    'vocabulary_policy': 'vocabulary authority',
+    'vocabulary_state': 'vocabulary publication',
+    'value_semantics': 'language values',
+    'ibl_registry': 'vocabulary loading',
+    'ibl_v2_parser': 'language grammar',
+    'ibl_v2_runtime': 'language execution',
+    'ibl_v2_compile': 'language validation',
+    'ibl_edition': 'language edition',
+    'vocabulary_import': 'vocabulary publication',
+    'control_launcher': 'control activation',
+    'update_maintenance': 'process ownership',
+    'member_profile': 'member authority',
+    'member_bridge': 'member authority',
+    'member_files': 'member path authority',
+    'member_runtime': 'member isolation',
+    'repair_resume': 'repair workspace continuity',
+}
+
 ESSENTIALS_CORE = frozenset({
-    'handler', 'red_zone_family', 'essentials_file_io', 'essentials_workspace',
-    'essentials_component_repair', 'repair_tool_scope', 'repair_staging',
-    'program_host_apply', 'repair_candidate', 'repair_gates', 'repair_outcomes', 'repair_surfaces', 'program_apply',
-    'vocab_write_gate', 'body_ops', 'script_ops', 'script_runtime', 'script_session', 'program_derived',
+    'handler', 'red_zone_family', 'repair_tool_scope', 'repair_staging',
+    'repair_candidate', 'program_host_apply', 'program_apply', 'vocab_write_gate',
+    'body_ops', 'script_ops',
 })
+RESTART_ESSENTIALS = frozenset({
+    'essentials_workspace', 'essentials_component_repair', 'repair_gates',
+    'repair_outcomes', 'repair_surfaces', 'script_runtime', 'script_session', 'program_derived',
+})
+
+# Workspace state is not candidate source. Reading and writing use the same
+# list instead of maintaining a second private-path boundary in staging.
+WORKSPACE_PRIVATE = {  # reason, owner diagnostic reads allowed
+    '.git': ('source publication', False),
+    '.worktrees': ('other candidate ownership', False),
+    'data/system_ai_state': ('task authority and receipts', True),
+    'data/restart_control': ('activation records', True),
+    'data/_backups': ('recovery records', False),
+    'data/spill': ('execution evidence', False),
+    'data/script_runs': ('execution receipts', False),
+    'data/backend_keeper_off': ('process control', False),
+}
 CORE_PREFIXES = {
+    **{path + '/': policy[0] for path, policy in WORKSPACE_PRIVATE.items()},
     'data/common_prompts/': 'agent instructions',
-    'data/restart_control/': 'activation records',
-    'data/system_ai_state/': 'task authority and receipts',
     'data/ibl_nodes_src/self.yaml': 'standard functional vocabulary',
     'data/ibl_nodes_src/others.yaml': 'standard functional vocabulary',
     'data/ibl_nodes_src/table.yaml': 'standard functional vocabulary',
     'data/ibl_nodes_src/meta.yaml': 'language metadata',
     'data/vocabulary_policy.yaml': 'vocabulary authority',
     'docs/generated_templates/': 'build templates',
-    '.git/': 'source publication', '.github/': 'validation configuration',
+    '.github/': 'validation configuration',
 }
 
 
@@ -143,6 +214,33 @@ def protected_reason(relative):
     return None
 
 
+def readable_runtime_state(relative):
+    """Owner repair may diagnose live control/receipt state without editing it."""
+    return bool(canonical(relative)) and any(relative == p or relative.startswith(p + '/')
+        for p, (_, readable) in WORKSPACE_PRIVATE.items() if readable)
+
+
+def requires_restart(relative):
+    """Repairable host implementation keeps its process lifetime; not a denial."""
+    path = canonical(relative)
+    if path is None:
+        return False
+    return ((relative.startswith('backend/') and path.stem in RESTART_MODULES)
+            or (relative.startswith('data/packages/installed/tools/system_essentials/')
+                and path.stem in RESTART_ESSENTIALS))
+
+
+def host_bound(relative):
+    """Immutable and restartable host code must not enter the hot import loader."""
+    return bool(protected_reason(relative) or requires_restart(relative))
+
+
+def generation_candidate(session):
+    """Choose publication from actual files, including sessions made by older code."""
+    return any(requires_restart(item.get('rel', path))
+               for path, item in session.get('files', {}).items())
+
+
 def describe(relative):
     """Return a discovered owner and the existing activation contract, or None."""
     path = canonical(relative)
@@ -159,6 +257,10 @@ def describe(relative):
         return {'kind': 'core', 'owner': 'protected-core', 'reason': reason,
                 'mutable': False, 'activation': 'external-development'}
     parts = path.parts
+    if requires_restart(relative):
+        return {'kind': 'host', 'owner': 'host:' + relative, 'mutable': True,
+                'activation': 'generation-restart',
+                'reason': 'process lifetime; repair through the existing restart controller'}
     if relative.startswith('data/scripts/'):
         return {'kind': 'script', 'owner': 'script:' + relative[13:],
                 'mutable': True, 'activation': 'script-owner'}

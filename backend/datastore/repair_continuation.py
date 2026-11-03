@@ -41,6 +41,26 @@ def read(task, base=None):
     return row if row and row.get("task_id") == task else None
 
 
+def staging_session(task, base=None):
+    """Follow verified workspace ownership transfers to its current receipt record."""
+    root = Path(base) / 'data/system_ai_state' if base else state_root()
+    session = read_json(root / 'repair_sessions' / (key(task) + '.json'))
+    seen = set()
+    while isinstance(session, dict) and session.get('reused_by'):
+        previous = session
+        old = previous['key']
+        if old in seen:
+            raise ValueError('수리 사본 인계가 순환합니다')
+        seen.add(old)
+        child = previous['reused_by']
+        session = read_json(root / 'repair_sessions' / (key(child) + '.json'))
+        if (not isinstance(session, dict) or session.get('key') != child
+                or session.get('resumed_from') != old
+                or any(session.get(k) != previous.get(k) for k in ('owner', 'root_task_id', 'worktree'))):
+            raise ValueError('수리 사본 인계의 소유권·원래 작업이 일치하지 않습니다')
+    return session
+
+
 def save(row, base=None):
     atomic_json(directory(base) / (key(row["task_id"]) + ".json"), row)
     return row
@@ -309,7 +329,7 @@ def _continue_execution(controller, row, decision, base=None):
     row["criteria_state"] = [{**c, "status": "unmet" if c["id"] in failed else "unverified"}
                              for c in criteria]
     # 응답 문구·시각·로그 양은 개발 진전이 아니다. 구현·산출물과 미달 기준을 비교한다.
-    files = {p: f for p, f in controller._evaluation_snapshot.get("files", {}).items()
+    files = {p: f for p, f in (getattr(controller, "_evaluation_snapshot", None) or {}).get("files", {}).items()
              if f.get("mode") != "image"}
     root = Path(base or get_base_path())
     session = read_json(root / "data/system_ai_state/repair_sessions" / (key(row.get("staging_task_id") or controller.task) + ".json")) or {}
@@ -321,7 +341,13 @@ def _continue_execution(controller, row, decision, base=None):
         staged = Path(entry.get("staged") or "")
         files[target] = {"hash": hashlib.sha256(staged.read_bytes()).hexdigest() if staged.is_file() else None,
                          "op": entry.get("op")}
-    signature = hashlib.sha256(json.dumps({"failed": sorted(failed), "files": files},
+    checks = [{k: r.get(k) for k in ('command', 'candidate_hash', 'environment_hash',
+                                    'status', 'criterion_ids')}
+              for r in session.get('execution_checks', []) if r.get('status') in {'passed', 'failed'}]
+    # Repeated logs/IDs are not progress; new machine verification of this exact
+    # candidate is. Keep the existing three-identical-observations stop rule.
+    checks = sorted({json.dumps(r, sort_keys=True) for r in checks})
+    signature = hashlib.sha256(json.dumps({"failed": sorted(failed), "files": files, "checks": checks},
                                          sort_keys=True).encode()).hexdigest()
     progress = [*row.get("execution_progress", []), signature][-3:]
     row.update(execution_progress=progress, next_instruction=decision.get("instruction", ""),

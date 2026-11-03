@@ -476,7 +476,8 @@ def _red_stage(path: str, for_write: bool) -> str:
     session = st.ensure_session(repo, key)
     if not session:
         raise RuntimeError("수리 사본을 읽을 수 없습니다")
-    return st.staged_path(repo, key, live_abs)
+    return str(_load_sibling("repair_tool_scope").source_path(
+        st, repo, os.path.join(repo, session["worktree"]), __import__("pathlib").Path(path)))
 
 
 def _repair_is_live_path(path):

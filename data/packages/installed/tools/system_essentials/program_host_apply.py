@@ -21,7 +21,14 @@ def apply(st, repo, session):
     root = publication.object_root(repo, row)
     changes = module_changes(session)
     # Load errors and incompatible interfaces fail before any live write.
-    prepared = program_modules.prepare(changes, root)
+    try:
+        prepared = program_modules.prepare(changes, root)
+    except program_modules.RestartRequired as exc:
+        # No live source or dispatch table has changed. The verified candidate
+        # can use the existing generation worker instead of being stranded.
+        session['activation_route'] = {'mode': 'generation-restart', 'reason': str(exc)}
+        st._save_session(repo, session)
+        return None
     _validate_standard(code, root, session)
     session['module_previous'] = previous
     session['module_publication'] = row

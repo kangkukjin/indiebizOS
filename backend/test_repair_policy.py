@@ -5,13 +5,13 @@ from test_repair_receipt_flow import repair  # noqa: F401
 from test_repair_workspace_completion import setup  # noqa: F401
 from test_conscious_supervisor import supervisor  # noqa: F401
 import repair_policy as policy
+import api_repair_continuation as consumer
 from supervisor_handoff import criteria_contract
 
 
 @pytest.mark.parametrize('entry', ['receipt', 'finalize'])
 def test_unverified_symptom_cannot_close_applied_repair(repair, monkeypatch, entry):
     from test_repair_receipt_flow import command
-    import api_repair_continuation as consumer
     import repair_root
     from thread_context import get_goal_eval_outcome
     root, wt, st, session, controller = repair
@@ -120,3 +120,35 @@ def test_review_continuation_alone_is_not_code_repair(supervisor):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+@pytest.mark.parametrize("transferred", [False, True])
+def test_receipt_policy_continues_unapplied_workspace_without_another_request(repair, monkeypatch, transferred):
+    import repair_continuation as journal
+    import repair_root
+    # This test owns queue production; the scheduler has separate integration tests.
+    monkeypatch.setattr(consumer, 'kick', lambda: None)
+    from thread_context import actor_context, get_goal_eval_outcome
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('partial implementation')
+    st._candidate.collect(str(root), session)
+    st._save_session(str(root), session)
+    if transferred:
+        old = session['key']
+        st._save_session(str(root), {**session, 'reused_by': 'latest'})
+        session = {**session, 'key': 'latest', 'resumed_from': old}
+        st._save_session(str(root), session)
+    controller.runner.config = {'id': controller.owner}
+    monkeypatch.setattr('principal.is_owner', lambda: True)
+    monkeypatch.setattr('final_evaluator.invoke', lambda *a, **kw: pytest.fail('extra completion model'))
+    with actor_context(origin='user'):
+        response = policy.finalize(controller, '검사 접수 중단으로 미실행')
+    row = journal.read(controller.task, root)
+    assert row['status'] == 'waiting_execution'
+    assert row['staging_task_id'] == session['key']
+    assert row['worktree'] == session['worktree']
+    assert row['criteria_contract']['criteria']
+    assert get_goal_eval_outcome()['status'] == 'PENDING_EXECUTION'
+    assert get_goal_eval_outcome()['goal_status'] == 'UNKNOWN'
+    assert not repair_root.projection(root, session['root_task_id'])['terminal']
+    assert '[작업 계속]' in response

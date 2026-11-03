@@ -2,10 +2,12 @@
 from pathlib import Path
 
 import program_versions as versions
-from program_boundary import protected_reason
+from program_boundary import protected_reason, generation_candidate
 
 
 def apply(st, repo, session):
+    if generation_candidate(session):
+        return None  # the existing staged restart path owns this transaction
     from script_mutation import activation_scope
     with st._candidate.locked(repo, 'application'), activation_scope(repo, session):
         result = _apply(st, repo, session)

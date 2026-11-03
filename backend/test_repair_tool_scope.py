@@ -61,7 +61,8 @@ def repair(tmp_path, monkeypatch, supervisor):
         monkeypatch.setattr(ops, name, value)
     from tool_context import ToolContext
     def call(name, args):
-        return json.loads(handler.execute(args, ToolContext(str(repo), name, agent_id='system_ai')))
+        result = handler.execute(args, ToolContext(str(repo), name, agent_id='system_ai'))
+        return result if name == 'read_file' else json.loads(result)
     with repair_workspace_scope(str(wt)):
         yield repo, wt, st, supervisor, call
 
@@ -244,7 +245,7 @@ def test_noncore_repair_pipeline_reaches_registration_apply_and_commit(repair, m
                   ' assert json.loads(subprocess.check_output([sys.executable,"data/scripts/fresh.py"])) == {"value":42}\n')
         assert call('write_file', {'path': 'backend/test_pipeline_script.py', 'content': source})['success']
         # A live grant must never open the core or the registry to file writes.
-        for path in ('backend/base/program_boundary.py', 'backend/cognition/prompt_builder.py',
+        for path in ('backend/base/program_boundary.py', 'backend/cognition/agent_pipeline.py',
                      'data/scripts/registry.yaml'):
             assert not call('write_file', {'path': path, 'content': 'bypass'})['success']
         result = call('patch_op', {'op': 'apply', 'verification_plan': [
@@ -278,6 +279,115 @@ def test_noncore_repair_pipeline_reaches_registration_apply_and_commit(repair, m
     from repair_readiness import program_published
     assert program_published(repo, st.read_session(str(repo), 'script-repair'))
 
+
+
+def test_report_read_keeps_original_source_and_candidate_code_stays_separate(repair):
+    repo, wt, st, controller, call = repair
+    report = repo / 'data/outputs/research/report.md'
+    report.parent.mkdir(parents=True)
+    report.write_text('Read the report and finish the repair.\n')
+    for path in [str(report), 'data/outputs/research/report.md']:
+        result = call('read_file', {'path': path})
+        assert 'Read the report' in str(result), result
+    assert not (wt / 'data/outputs/research/report.md').exists()
+    (wt / 'backend/candidate.py').write_text('CANDIDATE = True\n')
+    (repo / 'backend/candidate.py').write_text('LIVE = True\n')
+    assert 'CANDIDATE' in str(call('read_file', {'path': 'backend/candidate.py'}))
+    assert 'CANDIDATE' in str(call('read_file', {'path': str(repo / 'backend/candidate.py')}))
+    # Deleted/missing candidate implementation cannot quietly read the live source.
+    (wt / 'backend/candidate.py').unlink()
+    assert 'LIVE' not in str(call('read_file', {'path': 'backend/candidate.py'}))
+
+
+def test_prior_owned_candidate_is_readable_but_never_a_write_destination(repair):
+    repo, wt, st, controller, call = repair
+    old = repo / '.worktrees/repair-old'
+    (old / 'data/scripts').mkdir(parents=True)
+    (old / 'data/scripts/partial.py').write_text('PARTIAL = 42\n')
+    st._save_session(str(repo), {'key': 'old', 'owner': 'owner', 'status': 'staging',
+                                'worktree': '.worktrees/repair-old'})
+    for path in [str(old / 'data/scripts/partial.py'), '.worktrees/repair-old/data/scripts/partial.py']:
+        assert 'PARTIAL = 42' in str(call('read_file', {'path': path}))
+        assert not call('write_file', {'path': path, 'content': 'changed'})['success']
+    st._save_session(str(repo), {'key': 'old', 'owner': 'someone_else', 'status': 'staging',
+                                'worktree': '.worktrees/repair-old'})
+    assert 'PARTIAL = 42' not in str(call('read_file', {'path': str(old / 'data/scripts/partial.py')}))
+    assert (old / 'data/scripts/partial.py').read_text() == 'PARTIAL = 42\n'
+
+
+@pytest.mark.parametrize('relative', ['../outside.txt', '.git/config'])
+def test_source_reads_cannot_open_private_state_or_escape(repair, relative):
+    repo, wt, st, controller, call = repair
+    from test_repair_workspace_completion import module
+    with pytest.raises((ValueError, PermissionError)):
+        module('repair_tool_scope').source_path(st, repo, wt, Path(relative))
+
+
+
+def test_legacy_manual_registry_is_preserved_then_only_official_entry_is_registered(repair):
+    import base64
+    import yaml
+    repo, wt, st, controller, call = repair
+    (wt / 'data/scripts/fresh.py').write_text('import json\nprint(json.dumps({"value":42}))\n')
+    path = wt / 'data/scripts/registry.yaml'
+    draft = 'unapproved: {file: imaginary.py}\n'
+    path.write_text(draft)
+    result = call('script_op', {'op': 'register', 'id': 'fresh', 'path': 'data/scripts/fresh.py'})
+    assert result['success'] and result['recovered_draft'], result
+    assert set(yaml.safe_load(path.read_text())) == {'fresh'}
+    assert (repo / 'data/scripts/registry.yaml').read_text() == '{}\n'
+    session = st.read_session(str(repo), 'script-repair')
+    assert base64.b64decode(session['managed_drafts'][0]['data']).decode() == draft
+    st._candidate.collect(str(repo), session)
+
+
+def test_failed_legacy_registration_keeps_exact_draft(repair):
+    repo, wt, st, controller, call = repair
+    path = wt / 'data/scripts/registry.yaml'
+    draft = 'unapproved: {file: imaginary.py}\n'
+    path.write_text(draft)
+    result = call('script_op', {'op': 'register', 'id': 'missing', 'path': 'data/scripts/missing.py'})
+    assert not result['success']
+    assert path.read_text() == draft
+    assert not st.read_session(str(repo), 'script-repair').get('managed_files')
+
+
+
+def test_restartable_host_edit_reaches_deferred_apply_after_real_candidate_check(repair, monkeypatch):
+    import program_boundary
+    repo, wt, st, controller, call = repair
+    monkeypatch.setitem(program_boundary.RESTART_MODULES, 'host_lifetime', 'process lifetime')
+    relative = 'backend/host_lifetime.py'
+    result = call('write_file', {'path': relative, 'content': 'VALUE = 42\n'})
+    assert result['success'], result
+    test = 'import runpy\ndef test_value(): assert runpy.run_path("backend/host_lifetime.py")["VALUE"] == 42\n'
+    assert call('write_file', {'path': 'backend/test_host_lifetime.py', 'content': test})['success']
+    scheduled = []
+    def schedule(repo, session, checks, verify, active):
+        assert session['readiness']['decision']['status'] == 'APPROVED'
+        assert session['sealed'][relative]['after']
+        scheduled.append(session['key'])
+        return {'success': True, 'scheduled': True, 'worktree': session['worktree']}
+    monkeypatch.setattr(st, '_schedule_deferred_apply', schedule)
+    result = call('patch_op', {'op': 'apply', 'verification_plan': [
+        {'criterion_id': 'C1', 'command': shlex.quote(sys.executable) +
+         ' -m pytest backend/test_host_lifetime.py'}]})
+    assert result['success'] and result['scheduled'], json.dumps(result, ensure_ascii=False)
+    assert scheduled == ['script-repair']
+    assert not (repo / relative).exists()
+
+
+
+def test_runtime_diagnostics_can_be_read_without_opening_state_writes(repair):
+    repo, wt, st, controller, call = repair
+    state = repo / 'data/restart_control/state.json'
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text('{"phase":"ACTIVE"}')
+    for name in (str(state), 'data/restart_control/state.json', '~workspace/data/restart_control/state.json'):
+        assert 'ACTIVE' in call('read_file', {'path': name})
+        assert not call('write_file', {'path': name, 'content': '{"phase":"forged"}'})['success']
+    assert state.read_text() == '{"phase":"ACTIVE"}'
+    assert not (wt / 'data/restart_control/state.json').exists()
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

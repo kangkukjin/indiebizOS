@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from program_boundary import describe, plan, protected_reason
+from program_boundary import describe, plan, protected_reason, host_bound
 
 SKIP = {'.git', '.venv', 'node_modules', '__pycache__', '.worktrees', '.pytest_cache'}
 SOURCE_ROOTS = ('backend', 'scripts', 'data/scripts', 'data/packages/installed/tools', 'frontend/src', 'frontend/surfaces')
@@ -93,7 +93,7 @@ def analyse(root, changes, *, ownership=None):
             current = stack.pop()
             # Cross the protected host through its stable interface. Internal
             # host wiring is not an implementation input of every package.
-            if current not in seeds and protected_reason(current) and not Path(current).name.startswith('test_'):
+            if current not in seeds and host_bound(current) and not Path(current).name.startswith('test_'):
                 continue
             for p in edges.get(current, set()) - found:
                 found.add(p)

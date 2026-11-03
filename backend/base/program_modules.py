@@ -16,7 +16,11 @@ import threading
 import weakref
 import types
 
-from program_boundary import protected_reason
+from program_boundary import host_bound
+
+class RestartRequired(ValueError):
+    """Valid implementation cannot replace live objects; use a fresh generation."""
+
 
 _LOCK = threading.RLock()
 class Dispatch(dict):
@@ -134,7 +138,7 @@ class Boundary(ast.NodeTransformer):
         old = self.previous.get(key)
         if old is not None and node.decorator_list:
             if [ast.dump(d) for d in old.decorator_list] != [ast.dump(d) for d in node.decorator_list]:
-                raise ValueError('Decorator contract requires owner migration: ' + key)
+                raise RestartRequired('Decorator contract requires owner migration: ' + key)
             self.reused.add(key)
             node.decorator_list = []
         node.decorator_list.append(ast.Call(ast.Name('__program_bind__', ast.Load()),
@@ -193,7 +197,7 @@ class Owner:
                              and not callable(self.namespace[k])}
             has_restore = any(isinstance(n, ast.FunctionDef) and n.name == '__program_restore__' for n in tree.body)
             if changed_state and not has_restore:
-                raise ValueError('State initializer requires __program_restore__: ' + ', '.join(sorted(changed_state)))
+                raise RestartRequired('State initializer requires __program_restore__: ' + ', '.join(sorted(changed_state)))
             retained = {k for k in old.keys() & new.keys() if old[k] == new[k] and k in self.namespace}
             literal = {node.targets[0].id for node in tree.body if isinstance(node, ast.Assign)
                        and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
@@ -212,7 +216,7 @@ class Owner:
                 if isinstance(node, ast.Expr) and not isinstance(node.value, ast.Constant):
                     if any(ast.dump(node) == ast.dump(n) for n in ast.parse(self.source).body):
                         continue
-                    raise ValueError('Changed import effect needs owner lifecycle: ' + self.relative)
+                    raise RestartRequired('Changed import effect needs owner lifecycle: ' + self.relative)
                 body.append(node)
             tree.body = body
         previous = {}
@@ -249,7 +253,7 @@ class Owner:
                     value.routes[:] = [*old_value.routes, *value.routes]
             restore = functions.get('__program_restore__')
             if self.targets.get('__program_retire__') and not restore:
-                raise ValueError('Resource retirement requires __program_restore__')
+                raise RestartRequired('Resource retirement requires __program_restore__')
             if restore:
                 export = self.targets.get('__program_export__')
                 state = _invoke(_TABLE, export, (), {}) if export else dict(self.namespace)
@@ -258,12 +262,12 @@ class Owner:
         if not initial:
             missing = set(self.targets) - set(functions)
             if missing:
-                raise ValueError('Live callable removed; migrate its consumers first: ' + ', '.join(sorted(missing)))
+                raise RestartRequired('Live callable removed; migrate its consumers first: ' + ', '.join(sorted(missing)))
             for key in self.targets.keys() & functions.keys():
                 old_node = previous[key]
                 declared = (ast.dump(old_node.args), ast.dump(old_node.returns) if old_node.returns else None)
                 if declared != boundary.signatures[key]:
-                    raise ValueError('Callable signature requires consumer migration: ' + key)
+                    raise RestartRequired('Callable signature requires consumer migration: ' + key)
                 original, following = self.targets[key], functions[key]
                 old_params = inspect.signature(original).parameters
                 new_params = inspect.signature(following).parameters
@@ -273,9 +277,9 @@ class Owner:
                         continue
                     if isinstance(old_default, (str, int, float, bool, tuple, frozenset, type(None))):
                         if old_default != new_default:
-                            raise ValueError('Callable default requires consumer migration: ' + key)
+                            raise RestartRequired('Callable default requires consumer migration: ' + key)
                     elif hasattr(old_default, '_attributes_set') and repr(old_default) != repr(new_default):
-                        raise ValueError('Parameter metadata requires consumer migration: ' + key)
+                        raise RestartRequired('Parameter metadata requires consumer migration: ' + key)
                 # Decorator frameworks construct equivalent parameter objects on
                 # every import. Keep the bound defaults/schema objects, including
                 # mutable default state, when their declarations are unchanged.
@@ -287,7 +291,7 @@ class Owner:
                 if replacement is None or (original.__bases__ != tuple(self.classes.get(b.__name__, b) if b.__module__ == self.module.__name__ else b for b in replacement.__bases__) or
                         getattr(original, '__slots__', None) != getattr(replacement, '__slots__', None) or
                         getattr(original, '__annotations__', {}) != getattr(replacement, '__annotations__', {})):
-                    raise ValueError('Class layout requires owner migration: ' + name)
+                    raise RestartRequired('Class layout requires owner migration: ' + name)
                 namespace[name] = original
                 for function in functions.values():
                     if function.__closure__:
@@ -386,11 +390,11 @@ def prepare(changes, root):
                 for loaded in list(sys.modules.values()):
                     file = getattr(loaded, '__file__', None)
                     if file and Path(file).as_posix().endswith('/' + relative):
-                        raise ValueError('Loaded owner has no call boundary: ' + relative)
+                        raise RestartRequired('Loaded owner has no call boundary: ' + relative)
                 continue  # first import is selected by the finder
             path = Path(root) / relative
             if not path.is_file():
-                raise ValueError('Loaded module removal requires consumer migration: ' + relative)
+                raise RestartRequired('Loaded module removal requires consumer migration: ' + relative)
             source = path.read_text()
             prepared.append((owner, source, *owner.execute(source, path, staging_table=staging)))
     return prepared
@@ -423,7 +427,7 @@ def activate(prepared, version, root=None):
 
 def load_file(name, path, relative):
     """Spec-loaded mixed packages use the same boundary as ordinary imports."""
-    if protected_reason(relative):
+    if host_bound(relative):
         spec = __import__('importlib.util', fromlist=['util']).spec_from_file_location(name, path)
         module = __import__('importlib.util', fromlist=['util']).module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -466,7 +470,7 @@ class Finder(importlib.abc.MetaPathFinder):
             if not row or not origin.is_relative_to(overlay):
                 return None
             relative = origin.relative_to(overlay).as_posix()
-        if not relative.startswith('backend/') or protected_reason(relative):
+        if not relative.startswith('backend/') or host_bound(relative):
             return None
         source = self.source
         class Loader(importlib.abc.Loader):
@@ -504,7 +508,7 @@ def load_sibling(name, directory):
     path = Path(directory) / (name + '.py')
     relative = 'data/packages/installed/tools/system_essentials/' + name + '.py'
     managed = any(path.resolve().is_relative_to(f.code) for f in _FINDERS)
-    if managed and not protected_reason(relative):
+    if managed and not host_bound(relative):
         from program_publication import selected_path
         from runtime_utils import get_code_root, get_source_root
         path = selected_path(get_source_root(), get_code_root(), relative)

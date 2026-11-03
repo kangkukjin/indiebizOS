@@ -18,15 +18,54 @@ def test_new_programs_need_no_allow_list_entry(path):
 
 
 @pytest.mark.parametrize('path', [
-    'backend/base/principal.py', 'backend/cognition/final_evaluator.py',
-    'backend/ibl/ibl_v2_parser.py', 'scripts/iblbuild_derive.py', 'data/vocabulary_policy.yaml',
-    'backend/base/program_boundary.py', 'backend/services/restart_controller.py',
+    'backend/base/principal.py', 'backend/cognition/agent_pipeline.py', 'scripts/iblbuild_derive.py', 'data/vocabulary_policy.yaml',
+    'backend/base/program_boundary.py', 'backend/datastore/red_apply.py',
     'data/common_prompts/fragments/13_repair.md',
     'data/packages/installed/tools/system_essentials/program_apply.py',
     'data/ibl_nodes_src/self.yaml', 'backend/test_existing.py',
     'backend/base/../base/not_core.py'])
 def test_program_scope_cannot_grant_itself_governance(path):
     assert not eligible(path)
+
+
+@pytest.mark.parametrize('path', [
+    'backend/ibl/ibl_v2_parser.py', 'backend/cognition/final_evaluator.py',
+    'backend/cognition/prompt_builder.py', 'backend/cognition/repair_resume.py',
+    'backend/cognition/repair_policy.py', 'backend/services/restart_controller.py',
+    'data/packages/installed/tools/system_essentials/repair_outcomes.py',
+])
+def test_host_is_repairable_through_generation_not_hot_imports(path):
+    from program_boundary import host_bound, requires_restart, generation_candidate, candidate_plan
+    from test_repair_workspace_completion import module
+    assert eligible(path)
+    assert host_bound(path) and requires_restart(path)
+    assert describe(path)['activation'] == 'generation-restart'
+    session = {'baseline': {path: {'sha': 'old'}},
+               'files': {'/repo/' + path: {'rel': path}}}
+    decision = candidate_plan(session, {path: {'sha': 'new'}})
+    assert not decision['protected'] and not decision['unmanaged']
+    assert decision['programs'][0]['kind'] == 'host'
+    assert generation_candidate(session)
+    # No live publication side effects: hand off to the existing restart owner.
+    assert module('program_apply').apply(None, '/repo', session) is None
+
+
+def test_one_policy_update_changes_admission_publication_and_loader(monkeypatch):
+    import program_boundary as policy
+    import task_repair
+    import program_modules
+    from test_repair_workspace_completion import module
+    path = 'backend/services/new_algorithm.py'
+    assert not program_modules.host_bound(path)
+    monkeypatch.setitem(policy.RESTART_MODULES, 'new_algorithm', 'process lifetime')
+    assert task_repair.eligible(path)  # repair admission stays open
+    assert program_modules.host_bound(path)
+    assert policy.path_status(path, '/repo')['items'][0]['activation'] == 'generation-restart'
+    session = {'files': {'/repo/' + path: {'rel': path}}}
+    assert module('program_apply').apply(None, '/repo', session) is None
+    monkeypatch.setitem(policy.CORE_MODULES, 'new_algorithm', 'request authority')
+    assert not task_repair.eligible(path)
+    assert not policy.change(path, None, {'sha': 'new'})['mutable']
 
 
 def test_inputs_follow_imports_and_new_package_files_not_unrelated_features(tmp_path):

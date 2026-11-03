@@ -31,9 +31,9 @@ def unfinished(setup, monkeypatch):
     return root, wt, st, sess, controller
 
 
-def test_user_followup_keeps_all_criteria_and_reuses_same_workspace(unfinished):
+@pytest.mark.parametrize("message", ["#repair 수리를 마쳐줘", "수리를 완료해줘"])
+def test_user_followup_keeps_all_criteria_and_reuses_same_workspace(unfinished, message):
     root, wt, st, sess, controller = unfinished
-    message = '#repair 수리를 마쳐줘'
     with resume.user_resume(controller.runner, message, [{'role': 'user', 'content': controller.message}]):
         row = journal.current()
         inherited = journal.inherited_framing(message)
@@ -97,6 +97,29 @@ def test_strict_relation_rejects_empty_model_output(monkeypatch):
         framing._judge_relation({'message': 'prior'}, '#repair continue', strict=True)
 
 
+def test_explicit_prior_task_uses_existing_conversation_record(unfinished):
+    root, wt, st, sess, controller = unfinished
+    old = framing._load('owner')['last']
+    old['at'] = '2020-01-01T00:00:00'
+    framing._save('owner', {'last': {'task_id': 'unrelated'}, 'repeat': {'old': old}})
+    with resume.user_resume(controller.runner, sess['key'] + ' 수리를 완료해줘', ['previous']):
+        assert journal.current()['staging_task_id'] == sess['key']
+        assert st.load_session(str(root), 'next')['worktree'] == sess['worktree']
+
+
+def test_resume_relation_requires_execution_intent_and_keeps_history(monkeypatch):
+    seen = []
+    monkeypatch.setattr(framing, '_prompt', lambda name: 'relation')
+    def model(body, prompt, role):
+        seen.append((body, prompt))
+        return 'NEW'
+    monkeypatch.setattr(framing, '_oneshot', model)
+    assert framing._judge_relation({'message': 'repair'}, '지금 상태는?', strict=True,
+        history=[{'role': 'user', 'content': 'original work'}], execution_only=True) == 'NEW'
+    assert '상태 조회' in seen[0][1]
+    assert 'original work' in seen[0][0]
+
+
 def test_applied_backend_can_resume_commit_without_reapplying(setup, monkeypatch):
     from test_repair_workspace_completion import ready
     root, wt, st, sess = setup
@@ -113,3 +136,34 @@ def test_applied_backend_can_resume_commit_without_reapplying(setup, monkeypatch
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_plain_followup_follows_completed_execution_handoff_to_current_candidate(unfinished):
+    root, wt, st, sess, controller = unfinished
+    prior = journal.read(controller.task)
+    child = {**prior, 'task_id': 'latest', 'staging_task_id': 'latest'}
+    journal.save(child)
+    journal.save({**prior, 'status': 'continued', 'child_task_id': 'latest'})
+    st._save_session(str(root), {**sess, 'reused_by': 'latest'})
+    st._save_session(str(root), {**sess, 'key': 'latest'})
+    with resume.user_resume(controller.runner, '수리를 완료해줘', ['previous']):
+        assert journal.current()['staging_task_id'] == 'latest'
+        assert st.load_session(str(root), 'next')['worktree'] == sess['worktree']
+
+
+def test_stale_continuation_follows_owned_workspace_transfer(unfinished):
+    root, wt, st, sess, controller = unfinished
+    st._save_session(str(root), {**sess, 'reused_by': 'latest'})
+    st._save_session(str(root), {**sess, 'key': 'latest', 'resumed_from': sess['key']})
+    with resume.user_resume(controller.runner, '수리를 완료해줘', ['previous']):
+        assert journal.current()['staging_task_id'] == 'latest'
+        assert st.load_session(str(root), 'next')['worktree'] == sess['worktree']
+
+
+@pytest.mark.parametrize('field', ['owner', 'root_task_id', 'worktree', 'resumed_from'])
+def test_workspace_transfer_rejects_changed_ownership(unfinished, field):
+    root, wt, st, sess, controller = unfinished
+    st._save_session(str(root), {**sess, 'reused_by': 'latest'})
+    st._save_session(str(root), {**sess, 'key': 'latest', 'resumed_from': sess['key'], field: 'foreign'})
+    with pytest.raises(ValueError, match='소유권'):
+        journal.staging_session(sess['key'])

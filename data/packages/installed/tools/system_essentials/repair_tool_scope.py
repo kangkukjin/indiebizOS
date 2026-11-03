@@ -34,6 +34,53 @@ def protected_write_reason(handler, path, body_root):
     return None if item and item['mutable'] else reason
 
 
+def source_path(st, root, wt, path):
+    """Read explicit sources without turning them into candidate destinations.
+
+    Old owned workspaces are source material, never writable through this path.
+    The candidate's path validator still rejects state stores and symlink escapes.
+    """
+    from program_boundary import readable_runtime_state
+    root, wt = Path(root).resolve(), Path(wt).resolve()
+    if path.is_absolute() and path.is_relative_to(wt):
+        rel = path.relative_to(wt).as_posix()
+        return (st._candidate.target(root, rel, read_only=True) if readable_runtime_state(rel)
+                else st._candidate.target(wt, rel))
+    relative = path.relative_to(root) if path.is_absolute() and path.is_relative_to(root) else path
+    if relative.is_absolute():
+        raise PermissionError('수리 자료 읽기는 정본 또는 소유한 수리 사본 안에서 수행합니다')
+    if relative.parts and relative.parts[0] == '.worktrees':
+        if len(relative.parts) < 3:
+            raise PermissionError('읽을 수리 사본과 파일 경로를 지정하세요')
+        work = root / '.worktrees' / relative.parts[1]
+        sessions = root / st.SESSION_DIRNAME
+        owned = False
+        for record in sessions.glob('*.json'):
+            try:
+                session = json.loads(record.read_text())
+            except (ValueError, OSError):
+                continue
+            if (isinstance(session, dict) and session.get('owner') == st._repair_owner()
+                    and session.get('worktree') == work.relative_to(root).as_posix()):
+                owned = True
+                break
+        if not owned or work.is_symlink() or not work.resolve().is_relative_to(root):
+            raise PermissionError('이전 수리 사본의 읽기 소유권을 확인하지 못했습니다')
+        return st._candidate.target(work, Path(*relative.parts[2:]).as_posix())
+    rel = relative.as_posix()
+    if readable_runtime_state(rel):
+        return st._candidate.target(root, rel, read_only=True)
+    candidate = st._candidate.target(wt, rel)
+    from program_boundary import describe
+    # Runtime reports are absent from git worktrees. Do not fall back for deleted
+    # program source: that would disguise the candidate actually being tested.
+    if not candidate.exists() and describe(rel) is None:
+        live = st._candidate.target(root, rel)
+        if live.exists():
+            return live
+    return candidate
+
+
 def prepare(self_module, name, payload, project):
     if name == "body_op" and payload.get("op") == "commit":
         raise PermissionError("수리 델타의 각인은 self:patch apply 이후 적용 서비스가 수행합니다")
@@ -83,6 +130,9 @@ def prepare(self_module, name, payload, project):
         if not isinstance(result[field], str):
             raise ValueError("수리 파일 경로는 문자열이어야 합니다")
         path = Path(expand_body_path(result[field]))
+        if read_only or (name == 'copy_path' and field in {'src', 'source'}):
+            result[field] = str(source_path(st, root, wt, path))
+            continue
         if path.is_absolute():
             if path.is_relative_to(wt):
                 rel = path.relative_to(wt).as_posix()
@@ -213,12 +263,31 @@ def managed_write(st, repo, key, operation):
     """
     from program_boundary import MANAGED_RESOURCES
     session = st.ensure_session(repo, key)
-    st._candidate.collect(repo, session)
     relative = 'data/scripts/registry.yaml'
     path = st._candidate.target(Path(repo) / session['worktree'], relative)
     before = path.read_bytes() if path.is_file() else None
     mode = path.stat().st_mode if path.exists() else None
+    draft = None
+    owner_before = before
     try:
+        baseline = session['baseline'].get(relative)
+        if (relative not in session.get('managed_files', {})
+                and st._candidate.fingerprint(path) != baseline):
+            # Legacy candidates may contain a manually edited registry. Preserve
+            # the draft, then run the real owner against the proven baseline.
+            # Do not grant the whole old draft a fabricated owner receipt.
+            live = st._candidate.target(repo, relative)
+            if st._candidate.fingerprint(live) != baseline:
+                raise ValueError('등록부의 정본도 변경됐습니다. 기존 초안을 보존하고 충돌을 먼저 해결하세요')
+            import base64
+            draft = {'path': relative, 'data': base64.b64encode(before or b'').decode(),
+                     'fingerprint': st._candidate.fingerprint(path), 'reason': 'unreceipted registry draft'}
+            owner_before = live.read_bytes() if live.is_file() else None
+            if owner_before is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(owner_before)
+        st._candidate.collect(repo, session)
         result = operation()
         parsed = json.loads(result) if isinstance(result, str) else result
         if not isinstance(parsed, dict) or parsed.get('success') is not True:
@@ -229,7 +298,7 @@ def managed_write(st, repo, key, operation):
                 path.chmod(mode)
             return result
         from script_mutation import validate_task_scope
-        validate_task_scope(session, before, path.read_bytes() if path.exists() else None)
+        validate_task_scope(session, owner_before, path.read_bytes() if path.exists() else None)
         after = st._candidate.fingerprint(path)
         old = session.get('managed_files', {}).get(relative)
         session.setdefault('managed_files', {})[relative] = {
@@ -237,6 +306,8 @@ def managed_write(st, repo, key, operation):
         try:
             st._candidate.collect(repo, session)
             st._candidate.invalidate(session)
+            if draft:
+                session.setdefault('managed_drafts', []).append(draft)
             st._save_session(repo, session)
         except BaseException:
             if old is None:
@@ -244,6 +315,9 @@ def managed_write(st, repo, key, operation):
             else:
                 session['managed_files'][relative] = old
             raise
+        if draft:
+            parsed['recovered_draft'] = {'path': relative, 'preserved_in': 'managed_drafts',
+                'message': '기존 수동 원장은 초안으로 보존했습니다. 이번 공식 연산만 반영했으며 나머지 초안 항목도 공식 등록이 필요합니다.'}
         parsed.update(staged=True, worktree=session['worktree'], applied=False,
                       message='관리 연산의 사본 판본을 수리 후보에 연결했습니다. 검사 뒤 같은 사본을 apply 하세요.')
         return json.dumps(parsed, ensure_ascii=False)

@@ -69,7 +69,7 @@ def test_core_publication_rejected_and_unrelated_files_stay_sealed(tmp_path):
     repo.mkdir()
     code.mkdir()
     (code / 'unrelated.txt').write_text('old')
-    session = session_for(repo, code, {'backend/base/runtime_utils.py': 'pass\n'})
+    session = session_for(repo, code, {'backend/base/program_boundary.py': 'pass\n'})
     with pytest.raises(PermissionError, match='Protected'):
         pub.snapshot(repo, code, session)
     session = session_for(repo, code, {'backend/services/new_feature.py': 'VALUE = 2\n'})
@@ -258,3 +258,45 @@ def test_pending_program_does_not_publish_with_another_program_or_erase_it(tmp_p
     resumed = pub.snapshot(repo, code, a)
     assert resumed['files']['backend/services/second.py'] == second['files']['backend/services/second.py']
     assert resumed['owners']['backend/services/second.py'] == 'second'
+
+
+@pytest.mark.parametrize('layout_change', [True, False])
+def test_host_prepare_uses_restart_for_layout_change_only(tmp_path, monkeypatch, layout_change):
+    import subprocess
+    repo = _make_repo(tmp_path / 'repo')
+    relative = 'backend/local_layout.py'
+    path = repo / relative
+    path.write_text('def run(): return 1\n')
+    for args in (['config', 'user.name', 'Test'], ['config', 'user.email', 'test@example.test'],
+                 ['add', '.'], ['commit', '-qm', 'layout baseline']):
+        subprocess.run(['git', *args], cwd=repo, check=True)
+    old_table, old_owners = modules._TABLE, dict(modules._OWNERS)
+    module = types.ModuleType('local_layout')
+    modules.initialize(relative, module, path.read_text(), path)
+    handler = _load_handler()
+    st = handler._staging_mod()
+    monkeypatch.setattr(st, '_repair_owner', lambda: 'owner')
+    monkeypatch.setattr('runtime_utils.get_code_root', lambda: repo)
+    candidate = st.stage_file(str(repo), 'layout', str(path))
+    Path(candidate).write_text('def run(x): return x + 1\n')
+    session = st.read_session(str(repo), 'layout')
+    session.update(program_policy=1, repair_policy=2)
+    st._candidate.seal(str(repo), session, [{'gate': 'fixture', 'passed': True}],
+                      {'status': 'APPROVED'}, {'criteria': [{'id': 'C1', 'text': 'new interface'}]})
+    st._save_session(str(repo), session)
+    if not layout_change:
+        monkeypatch.setattr(modules, 'prepare', lambda *a: (_ for _ in ()).throw(ValueError('invalid candidate')))
+    try:
+        apply = handler._load_sibling('program_host_apply')
+        if layout_change:
+            assert apply.apply(st, str(repo), session) is None
+            assert session['activation_route']['mode'] == 'generation-restart'
+            assert st._reload_triggering(session)
+        else:
+            with pytest.raises(ValueError, match='invalid candidate'):
+                apply.apply(st, str(repo), session)
+        assert module.run() == 1
+        assert path.read_text() == 'def run(): return 1\n'
+        assert not session.get('module_publication')
+    finally:
+        modules._TABLE, modules._OWNERS = old_table, old_owners

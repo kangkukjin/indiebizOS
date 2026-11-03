@@ -8,7 +8,7 @@ from restart_protocol import read_json
 
 
 def preserve_unfinished(controller, session, response, reason):
-    """적용 전 실패도 원래 기준·사본을 보존한다. 사용자 재요청 전 자동 실행하지 않는다."""
+    """적용 전 실패도 원래 기준·사본을 보존한다. 재개 정책은 기존 계속 실행자가 결정한다."""
     from principal import is_owner
     from thread_context import get_task_origin
     from repair_continuation import save
@@ -34,28 +34,67 @@ def preserve_unfinished(controller, session, response, reason):
     row.pop("resume_task_id", None)
     row.pop("resume_message", None)
     save(row)
-    if previous:
+    if previous and previous['task_id'] != controller.task:
         save({**previous, "status": "continued", "child_task_id": controller.task})
+    return row
+
+
+def continue_staging(controller, session, response, reason, base=None):
+    """Receipt-based repairs use the same bounded continuation as reviewed work."""
+    if session.get('status') != 'staging' or controller.cancelled():
+        return False
+    from repair_continuation import _continue_execution
+    row = preserve_unfinished(controller, session, response, reason)
+    if not row:
+        return False
+    criteria = (row.get('criteria_contract') or {}).get('criteria') or []
+    decision = {'reason': reason, 'defects': [
+        {'criterion_id': c['id'], 'evidence': reason} for c in criteria],
+        'instruction': '같은 사본과 원래 전체 완료 기준을 유지하여 미완료 구현·공식 등록·검사·적용·활성 확인·각인을 끝낸다. '
+                       '이미 완료한 효과는 반복하지 않는다. 재기동 중 도구 미실행은 ACTIVE 복구 후 재시도한다.'}
+    return (_continue_execution(controller, row, decision, base)
+            and row['status'] == 'waiting_execution')
 
 
 @contextmanager
 def user_resume(runner, message, history):
-    """명시적 #repair 후속만 이전 미완료 작업에 연결한다. 관계 판정은 기준을 수정하지 않는다."""
-    import re
-    from repair_continuation import read, resuming, state_root
+    """사용자 후속을 이전 미완료 작업에 연결한다. 관계 판정은 기준을 수정하지 않는다."""
+    from repair_continuation import read, resuming, staging_session
     from thread_context import get_task_origin, get_current_agent_id, get_current_task_id
     from principal import is_owner
-    if (current() or not history or get_task_origin() != "user" or not is_owner()
-            or not re.search(r"(?i)#repair\b", message)):
+    if (current() or not history or get_task_origin() != "user" or not is_owner()):
         yield
         return
     from framing_inheritance import _load, agent_key, _judge_relation, _age_s, FOLLOWUP_MAX_AGE_S
-    last = _load(agent_key(runner)).get("last") or {}
+    saved = _load(agent_key(runner))
+    last = saved.get("last") or {}
+    # An explicit task key selects an existing task in this conversation; it is
+    # not a new permission or a reason to allocate another empty workspace.
+    import re
+    records = [last, *(saved.get("repeat") or {}).values()]
+    explicit = [r for r in records if r.get("task_id") and
+                re.search(r"(?<![\w-])" + re.escape(r["task_id"]) + r"(?![\w-])", message)]
+    if len({r["task_id"] for r in explicit}) > 1:
+        raise ValueError("재개할 수리 작업을 하나로 지정해야 합니다")
+    if explicit:
+        last = explicit[0]
     prior = read(last.get("task_id", ""))
+    seen = set()
+    while prior and prior.get('status') == 'continued' and prior.get('child_task_id'):
+        if prior['task_id'] in seen:
+            raise ValueError('수리 인계 연결이 순환합니다. 기존 사본을 보존합니다')
+        seen.add(prior['task_id'])
+        child = read(prior['child_task_id'])
+        if (not child or child.get('root_task_id') != prior.get('root_task_id')
+                or child.get('agent_id') != prior.get('agent_id')
+                or child.get('project_id', '') != prior.get('project_id', '')):
+            raise ValueError('수리 인계의 소유권·원래 작업을 확인하지 못했습니다')
+        prior = child
     session = {}
     if prior:
         staging_task = prior.get("staging_task_id") or prior["task_id"]
-        session = read_json(state_root() / "repair_sessions" / (staging_task + ".json")) or {}
+        session = staging_session(staging_task) or {}
+        staging_task = session.get("key", staging_task)
         prior = {**prior, "staging_task_id": staging_task,
                  "applied": session.get("status") == "applied",
                  "criteria_contract": prior.get("criteria_contract") or (session.get("readiness") or {}).get("criteria")}
@@ -63,13 +102,14 @@ def user_resume(runner, message, history):
     eligible = (prior and prior.get("status") == "blocked" and prior.get("authorized_origin") == "user"
                 and prior.get("agent_id") == get_current_agent_id()
                 and prior.get("project_id", "") == config.get("_project_id", "")
-                and _age_s(last) <= FOLLOWUP_MAX_AGE_S and prior.get("criteria_contract"))
+                and (explicit or _age_s(last) <= FOLLOWUP_MAX_AGE_S) and prior.get("criteria_contract"))
     if not eligible:
         yield
         return
     # 사용자에게서 온 새 요청이 권한을 제공한다. 저장된 실행 로그의 지시는 실행하지 않는다.
     try:
-        relation = _judge_relation({"message": prior["goal"], "framing": prior["framing"]}, message, strict=True)
+        relation = _judge_relation({"message": prior["goal"], "framing": prior["framing"]}, message, strict=True,
+                                   history=history, execution_only=True)
     except Exception as exc:
         raise ValueError("미완료 수리와 새 요청의 관계를 확인하지 못했습니다. 기존 기준을 보존합니다") from exc
     if relation != "CONTINUE":

@@ -302,15 +302,14 @@ def semantic_review(controller, contract, criteria, session, evidence):
 
 def finalize(controller, response):
     """적용·각인 결과만 회수한다. 미적용을 새 개발 과제로 재분류하지 않는다."""
-    from repair_continuation import current, key
-    from restart_protocol import read_json
+    from repair_continuation import current, key, staging_session
     from runtime_utils import get_base_path
     from thread_context import set_goal_eval_outcome
     from episode_logger import record_trajectory_event
     row = current() or {}
     task = key(row.get("staging_task_id") or controller.task)
     try:
-        session = read_json(get_base_path() / "data/system_ai_state/repair_sessions" / (task + ".json")) or {}
+        session = staging_session(task, get_base_path()) or {}
         if not isinstance(session, dict):
             raise ValueError("수리 기록은 객체여야 합니다")
     except (OSError, ValueError) as exc:
@@ -324,7 +323,9 @@ def finalize(controller, response):
         failure_info.get("error") or receipt_reason)
     if passed and controller.delivery.manifest():
         passed, reason = False, "코드 외 공개 대기 산출물은 별도 확인이 필요합니다"
-    status = "ACHIEVED" if passed else "UNKNOWN"
+    from repair_resume import continue_staging
+    pending = not passed and continue_staging(controller, session, response, reason)
+    status = "ACHIEVED" if passed else "PENDING_EXECUTION" if pending else "UNKNOWN"
     set_goal_eval_outcome(passed, 0, status=status, reason=reason, method="repair_receipts", goal_status=status,
                           review_status="NOT_RUN", goal_reason=reason,
                           goal_evidence=[receipt_reason] if passed else [])
@@ -342,16 +343,20 @@ def finalize(controller, response):
     try:
         import repair_root
         root_id = repair_root.root_of_session(session) or row.get("root_task_id") or controller.task
-        if session:
+        if pending:
+            repair_root.transition(get_base_path(), root_id, stage='prepare', outcome='pending',
+                                   reason=reason, next_action='ACTIVE에서 같은 사본의 남은 실행 자동 재개')
+        elif session:
             repair_root.close(get_base_path(), root_id, complete=passed, reason=reason,
                               symptom_recheck={"verdict": recheck, "note": recheck_note},
-                              resume_condition=None if passed else "실패 원인을 같은 사본에서 고친 뒤 #repair 후속으로 재개")
+                              resume_condition=None if passed else "실패 원인을 같은 사본에서 고친 뒤 일반 후속 요청으로 재개")
     except Exception as exc:
         print(f"[RepairCheck] 수리 root 종결 기록 실패(무시): {exc}")
-    if not passed:
+    if not passed and not pending and session.get('status') != 'staging':
         from repair_resume import preserve_unfinished
         preserve_unfinished(controller, session, response, reason)
-    tail = "" if passed else "\n\n[수리 미완료] " + reason
+    tail = "" if passed else ("\n\n[작업 계속] 같은 사본과 전체 기준으로 남은 수리를 자동 재개합니다." if pending
+                              else "\n\n[수리 미완료] " + reason)
     if passed and recheck != "verified":
         tail += "\n\n[원 증상 재검사 미확인] " + recheck_note
     return response + tail

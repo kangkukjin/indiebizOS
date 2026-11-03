@@ -10,8 +10,9 @@ from contextlib import contextmanager
 from pathlib import Path
 
 VERSION = 1
-PRIVATE = (".git", ".worktrees", "data/system_ai_state", "data/restart_control",
-           "data/_backups", "data/spill", "data/script_runs", "data/backend_keeper_off")
+from program_boundary import WORKSPACE_PRIVATE
+
+PRIVATE = tuple(WORKSPACE_PRIVATE)
 
 
 def digest(value):
@@ -34,11 +35,13 @@ def execution_environment(worktree, session, *, search_paths=None):
     return environment(worktree, search_paths=search_paths)
 
 
-def target(root, relative):
+def target(root, relative, *, read_only=False):
     root = Path(root).resolve()
     rel = Path(relative)
-    if rel.is_absolute() or ".." in rel.parts or any(
-            relative == p or relative.startswith(p + "/") for p in PRIVATE):
+    from program_boundary import readable_runtime_state
+    private = any(relative == p or relative.startswith(p + '/') for p in PRIVATE)
+    if (rel.is_absolute() or ".." in rel.parts
+            or private and not (read_only and readable_runtime_state(relative))):
         raise ValueError("수리 경로가 보호 영역 또는 사본 밖입니다: " + relative)
     path = root / rel
     if not path.resolve().is_relative_to(root):

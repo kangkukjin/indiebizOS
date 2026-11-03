@@ -195,13 +195,18 @@ def _oneshot(prompt: str, system_prompt: str, role: str) -> str:
     return raw if isinstance(raw, str) else ""
 
 
-def _judge_relation(previous: dict, message: str, *, strict=False, history=None) -> str:
+def _judge_relation(previous: dict, message: str, *, strict=False, history=None, execution_only=False) -> str:
     """CONTINUE / NEW — 출력 한 단어. 어긋난 답은 NEW(계승하지 않음)."""
     system_prompt = _prompt(_RELATION_PROMPT)
     if not system_prompt:
         if strict:
             raise ValueError("관계 판정 프롬프트가 없습니다")
         return "NEW"
+    if execution_only:
+        system_prompt += ("\n이번 판정은 미완료 수리의 실행 재개 여부다. 같은 작업의 구현·검사·적용을 "
+                          "계속하라는 사용자 요청일 때만 CONTINUE. 상태 조회·설명·원인 질문은 "
+                          "같은 주제여도 NEW. #repair나 특별한 문구는 필요하지 않다. "
+                          "새 목표·완료 기준을 요구하면 NEW로 분류한다.")
     body = json.dumps({
         "previous_message": (previous.get("message") or "")[:800],
         "previous_framing": ((previous.get("framing") or {}).get("task_framing") or "")[:700],

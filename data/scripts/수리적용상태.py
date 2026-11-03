@@ -1,29 +1,13 @@
 #!/usr/bin/env python3
-"""수리적용상태 — "무엇을 고쳤고 지금 라이브에 있나"를 기계가 만든다.
+"""수리적용상태 — self:patch status 관측을 단계별로 표시하는 읽기 어댑터.
 
-why: 자기수리 보고의 '변경 파일·적용 상태' 절이 두 턴 연속 사실과 어긋났다
-     (① "테스트 파일도 고쳤다" — 세션 원장에 그 파일이 없었다 ② "아직 라이브에
-     없다" — 그 사이 적용이 끝나 있었다). 두 번이면 우연이 아니라 구조다:
-     그 절이 **서술**에서 나오기 때문이다. 카운터를 달아 지켜보는 것은 수리가
-     아니라 수리 유예 장치이므로, 그 절을 거짓말할 수 없는 자리로 옮긴다 —
-     세션 원장 + 격리/라이브 바이트 대조 + git 원장.
-
-args (stdin JSON):
-  key       특정 스테이징 세션 키만 (기본: 종결되지 않은 세션 전부)
-  commits   최근 N 커밋의 파일도 함께 (기본 1, 0이면 생략)
-  all       true 면 applied/discarded 세션도 (기본 false)
-
-산출: {"items": [...], "message": "..."}
-
-각 행의 뜻:
-  격리    = 이 세션의 격리 사본에 이 파일의 변경이 쌓여 있다
-  라이브  = 격리 사본과 라이브의 **바이트가 같다**(=적용됨). 다르면 미적용.
-            파일이 라이브에 없으면 '라이브없음'.
-  git     = 라이브 저장소에서 그 파일의 현재 git 상태(미커밋/커밋됨)
-★이 스크립트는 판단하지 않는다 — 읽은 것만 적는다. 세션 원장이 비면 '세션없음'이라
-  적지, '변경 없음'이라 적지 않는다(부재의 주장과 관측의 부재는 다르다).
+args: key, status(self:patch status의 결과), observed_at(그 조회 시각, 선택),
+commits(현재 작업 저장소의 최근 커밋 파일, 기본 1), all(종결 세션 포함).
+자식은 부모의 수리 소유권을 재구성하지 않는다. status 없이 호출하면 기존
+키 인자를 보존하여 부모에게 조회 요청을 반환한다. 세션 원장을 직접 열지 않는다.
+items의 라이브 열은 바이트 관측이고 활성·완료 판정이 아니다. 저장 영수증과
+현재 조회를 구분하며 현재 실행 판본을 별도 측정하지 않는다.
 """
-import hashlib
 import json
 import os
 import subprocess
@@ -86,103 +70,59 @@ def _git_state(rel, content_path, dirty):
     return "커밋됨" if mine == head else "미커밋(HEAD와 다름)"
 
 
+def project_status(args):
+    """Only consume the parent's owner-filtered result; never open session files."""
+    key = args.get('key')
+    snapshot = args.get('status')
+    request = {'action': 'self:patch', 'args': {'op': 'status', **({'key': key} if key else {})}}
+    if not isinstance(snapshot, dict) or snapshot.get('success') is not True:
+        return {'items': [], 'state': 'unknown', 'reported_complete': None,
+                'request': request, 'source_complete': False,
+                'unknown': ['부모의 self:patch status 결과가 필요합니다'],
+                'message': '세션 원장을 직접 읽지 않습니다. 부모 조회 결과를 status 인자로 전달하세요.'}
+    items = []
+    for row in snapshot.get('items', []):
+        if key and row.get('key') != key:
+            continue
+        if not args.get('all') and not key and row.get('status') in CLOSED:
+            continue
+        # Owner adds these fields only where the caller may see full progress.
+        fields = ('candidate_hash', 'verified', 'verified_current', 'current_candidate_hash',
+                  'execution_checks', 'verification_plan', 'last_preparation', 'applied',
+                  'complete', 'stage', 'activation', 'activation_checks', 'commit',
+                  'recovery', 'program_scope', 'program_activation', 'root', 'last_error')
+        stored = {name: row.get(name) for name in fields}
+        items.append({'key': row.get('key'), 'status': row.get('status'),
+                      'files': row.get('files', []), 'stored_receipts': stored,
+                      'file_observation': row.get('live_comparison'),
+                      'source': 'supplied self:patch status',
+                      'owner_observed_at': args.get('observed_at'),
+                      'active_rechecked_here': False,
+                      'unknown': [name for name in ('activation', 'activation_checks', 'commit', 'recovery')
+                                  if not row.get(name)]})
+    return {'items': items, 'owner_status': snapshot, 'request': request,
+            'reported_complete': snapshot.get('complete'),
+            'source_complete': bool(items), 'active_rechecked_here': False,
+            'unknown': [] if items else ['대상 행 미관측: 세션 부재나 접근 거절을 구별할 수 없습니다'],
+            'message': '전달받은 소유자 관측입니다. 저장 영수증·파일 비교·활성·각인은 별개이며 이 호출은 적용이나 복구를 실행하지 않습니다.'}
+
+
 def main():
-    try:
-        args = json.loads(sys.stdin.read() or "{}")
-    except Exception:
-        args = {}
-    want_key = args.get("key")
-    commits = int(args.get("commits", 1) or 0)
-    show_all = bool(args.get("all"))
-
-    # git 원장 — 라이브 저장소의 현재 상태
-    dirty = {}
-    for line in _git(["status", "--porcelain"]).splitlines():
-        if len(line) > 3:
-            dirty[line[3:].strip().strip('"')] = line[:2].strip() or "?"
-
-    items, notes = [], []
-    sessions = []
-    if os.path.isdir(SESS_DIR):
-        for fn in sorted(os.listdir(SESS_DIR)):
-            if not fn.endswith(".json") or fn.endswith(".apply.json"):
-                continue
-            key = fn[:-5]
-            if want_key and key != want_key:
-                continue
-            try:
-                with open(os.path.join(SESS_DIR, fn), encoding="utf-8") as f:
-                    sess = json.load(f)
-            except Exception as e:
-                notes.append(f"{key}: 원장 읽기 실패 {e}")
-                continue
-            if not show_all and (sess.get("status") or "") in CLOSED:
-                continue
-            sessions.append((key, sess))
-    else:
-        notes.append(f"세션 디렉토리 없음: {SESS_DIR}")
-
-    if not sessions:
-        notes.append("종결되지 않은 스테이징 세션 없음" if not want_key
-                     else f"세션 없음: {want_key}")
-
-    for key, sess in sessions:
-        wt = os.path.join(ROOT, sess.get("worktree") or "")
-        status = sess.get("status") or "?"
-        files = sess.get("files") or {}
-        if not files:
-            notes.append(f"{key}({status}): 원장에 파일 0건")
-        for live_abs, rec in sorted(files.items()):
-            rel = os.path.relpath(live_abs, ROOT)
-            staged = (rec or {}).get("staged") or os.path.join(wt, rel)
-            h_stage, h_live = _sha(staged), _sha(live_abs)
-            if h_live is None:
-                live_state = "라이브없음"
-            elif h_stage is None:
-                live_state = "격리사본없음"
-            elif h_stage == h_live:
-                live_state = "반영됨"
-            else:
-                live_state = "미반영(격리에만)"
-            items.append({
-                "파일": rel,
-                "영역": os.path.dirname(rel) or ".",
-                "세션": key,
-                "세션상태": status,
-                "라이브": live_state,
-                # ★git 열 = "이 변경 내용이 HEAD 에 있는가"(격리 사본 blob vs HEAD blob).
-                #   라이브 더러움(git status)으로 판정하던 두 판(라이브없음→커밋됨,
-                #   격리에만→커밋됨)의 오답을 한 원인으로 닫는다.
-                "git": _git_state(rel, staged if h_stage is not None else live_abs, dirty),
-                "격리해시": (h_stage or "")[:8],
-                "라이브해시": (h_live or "")[:8],
-            })
-
-    for i in range(commits):
-        line = _git(["log", "-1", f"--skip={i}", "--format=%h|%s"]).strip()
+    args = json.loads(sys.stdin.read() or '{}')
+    result = project_status(args)
+    # Optional historical Git rows describe this workspace only, not activation.
+    commits = []
+    for i in range(max(0, int(args.get('commits', 1) or 0))):
+        line = _git(['log', '-1', f'--skip={i}', '--format=%H|%s']).strip()
         if not line:
             break
-        sha, _, subj = line.partition("|")
-        for rel in _git(["show", "--name-only", "--format=", sha]).split("\n"):
-            rel = rel.strip().strip('"')
-            if not rel:
-                continue
-            items.append({
-                "파일": rel,
-                "영역": os.path.dirname(rel) or ".",
-                "세션": f"커밋 {sha}",
-                "세션상태": subj[:60],
-                "라이브": "반영됨" if os.path.exists(os.path.join(ROOT, rel)) else "삭제됨",
-                "git": _git_state(rel, os.path.join(ROOT, rel), dirty),
-                "격리해시": "",
-                "라이브해시": (_sha(os.path.join(ROOT, rel)) or "")[:8],
-            })
-
-    msg = f"{len(items)}행 — 세션 {len(sessions)}개"
-    if notes:
-        msg += " · " + " / ".join(notes)
-    print(json.dumps({"items": items, "message": msg}, ensure_ascii=False))
+        sha, _, subject = line.partition('|')
+        commits.append({'commit': sha, 'subject': subject, 'workspace': ROOT,
+                        'scope': 'historical commit; not current active code',
+                        'files': _git(['show', '--name-only', '--format=', sha]).splitlines()})
+    result['commits'] = commits
+    print(json.dumps(result, ensure_ascii=False))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

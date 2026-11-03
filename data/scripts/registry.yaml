@@ -66,10 +66,10 @@ Android제어부품:
       - request
       - limbs
       result:
+        native_control: Record
         platform: Text
         request: Record
         source_path: Text
-        native_control: Record
         target: Text
         timeout: Number
         wait: Number
@@ -82,12 +82,12 @@ Android제어부품:
       result:
         code: Text
         helper_sha256: Text
-        transport: Text
         inputs: Record
         platform: Text
         request: Record
         request_id: Text
         source_sha256: Text
+        transport: Text
       when:
         op: prepare
     - required:
@@ -215,6 +215,76 @@ Cloudflare사용량:
   interpreter: python
   registered_at: '2026-09-05T11:02:03'
   timeout: 120
+LS102Append:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - write_external
+    params:
+      path: Text
+      request: Record
+    required:
+    - path
+    - request
+    result:
+      path: Text
+      receipt: Text
+    version: 1
+    write_resources:
+      file: path
+  created_at: '2026-10-28T11:29:02.329153+00:00'
+  description: 102회차 훈련 전용 LS102Append
+  file: ls102_append.py
+  interpreter: python
+  origin: user
+  registered_at: '2026-10-28T11:29:02.329143+00:00'
+  registration_updated_at: '2026-10-28T12:27:06.133632+00:00'
+  timeout: 300
+LS102Normalize:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - pure
+    params:
+      aliases: Record
+      kind: Text
+      payload: Unknown
+    required:
+    - kind
+    - payload
+    - aliases
+    result: List<Record>
+    version: 1
+  created_at: '2026-10-28T11:29:01.746896+00:00'
+  description: 102회차 훈련 전용 LS102Normalize
+  file: ls102_normalize.py
+  interpreter: python
+  origin: user
+  registered_at: '2026-10-28T11:29:01.746751+00:00'
+  registration_updated_at: '2026-10-28T12:27:05.305602+00:00'
+  timeout: 300
+LS103Normalize:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - pure
+    params:
+      items: List<Record>
+    required:
+    - items
+    result: List<Record>
+    version: 1
+  created_at: '2026-10-28T12:04:29.672961+00:00'
+  description: 103회차 공급업체 포장가격과 배송비 단위 정규화
+  file: ls103_normalize.py
+  interpreter: python
+  origin: user
+  registered_at: '2026-10-28T12:04:29.672778+00:00'
+  registration_updated_at: '2026-10-28T12:04:29.672962+00:00'
+  timeout: 300
 PC제어부품:
   callable_contract:
     adapter:
@@ -458,7 +528,8 @@ PC제어부품:
         op: verify
     version: 1
   description: PC제어·PC제어확인의 내부 준비·검증 부품. request의 action·device_id·value·enabled·video·url·title·duration_seconds·fullscreen·app·display·display_id·name·seconds·text·window_id·tab·expected는
-    지원 동작별로 op:contract의 actions·optional에서 조회한다. youtube_replace는 검색 행을 video로 그대로 전달하거나 URL·전체 제목·초 길이를 함께 지정한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
+    지원 동작별로 op:contract의 actions·optional에서 조회한다. youtube_replace는 검색 행을 video로 그대로
+    전달하거나 URL·전체 제목·초 길이를 함께 지정한다. 일반 제어는 저장 함수를 사용한다. 가이드 pc_control.md.
   file: pc_control.py
   interpreter: python
   registered_at: '2026-10-18T00:00:00'
@@ -918,6 +989,32 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-27T18:26:29'
   timeout: 60
+개발준비:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - read_external
+    params:
+      files: List<Text>
+      previous: Record
+    required:
+    - files
+    result:
+      identity: Record
+      items: List<Record>
+      source_complete: Bool
+      stable: Bool
+      unknown: List<Record>
+    version: 1
+  created_at: '2026-11-03T08:03:04.942607+00:00'
+  description: 명시 파일의 현재 사본·HEAD·지문, 공통 소유권·영향·검사 선택·필수 빌드와 미확인을 조회한다. files 필수, previous는
+    이전 identity. 읽기 결과는 권한이나 검사 통과가 아니다.
+  file: dev_prepare.py
+  interpreter: python
+  registered_at: '2026-11-03T08:03:04.942598+00:00'
+  registration_updated_at: '2026-11-03T08:03:04.942608+00:00'
+  timeout: 300
 구성요소수명:
   created_at: '2026-10-20T02:46:40.371811+00:00'
   description: 어휘·등록 스크립트·이름 붙은 관용구의 생성/변경/검증/수리/실행 시각과 구현 지문을 조회한다. 입력(args)은 op=list(기본)/history/sync/verify/repair,
@@ -958,6 +1055,14 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-07T20:07:16'
   timeout: 300
+능력변경:
+  description: '어휘·스크립트·관용구 변경 계획·검사·조회. args.op=plan(request: kind=idiom/script/action,
+    target, operation=add/update/remove, code/source, probes) 또는 check/status/verify(plan,
+    probes). 반환 program을 self:workflow run으로 실행한다. 능력변경완료 관용구로 한 번에 연결. code 변경은 기존
+    self:patch 적용 권한을 사용. 가이드 capability_change.md.'
+  file: capability_change.py
+  interpreter: python
+  timeout: 3600
 미디어세션:
   description: '미디어 세션 제어(docs/MEDIA_SESSION_CONTRACT.md) — args: op(capabilities|create|status|accept|reject|end|update|list|history|health)·
     target(장치 이름·device_id 또는 통화 상대 이름/npub)·kind(call|extension)·purpose(voice_call|video_call|camera|microphone|speaker|playback)·
@@ -971,42 +1076,42 @@ python_libraries:
   timeout: 60
 보고서HTML:
   callable_contract:
-    version: 1
-    params:
-      src: Text
-      dst: Text
-      title: Text?
-      subtitle: Text?
-      theme: Text?
-      accent: Text?
-      drop_lines: Text|List<Text>|Null
-      publish: Text?
-    required:
-    - src
-    - dst
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - unknown
     nonempty:
     - src
     - dst
+    params:
+      accent: Text?
+      drop_lines: Text|List<Text>|Null
+      dst: Text
+      publish: Text?
+      src: Text
+      subtitle: Text?
+      theme: Text?
+      title: Text?
+    required:
+    - src
+    - dst
     result:
-      success: Bool
       items:
         $list:
-          path: Text
-          title: Text
-          theme: Text
           bytes: Number
+          dropped_lines: Number
           headings: Number
           links: Number
-          tables: Number
-          dropped_lines: Number
+          path: Text
           table_structure:
-            status: Text
-            expected: Number
             boundaries_fixed: Number
-    effects:
-    - unknown
-    adapter:
-      protocol: registered-json/1
+            expected: Number
+            status: Text
+          tables: Number
+          theme: Text
+          title: Text
+      success: Bool
+    version: 1
   description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫
     h1) · subtitle(머리 한 줄) · theme(plain|card|briefing: 목차·요약·기사 구획) · accent · drop_lines(그
     문자열이 든 줄 제거 — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행) · publish(direct=완성 즉시 dst 공개, 기본
@@ -1016,20 +1121,131 @@ python_libraries:
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
 빌드검증:
-  description: '몸의 커밋 전 관문 배터리(build --check·층·동등성(+typecheck)·items 주입·경로 해석·파일 크기)를
-    한 번에 — args: gates(목록, 기본 전부)·timeout. items(gate·ok·exit·seconds·summary)+ok.
-    개발 주행의 Bash 검증 되풀이를 한 낱말로(2026-09-05)'
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - unknown
+    params:
+      current: Record
+      gates: List<Text>
+      op: Text
+      receipts: List<Record>
+      timeout: Number
+    required: []
+    result:
+      items:
+        $list:
+          gate: Text
+          ok: Bool
+          summary: Text
+      ok: Bool
+    version: 1
+  created_at: null
+  description: 관문 빌드 검사. gates·timeout, op run/plan/observe. plan은 부모 run_command
+    명령, observe는 receipts/current의 후보·환경 대조와 남은 검사. 독립 빌드 성공은 기능·활성·공식 수리 완료가 아니다.
   file: 빌드검증.py
   interpreter: python
   registered_at: '2026-09-05T13:46:00'
+  registration_updated_at: '2026-11-03T08:38:41.533445+00:00'
   timeout: 900
 수리적용상태:
-  description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만),
-    commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - read_external
+    params:
+      all: Bool
+      commits: Number
+      key: Text
+      observed_at: Text
+      status: Record
+    required: []
+    result:
+      commits: List<Record>
+      items: List<Record>
+      request: Record
+      source_complete: Bool
+    version: 1
+  created_at: null
+  description: 부모 self:patch status 결과를 status로 받아 저장 영수증·현재 파일 관측·활성·커밋을 분리한다. key·observed_at·all·commits
+    선택. status 부재는 조회 요청과 unknown이며 성공으로 추정하지 않는다. 직접 적용·복구·활성 측정을 하지 않는다.
   file: 수리적용상태.py
   interpreter: python
   registered_at: '2026-08-24T03:39:12'
+  registration_updated_at: '2026-11-03T08:38:59.900097+00:00'
   timeout: 300
+수집관용구:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - pure
+    enums:
+      op:
+      - urls
+      - finish
+      - match
+      - collect
+    integers:
+    - limit
+    - context
+    minimum:
+      context: 0
+      limit: 0
+    params:
+      context: Number
+      keep: List<Text>
+      limit: Number
+      op: Text
+      pattern: Text
+      result: Record
+      results: List<Record>
+      selection: Record
+      source: Unknown
+    required:
+    - op
+    result:
+      count: Number
+      items: List<Record>
+    variants:
+    - required:
+      - op
+      - source
+      when:
+        op: urls
+    - required:
+      - op
+      - selection
+      - result
+      when:
+        op: finish
+    - required:
+      - op
+      - source
+      - pattern
+      - limit
+      result:
+        count: Number
+        items: List<Record>
+        match_info: Record
+      when:
+        op: match
+    - required:
+      - op
+      - results
+      when:
+        op: collect
+    version: 1
+  description: URL 중복 제거(urls), 수집 결과 복원(finish), 출처 경계 안에서 본문·문맥 검색(match), 행 결과
+    취합(collect). 주소마다읽기·본문에서찾기 등의 공용 값 연산이다. urls에 limit을 주면 앞 개수개 정상 후보와 collection을
+    반환하고 실패 행은 finish에서 복원한다. collect는 값·실패·원천 잘림을 보존하며 펼친다. 의도한 선별은 truncations.scope=selection으로
+    원천 잘림과 구별한다. 모델·외부 API를 호출하지 않는다.
+  file: collection_idioms.py
+  interpreter: python
+  registered_at: '2026-09-21T21:58:24'
+  timeout: 30
 스프레드시트후속검증:
   description: '시트 후속 검증: args.root=정본 또는 그 .worktrees 경로, mode=unit/build/live/gates'
   file: spreadsheet_followup.py
@@ -1053,20 +1269,25 @@ python_libraries:
     effects:
     - unknown
     params:
+      current: Record
       files: List<Text>
       k: Text
+      op: Text
+      receipts: List<Record>
       timeout: Number
     required: []
     result:
       items: List<Record>
       ok: Bool
     version: 1
-  description: 'pytest 를 파일·-k 단위로 — args: files(바뀐 곳의 시험 파일 목록)·k·timeout. items(file·passed·failed·errors·failures[])+ok.
-    [self:edit] 뒤 검증을 같은 프로그램에서(2026-09-05). 전수(files 생략·폴더, 약 8분)는 전경 거절 — background:true
-    로 돌리고 status{job_id, wait:240} 로 받는다(2026-09-18)'
+  created_at: null
+  description: pytest 파일·-k 실행. op run(기본)은 비공식 구조화 검사, plan은 부모 run_command 명령, observe는
+    receipts/current의 후보·환경 일치와 잔여 검사 표시. 0건·skip·timeout은 통과가 아니다. 공식 재사용·적용 판정은
+    검사 소유자가 담당.
   file: 시험.py
   interpreter: python
   registered_at: '2026-09-05T13:46:00'
+  registration_updated_at: '2026-11-03T08:03:26.940105+00:00'
   timeout: 900
 압축:
   callable_contract:
@@ -1251,7 +1472,9 @@ python_libraries:
     required_any:
     - - query
       - id
-    result: {success: Bool, items: 'List<Record>'}
+    result:
+      items: List<Record>
+      success: Bool
     version: 1
   description: '식약처 의약품 제품 허가정보(전문·일반)를 조회. args: query(제품명) 또는 id(품목기준코드), page(기본1),
     limit(1~100). items에 id·title·manufacturer·classification·ingredients_text·url·raw,
@@ -1443,27 +1666,6 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-08T06:17:58'
   timeout: 300
-수집관용구:
-  callable_contract:
-    version: 1
-    adapter: {protocol: registered-json/1}
-    effects: [pure]
-    params: {op: Text, source: Unknown, limit: Number, context: Number, selection: Record, result: Record, results: 'List<Record>', keep: 'List<Text>', pattern: Text}
-    required: [op]
-    enums: {op: [urls, finish, match, collect]}
-    result: {items: 'List<Record>', count: Number}
-    integers: [limit, context]
-    minimum: {limit: 0, context: 0}
-    variants:
-    - {when: {op: urls}, required: [op, source]}
-    - {when: {op: finish}, required: [op, selection, result]}
-    - {when: {op: match}, required: [op, source, pattern, limit], result: {items: 'List<Record>', count: Number, match_info: Record}}
-    - {when: {op: collect}, required: [op, results]}
-  description: 'URL 중복 제거(urls), 수집 결과 복원(finish), 출처 경계 안에서 본문·문맥 검색(match), 행 결과 취합(collect). 주소마다읽기·본문에서찾기 등의 공용 값 연산이다. urls에 limit을 주면 앞 개수개 정상 후보와 collection을 반환하고 실패 행은 finish에서 복원한다. collect는 값·실패·원천 잘림을 보존하며 펼친다. 의도한 선별은 truncations.scope=selection으로 원천 잘림과 구별한다. 모델·외부 API를 호출하지 않는다.'
-  file: collection_idioms.py
-  interpreter: python
-  registered_at: '2026-09-21T21:58:24'
-  timeout: 30
 폴더변화:
   description: '폴더의 파일 골격(경로·크기·수정 시각)을 지난번 본 모습과 대조해 바뀐 것만 낸다 — args: path(필수, 상대
     경로는 작업공간 기준)·exclude(glob 목록, 기본 제외 DB·캐시에 더함)·name(같은 폴더를 다른 목적으로 따로 볼 때)·op(check
@@ -1482,80 +1684,3 @@ python_libraries:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
-
-LS102Append:
-  origin: user
-  callable_contract:
-    adapter:
-      protocol: registered-json/1
-    effects:
-    - write_external
-    params:
-      path: Text
-      request: Record
-    required:
-    - path
-    - request
-    result:
-      path: Text
-      receipt: Text
-    version: 1
-    write_resources:
-      file: path
-  created_at: '2026-10-28T11:29:02.329153+00:00'
-  description: 102회차 훈련 전용 LS102Append
-  file: ls102_append.py
-  interpreter: python
-  registered_at: '2026-10-28T11:29:02.329143+00:00'
-  registration_updated_at: '2026-10-28T12:27:06.133632+00:00'
-  timeout: 300
-LS102Normalize:
-  origin: user
-  callable_contract:
-    adapter:
-      protocol: registered-json/1
-    effects:
-    - pure
-    params:
-      aliases: Record
-      kind: Text
-      payload: Unknown
-    required:
-    - kind
-    - payload
-    - aliases
-    result: List<Record>
-    version: 1
-  created_at: '2026-10-28T11:29:01.746896+00:00'
-  description: 102회차 훈련 전용 LS102Normalize
-  file: ls102_normalize.py
-  interpreter: python
-  registered_at: '2026-10-28T11:29:01.746751+00:00'
-  registration_updated_at: '2026-10-28T12:27:05.305602+00:00'
-  timeout: 300
-LS103Normalize:
-  origin: user
-  callable_contract:
-    adapter:
-      protocol: registered-json/1
-    effects:
-    - pure
-    params:
-      items: List<Record>
-    required:
-    - items
-    result: List<Record>
-    version: 1
-  created_at: '2026-10-28T12:04:29.672961+00:00'
-  description: 103회차 공급업체 포장가격과 배송비 단위 정규화
-  file: ls103_normalize.py
-  interpreter: python
-  registered_at: '2026-10-28T12:04:29.672778+00:00'
-  registration_updated_at: '2026-10-28T12:04:29.672962+00:00'
-  timeout: 300
-
-능력변경:
-  file: capability_change.py
-  interpreter: python
-  timeout: 3600
-  description: '어휘·스크립트·관용구 변경 계획·검사·조회. args.op=plan(request: kind=idiom/script/action, target, operation=add/update/remove, code/source, probes) 또는 check/status/verify(plan, probes). 반환 program을 self:workflow run으로 실행한다. 능력변경완료 관용구로 한 번에 연결. code 변경은 기존 self:patch 적용 권한을 사용. 가이드 capability_change.md.'

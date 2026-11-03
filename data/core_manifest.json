@@ -89,6 +89,8 @@
       "capability_change.py",
       "chrome_control.py",
       "collection_idioms.py",
+      "dev_prepare.py",
+      "development_checks.py",
       "drug_approval.py",
       "examples.json",
       "github저장소메타.py",

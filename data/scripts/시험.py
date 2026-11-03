@@ -13,7 +13,7 @@ args (stdin JSON):
 """
 import json
 import os
-import re
+import shlex
 import subprocess
 import sys
 import time
@@ -26,8 +26,8 @@ import boot_paths  # noqa: E402,F401
 from logging_utils import mask_secrets
 
 PY = sys.executable
-SUMMARY_RE = re.compile(r"(\d+) (passed|failed|error|errors|skipped)")
-PROGRESS_RE = re.compile(r"^([.FEsx]+)\s+\[\s*\d+%\]")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from development_checks import independent_test, save_output, mode
 
 
 def _args():
@@ -39,35 +39,11 @@ def _args():
 
 
 def _run(files, k, timeout):
-    cmd = [PY, "-m", "pytest", "-q", "-p", "no:warnings", "-rf", *files]
-    if k:
-        cmd += ["-k", k]
-    p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
-    text = p.stdout + "\n" + p.stderr
-    counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0}
-    summary_line = next((l for l in reversed(text.splitlines()) if SUMMARY_RE.search(l)), "")   # 요약 줄이 있으면 그것
-    for n, kind in SUMMARY_RE.findall(summary_line):
-        counts["errors" if kind.startswith("error") else kind] = int(n)
-    if not summary_line:                                   # 이 몸의 pytest 설정은 -q 요약 줄을 안 낸다 — 진행 줄의 글자를 센다
-        for line in text.splitlines():
-            m = PROGRESS_RE.match(line)
-            if m:
-                seq = m.group(1)
-                counts["passed"] += seq.count("."); counts["failed"] += seq.count("F")
-                counts["errors"] += seq.count("E"); counts["skipped"] += seq.count("s") + seq.count("x")
-    failures = [m.group(1) for m in re.finditer(r"^FAILED (\S+)", text, re.M)]
-    return counts, failures, p.returncode, text
+    return independent_test(ROOT, files, k, timeout)
 
 
 def _failure_output(text):
-    """진단은 즉시 보여 주고 전체 출력은 같은 영수증에서 회수한다."""
-    text = mask_secrets(text)
-    directory = ROOT / "data/spill/test_outputs"
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / (uuid.uuid4().hex + ".log")
-    path.write_text(text, encoding="utf-8")
-    excerpt = text if len(text) <= 6000 else text[:3000] + "\n… 중간 생략, output_path에 전체 보존 …\n" + text[-3000:]
-    return {"output": excerpt, "output_path": str(path), "truncated": len(text) > 6000}
+    return save_output(ROOT, text)
 
 
 def _whole_suite(requested):
@@ -78,6 +54,13 @@ def _whole_suite(requested):
 def main():
     a = _args()
     requested = a.get("files") or []
+    command_files = requested or ["backend/"]
+    commands = [shlex.join([PY, "-m", "pytest", "-p", "no:warnings", "-rf", f]
+                          + (["-k", a["k"]] if a.get("k") else [])) for f in command_files]
+    managed = mode(a, commands)
+    if managed is not None:
+        print(json.dumps(managed, ensure_ascii=False))
+        return 0
     if _whole_suite(requested) and os.environ.get("INDIEBIZ_SCRIPT_MODE") == "foreground":
         print(json.dumps({"success": False, "items": [], "error": (
             "전수 시험(5천여 건·약 8분)은 전경으로 받지 않습니다. 수리·개발의 검증이면 files 에 바뀐 곳의 시험 파일만 주세요"
@@ -91,21 +74,25 @@ def main():
     t0 = time.time()
     for n, f in enumerate(files, 1):
         print(f"[진행] {n}/{len(files)} {f}", file=sys.stderr, flush=True)     # 백그라운드 status 의 progress 로 보인다
-        if not (ROOT / f).exists():
+        if time.time() - t0 >= timeout:
+            items.append({"file": f, "ok": False, "passed": 0, "failed": 0, "errors": 0, "skipped": 0, "state": "not_run", "failures": ["전체 시한 소진으로 미실행"]})
+            continue
+        if not (ROOT / f.split("::", 1)[0]).exists():
             items.append({"file": f, "ok": False, "passed": 0, "failed": 0, "errors": 1, "skipped": 0, "failures": ["파일 없음"]})
             continue
         try:
-            counts, failures, rc, text = _run([f], k, max(5.0, timeout - (time.time() - t0)))
-            ok = rc == 0 and counts["passed"] > 0 and not counts["skipped"]          # 5 = 수집 0(k 로 전부 걸러짐)
+            counts, failures, rc, text = _run([f], k, max(0.01, timeout - (time.time() - t0)))
+            ok = rc == 0 and counts["passed"] > 0 and not counts["skipped"] and not counts.get("not_run") and not counts.get("failure_kind") and counts.get("test_report", {}).get("passed", True)          # 5 = 수집 0(k 로 전부 걸러짐)
             items.append({"file": f, "ok": ok, **counts, "failures": failures[:12],
-                          **(_failure_output(text) if not ok else {})})
+                          **_failure_output(text), "exit": rc})
         except subprocess.TimeoutExpired as exc:
             parts = [v.decode(errors="replace") if isinstance(v, bytes) else (v or "") for v in (exc.stdout, exc.stderr)]
             evidence = _failure_output("\n".join(parts) + "\n시험 실행 시한 초과")
             items.append({"file": f, "ok": False, "passed": 0, "failed": 0, "errors": 1, "skipped": 0, "failures": ["시한 초과"], **evidence})
-    ok = all(i["ok"] for i in items)
+    ok = bool(items) and all(i["ok"] for i in items)
     p_sum = sum(i["passed"] for i in items); f_sum = sum(i["failed"] + i["errors"] for i in items)
-    print(json.dumps({"items": items, "ok": ok,
+    print(json.dumps({"items": items, "ok": ok, "planned": files,
+                      "official_receipt": False, "evidence_kind": "independent_execution",
                       "operation_outcome": {"status": "passed" if ok else "failed",
                                             "message": f"{len(items)}파일 · 통과 {p_sum} · 실패 {f_sum}"},
                       "seconds": round(time.time() - t0, 1),

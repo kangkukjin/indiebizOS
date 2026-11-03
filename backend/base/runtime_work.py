@@ -248,6 +248,29 @@ def submit_coroutine_threadsafe(coro, loop):
     return future
 
 
+def _reap_until_observed(wait, owner, lease, error=None):
+    """Transient OS observation failures retain ownership and retry in place."""
+    try:
+        while True:
+            try:
+                wait()
+            except Exception as exc:
+                with owner.lock:
+                    if error in owner.errors:
+                        owner.errors.remove(error)
+                    error = "process observation: " + str(exc)
+                    owner.errors.append(error)
+                time.sleep(0.2)
+                continue
+            with owner.lock:
+                if error in owner.errors:
+                    owner.errors.remove(error)
+            return
+    finally:
+        if lease:
+            lease.close()
+
+
 def install_worker_tracking():
     """요청에서 파생된 stdlib 실행 경계. 설치는 워커 조립점에서 한 번만.
 
@@ -315,6 +338,7 @@ def install_worker_tracking():
             with owner.lock:
                 owner.entries[lease.key]["pid"] = proc.pid
         receipt = None
+        receipt_error = None
         if mark:
             try:
                 from restart_process import tool_process_receipt
@@ -323,20 +347,20 @@ def install_worker_tracking():
                 # 등록 직후 아주 짧게 끝난 자식은 이미 완료. 살아 있는데 신원이 없으면 UNKNOWN.
                 if proc.poll() is None:
                     with owner.lock:
-                        owner.errors.append("process receipt: " + str(exc))
+                        receipt_error = "process receipt: " + str(exc)
+                        owner.errors.append(receipt_error)
+        def observe():
+            nonlocal receipt
+            if mark and receipt is None and proc.poll() is None:
+                from restart_process import tool_process_receipt
+                receipt = tool_process_receipt(proc, os.environ["INDIEBIZ_BASE_PATH"], owner.generation, mark)
+            if receipt:
+                from restart_process import wait_tool_process
+                wait_tool_process(proc, *receipt)
+            else:
+                proc.wait()
         def reap():
-            try:
-                if receipt:
-                    from restart_process import wait_tool_process
-                    wait_tool_process(proc, *receipt)
-                else:
-                    proc.wait()
-            except Exception as exc:
-                with owner.lock:
-                    owner.errors.append("process observation: " + str(exc))
-            finally:
-                if lease:
-                    lease.close()
+            _reap_until_observed(observe, owner, lease, receipt_error)
         watcher = threading.Thread(target=reap, daemon=True, name="runtime-process-reap")
         original_start(watcher)
 

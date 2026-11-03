@@ -132,3 +132,28 @@ def test_queued_delegation_and_finalizer(work):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_transient_process_observation_retains_lease_then_recovers(work, monkeypatch):
+    import runtime_work as module
+    lease = work.reserve('real-process')
+    calls = []
+    monkeypatch.setattr(module.time, 'sleep', lambda delay: None)
+    def observe():
+        calls.append(1)
+        assert work.snapshot()['active_roots'] == 1
+        if len(calls) == 1:
+            raise SystemError('temporary proc_cmdline failure')
+        assert work.snapshot()['ownership'] == 'unknown'
+    module._reap_until_observed(observe, work, lease)
+    assert len(calls) == 2
+    assert work.snapshot()['ownership'] == 'known'
+    assert work.snapshot()['active_roots'] == 0
+
+
+def test_recovered_process_receipt_clears_only_its_own_error(work):
+    import runtime_work as module
+    work.errors[:] = ['unrelated observation', 'receipt failure']
+    lease = work.reserve('process')
+    module._reap_until_observed(lambda: None, work, lease, 'receipt failure')
+    assert work.errors == ['unrelated observation']

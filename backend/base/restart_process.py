@@ -281,7 +281,9 @@ def _is_adopted(ident, rules):
         if _birth_time(p) != ident["born"]:
             return False
         argv = p.cmdline()
-    except psutil.Error:
+    except (psutil.Error, SystemError):
+        # Native cmdline races are not evidence of daemon adoption. Keep the
+        # process in the owned set and continue observing its actual lifetime.
         return False
     if not argv:
         return False

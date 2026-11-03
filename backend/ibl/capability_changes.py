@@ -212,7 +212,11 @@ def plan(request):
     from program_boundary import managed
     details['ownership'] = managed(kind, target)
     from thread_context import get_repair_workspace
-    details['repair'] = bool(get_repair_workspace() or os.environ.get('INDIEBIZ_REPAIR_CHILD') == '1')
+    workspace = get_repair_workspace()
+    child_source = os.environ.get('INDIEBIZ_SOURCE_ROOT') if os.environ.get('INDIEBIZ_REPAIR_CHILD') == '1' else None
+    # A sandbox child is not itself the parent repair. Tests and nested bodies
+    # have their own data root and must use their normal management lifecycle.
+    details['repair'] = any(value and Path(value).resolve() == root for value in (workspace, child_source))
     if kind == 'script':
         details['other_registrations'] = digest({k: v for k, v in read_registry(root).items() if k != target})
     details['request_id'] = request.get('request_id') or digest(details)

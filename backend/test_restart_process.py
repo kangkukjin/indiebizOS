@@ -432,3 +432,13 @@ def test_real_bad_boot_rolls_back_only_known_bytes(runtime):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_native_cmdline_error_never_adopts_an_owned_process(monkeypatch):
+    import restart_process as module
+    class Process:
+        def cmdline(self):
+            raise SystemError('proc_cmdline returned an exception')
+    monkeypatch.setattr(module.psutil, 'Process', lambda pid: Process())
+    monkeypatch.setattr(module, '_birth_time', lambda process: 1)
+    assert not module._is_adopted({'pid': 123, 'born': 1}, [('adb', ['server'])])

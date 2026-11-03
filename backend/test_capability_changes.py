@@ -339,3 +339,21 @@ def test_pending_apply_keeps_stage_observations_and_recovery():
     assert value['stages']['verified'] is True and value['stages']['applied'] is False
     assert value['stages']['delivered'] is None
     assert value['recovery'] == receipt['recovery']
+
+
+@pytest.mark.parametrize('same_body', [False, True])
+def test_sandbox_child_routes_apply_only_for_its_candidate_body(body, monkeypatch, same_body):
+    root, _ = body
+    source = root / 'data/scripts/sample.py'
+    source.write_text('print("{}")\n')
+    monkeypatch.setenv('INDIEBIZ_REPAIR_CHILD', '1')
+    monkeypatch.setenv('INDIEBIZ_SOURCE_ROOT', str(root if same_body else root.parent / 'parent-candidate'))
+    result = changes.plan({'kind': 'script', 'target': 'sample', 'operation': 'add', 'source': str(source)})
+    assert result['plan']['repair'] is same_body
+
+
+def test_registration_in_nested_test_body_does_not_inherit_parent_apply(body, monkeypatch):
+    root, _ = body
+    monkeypatch.setenv('INDIEBIZ_REPAIR_CHILD', '1')
+    monkeypatch.setenv('INDIEBIZ_SOURCE_ROOT', str(root.parent / 'parent-candidate'))
+    test_script_add_update_remove_and_history(body)

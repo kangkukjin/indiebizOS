@@ -5,8 +5,9 @@ import re
 import uuid
 from pathlib import Path
 
-FILE_TOOLS = {"read_op", "read_file", "write_file", "edit_file", "list_directory", "make_directory",
-        "delete_path", "move_path", "copy_path", "run_command", "patch_op", "grep_files", "glob_files"}
+WRITE_TOOLS = {"write_file", "edit_file", "make_directory", "delete_path", "move_path", "copy_path"}
+FILE_TOOLS = WRITE_TOOLS | {"read_op", "read_file", "list_directory", "run_command",
+                            "patch_op", "grep_files", "glob_files"}
 PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source", "dest", "destination", "args_file"}
 
 
@@ -71,6 +72,13 @@ def prepare(self_module, name, payload, project):
         if not read_only:
             from task_repair import check_delta
             check_delta(sess, [rel])
+            writes_path = name in WRITE_TOOLS and not (
+                name == 'copy_path' and field in {'src', 'source'})
+            if writes_path and sess.get('program_policy'):
+                from program_boundary import change
+                owner = change(rel, sess['baseline'].get(rel), {'pending': True})
+                if not owner or not owner['mutable']:
+                    raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' + rel)
         from script_workspace import current_scope, workspace, prepare_path
         candidate = (wt / rel).resolve()
         if current_scope() and candidate.is_relative_to(workspace().resolve()):
@@ -164,3 +172,60 @@ def record_write(st, repo, key, result):
                       message="격리 사본에 변경을 보존했습니다. 정본 무변경. 요청 전체를 검증한 뒤 apply 하세요")
         return json.dumps(parsed, ensure_ascii=False)
     return result
+
+
+def execute(st, repo, key, name, payload, operation):
+    """Run under the caller's application lock and record only owned effects."""
+    if name == 'script_op' and payload.get('op') in {'register', 'remove'}:
+        return managed_write(st, repo, key, operation)
+    result = operation()
+    return record_write(st, repo, key, result) if name in WRITE_TOOLS else result
+
+
+def managed_write(st, repo, key, operation):
+    """The script owner writes; the existing host session records exact bytes.
+
+    Failed publication rolls its resource back, never poisoning the candidate.
+    The caller holds the repair application lock through this transaction.
+    """
+    from program_boundary import MANAGED_RESOURCES
+    session = st.ensure_session(repo, key)
+    st._candidate.collect(repo, session)
+    relative = 'data/scripts/registry.yaml'
+    path = st._candidate.target(Path(repo) / session['worktree'], relative)
+    before = path.read_bytes() if path.is_file() else None
+    mode = path.stat().st_mode if path.exists() else None
+    try:
+        result = operation()
+        parsed = json.loads(result) if isinstance(result, str) else result
+        if not isinstance(parsed, dict) or parsed.get('success') is not True:
+            if before is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(before)
+                path.chmod(mode)
+            return result
+        after = st._candidate.fingerprint(path)
+        old = session.get('managed_files', {}).get(relative)
+        session.setdefault('managed_files', {})[relative] = {
+            'owner': MANAGED_RESOURCES[relative], 'fingerprint': after}
+        try:
+            st._candidate.collect(repo, session)
+            st._candidate.invalidate(session)
+            st._save_session(repo, session)
+        except BaseException:
+            if old is None:
+                session['managed_files'].pop(relative, None)
+            else:
+                session['managed_files'][relative] = old
+            raise
+        parsed.update(staged=True, worktree=session['worktree'], applied=False,
+                      message='관리 연산의 사본 판본을 수리 후보에 연결했습니다. 검사 뒤 같은 사본을 apply 하세요.')
+        return json.dumps(parsed, ensure_ascii=False)
+    except BaseException:
+        if before is None:
+            path.unlink(missing_ok=True)
+        else:
+            path.write_bytes(before)
+            path.chmod(mode)
+        raise

@@ -6,7 +6,8 @@ from program_boundary import protected_reason
 
 
 def apply(st, repo, session):
-    with st._candidate.locked(repo, 'application'):
+    from script_mutation import activation_scope
+    with st._candidate.locked(repo, 'application'), activation_scope(repo, session):
         result = _apply(st, repo, session)
         if result is not None:
             return result
@@ -57,7 +58,8 @@ def _apply(st, repo, session):
 
 
 def resume(st, repo, session):
-    with st._candidate.locked(repo, 'application'):
+    from script_mutation import activation_scope
+    with st._candidate.locked(repo, 'application'), activation_scope(repo, session):
         try:
             return finish(st, repo, session)
         except BaseException:

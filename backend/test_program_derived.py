@@ -53,10 +53,17 @@ def test_document_marker_changes_do_not_authorize_prose_changes(case):
     assert len(calls) == 1
 
 
-def test_core_and_builder_changes_are_rejected_before_candidate_execution(case):
+@pytest.mark.parametrize('relative', ['scripts/iblbuild_derive.py',
+                                      'backend/base/program_boundary.py',
+                                      'backend/base/repair_process_bridge.py'])
+def test_core_and_builder_changes_are_rejected_before_candidate_execution(case, relative):
     repo, wt, candidate, derived, session, calls = case
+    path = wt / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('raise RuntimeError("must not execute")\n')
+    current = {relative: candidate.fingerprint(path)}
     with pytest.raises(PermissionError):
-        derived.accept(candidate, repo, session, {}, ['scripts/iblbuild_derive.py'])
+        derived.accept(candidate, repo, session, current, [relative])
     assert not calls
 
 

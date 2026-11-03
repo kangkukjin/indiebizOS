@@ -695,10 +695,9 @@ def execute(tool_input: dict, context) -> str:
             return result
         if _red_grant_active() and context.tool_name != "patch_op":
             with _staging_mod()._candidate.locked(str(_REPO_ROOT), "application"):
-                result = _execute(tool_input, context)
-                if context.tool_name in {"write_file", "edit_file", "copy_path", "move_path", "delete_path", "make_directory"}:
-                    result = _load_sibling("repair_tool_scope").record_write(
-                        _staging_mod(), str(_REPO_ROOT), _staging_key(), result)
+                result = _load_sibling('repair_tool_scope').execute(
+                    _staging_mod(), str(_REPO_ROOT), _staging_key(), context.tool_name,
+                    tool_input, lambda: _execute(tool_input, context))
         else:
             result = _execute(tool_input, context)
     except (PermissionError, ValueError, RuntimeError) as exc:

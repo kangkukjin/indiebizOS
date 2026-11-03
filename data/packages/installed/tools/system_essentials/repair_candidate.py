@@ -164,6 +164,9 @@ def collect(repo, session):
     if any(not target(wt, p).is_file() for p in session.get("artifact_paths", [])):
         raise ValueError("등록된 배치 산출물이 사본에서 사라졌습니다")
     current = inventory(wt, session.get("artifact_paths", []))
+    for rel, receipt in session.get('managed_files', {}).items():
+        if current.get(rel) != receipt['fingerprint']:
+            raise PermissionError('공식 관리 연산 이후 원장이 직접 변경됐습니다: ' + rel)
     for rel, expected in session.get('derived_files', {}).items():
         if current.get(rel) != expected:
             raise PermissionError('호스트 빌드 후 파생 파일이 변경됐습니다: ' + rel)
@@ -195,8 +198,9 @@ def collect(repo, session):
         from program_dependencies import analyse, with_derived_inputs
         token = digest(current)
         if session.get('program_analysis_hash') != token:
-            owned_elsewhere = set(session.get('derived_files', {})) | set(session.get('artifact_paths', []))
-            scope = analyse(wt, [r['rel'] for r in files.values() if r['rel'] not in owned_elsewhere])
+            from program_boundary import candidate_plan
+            ownership = candidate_plan(session, current)
+            scope = analyse(wt, [r['rel'] for r in files.values()], ownership=ownership)
             scope = with_derived_inputs(wt, scope, session.get('derived_files', {}))
             if scope['protected'] or scope['unmanaged']:
                 raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' +
@@ -340,6 +344,11 @@ def validate(repo, session):
     if ignored_source_files(Path(repo) / session["worktree"]):
         raise ValueError("검증 이후 적용 묶음에 없는 소스가 생겼습니다")
     current = inventory(Path(repo) / session["worktree"], session.get("artifact_paths", []))
+    if session.get('program_policy'):
+        from program_boundary import candidate_plan
+        ownership = candidate_plan(session, current)
+        if ownership['protected'] or ownership['unmanaged']:
+            raise PermissionError('적용 후보의 변경 권한이 유효하지 않습니다')
     if digest(current) != ready["candidate_hash"]:
         raise ValueError("검증 이후 사본이 변경됐습니다. 준비 판정이 무효입니다")
     if ready.get("environment_kind") == "pure-json/1":

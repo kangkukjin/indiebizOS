@@ -1,4 +1,4 @@
-"""Activate ordinary module/catalog candidates without replacing the host worker."""
+"""Activate owned program candidates without replacing the host worker."""
 from pathlib import Path
 
 import program_modules
@@ -10,7 +10,7 @@ def apply(st, repo, session):
     from runtime_utils import get_code_root
     scope = session.get('program_scope') or {}
     owners = scope.get('programs') or []
-    if not owners or any(p['kind'] not in {'module', 'vocabulary', 'package'} for p in owners):
+    if not owners or any(p['kind'] not in {'module', 'vocabulary', 'package', 'script', 'managed', 'test', 'derived'} for p in owners):
         return None
     code = Path(get_code_root())
     if scope.get('protected') or scope.get('unmanaged'):
@@ -19,7 +19,7 @@ def apply(st, repo, session):
     previous = publication.read(repo)
     row = publication.snapshot(repo, code, session)
     root = publication.object_root(repo, row)
-    changes = [p for p in session['sealed'] if p.endswith('.py') and not protected_reason(p)]
+    changes = module_changes(session)
     # Load errors and incompatible interfaces fail before any live write.
     prepared = program_modules.prepare(changes, root)
     _validate_standard(code, root, session)
@@ -109,8 +109,7 @@ def finish(st, repo, session, prepared=None):
                 if drift:
                     raise ValueError('Activation dependency changed: ' + ', '.join(drift[:8]))
             if prepared is None:
-                prepared = program_modules.prepare([p for p in session['sealed'] if p.endswith('.py')
-                                                     and not protected_reason(p)], root)
+                prepared = program_modules.prepare(module_changes(session), root)
             row['activation'] = 'active'
             try:
                 program_modules.publish(prepared, row['version'], root, lambda: publication.publish(repo, row))
@@ -126,7 +125,7 @@ def finish(st, repo, session, prepared=None):
                 raise
     # Registry/catalog loaders key on the published path; derived UI caches use
     # the existing owner invalidation procedure and must acknowledge it.
-    if any(p.startswith('data/') for p in session['sealed']):
+    if any(p['kind'] in {'vocabulary', 'package', 'derived'} for p in session['program_scope']['programs']):
         from ibl_routing import invalidate_runtime_caches
         token = program_modules._PIN.set(None)
         try:
@@ -158,7 +157,9 @@ def finish(st, repo, session, prepared=None):
     st._save_session(repo, session)
     return {'success': bool(committed.get('success')), 'applied': True, 'activated': True,
             'restart_required': False, 'key': session['key'], 'commit': committed,
-            'programs': session['program_activation'], 'message': '해당 모듈·사전 판본을 교체했습니다.'}
+            'programs': session['program_activation'],
+            'message': ('검증한 프로그램·등록 판본의 적용·활성 확인·커밋을 마쳤습니다.' if committed.get('success')
+                        else '프로그램은 활성화됐지만 커밋을 마치지 못했습니다. 같은 적용을 재개하세요.')}
 
 
 def recover(st, repo, session):
@@ -185,3 +186,10 @@ def _after_calls(st, repo, session):
         from red_apply import _load_handler
         return _load_handler({'repo': str(repo)})._load_sibling('program_apply').resume(st, repo, session)
     program_runtime.finish_later((str(repo), session['key']), finish_later)
+
+
+def module_changes(session):
+    """Scripts and tests use their file/registry owner, never Python hot imports."""
+    return [p for owner in session['program_scope']['programs']
+            if owner['kind'] in {'module', 'package'}
+            for p in owner['files'] if p.endswith('.py') and not protected_reason(p)]

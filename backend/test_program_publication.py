@@ -22,7 +22,8 @@ def session_for(repo, code, changes):
         if content is not None:
             target.write_text(content)
         sealed[relative] = {'before': candidate.fingerprint(code / relative), 'after': candidate.fingerprint(target)}
-    return {'worktree': 'candidate', 'key': 'example', 'sealed': sealed, 'derived_files': {}}
+    return {'worktree': 'candidate', 'key': 'example', 'sealed': sealed,
+            'derived_files': {p: row['after'] for p, row in sealed.items() if p == 'data/ibl_nodes.yaml'}}
 
 
 def test_prepared_catalog_is_invisible_then_both_loaders_see_publication(tmp_path, monkeypatch):
@@ -166,7 +167,8 @@ def test_module_first_import_uses_published_file_and_can_add_module(tmp_path, mo
         sys.meta_path[:], modules._FINDERS[:], modules._OWNERS, modules._TABLE = old
 
 
-def test_combined_catalog_and_package_waits_only_for_package_calls(tmp_path, monkeypatch):
+@pytest.mark.parametrize('catalog_kind', ['vocabulary', 'derived'])
+def test_combined_catalog_and_package_waits_only_for_package_calls(tmp_path, monkeypatch, catalog_kind):
     import program_runtime as runtime
     from test_repair_workspace_completion import module
     from types import SimpleNamespace as NS
@@ -191,8 +193,8 @@ def test_combined_catalog_and_package_waits_only_for_package_calls(tmp_path, mon
     pending = []
     monkeypatch.setattr(runtime, 'finish_later', lambda *args: pending.append(args))
     session.update(module_publication=row, readiness={},
-                   program_scope={'programs': [{'kind': 'package', 'owner': 'package:mixed-feature', 'root': prefix},
-                                                {'kind': 'vocabulary', 'owner': 'vocabulary:sense'}]},
+                   program_scope={'programs': [{'kind': 'package', 'owner': 'package:mixed-feature', 'root': prefix, 'files': [prefix + '/handler.py']},
+                                                {'kind': catalog_kind, 'owner': 'vocabulary:sense'}]},
                    program_activation=[{'activation': 'pending'}])
     st = NS(_candidate=NS(commit=lambda *a: {'success': True, 'commit': 'test-receipt'}), _save_session=lambda *a: None)
     old_table = modules._TABLE

@@ -25,7 +25,7 @@ CORE_MODULES = {
     'red_watchdog': 'repair recovery', 'restart_red': 'publication authority',
     'repair_policy': 'repair acceptance', 'repair_readiness': 'repair acceptance',
     'repair_check_runner': 'test evidence', 'repair_test_results': 'test evidence',
-    'repair_process': 'candidate isolation', 'coding_process': 'candidate isolation',
+    'repair_process': 'candidate isolation', 'repair_process_bridge': 'candidate isolation', 'coding_process': 'candidate isolation',
     'script_process': 'execution isolation', 'file_script': 'script authority',
     'script_workspace': 'execution isolation', 'shell_shadow_gate': 'execution isolation',
     'task_repair': 'repair scope', 'repair_continuation': 'repair lifetime',
@@ -167,3 +167,54 @@ def managed(kind, target):
             'restart_required': None if kind == 'action' else False,
             'in_flight': 'bound-compiled-plan' if kind == 'idiom' else 'owner-execution-contract',
             'verification': 'owner-and-consumer-contracts'}
+
+
+# The owner may publish this resource; ordinary file writes may never grant it.
+MANAGED_RESOURCES = {'data/scripts/registry.yaml': 'script-registry'}
+
+
+def change(relative, before, after, *, managed=None, derived=None):
+    """One decision for an actual delta, shared by collection and publication.
+
+    Static ownership is not permission to weaken an existing acceptance test.
+    New tests are candidate support; owner outputs require exact host receipts.
+    """
+    if not canonical(relative):
+        return describe(relative)
+    receipt = (managed or {}).get(relative) or {}
+    owner = MANAGED_RESOURCES.get(relative)
+    if owner and receipt.get('owner') == owner and receipt.get('fingerprint') == after:
+        return {'kind': 'managed', 'owner': owner, 'mutable': True,
+                'activation': 'owner-revision'}
+    if relative in (derived or {}) and derived[relative] == after:
+        return {'kind': 'derived', 'owner': 'host-builder', 'mutable': True,
+                'activation': 'derived-publication'}
+    path = PurePosixPath(relative)
+    if (before is None and after is not None and path.name.startswith('test_')
+            and path.suffix == '.py' and relative.startswith('backend/')
+            and protected_reason(relative) == 'existing acceptance contract'):
+        return {'kind': 'test', 'owner': 'test:' + relative, 'mutable': True,
+                'activation': 'acceptance-source'}
+    return describe(relative)
+
+
+def candidate_plan(session, current):
+    """Project trusted baseline/owner receipts into the existing program plan."""
+    baseline = session['baseline']
+    changes = sorted(p for p in set(baseline) | set(current) if baseline.get(p) != current.get(p))
+    result = {'programs': [], 'protected': {}, 'unmanaged': []}
+    owners = {}
+    for relative in changes:
+        if relative in session.get('artifact_paths', []):
+            continue
+        item = change(relative, baseline.get(relative), current.get(relative),
+                      managed=session.get('managed_files'), derived=session.get('derived_files'))
+        if not item:
+            result['unmanaged'].append(relative)
+        elif not item['mutable']:
+            result['protected'][relative] = item['reason']
+        else:
+            entry = owners.setdefault(item['owner'], {**item, 'files': []})
+            entry['files'].append(relative)
+    result['programs'] = list(owners.values())
+    return result

@@ -20,8 +20,9 @@ def contract():
 
 
 def accept(candidate, repo, session, current, changes):
-    from program_boundary import describe, protected_reason
-    candidates = [p for p in changes if not describe(p) or protected_reason(p)]
+    from program_boundary import candidate_plan
+    scope = candidate_plan(session, current)
+    candidates = [*scope['protected'], *scope['unmanaged']]
     candidates = [p for p in candidates if p not in session.get('derived_files', {})
                   and p not in session.get('artifact_paths', [])]
     if not candidates:

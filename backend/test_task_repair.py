@@ -393,3 +393,14 @@ def test_scoped_candidate_real_check_and_component_apply(env, monkeypatch, diagn
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_scoped_repair_can_add_regression_without_expanding_implementation_scope(monkeypatch):
+    monkeypatch.setattr(journal, 'current', lambda: None)
+    path = 'backend/services/document_parser.py'
+    session = {'task_scope': {'paths': [path]}, 'baseline': {'backend/test_existing.py': {'sha': 'old'}}}
+    repair.check_delta(session, [path, 'backend/test_new_regression.py'])
+    for forbidden in ('backend/test_existing.py', 'backend/conftest.py',
+                      'backend/services/unrelated.py', 'data/scripts/registry.yaml'):
+        with pytest.raises(PermissionError, match='범위 밖'):
+            repair.check_delta(session, [path, forbidden])

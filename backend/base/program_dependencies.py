@@ -8,7 +8,7 @@ from pathlib import Path
 from program_boundary import describe, plan, protected_reason
 
 SKIP = {'.git', '.venv', 'node_modules', '__pycache__', '.worktrees', '.pytest_cache'}
-SOURCE_ROOTS = ('backend', 'scripts', 'data/packages/installed/tools', 'frontend/src', 'frontend/surfaces')
+SOURCE_ROOTS = ('backend', 'scripts', 'data/scripts', 'data/packages/installed/tools', 'frontend/src', 'frontend/surfaces')
 PATH_REFERENCE = re.compile(r'(?:backend|scripts|data|frontend)/[\w./-]+')
 
 
@@ -53,7 +53,7 @@ def inventory(root):
     return paths
 
 
-def analyse(root, changes):
+def analyse(root, changes, *, ownership=None):
     """Program inputs and affected consumers, with unresolved imports visible.
 
     Package-local dynamic loading watches the entire package directory (including
@@ -61,7 +61,7 @@ def analyse(root, changes):
     silently certified as an isolated program.
     """
     root = Path(root)
-    change_plan = plan(changes)
+    change_plan = ownership if ownership is not None else plan(changes)
     paths = inventory(root)
     modules, graph, reverse, externals, unknown = {}, {}, {}, {}, {}
     for path in paths:

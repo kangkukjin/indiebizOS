@@ -50,7 +50,10 @@ def check_delta(session, relatives):
     paths = limit.get('paths')
     if not valid_paths(paths):
         raise PermissionError('업무 수리의 구현 범위가 유효하지 않습니다')
-    outside = set(relatives) - set(paths) - session.get('derived_files', {}).keys()
+    from program_boundary import change
+    support = {p for p in relatives if (change(p, session.get('baseline', {}).get(p),
+               {'pending': True}) or {}).get('kind') == 'test'}
+    outside = set(relatives) - set(paths) - session.get('derived_files', {}).keys() - support
     if outside:
         raise PermissionError('업무 수리 범위 밖 변경: ' + ', '.join(sorted(outside)))
 

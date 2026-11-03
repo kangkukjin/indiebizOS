@@ -64,5 +64,36 @@ def test_managed_definitions_keep_their_publication_owner(kind, owner):
         assert result['restart_required'] is False
 
 
+def test_dynamic_change_keeps_old_tests_protected_and_binds_owner_output():
+    from program_boundary import change
+    stamp = {'sha': 'exact', 'mode': 420}
+    test = 'backend/test_new_behavior.py'
+    assert change(test, None, stamp)['kind'] == 'test'
+    assert not change(test, stamp, {'sha': 'edited'})['mutable']
+    assert not change(test, stamp, None)['mutable']
+    assert not change('backend/conftest.py', None, stamp)['mutable']
+    path = 'data/scripts/registry.yaml'
+    receipts = {path: {'owner': 'script-registry', 'fingerprint': stamp}}
+    assert change(path, None, stamp, managed=receipts)['kind'] == 'managed'
+    assert not change(path, None, {'sha': 'forged'}, managed=receipts)['mutable']
+    assert not change(path, None, stamp)['mutable']
+    assert not change('backend/base/repair_process_bridge.py', None, stamp)['mutable']
+
+
+def test_script_helpers_and_consumers_are_part_of_dependency_inputs(tmp_path):
+    files = {'data/scripts/main.py': 'import helper\n',
+             'data/scripts/helper.py': 'VALUE=1\n',
+             'data/scripts/unrelated.py': 'VALUE=9\n',
+             'backend/test_script.py': 'TARGET="data/scripts/main.py"\n'}
+    for name, source in files.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source)
+    scope = analyse(tmp_path, ['data/scripts/main.py'])
+    assert 'data/scripts/helper.py' in scope['inputs']
+    assert 'backend/test_script.py' in scope['tests']
+    assert 'data/scripts/unrelated.py' not in scope['inputs']
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

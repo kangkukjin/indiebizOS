@@ -41,3 +41,37 @@ def publish(root, path, directory, write, before, after, sid):
     write(after)
     return {'revision': revision(after.get(sid), directory),
             'callers': [r['location'] for r in impact['callers']], 'unknown': impact['unknown']}
+
+
+@contextmanager
+def activation_scope(repo, session):
+    """Serialize candidate registry publication with the live definition owner."""
+    relative = 'data/scripts/registry.yaml'
+    if relative not in session.get('sealed', {}):
+        yield
+        return
+    import function_store
+    with function_store.transaction(), transaction(Path(repo) / relative):
+        validate_candidate(repo, session)
+        yield
+
+
+def validate_candidate(repo, session):
+    """Recheck consumers at publication, including ones created since staging."""
+    import base64
+    import yaml
+    import function_store
+    from capability_consumers import validate_script_change
+    relative = 'data/scripts/registry.yaml'
+    item = session.get('sealed', {}).get(relative)
+    if not item:
+        return
+    before = yaml.safe_load(base64.b64decode(item['before_data'])) if item.get('before_data') else {}
+    after = yaml.safe_load(base64.b64decode(item['data'])) if item.get('data') else {}
+    before, after = before or {}, after or {}
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        raise ValueError('스크립트 등록부 형식이 유효하지 않습니다')
+    for sid in sorted(set(before) | set(after)):
+        if before.get(sid) != after.get(sid):
+            validate_script_change(repo, Path(repo) / relative, before, after, sid,
+                                   function_store.storage_root())

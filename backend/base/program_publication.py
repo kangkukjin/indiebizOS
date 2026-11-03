@@ -9,7 +9,7 @@ from pathlib import Path
 import tempfile
 import shutil
 
-from program_boundary import canonical, protected_reason
+from program_boundary import canonical, change
 from program_versions import home, digest, _file_hash
 from restart_protocol import atomic_json
 
@@ -39,7 +39,9 @@ def snapshot(repo, code, session):
             continue
         if not canonical(relative):
             raise ValueError('Noncanonical program path')
-        if protected_reason(relative) and relative not in session.get('derived_files', {}):
+        owner = change(relative, item.get('before'), item.get('after'),
+                       managed=session.get('managed_files'), derived=session.get('derived_files'))
+        if not owner or not owner['mutable']:
             raise PermissionError('Protected program path: ' + relative)
         files[relative] = (item.get('after') or {}).get('sha')
         before.setdefault(relative, file_hash(Path(code) / relative))

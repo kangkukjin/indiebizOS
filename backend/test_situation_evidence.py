@@ -68,6 +68,31 @@ def test_observation_failure_preserves_completed_tool_result(active, monkeypatch
     assert run_tool('save', {}, lambda: {'saved': True}) == {'saved': True}
 
 
+@pytest.mark.parametrize('root', ['supervision', 'tool_evidence'])
+@pytest.mark.parametrize('fault', ['', 'missing', 'owner', 'version'])
+def test_parent_checkpoint_roundtrip_and_unavailable_evidence(active, tmp_path, monkeypatch, root, fault):
+    from situation_evidence import checkpoint, restore_parent
+    from execution_situation import Situation
+    from recovery_observation import configure
+    monkeypatch.setattr('common.spill.spill_dir', lambda: tmp_path)
+    active.situation.store = TurnStore(tmp_path / root / 'parent')
+    active.situation.recovery.observe('failure', [{'signal': 'failure'}], {'id': 'original'})
+    ref = checkpoint(active)
+    if fault == 'missing':
+        ref['id'] = 'absent'
+    elif fault == 'owner':
+        ref['owner'] = 'other'
+    elif fault == 'version':
+        ref['projection_revision'] += 1
+    resumed = Situation(active.situation.owner, 'resumed', lambda *a, **kw: None, lambda v: {})
+    restore_parent(resumed, ref)
+    configure(resumed)
+    row = resumed.recovery_view()[0]
+    assert row['signal'] == ('unobserved_range' if fault else 'failure')
+    if not fault:
+        assert row['origin']['task'] == active.task
+
+
 def test_draft_validation_does_not_certify_original_file(active, tmp_path):
     from document_workspace import DocumentWorkspace
     workspace = DocumentWorkspace(tmp_path / 'office')

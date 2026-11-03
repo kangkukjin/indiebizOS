@@ -67,6 +67,10 @@ evidence_ids에는 제공된 실제 근거 참조만 넣고, resolved_when에는
 "response_version":0,"response_hash":""}.
 진척이 정상적이면 CONTINUE, 근거 부족/오류는 UNKNOWN이다.
 CONTINUE일 때 instruction은 빈 문자열이다. 실제 행동 변경이 필요할 때만 REWORK와 최소 지시를 쓴다.
+recovery_incidents의 처리 판단이 필요한 경우에만 같은 응답의 incident_assessments 배열에
+incident_ref, incident_revision, disposition(continue|satisfied|irrelevant|awaiting_user|blocked|unknown),
+basis_refs(실제 증거 ID 배열), reason을 넣는다. 이는 사건에 관한 모델 판단이며 목표 완료 사실이 아니다.
+도움말 조회·다른 도구의 성공·전체 CONTINUE만으로 기존 장애를 해소하지 않는다.
 감독은 실패·반복·실행 중 정체 또는 명시적 검토 이정표에 대해 호출된다.
 작업이 오래 걸렸다는 이유만으로 개입하지 마라. 관측된 문제를 해결할 때
 독립 읽기/AI 변환은 병렬 each, 공통 자료는 한 번 읽기, 변하지 않은 검증은 재사용을 고려한다.

@@ -112,7 +112,8 @@ def test_recovered_failure_does_not_invoke_review(supervisor, monkeypatch):
     # A tick that already captured the old reason must revalidate it too.
     supervisor.review('repeated_failure')
     assert supervisor.reviews == 0
-    assert any(issue['open'] for issue in supervisor.issues.values())  # no fabricated resolution
+    from recovery_projection import requires_attention
+    assert any(requires_attention(row) for row in supervisor.recovery.view())  # no fabricated resolution
 
 
 def test_evidence_read_does_not_disguise_failure_or_trigger_repeat(supervisor, monkeypatch):

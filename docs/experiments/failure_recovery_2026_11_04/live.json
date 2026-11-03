@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "model": "gpt-6-astra:high",
+  "fixture": "fictional inline data",
+  "scope": "real continuation prompt + model answer; no production task or effect replay",
+  "cases": [
+    {
+      "name": "aggregation",
+      "request": "확정 주문 12, 18, 7의 합계와 건수를 JSON {\"total\":정수,\"count\":정수}로 답하세요. 취소 주문 90은 제외하세요.",
+      "previous": "전용 집계 도구의 열 이름 오류를 확인했습니다.",
+      "calls": [
+        {
+          "id": "sum",
+          "name": "aggregate",
+          "input": {
+            "column": "amount"
+          },
+          "result": {
+            "success": false,
+            "error": "column not found",
+            "available": "net"
+          }
+        },
+        {
+          "id": "guide",
+          "name": "read_guide",
+          "result": {
+            "success": true,
+            "guide": "net is the order amount"
+          }
+        }
+      ],
+      "expected": {
+        "total": 37,
+        "count": 3
+      },
+      "response": "{\"total\":37,\"count\":3}",
+      "passed": true,
+      "model_invocations": 1,
+      "elapsed_s": 5.835,
+      "usage": {
+        "total_input_tokens": 11343,
+        "total_output_tokens": 13,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 5085.26,
+        "avg_request_latency_ms": 5085.26
+      },
+      "tool_events": []
+    },
+    {
+      "name": "document",
+      "request": "OCR 본문 \"항목 A 수량 2 단가 15; 항목 B 수량 3 단가 8\"을 행 2개와 합계로 정리하세요. JSON {\"rows\":[{\"item\":\"A\",\"quantity\":2,\"price\":15,\"subtotal\":30}, ...],\"total\":정수}만 답하세요.",
+      "previous": "표 변환기 오류를 진단하고 도움말을 읽었습니다.",
+      "calls": [
+        {
+          "id": "convert",
+          "name": "table_convert",
+          "result": {
+            "success": false,
+            "error": "unsupported table layout"
+          }
+        },
+        {
+          "id": "help",
+          "name": "read_help",
+          "result": {
+            "success": true,
+            "guide": "plain text can be structured directly"
+          }
+        }
+      ],
+      "expected": {
+        "rows": [
+          {
+            "item": "A",
+            "quantity": 2,
+            "price": 15,
+            "subtotal": 30
+          },
+          {
+            "item": "B",
+            "quantity": 3,
+            "price": 8,
+            "subtotal": 24
+          }
+        ],
+        "total": 54
+      },
+      "response": "{\"rows\":[{\"item\":\"A\",\"quantity\":2,\"price\":15,\"subtotal\":30},{\"item\":\"B\",\"quantity\":3,\"price\":8,\"subtotal\":24}],\"total\":54}",
+      "passed": true,
+      "model_invocations": 1,
+      "elapsed_s": 6.95,
+      "usage": {
+        "total_input_tokens": 11372,
+        "total_output_tokens": 45,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 5837.88,
+        "avg_request_latency_ms": 5837.88
+      },
+      "tool_events": []
+    },
+    {
+      "name": "irrelevant_search_failure",
+      "request": "제공된 확정 값 4와 9의 합을 JSON {\"total\":정수}로만 답하세요. 외부 자료는 필요 없습니다.",
+      "previous": "{\"total\":13}",
+      "calls": [
+        {
+          "id": "search",
+          "name": "shell",
+          "is_error": true,
+          "result": {
+            "exit_code": 1,
+            "stdout": "",
+            "stderr": ""
+          }
+        },
+        {
+          "id": "sum",
+          "name": "calculate",
+          "result": {
+            "success": true,
+            "total": 13
+          }
+        }
+      ],
+      "expected": {
+        "total": 13
+      },
+      "response": "{\"total\":13}",
+      "passed": true,
+      "model_invocations": 1,
+      "elapsed_s": 5.584,
+      "usage": {
+        "total_input_tokens": 11316,
+        "total_output_tokens": 9,
+        "total_cache_read_tokens": 8448,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 4772.59,
+        "avg_request_latency_ms": 4772.59
+      },
+      "tool_events": []
+    }
+  ]
+}

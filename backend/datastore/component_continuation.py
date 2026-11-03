@@ -41,6 +41,7 @@ def attach(turn):
     restore_budget(turn, row)
     turn.component_resume_key = row.get('component_key') or ''
     turn.followup_reason = row.get('followup_reason', '')
+    turn.recovery_checkpoint = row.get('recovery_checkpoint')
 
 
 def restore_budget(turn, row):
@@ -130,6 +131,12 @@ def _checkpoint(turn, event=None):
     if turn.task == row['execution_task_id']:
         row.update(component_key=turn.component_session or turn.component_resume_key,
                    followup_reason=turn.followup_reason)
+        situation = turn.situation
+        if situation and row.get('recovery_revision') != situation.revision:
+            from situation_evidence import checkpoint as situation_checkpoint
+            snapshot = situation_checkpoint(turn)
+            if snapshot:
+                row.update(recovery_checkpoint=snapshot, recovery_revision=situation.revision)
     if event and event.get('type') in {'error', 'cancelled'}:
         row['execution_error'] = str(event.get('content') or event.get('type'))
     journal.save(row)
@@ -178,7 +185,7 @@ def context(row):
                 '원래 목표·명시 제약·기존 효과 영수증을 유지하고 남은 업무를 실행하세요. '
                 '수리 실패 시 다른 방법을 찾되 동일한 수정 반복은 하지 마세요. '
                 '효과가 불명확한 쓰기는 대상 상태부터 확인하세요.\n' + json.dumps(
-                    {k: row.get(k) for k in ('goal', 'repair_result', 'store', 'budget')}, ensure_ascii=False))
+                    {k: row.get(k) for k in ('goal', 'repair_result', 'store', 'budget', 'recovery_checkpoint')}, ensure_ascii=False))
     return ('등록 부품을 수리하던 원래 사용자 업무가 프로세스 교체로 중단되어 이어갑니다. '
             '새 요청이나 광역 수리 승인이 아닙니다. 목적·명시 제약·권한을 유지하세요. '
             '원래 대화의 복구 관측과 아래 증거 저장소를 먼저 확인하세요. '

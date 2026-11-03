@@ -22,6 +22,64 @@ def observe(s, version, cursor, subject=None, **kw):
                      source_cursor=cursor, **kw)
 
 
+def test_native_error_survives_successful_read_and_is_delivered(situation):
+    from recovery_observation import configure, pending
+    configure(situation)
+    for ident, name, result, error in [('a', 'play', 'timeout', True), ('b', 'guide', 'help', False)]:
+        situation.observe_native({'type': 'tool_start', 'id': ident, 'name': name, 'input': {}})
+        situation.observe_native({'type': 'tool_result', 'id': ident, 'result': result, 'is_error': error})
+    rows = pending(situation.recovery_view())
+    assert len(rows) == 1 and rows[0]['origin']['call_id'] == 'a'
+    payload = situation.prepare('execution')
+    assert any(row['latest']['facet'] == 'recovery' for row in payload['observations'])
+
+
+def test_changed_basis_invalidates_judgment_but_not_unrelated_result(situation):
+    from recovery_projection import requires_attention
+    subject = {'kind': 'file', 'path': '/source'}
+    situation.observe(subject, 'version', 'one', source='file', source_ref={'id': 'old'}, source_cursor=1)
+    situation.recovery.observe('failure', [{'signal': 'failure'}], {'id': 'error'})
+    row = situation.recovery.view()[0]
+    assert situation.recovery.assess({'incident_ref': row['incident_ref'], 'incident_revision': row['revision'],
+        'disposition': 'satisfied', 'basis_refs': ['old'], 'reason': 'uses checked source'}, actor='review', valid_refs={'old'})
+    situation.observe({'kind': 'file', 'path': '/other'}, 'version', 'new', source='file', source_cursor=2)
+    assert not requires_attention(situation.recovery_view()[0])
+    situation.observe(subject, 'version', 'two', source='file', source_ref={'id': 'new'}, source_cursor=2)
+    assert requires_attention(situation.recovery_view()[0])
+
+
+def test_history_display_does_not_resume_cancelled_or_unrelated_failures(situation):
+    situation.recovery.observe('failed', [{'signal': 'failure'}], {'id': 'original'})
+    saved = situation.snapshot()
+    next_turn = Situation('owner', 'other', lambda *a, **k: None, lambda v: {'id': fingerprint(v)})
+    next_turn.restore(saved, {'turn': 'old'})
+    assert next_turn.recovery_view() == []
+    next_turn.restore(saved, {'turn': 'old'}, resume_recovery=True)
+    assert len(next_turn.recovery_view()) == 1
+
+
+def test_bridge_transport_failure_is_observed_without_supervisor(situation):
+    from recovery_observation import configure
+    configure(situation)
+    situation.observe_native({'type': 'tool_result', 'id': 'lost', 'name': 'mcp__indiebizos__execute_ibl',
+                              'result': 'connection lost', 'transport_error': True})
+    assert situation.recovery_view()[0]['signal'] == 'result_missing'
+    situation.observe_native({'type': 'tool_result', 'id': 'ok', 'name': 'mcp__indiebizos__execute_ibl',
+                              'result': {'success': True}})
+    assert len(situation.recovery_view()) == 1
+
+
+def test_native_ids_reused_in_next_model_round_do_not_overwrite_first_failure(situation):
+    from recovery_observation import configure
+    configure(situation)
+    for text in ('first failure', 'second failure'):
+        situation.observe_native({'type': 'tool_start', 'id': 'item_0', 'name': 'shell'})
+        situation.observe_native({'type': 'tool_result', 'id': 'item_0', 'result': text, 'is_error': True})
+    rows = situation.recovery_view()
+    assert len(rows) == 2
+    assert rows[0]['observation_refs'] != rows[1]['observation_refs']
+
+
 def test_out_of_order_duplicate_and_conflict_preserve_first(situation):
     s = situation
     observe(s, 'v1', 1)

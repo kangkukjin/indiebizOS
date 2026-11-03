@@ -365,6 +365,9 @@ class CognitivePipelineMixin:
                         from situation_evidence import attach as attach_situation
                         if situation_enabled:
                             attach_situation(_execution, _supervisor.store if _supervisor else None, handoff)
+                            if _execution and _execution.situation:
+                                from recovery_observation import configure
+                                configure(_execution.situation, _supervisor.recovery if _supervisor else None)
                     else:
                         from episode_logger import record_trajectory_event
                         record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})
@@ -699,7 +702,7 @@ class CognitivePipelineMixin:
                                        "success": True, "_t0": _time.monotonic()})
                 eval_tool_calls.append({"id": ev.get("id", ""), "name": _name,
                                         "input": _input,
-                                        "result": "", "is_error": False})
+                                        "result": "", "is_error": False, "_result_received": False})
             elif et == "tool_result":
                 _rt = ev.get("result", "")
                 # 되받아쓰기·가리킴 수치 메타 — 결과 원문은 싣지 않고 수치만(2026-09-06 [출력해부])
@@ -730,6 +733,7 @@ class CognitivePipelineMixin:
                     if not eval_tool_calls[_idx].get("input") and isinstance(ev.get("input"), dict) and ev.get("input"):
                         eval_tool_calls[_idx]["input"] = ev["input"]
                     eval_tool_calls[_idx]["is_error"] = _is_err
+                    eval_tool_calls[_idx]['transport_error'] = bool(ev.get('transport_error'))
                     if _idx < len(tool_calls_log):
                         if not _is_err:
                             try:
@@ -807,7 +811,7 @@ class CognitivePipelineMixin:
                 if (event.get("type") == "text"
                         and not (force_role or _clarify_text or context_update)):
                     from task_continuation import needs_followup
-                    if needs_followup(eval_tool_calls):
+                    if needs_followup(eval_tool_calls, supervisor=_supervisor):
                         continue  # 실패 직후의 종료 초안은 후속 실행/최종 채택까지 보류한다.
                 if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
                     continue  # 저장된 후보만 검수 후 한 번 전달한다.

@@ -166,6 +166,8 @@ def request(handler, payload, context, *, framing_factory):
              **{k: parent[k] for k in ('agent_id', 'project_id', 'system_ai')}}
     parent.update(status='waiting_repair', repair_child=key, repair_signature=signature,
                   repair_signatures=[*parent.get('repair_signatures', []), signature])
+    from situation_evidence import checkpoint
+    parent['recovery_checkpoint'] = checkpoint(turn)
     # 저장 사이 사망 시 부모는 같은 child key를 복원한다. 부모 없는 자식은 실행하지 않는다.
     parent['repair_request'] = child
     journal.save(parent)

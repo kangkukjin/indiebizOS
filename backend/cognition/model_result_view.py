@@ -910,6 +910,28 @@ def _compact_execution_metadata(out, ref):
     out["result_ref"] = {k: v for k, v in out["result_ref"].items() if k not in {"read", "input_hint"}}
 
 
+def execution_evidence_summary(result):
+    """One summary contract for raw IBL results and their model-facing projection."""
+    summary = {"events": len(result.get("evidence", [])),
+                               "source_complete": result.get("source_complete")}
+    failures = [e for e in result.get('evidence', []) if e.get('kind') == 'tool_failure']
+    summary.update(tool_failures=len(failures),
+                                  source_failures=sum(e.get('incomplete') is True for e in failures))
+    outcomes = {o['id']: o for e in result.get('evidence', []) if e.get('kind') == 'tool_evidence'
+                for o in e.get('operation_outcomes', [])
+                if isinstance(o, dict) and isinstance(o.get('id'), str)
+                and o.get('status') in ('passed', 'failed')}
+    if outcomes:
+        summary['operation_outcomes'] = list(outcomes.values())
+        summary['operation_failures'] = sum(o['status'] == 'failed' for o in outcomes.values())
+    if failures:
+        summary['failures'] = [
+            {k: e[k] for k in ('id', 'action', 'code', 'failure_kind', 'incomplete') if k in e}
+            for e in failures[:8]]
+        summary['failures_omitted'] = max(0, len(failures) - 8)
+    return summary
+
+
 def project_v2_result(result):
     """Typed values keep their meaning; verbose execution evidence stays on disk."""
     raw = json.dumps(result, ensure_ascii=False, default=str)
@@ -924,23 +946,7 @@ def project_v2_result(result):
     if source_refs:
         out['source_observation_refs'] = source_refs[:64]
         out['source_observations_omitted'] = max(0, len(source_refs) - 64)
-    out["evidence_summary"] = {"events": len(result.get("evidence", [])),
-                               "source_complete": result.get("source_complete")}
-    failures = [e for e in result.get('evidence', []) if e.get('kind') == 'tool_failure']
-    out['evidence_summary'].update(tool_failures=len(failures),
-                                  source_failures=sum(e.get('incomplete') is True for e in failures))
-    outcomes = {o['id']: o for e in result.get('evidence', []) if e.get('kind') == 'tool_evidence'
-                for o in e.get('operation_outcomes', [])
-                if isinstance(o, dict) and isinstance(o.get('id'), str)
-                and o.get('status') in ('passed', 'failed')}
-    if outcomes:
-        out['evidence_summary']['operation_outcomes'] = list(outcomes.values())
-        out['evidence_summary']['operation_failures'] = sum(o['status'] == 'failed' for o in outcomes.values())
-    if failures:
-        out['evidence_summary']['failures'] = [
-            {k: e[k] for k in ('id', 'action', 'code', 'failure_kind', 'incomplete') if k in e}
-            for e in failures[:8]]
-        out['evidence_summary']['failures_omitted'] = max(0, len(failures) - 8)
+    out["evidence_summary"] = execution_evidence_summary(result)
     from image_envelopes import harvest_images
     # Harvest before string/depth previews can destroy base64. The stored original
     # retains typed values; only this display copy loses duplicate wire bytes.

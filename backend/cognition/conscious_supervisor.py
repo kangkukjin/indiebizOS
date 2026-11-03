@@ -109,6 +109,11 @@ class Supervisor:
         self.final_usage = {"input": 0, "output": 0}
         self.phase_usage = {}
         self.issues = {}
+        from recovery_projection import RecoveryProjection
+        import principal
+        self.recovery = RecoveryProjection(principal.current().key(), task,
+            lambda row: self.log('recovery.changed', incident_ref=row['incident_ref'],
+                                 revision=row['revision'], resolution=row['resolution'], signal=row['signal']))
         self.last_decision = None
         self.checkpoints = set()
         self.checkpoint = None
@@ -244,8 +249,11 @@ class Supervisor:
 
     def review_conditions(self, reason):
         return {"trigger": reason,
+                "call_signature": self.last_signature,
                 "goal": digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)),
                 "issues": {k: dict(v) for k, v in self.issues.items() if v["open"] and k == self.last_signature},
+                "incidents": {r['incident_ref']: r['revision'] for r in self.recovery.view()
+                              if r['origin']['call_id'] == getattr(self, '_last_recovery_call', '')},
                 "active": list(self.active) if reason == "tool_stalled" else [],
                 "jobs": {k: self.job_signature(v) for k, v in self.job_states.items()
                          if reason in {"job_failed", "job_stalled"}}}
@@ -257,11 +265,23 @@ class Supervisor:
     def conditions_valid(self, conditions):
         if conditions["goal"] != digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)):
             return False
+        if (conditions.get('trigger') == 'repeated_failure' and conditions.get('call_signature')
+                and next((error for sig, _, error in reversed(self.tool_observations)
+                          if sig == conditions['call_signature']), True) is False):
+            return False  # The same call has returned; do not replay its old retry instruction.
         if (conditions.get("trigger") == "repeated_failure" and self.failures < 2
                 and conditions["issues"]
                 and all(v.get("pre_execution") for v in conditions["issues"].values())):
             return False
+        incident_rows = {r['incident_ref']: r for r in self.recovery.view()}
+        trigger_rows = [incident_rows[k] for k in conditions.get('incidents', {}) if k in incident_rows]
+        if (conditions.get('trigger') == 'repeated_failure' and self.failures < 2
+                and trigger_rows and all(r.get('pre_execution') for r in trigger_rows)):
+            return False  # Retire this trigger's advice, not the unresolved operation facts.
         if any(self.issues.get(k) != v for k, v in conditions["issues"].items()):
+            return False
+        current_incidents = {r['incident_ref']: r['revision'] for r in self.recovery.view()}
+        if any(current_incidents.get(k) != v for k, v in conditions.get('incidents', {}).items()):
             return False
         if conditions["active"] and not any(k in self.active for k in conditions["active"]):
             return False
@@ -406,6 +426,8 @@ class Supervisor:
             situation = current_situation(self.owner, self.task)
             if situation:
                 state['execution_situation'] = situation.snapshot()
+            state['recovery_incidents'] = self.recovery.view()[-24:]
+            state['recovery_incident_count'] = len(self.recovery.view())
             return state
 
     def progress(self, detail):
@@ -446,8 +468,16 @@ class Supervisor:
     def _finish(self, key, result, error=False, unknown=False):
         from execution_situation import current as current_situation, active_call_id
         situation = current_situation()
+        recovery_key = active_call_id() or key
         if situation and not active_call_id():
-            situation.tool_finished(key, result, unknown=unknown)
+            situation.tool_finished(key, result, unknown=unknown, error=error)
+        with self.lock:
+            original_call = dict(self.active.get(key, {}))
+        from recovery_observation import observe as observe_recovery
+        observe_recovery(self.recovery, recovery_key, original_call.get('name', ''),
+                         original_call.get('_payload'), result, self.store.evidence(result),
+                         error=error, unknown=unknown)
+        self._last_recovery_call = recovery_key
         with self.lock:
             call = self.active.pop(key, {})
             ref = self.store.evidence(result)
@@ -497,20 +527,15 @@ class Supervisor:
             from supervisor_review import ibl_shape_repair_key, ibl_error_render_repair_key
             repair_key = (ibl_shape_repair_key(call.get("name", ""), payload)
                           or ibl_error_render_repair_key(call.get("name", ""), payload))
-            if (error and not observation) or self.repeats >= 3:
+            if self.repeats >= 3:
                 prior = self.issues.get(sig, {})
                 self.issues[sig] = {"open": True, "generation": prior.get("generation", 0),
-                                    "kind": "failure" if error and not observation else "repeat",
+                                    "kind": "repeat",
                                     "pre_execution": (str(call.get("name", "")).endswith("execute_ibl")
                                                       and detail.get("executed") is False),
                                     "repair_key": repair_key}
             elif sig in self.issues and self.issues[sig]["open"]:
                 self.issues[sig] = {"open": False, "generation": self.issues[sig]["generation"] + 1}
-            if (not error and repair_key and detail.get("executed") is not False
-                    and detail.get("mode") != "check"):
-                for issue_sig, issue in list(self.issues.items()):
-                    if issue["open"] and issue.get("kind") == "failure" and issue.get("repair_key") == repair_key:
-                        self.issues[issue_sig] = {"open": False, "generation": issue["generation"] + 1}
             if self.repeats == 1 and not error and not job_observation:
                 self.last_progress = time.monotonic()
                 self.exec_revision += 1  # 시작 예고·실패·같은 status 반복은 진척이 아니다.
@@ -620,14 +645,15 @@ class Supervisor:
                 if event.get("transport_error"):
                     key = self._start(name, payload)
                     self.log("tool.transport_error", id=key, name=name, role="execution")
-                    self._finish(key, event.get("result", ""), True)
+                    self._finish(key, event.get("result", ""), True, unknown=True)
             return
         if event.get("type") == "tool_start":
             self._native[event.get("id") or name] = self._start(name, event.get("input", {}))
         elif event.get("type") == "tool_result":
             key = self._native.pop(event.get("id") or name, None)
             if key:
-                self._finish(key, event.get("result", event.get("content", "")), event.get("is_error", False))
+                self._finish(key, event.get("result", event.get("content", "")), event.get("is_error", False),
+                             unknown=bool(event.get('transport_error')))
 
     def boundary(self):
         if self.cancelled():
@@ -754,6 +780,9 @@ class Supervisor:
             if self.cancelled():
                 return
             self.log("decision", role="consciousness", trigger=reason, decision=decision)
+            from recovery_observation import assess as assess_recovery
+            accepted = assess_recovery(self, decision, conditions['goal'])
+            conditions['incidents'].update({k: v for k, v in accepted.items() if k in conditions['incidents']})
             self.review_cursor = cursor
             if decision["status"] in {"REWORK", "UNKNOWN"} and (decision.get("instruction") or decision.get("findings")):
                 with self.lock:

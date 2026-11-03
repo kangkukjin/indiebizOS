@@ -36,7 +36,8 @@ def test_changed_program_recovery_retires_old_failure_instruction(supervisor, mo
         assert supervisor.pending
         finish(supervisor, good)
     assert supervisor.boundary() is None
-    assert any(v['open'] for v in supervisor.issues.values())
+    from recovery_projection import requires_attention
+    assert any(requires_attention(row) for row in supervisor.recovery.view())
 
 
 def test_result_paging_does_not_discard_needed_failure_instruction(supervisor, monkeypatch):

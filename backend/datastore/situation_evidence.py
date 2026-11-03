@@ -23,7 +23,9 @@ def attach(binding, store=None, handoff=None):
         from episode_logger import record_trajectory_event
         record_trajectory_event('supervision.' + kind, {'store': str(store.directory),
                                                        'seq': store.sequence,
-                                                       'projection_revision': fields.get('projection_revision')})
+                                                       'projection_revision': fields.get('projection_revision'),
+            **({k: fields[k] for k in ('incident_ref', 'revision', 'resolution', 'signal', 'disposition', 'reason')
+                if k in fields} if kind.startswith('recovery.') else {})})
         if kind == 'situation.checkpoint' and handoff and handoff.available:
             try:
                 handoff.record('situation', {'snapshot': fields, 'availability': 'last_observed'})
@@ -44,8 +46,53 @@ def attach(binding, store=None, handoff=None):
     binding.situation = situation
     for snapshot, ref in getattr(handoff, 'situation_recovery', []):
         situation.restore(snapshot, ref)
+    if getattr(binding, 'recovery_checkpoint', None):
+        restore_parent(situation, binding.recovery_checkpoint)
     situation.observe({'kind': 'request', 'task': binding.task}, 'request_ref', evidence(binding.request),
                       source='user_request', basis='user_request', observed_at=time.time())
+
+
+def checkpoint(binding):
+    """Seal the current projection in its existing evidence store, before handing off effects."""
+    situation = getattr(binding, 'situation', None)
+    if not situation or not getattr(situation, 'store', None):
+        return None
+    snapshot = situation.snapshot()
+    if not snapshot['recovery']['incidents']:
+        return None
+    try:
+        ref = situation.store.evidence(snapshot)
+    except (OSError, ValueError, TypeError):
+        return {'availability': 'recovery_evidence_unavailable'}
+    return {'store': str(situation.store.directory), 'id': ref['id'],
+            'owner': situation.owner, 'task': situation.task,
+            'projection_revision': snapshot['projection_revision']}
+
+
+def restore_parent(situation, ref):
+    from pathlib import Path
+    from common.spill import spill_dir
+    from member_runtime import is_member, private_path
+    from supervision_store import TurnStore
+    try:
+        path = Path(ref['store']).resolve()
+        roots = ([private_path(name) for name in ('supervision', 'tool_evidence')] if is_member()
+                 else [Path(spill_dir()) / name for name in ('supervision', 'tool_evidence')])
+        if (ref['owner'] != situation.owner
+                or not any(path.is_relative_to(Path(root).resolve()) for root in roots) or not path.is_dir()):
+            raise ValueError('recovery checkpoint scope mismatch')
+        page = TurnStore(path).read_evidence(ref['id'], limit=None)
+        if page['integrity'] != 'verified':
+            raise ValueError('recovery checkpoint integrity unavailable')
+        snapshot = json.loads(page['text'])
+        if (snapshot.get('recovery', {}).get('task') != ref['task']
+                or snapshot.get('projection_revision') != ref['projection_revision']):
+            raise ValueError('recovery checkpoint version mismatch')
+        situation.restore(snapshot, ref, resume_recovery=True)
+    except (ValueError, OSError, KeyError, TypeError):
+        situation.recovery.observe('parent-checkpoint', [{'signal': 'unobserved_range'}],
+                                   {'availability': 'recovery_evidence_unavailable'})
+        situation.persist('recovery.unavailable', reason='parent_checkpoint_unavailable')
 
 
 def observe_result(situation, result, ref, call_id):

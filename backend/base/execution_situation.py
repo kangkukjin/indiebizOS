@@ -44,6 +44,9 @@ def projection_kind(record):
         return 'request'
     if record['availability'] in {'conflict', 'needs_recheck'}:
         return record['availability']
+    if row['facet'] == 'recovery':
+        from recovery_projection import requires_attention
+        return 'unresolved' if requires_attention(value) else 'state'
     if row['facet'] == 'execution':
         return 'unresolved' if value.get('state') in {'running', 'result_missing'} else 'history'
     if row['basis'] == 'observed':
@@ -223,7 +226,12 @@ class Situation:
         self.source_cursors = {}
         self.closed = False
         self.on_result = None
+        self.on_recovery = None
+        self.call_inputs = {}
+        from recovery_projection import RecoveryProjection
+        self.recovery = RecoveryProjection(owner, task, self.publish_recovery)
         self.native_calls = {}
+        self.native_sequences = {}
         self.refreshers = {}
         self.delivery_ids = set()
         self.snapshot_ref = None
@@ -246,8 +254,10 @@ class Situation:
             except Exception as exc:
                 self.persist('situation.source_unavailable', error=type(exc).__name__)
 
-    def restore(self, snapshot, source_ref):
+    def restore(self, snapshot, source_ref, *, resume_recovery=False):
         """Only the owning conversation handoff may supply this data. No automatic task resumption."""
+        if resume_recovery and snapshot.get('recovery'):
+            self.recovery.restore(snapshot['recovery'])
         with self.lock:
             for record in snapshot.get('observations', []):
                 row = record['latest']
@@ -263,10 +273,29 @@ class Situation:
             self.snapshot_ref = None
             self.persist('situation.restored', source_ref=source_ref, projection_revision=self.revision)
 
+    def publish_recovery(self, row):
+        self.observe({'kind': 'incident', 'id': row['incident_ref']}, 'recovery', row,
+                     source='recovery_projection', source_cursor=row['revision'],
+                     source_ref=(row.get('observation_refs') or [{}])[0], observed_at=time.time())
+        self.persist('recovery.changed', incident_ref=row['incident_ref'], revision=row['revision'],
+                     resolution=row['resolution'], signal=row['signal'],
+                     disposition=(row.get('assessment') or {}).get('disposition'))
+
+    def recovery_view(self):
+        snapshot = self.snapshot()
+        stale = {r['latest']['source_ref'].get('id') for r in snapshot['observations']
+                 if r['availability'] in {'needs_recheck', 'conflict'}
+                 and isinstance(r['latest'].get('source_ref'), dict)}
+        self.recovery.invalidate(stale - {None})
+        return self.recovery.view()
+
     def observe(self, subject, facet, value, *, source, source_ref=None, source_cursor=None,
                 subject_revision=None, observed_at=None, basis='observed', relation=None,
                 event_id=None, call_id='', evidence_key=None):
         from logging_utils import mask_secret_data
+        if facet == 'receipt' and source == 'task_receipts' and basis == 'observed':
+            self.recovery.receipt(subject, value, source_ref, call_id=call_id,
+                                  cursor=source_cursor, observed_at=observed_at)
         with self.lock:
             if self.closed:
                 return None
@@ -325,6 +354,12 @@ class Situation:
             else:
                 record = {'first': row, 'latest': row, 'revision': self.revision}
             self.records[key] = record
+            if basis == 'observed' and subject_revision is not None and not late:
+                self.recovery.invalidate_subject(subject, subject_revision)
+            if old and facet != 'recovery' and old['latest']['signature'] != row['signature']:
+                prior_ref = old['latest'].get('source_ref') or {}
+                if prior_ref.get('id'):
+                    self.recovery.invalidate({prior_ref['id']})
             if isinstance(source_cursor, int):
                 self.source_cursors[key] = max(source_cursor, self.source_cursors.get(key, 0))
             self.persist('situation.observed', projection_revision=self.revision, observation=row,
@@ -334,13 +369,19 @@ class Situation:
     @optional_observation
     def tool_started(self, key, name, payload):
         ref = self.evidence(payload)
+        self.call_inputs[key] = (name, payload)
         self.observe({'kind': 'call', 'id': key}, 'execution',
                      {'name': name, 'state': 'running', 'effect': 'unknown', 'input_ref': ref},
                      source='tool', source_cursor=0, source_ref=ref, call_id=key, observed_at=time.time())
 
     @optional_observation
-    def tool_finished(self, key, result, unknown=False):
+    def tool_finished(self, key, result, unknown=False, error=False):
         ref = self.evidence(result)
+        name, payload = self.call_inputs.pop(key, ('', {}))
+        if self.on_recovery:
+            self.on_recovery(key, name, payload, result, ref, error, unknown)
+        elif error or unknown:
+            self.recovery.observe(key, [{'signal': 'result_missing' if unknown else 'failure'}], ref, name=name)
         self.observe({'kind': 'call', 'id': key}, 'execution',
                      {'state': 'result_missing' if unknown else 'returned',
                       'effect': 'unknown', 'result_ref': ref},
@@ -351,17 +392,27 @@ class Situation:
     def observe_native(self, event):
         name = event.get('name') or event.get('tool') or ''
         if name.startswith('mcp__indiebizos__') or name in {'execute_ibl', 'supervision'}:
+            if event.get('type') == 'tool_result' and event.get('transport_error'):
+                # A transport failure may never reach the backend producer.
+                key = event.get('id') or name
+                self.tool_started(key, name, {})
+                self.tool_finished(key, event.get('result', ''), unknown=True, error=True)
             return  # the backend is the owner of bridge observations
         ident = event.get('id')
         if not ident:
             return
         if event.get('type') == 'tool_start':
-            self.native_calls[ident] = name
-            self.tool_started(ident, name, event.get('input', {}))
+            if ident in self.native_calls:
+                return
+            sequence = self.native_sequences.get(ident, 0)
+            key = ident if sequence == 0 else f'{ident}:{sequence}'
+            self.native_sequences[ident] = sequence + 1
+            self.native_calls[ident] = key
+            self.tool_started(key, name, event.get('input', {}))
         elif event.get('type') == 'tool_result' and ident in self.native_calls:
-            self.native_calls.pop(ident)
-            self.tool_finished(ident, event.get('result', event.get('content', '')),
-                               unknown=bool(event.get('transport_error')))
+            key = self.native_calls.pop(ident)
+            self.tool_finished(key, event.get('result', event.get('content', '')),
+                               unknown=bool(event.get('transport_error')), error=bool(event.get('is_error')))
 
     def snapshot(self, since=0):
         with self.lock:
@@ -391,7 +442,7 @@ class Situation:
                     row['availability'] = 'conflict'
                 rows.append(row)
             return {'projection_revision': self.revision, 'source_cursors': dict(self.source_cursors),
-                    'observations': rows}
+                    'observations': rows, 'recovery': self.recovery.snapshot()}
 
     def prepare(self, consumer, *, retained=(), baseline=False, budget=None, compact=False):
         """Reserve space for state AND results; acknowledge only facts actually included."""

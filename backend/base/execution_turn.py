@@ -31,6 +31,7 @@ class Binding:
     allowed_set: object = None
     on_change: object = None
     situation: object = None
+    recovery_checkpoint: object = None
 
 
 def current():

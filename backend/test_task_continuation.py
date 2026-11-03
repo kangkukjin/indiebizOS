@@ -45,10 +45,40 @@ def test_failed_tool_runs_next_method_without_negative_word_judgment(turn):
     assert run(calls)[1] == []
 
 
-@pytest.mark.parametrize('calls', [[], [{'result': {'items': []}}],
-    [{'result': {'error': 'old'}}, {'result': {'items': ['alternative']}}]])
+@pytest.mark.parametrize('calls', [[], [{'result': {'items': []}}]])
 def test_success_and_resolved_failures_add_no_model_call(turn, calls):
     assert run(calls)[1] == []
+
+
+def test_successful_guide_does_not_erase_failed_work(turn):
+    calls = [{'name': 'play', 'result': {'success': False, 'error': 'timeout'}},
+             {'name': 'guide', 'result': {'items': ['diagnostic instructions']}}]
+    _, invocations, _, _ = run(calls)
+    assert len(invocations) == 1
+    packet = __import__('json').loads(invocations[0]['message_content'].split('\n', 1)[1])
+    assert packet['recovery']['incidents'][0]['origin']['name'] == 'play'
+    assert not run(calls)[1]
+
+
+def test_missing_return_is_not_a_mid_call_failure_but_final_boundary_preserves_it(turn):
+    calls = [{'id': 'lost', 'name': 'write', 'input': {}, '_result_received': False}]
+    assert not tc.needs_followup(calls)
+    assert len(run(calls)[1]) == 1
+
+
+def test_no_supervisor_native_followup_records_actual_recovery_calls(turn):
+    from execution_situation import Situation, fingerprint
+    from recovery_observation import configure
+    turn.situation = Situation('owner', 'task', lambda *a, **k: None, lambda v: {'id': fingerprint(v)})
+    configure(turn.situation)
+    turn.situation.tool_started('a', 'play', {})
+    turn.situation.tool_finished('a', 'timeout', error=True)
+    events = [{'type': 'tool_start', 'id': 'diagnose', 'name': 'shell', 'input': {}},
+              {'type': 'tool_result', 'id': 'diagnose', 'result': 'remote denied', 'is_error': True},
+              {'type': 'final', 'content': '확인된 차단과 부분 결과'}]
+    _, invocations, _, emitted = run([], events=events)
+    assert len(invocations) == 1 and not any(e['type'] == 'final' for e in emitted)
+    assert {r['origin']['call_id'] for r in turn.situation.recovery.view()} == {'a', 'diagnose'}
 
 
 def test_cancel_budget_and_existing_handoff_stop_additional_execution(turn, monkeypatch):

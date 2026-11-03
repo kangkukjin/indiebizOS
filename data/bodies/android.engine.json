@@ -63,6 +63,7 @@
     "base/quiescent_reload",
     "base/r2_client",
     "base/recall_relevance",
+    "base/recovery_projection",
     "base/reload_gate",
     "base/repair_live_probe",
     "base/repair_process",
@@ -162,6 +163,7 @@
     "cognition/model_value_preview",
     "cognition/prompt_builder",
     "cognition/prompt_composition",
+    "cognition/recovery_observation",
     "cognition/reflex_execution",
     "cognition/reframe",
     "cognition/repair_check_runner",
@@ -611,8 +613,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 600,
-    "engine": 568,
+    "total": 602,
+    "engine": 570,
     "blocklist": 32
   }
 }

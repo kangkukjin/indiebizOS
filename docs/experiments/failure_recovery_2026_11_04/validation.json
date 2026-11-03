@@ -1,0 +1,47 @@
+{
+  "recorded_at": "2026-11-03T16:28:10.225010+00:00",
+  "baseline": "5fb968e4",
+  "non_system": {
+    "command": ".venv/bin/python3 -m pytest backend/ -m \"not system\" -n auto --dist loadfile",
+    "tests": 12280,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 9
+  },
+  "system": {
+    "command": ".venv/bin/python3 -m pytest backend/test_restart_process.py backend/test_restart_generation_process.py backend/test_task_repair.py -m system",
+    "tests": 42,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_task_repair_system": {
+    "passed": 2
+  },
+  "focused_final": {
+    "passed": 387
+  },
+  "checks": {
+    "android_bundle": "regenerated",
+    "ibl_nodes_check": "passed",
+    "backend_layers": "passed",
+    "diff_check": "passed"
+  },
+  "activation": {
+    "phase": "ACTIVE",
+    "generation": "5003494768b85be0f49b404f0307a739",
+    "files": 13,
+    "matching": 13,
+    "pending_finalizers": 1,
+    "active_roots": 0
+  },
+  "real_model": "live.json",
+  "limits": [
+    "No general cost/speed improvement claimed",
+    "Read-only model continuation smoke; no real remote effect execution"
+  ],
+  "excluded_attempts": [
+    "Initial sandbox test failures from process/socket/browser restrictions",
+    "Five initial full-suite regressions fixed and final full suite rerun"
+  ]
+}

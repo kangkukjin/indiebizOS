@@ -228,7 +228,18 @@ def test_pending_apply_preserves_scope_without_self_cycle_and_parent_returns(env
     import api_task_repair
     import api_component_continuation
     from conversation_handoff import Handoff
+    from situation_evidence import attach
+    from recovery_observation import configure, pending
+    from supervision_store import TurnStore
+    spill = env.repo / 'spill'
+    monkeypatch.setattr('common.spill.spill_dir', lambda: spill)
+    attach(env.turn, TurnStore(spill / 'supervision' / 'original'))
+    configure(env.turn.situation)
+    env.turn.situation.tool_started('parse', 'parse_document', {})
+    env.turn.situation.tool_finished('parse', {'success': False, 'error': 'parser'}, error=True)
+    incident = env.turn.situation.recovery.view()[0]['incident_ref']
     parent, child = propose(env)
+    assert parent['recovery_checkpoint']['task'] == 'original'
     Handoff().finish(True, repair.NOTICE)
     env.store.finish(env.turn.conversation)
 
@@ -260,6 +271,15 @@ def test_pending_apply_preserves_scope_without_self_cycle_and_parent_returns(env
         assert row['framing'] == parent['framing']
         assert sessions.current().session_id == env.turn.conversation.session_id
         assert red_grant.active_grant(task_id=row['resume_task_id']) is None
+        turn = execution_turn.Binding(env.turn.runner, 'system_ai', row['resume_task_id'],
+                                     context={}, conversation=sessions.current(), request=row['goal'])
+        with journal.resuming(row):
+            parents.attach(turn)
+        attach(turn, TurnStore(spill / 'supervision' / 'resumed'))
+        configure(turn.situation)
+        # Implementation repair has not yet completed the original report.
+        assert [r['incident_ref'] for r in pending(turn.situation.recovery_view())] == [incident]
+        (env.repo / 'report.txt').write_text('recovered report')
         called.append(row['goal'])
         return {'response': '보고서 저장 완료'}
 
@@ -268,6 +288,7 @@ def test_pending_apply_preserves_scope_without_self_cycle_and_parent_returns(env
     assert called == [parent['goal']]
     assert journal.read(parent['task_id'])['attempt'] == 0
     assert journal.read(parent['task_id'])['status'] == 'completed'
+    assert (env.repo / 'report.txt').read_text() == 'recovered report'
 
 
 def test_child_waits_for_parent_segment_to_finish(env):

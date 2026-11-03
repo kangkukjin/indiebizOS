@@ -45,7 +45,8 @@ def test_rebinding_and_rewrapped_input_recovery_retires_stale_instruction(superv
         assert supervisor.pending
         finish(good)
     assert supervisor.boundary() is None
-    assert any(issue['open'] for issue in supervisor.issues.values())
+    from recovery_projection import requires_attention
+    assert any(requires_attention(row) for row in supervisor.recovery.view())
 
 
 @pytest.mark.parametrize('change', [
@@ -106,7 +107,8 @@ def test_error_render_recovery_retires_only_its_stale_instruction(supervisor, mo
         assert supervisor.pending
         finish(RENDER_GOOD)
     assert supervisor.boundary() is None
-    assert sum(issue['open'] for issue in supervisor.issues.values()) == 1
+    from recovery_projection import requires_attention
+    assert sum(requires_attention(row) for row in supervisor.recovery.view()) == 1
 
 
 @pytest.mark.parametrize('change', [
@@ -169,7 +171,8 @@ def test_recovered_failure_sequence_retires_trigger_but_keeps_goal(supervisor, m
     notice = supervisor.boundary()
     assert [f['id'] for f in notice['findings']] == ['version']
     assert notice['findings'][0]['needs_recheck']
-    assert any(issue['open'] for issue in supervisor.issues.values())  # retain diagnostic history
+    from recovery_projection import requires_attention
+    assert any(requires_attention(row) for row in supervisor.recovery.view())
 
 
 @pytest.mark.parametrize('recovery', ['during_review', 'before_delivery'])

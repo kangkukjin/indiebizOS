@@ -56,7 +56,7 @@
       },
       "path_audited": {
         "at": "2026-11-03",
-        "impl": "6409f0c1a8a6ae73"
+        "impl": "a79577b24c821acc"
       }
     },
     "self:list": {
@@ -99,7 +99,7 @@
       },
       "path_audited": {
         "at": "2026-11-03",
-        "impl": "6409f0c1a8a6ae73"
+        "impl": "a79577b24c821acc"
       }
     },
     "self:record": {
@@ -158,7 +158,7 @@
       },
       "path_audited": {
         "at": "2026-11-03",
-        "impl": "6409f0c1a8a6ae73"
+        "impl": "a79577b24c821acc"
       }
     },
     "self:write": {
@@ -173,7 +173,7 @@
       },
       "path_audited": {
         "at": "2026-11-03",
-        "impl": "6409f0c1a8a6ae73"
+        "impl": "a79577b24c821acc"
       }
     },
     "sense:crawl": {

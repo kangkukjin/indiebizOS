@@ -196,10 +196,10 @@ def test_commit_retry_does_not_reapply_files(repair, monkeypatch):
                    commit={'success': False, 'error': 'index busy'})
     st._save_session(str(root), session)
     monkeypatch.setattr(st, '_perform_apply', lambda *a: pytest.fail('duplicate write'))
-    monkeypatch.setattr(st, 'commit_applied', lambda *a: {'success': False, 'error': 'index busy'})
+    monkeypatch.setattr(st._candidate, 'commit', lambda *a: {'success': False, 'error': 'index busy'})
     failed = st.op_apply({'_repo_root': str(root), '_grant_key': session['key']})
     assert failed['stage'] == 'commit' and failed['recovery']['action'] == 'retry_apply'
-    monkeypatch.setattr(st, 'commit_applied', lambda *a: {'success': True, 'commit': 'abc1234'})
+    monkeypatch.setattr(st._candidate, 'commit', lambda *a: {'success': True, 'commit': 'abc1234'})
     assert st.op_apply({'_repo_root': str(root), '_grant_key': session['key']})['complete']
 
 

@@ -111,8 +111,8 @@ def complete(st, repo, session, *, activate=True):
         for field, command in (session.get('readiness', {}).get('activation_commands') or {}).items():
             if command and st._candidate.activation(repo, session, field, command, st._save_session).get('state') != 'passed':
                 st._save_session(repo, session)
-                return {'success': False, 'applied': True, 'activated': True,
-                        'stage': 'activation', 'error': '프로그램 활성 검사 미통과', 'key': session['key']}
+                return st._outcomes.finish(session, {'success': False, 'applied': True,
+                                                     'activated': True, 'key': session['key']})
     handler = _load_handler({'repo': str(repo)})
     committed = st._candidate.commit(repo, session, handler._load_sibling('body_ops'))
     recovered = recover_commit_failure(st, repo, session, committed)

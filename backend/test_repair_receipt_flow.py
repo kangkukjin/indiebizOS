@@ -95,7 +95,11 @@ def repair(setup, supervisor, monkeypatch):
     post_verify = red_apply._run_post_verify
     monkeypatch.setattr(red_apply, '_run_post_verify',
                         lambda *a, **kw: post_verify(*a, **kw, live_read=False))
-    monkeypatch.setattr('red_apply._load_handler', lambda job: SimpleNamespace(_staging_mod=lambda: st))
+    from test_repair_staging import _load_handler
+    handler = _load_handler()
+    handler._REPO_ROOT = root
+    handler._staging_mod = lambda: st
+    monkeypatch.setattr('red_apply._load_handler', lambda job: handler)
     monkeypatch.setattr('final_evaluator.invoke', lambda *a, **kw: pytest.fail('unexpected AI review'))
     st._save_session(str(root), session)
     return root, wt, st, session, supervisor

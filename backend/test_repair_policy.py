@@ -68,6 +68,33 @@ def test_live_change_stops_remaining_expensive_checks(repair, monkeypatch):
     assert calls == ['pytest first.py']
 
 
+def test_direct_apply_refreshes_untouched_dependencies_before_real_checks(repair):
+    from test_repair_receipt_flow import command
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    (root / 'b.txt').write_text('new dependency')
+    cmd = command(wt, 'assert __import__("pathlib").Path("b.txt").read_text() == "new dependency"')
+    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
+                          'verification_plan': [{'criterion_id': 'C1', 'command': cmd}]})
+    assert applied['applied'] and applied['commit']['success'], applied
+    assert (root / 'a.txt').read_text() == 'fixed'
+    assert (wt / 'b.txt').read_text() == (root / 'b.txt').read_text() == 'new dependency'
+    saved = st.read_session(str(root), session['key'])
+    assert 'b.txt' not in saved['sealed']  # The other edit is never our delta.
+
+
+def test_direct_apply_preserves_real_collision_without_running_checks(repair, monkeypatch):
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('our repair')
+    (root / 'a.txt').write_text('other repair')
+    session['verification_plan'] = [{'criterion_id': 'C1', 'command': 'pytest expensive.py'}]
+    monkeypatch.setattr('repair_check_runner.check', lambda *a: pytest.fail('unresolved collision'))
+    result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
+    assert result['stage'] == 'conflict' and 'a.txt' in result['error']
+    assert (root / 'a.txt').read_text() == 'other repair'
+    assert (wt / 'a.txt').read_text() == 'our repair'
+
+
 @pytest.mark.parametrize('change', ['none', 'uncollected', 'applied', 'broken'])
 def test_code_receipts_follow_actual_candidate_not_repair_turn(setup, monkeypatch, change):
     from types import SimpleNamespace

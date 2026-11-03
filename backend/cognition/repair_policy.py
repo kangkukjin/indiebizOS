@@ -67,7 +67,12 @@ def prepare(controller, repo, session, verify, candidate):
         return failure("plan", "의미 검토가 지정된 기준은 시험 통과만으로 승인할 수 없습니다",
                        missing_criteria=missing_semantic)
     wt = Path(repo) / session["worktree"]
-    before = candidate.collect(repo, session)
+    # The same preparation owns dependency refresh for direct apply and shell
+    # entry. Sync before capturing evidence; never change inputs during checks.
+    try:
+        before = candidate.refresh(repo, session)
+    except (ValueError, OSError) as exc:
+        return failure("conflict", str(exc))
     env = candidate.execution_environment(wt, session)
     supporting = {r["result"]["id"] for r in controller.store.tool_index(limit=10000)
                   if not r.get("is_error") and r.get("result", {}).get("id")}

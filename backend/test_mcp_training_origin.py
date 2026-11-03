@@ -195,5 +195,67 @@ def test_repair_grant_requires_execution_identity_across_mcp(tmp_path, monkeypat
         rg.revoke_grant()
 
 
+@pytest.mark.parametrize('tool', ['execute_ibl', 'run_command'])
+@pytest.mark.parametrize('transport', ['http', 'stdio'])
+@pytest.mark.parametrize('parent_state', ['live', 'stale', 'unknown'])
+def test_all_mcp_execution_tools_keep_parent_during_drain(monkeypatch, tool, transport, parent_state):
+    import io
+    import urllib.error
+    import runtime_work
+    from api_runtime import RuntimeAdmission
+
+    previous = runtime_work.registry()
+    reg = runtime_work.install('mcp-drain-test')
+    reg.gate('ACTIVE')
+    root = reg.reserve('existing-repair')
+    parent = root.parent if parent_state != 'unknown' else 'guessed-parent'
+    ctx = _ctx('user') if transport == 'http' else None
+    if ctx:
+        ctx.request_context.request.headers['x-runtime-parent'] = parent
+        monkeypatch.delenv('INDIEBIZ_RUNTIME_PARENT', raising=False)
+    else:
+        monkeypatch.setenv('INDIEBIZ_RUNTIME_PARENT', parent)
+    monkeypatch.setattr(M.mcp, 'get_context', lambda: ctx)
+    admitted, requests = [], []
+
+    async def app(scope, receive, send):
+        admitted.append(scope['path'])
+        await send({'type': 'http.response.start', 'status': 200, 'headers': []})
+        await send({'type': 'http.response.body', 'body': b'{"success":true,"value":1}'})
+
+    admission = RuntimeAdmission(app)
+
+    def post(request, timeout):
+        from urllib.parse import urlparse
+        messages = []
+        requests.append((request.get_header('X-runtime-parent'), json.loads(request.data)))
+        async def receive():
+            return {'type': 'http.request', 'body': request.data, 'more_body': False}
+        async def send(message):
+            messages.append(message)
+        scope = {'type': 'http', 'method': 'POST', 'path': urlparse(request.full_url).path,
+                 'headers': [(k.lower().encode(), v.encode()) for k, v in request.header_items()]}
+        asyncio.run(admission(scope, receive, send))
+        body = b''.join(m.get('body', b'') for m in messages)
+        if messages[0]['status'] != 200:
+            raise urllib.error.HTTPError(request.full_url, 503, 'draining', {}, io.BytesIO(body))
+        return io.BytesIO(body)
+
+    monkeypatch.setattr(M.urllib.request, 'urlopen', post)
+    try:
+        reg.gate('DRAINING')
+        if parent_state == 'stale':
+            root.close()
+        if tool == 'execute_ibl':
+            asyncio.run(M.execute_ibl('return 1', ctx=ctx))
+        else:
+            asyncio.run(M.run_command('python -m pytest', ctx=ctx))
+        assert bool(admitted) is (parent_state == 'live')
+        assert requests and all(p == parent and '_runtime_parent' not in body for p, body in requests)
+    finally:
+        root.close()
+        runtime_work._registry = previous
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

@@ -173,7 +173,7 @@ def run_shell(handler, command, timeout):
     wt = Path(repo) / sess["worktree"]
     if sess.get("repair_policy") == 2:
         from repair_check_runner import execute
-        # Preparation occurs before the command; apply itself never syncs or builds.
+        # Refresh before the command, as direct apply does before its checks.
         candidate.refresh(repo, sess)
         record = execute(repo, sess, candidate, command, current(), timeout)
         st._save_session(repo, sess)

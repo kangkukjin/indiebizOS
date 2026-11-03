@@ -162,7 +162,15 @@ def _post_backend(path: str, payload: dict, timeout: int) -> str:
     별도 프로세스라 우연히 무사했을 뿐, 같은 이유로 blocking 은 스레드로 뺀다.
     """
     payload = dict(payload)
-    parent = payload.pop("_runtime_parent", None) or os.environ.get("INDIEBIZ_RUNTIME_PARENT")
+    # HTTP MCP shares a server process, so the caller's live parent belongs to
+    # this request, not the server environment. Every tool uses this transport.
+    try:
+        request = mcp.get_context().request_context.request
+        request_parent = request.headers.get("x-runtime-parent") if request else None
+    except (AttributeError, LookupError, ValueError):
+        request_parent = None
+    parent = (payload.pop("_runtime_parent", None) or request_parent
+              or os.environ.get("INDIEBIZ_RUNTIME_PARENT"))
     headers = {"Content-Type": "application/json"}
     if parent:
         headers["X-Runtime-Parent"] = parent
@@ -316,14 +324,6 @@ async def execute_ibl(code: str, project_path: str = "",
     task_id = h_task or DEFAULT_TASK_ID
     effective_origin = origin or h_origin or DEFAULT_TASK_ORIGIN
     payload = {"code": code, "project_path": effective_path}
-    try:
-        request_context = ctx.request_context if ctx is not None else None
-        runtime_parent = (request_context.request.headers.get("x-runtime-parent")
-                          if request_context and request_context.request else None)
-    except (AttributeError, LookupError):
-        runtime_parent = None
-    if runtime_parent:
-        payload["_runtime_parent"] = runtime_parent
     from ibl_edition import authoring_request
     for field, value in (("composition", composition), ("completion", completion), ("repair", repair)):
         if value is not None:

@@ -354,8 +354,9 @@ def _assemble_project_agent(sample: str, project_id: Optional[str]) -> Dict[str,
     agent_id = cfg.get("id")
     allowed_nodes = cfg.get("allowed_nodes")
     git_enabled = (project_path / ".git").exists()
-    role_file = project_path / f"agent_{agent_name}_role.txt"
-    note_file = project_path / f"agent_{agent_name}_note.txt"
+    from project_manager import configured_agent_text_path
+    role_file = configured_agent_text_path(project_path, cfg, "role")
+    note_file = configured_agent_text_path(project_path, cfg, "note")
     role_text = _read(role_file) if role_file.exists() else ""
     notes_text = _read(note_file).strip() if note_file.exists() else ""
     model = _model_info("execution")
@@ -385,10 +386,10 @@ def _assemble_project_agent(sample: str, project_id: Optional[str]) -> Dict[str,
                  pm_block, included=bool(pm_block), condition="프로젝트 폴더의 포식 문서가 있을 때",
                  note="프로젝트 에이전트의 CLAUDE.md 에 해당. 24KB 상한, 넘으면 잘림 표식."),
         _section("role", "역할 (# Role)", "system", "file", _rel(role_file),
-                 f"\n# Role\n{role_prompt}", note="'당신은 <이름>입니다.' 한 줄 + agent_<이름>_role.txt 본문."),
+                 f"\n# Role\n{role_prompt}", note="'당신은 <이름>입니다.' 한 줄 + 프로젝트 저장 형식에 따른 역할 본문."),
         _section("notes", "노트 (# Notes)", "system", "file", _rel(note_file),
                  f"# Notes\n{notes_text}" if notes_text else "", included=bool(notes_text),
-                 condition="agent_<이름>_note.txt 가 있을 때 (의료 프로젝트는 환자 차트가 라이브로 덧붙음)"),
+                 condition="프로젝트 저장 형식에 따른 메모가 있을 때 (의료 프로젝트는 환자 차트가 라이브로 덧붙음)"),
         _now_section(),
         _recall_section(sample),
         _model_name_section(model_name),

@@ -5,12 +5,11 @@
 부른다. 실행 중 러너 명부는 datastore.agent_registry.agent_runners(한 곳).
 """
 import os
-import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
 
-import yaml
+from project_manager import AgentTextConflict as AgentConflictError
 
 
 def _project_path(project_id: str) -> Path:
@@ -26,23 +25,13 @@ def _project_path(project_id: str) -> Path:
 
 
 def _load(project_path: Path) -> dict:
-    f = project_path / "agents.yaml"
-    if not f.exists():
-        return {"agents": [], "common": {}}
-    return yaml.safe_load(f.read_text(encoding="utf-8")) or {"agents": [], "common": {}}
+    from project_manager import agent_settings
+    return agent_settings(project_path)
 
 
 def _save(project_path: Path, data: dict) -> None:
-    content = yaml.dump(data, allow_unicode=True, default_flow_style=False)
-    fd, temporary = tempfile.mkstemp(prefix=".agents-", dir=project_path)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, project_path / "agents.yaml")
-    finally:
-        Path(temporary).unlink(missing_ok=True)
+    from project_manager import save_agent_settings
+    save_agent_settings(project_path, data)
 
 
 def _apply_fields(agent: dict, name=None, type=None, allowed_nodes=None, allowed_tools=None, channel=None, email=None) -> dict:
@@ -71,31 +60,29 @@ def create_agent(project_id: str, name: str, type: str = "ai_agent", role: str =
     new = _apply_fields({"id": f"agent_{uuid.uuid4().hex[:8]}", "active": True}, name=name, type=type,
                         allowed_nodes=allowed_nodes, allowed_tools=allowed_tools, channel=channel, email=email)
     _check_name(data, None, name)
-    role_path = _text_path(pp, new, "role")
-    note_path = _text_path(pp, new, "note")
+    role_path = _text_path(pp, new, "role", data, require_exists=False)
+    note_path = _text_path(pp, new, "note", data, require_exists=False)
     if role_path.exists() or note_path.exists():
         raise AgentConflictError("새 에이전트의 역할 또는 메모 파일이 이미 있습니다.")
     data.setdefault("agents", []).append(new)
-    created = False
+    created = []
     try:
-        if role is not None:
-            with role_path.open("x", encoding="utf-8") as stream:
-                created = True
-                stream.write(role)
+        for path, content in ((role_path, role or ""), (note_path, "")):
+            if data.get("agent_text_storage") == "id-v1" or (path == role_path and role is not None):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with path.open("x", encoding="utf-8") as stream:
+                    created.append(path)
+                    stream.write(content)
         _save(pp, data)
     except BaseException:
-        if created:
-            role_path.unlink(missing_ok=True)
+        for path in created:
+            path.unlink(missing_ok=True)
         raise
     return new
 
 
 class AgentConfigMissingError(FileNotFoundError):
     """설정 파일의 부재와 실제 파일 I/O 실패를 구분한다."""
-
-
-class AgentConflictError(ValueError):
-    """저장 신원이나 텍스트의 소유권이 불명확하여 변경하지 않았다."""
 
 
 def _resolve(data: dict, agent_id: str, *, by_name=False) -> dict:
@@ -110,18 +97,9 @@ def _resolve(data: dict, agent_id: str, *, by_name=False) -> dict:
     return matches[0]
 
 
-def _text_path(pp: Path, agent: dict, kind: str) -> Path:
-    if kind not in ("role", "note"):
-        raise ValueError("텍스트 종류는 role 또는 note여야 합니다.")
-    name = agent.get("name", agent["id"])
-    if not isinstance(name, str) or not name or Path(name).name != name or "\\" in name:
-        raise AgentConflictError("에이전트 이름에 경로를 사용할 수 없습니다.")
-    if "name" not in agent and (pp / f"agent_None_{kind}.txt").exists():
-        raise AgentConflictError("이름 없는 에이전트의 이전 텍스트를 확인해야 합니다.")
-    path = pp / f"agent_{name}_{kind}.txt"
-    if path.is_symlink():
-        raise AgentConflictError("에이전트 텍스트의 심볼릭 링크를 확인해야 합니다.")
-    return path
+def _text_path(pp: Path, agent: dict, kind: str, data=None, *, require_exists=True) -> Path:
+    from project_manager import agent_text_path
+    return agent_text_path(pp, agent, kind, data=data, require_exists=require_exists)
 
 
 def _check_name(data, agent, name):
@@ -136,7 +114,7 @@ def update_agent(project_id: str, agent_id: str, **fields) -> dict:
     role = fields.pop("role", None)
     updated = _apply_fields(dict(agent), **fields)
     _check_name(data, agent, updated.get("name", agent_id))
-    pairs = [(_text_path(pp, agent, kind), _text_path(pp, updated, kind))
+    pairs = [(_text_path(pp, agent, kind, data), _text_path(pp, updated, kind, data))
              for kind in ("role", "note")]
     renamed = pairs[0][0] != pairs[0][1]
     if renamed and any(dst.exists() for src, dst in pairs):
@@ -183,7 +161,7 @@ def delete_agent(project_id: str, agent_id: str) -> str:
     pp = _project_path(project_id)
     data = _load(pp)
     agent = _resolve(data, agent_id)
-    paths = [_text_path(pp, agent, kind) for kind in ("role", "note")]
+    paths = [_text_path(pp, agent, kind, data) for kind in ("role", "note")]
     name = agent.get("name", agent_id)
     _check_name(data, agent, name)
     data["agents"].remove(agent)
@@ -202,7 +180,7 @@ def text_record(project_id: str, agent_id: str, kind: str, *, text=None,
     data = _load(pp)
     agent = _resolve(data, agent_id)
     _check_name(data, agent, agent.get("name", agent_id))
-    path = _text_path(pp, agent, kind)
+    path = _text_path(pp, agent, kind, data)
     if text is not None:
         path.write_text(text, encoding="utf-8")
     content = path.read_text(encoding="utf-8") if path.exists() else ""

@@ -10,6 +10,15 @@ from typing import List, Dict, Optional
 from conversation_db import ConversationDB
 
 
+
+def _agent_text_location(base_path, name, kind):
+    from project_manager import agent_settings, agent_text_path, resolve_text_agent
+    from pathlib import Path
+    data = agent_settings(base_path)
+    agent = (resolve_text_agent(data, name) if data.get('agents')
+             or data.get('agent_text_storage') else {'name': name})
+    return str(agent_text_path(Path(base_path), agent, kind, data=data))
+
 class MyConversations:
     """
     특정 주체의 대화 관리 클래스 (새 스키마)
@@ -402,7 +411,7 @@ class MyConversations:
     def load_agent_role(agent_name: str) -> str:
         """개별역할 원본 파일 읽기"""
         import os
-        filepath = os.path.join(os.getcwd(), f'agent_{agent_name}_role.txt')
+        filepath = _agent_text_location(os.getcwd(), agent_name, 'role')
         if not os.path.exists(filepath):
             return ''
         try:
@@ -416,7 +425,7 @@ class MyConversations:
     def save_agent_role(agent_name: str, content: str):
         """개별역할 원본 파일 저장"""
         import os
-        filepath = os.path.join(os.getcwd(), f'agent_{agent_name}_role.txt')
+        filepath = _agent_text_location(os.getcwd(), agent_name, 'role')
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -429,7 +438,7 @@ class MyConversations:
     def load_agent_note(agent_name: str) -> str:
         """영구노트 원본 파일 읽기"""
         import os
-        filepath = os.path.join(os.getcwd(), f'agent_{agent_name}_note.txt')
+        filepath = _agent_text_location(os.getcwd(), agent_name, 'note')
         if not os.path.exists(filepath):
             return ''
         try:
@@ -443,7 +452,7 @@ class MyConversations:
     def save_agent_note(agent_name: str, content: str):
         """영구노트 원본 파일 저장"""
         import os
-        filepath = os.path.join(os.getcwd(), f'agent_{agent_name}_note.txt')
+        filepath = _agent_text_location(os.getcwd(), agent_name, 'note')
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -487,6 +496,11 @@ class MyConversations:
             'errors': [],
             'db_updated': False
         }
+
+        from project_manager import agent_settings
+        if agent_settings(base_path).get('agent_text_storage') == 'id-v1':
+            return {**result, 'success': False,
+                    'errors': ['ID 저장 프로젝트의 개명은 에이전트 관리 API를 사용해야 합니다.']}
 
         # 리네이밍할 파일 패턴들
         file_patterns = [

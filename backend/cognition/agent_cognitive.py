@@ -185,7 +185,8 @@ class AgentCognitiveMixin(
             return "IndieBiz OS의 관리자이자 안내자"
         else:
             agent_name = self.config.get("name", "에이전트")
-            role_file = self.project_path / f"agent_{agent_name}_role.txt"
+            from project_manager import configured_agent_text_path
+            role_file = configured_agent_text_path(self.project_path, self.config, "role")
             if role_file.exists():
                 return role_file.read_text(encoding='utf-8')
             return ""
@@ -294,7 +295,8 @@ class AgentCognitiveMixin(
         git_enabled = (self.project_path / ".git").exists()
 
         agent_notes = ""
-        note_file = self.project_path / f"agent_{agent_name}_note.txt"
+        from project_manager import configured_agent_text_path
+        note_file = configured_agent_text_path(self.project_path, self.config, "note")
         if note_file.exists():
             agent_notes = note_file.read_text(encoding='utf-8').strip()
 
@@ -354,7 +356,8 @@ class AgentCognitiveMixin(
 
         # 3. 에이전트별 영구메모
         agent_notes = ""
-        note_file = self.project_path / f"agent_{agent_name}_note.txt"
+        from project_manager import configured_agent_text_path
+        note_file = configured_agent_text_path(self.project_path, self.config, "note")
         if note_file.exists():
             agent_notes = note_file.read_text(encoding='utf-8').strip()
 

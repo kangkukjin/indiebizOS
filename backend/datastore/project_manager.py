@@ -122,21 +122,16 @@ class ProjectManager:
             self._create_default_project_files(project_path)
             return
 
-        # agent_roles 폴더 (폴더 전체 복사 + 프로젝트 루트에도 복사)
-        roles_src = template_path / "agent_roles"
-        if roles_src.exists():
-            # agent_roles 폴더 생성 및 복사
-            roles_dst = project_path / "agent_roles"
-            roles_dst.mkdir(exist_ok=True)
-            for agent_file in roles_src.glob("*.txt"):
-                shutil.copy2(agent_file, roles_dst / agent_file.name)
-                # 프로젝트 루트에도 복사 (indiebizE 호환)
-                shutil.copy2(agent_file, project_path / agent_file.name)
-
-        # agents.yaml.template -> agents.yaml
+        # 설정 선언과 전체 ID 디렉터리를 함께 복사한다. 구 템플릿만 루트 파일을 사용한다.
         template_src = template_path / "agents.yaml.template"
         if template_src.exists():
             shutil.copy2(template_src, project_path / "agents.yaml")
+        roles_src = template_path / "agent_roles"
+        if roles_src.exists():
+            shutil.copytree(roles_src, project_path / "agent_roles", dirs_exist_ok=True)
+            if agent_settings(project_path).get("agent_text_storage") != "id-v1":
+                for agent_file in roles_src.glob("*.txt"):
+                    shutil.copy2(agent_file, project_path / agent_file.name)
 
         # config.yaml
         config_src = template_path / "config.yaml"
@@ -612,3 +607,97 @@ agents:
             self._save_projects_list(projects)
 
         return copied
+
+
+class AgentTextConflict(ValueError):
+    """에이전트 텍스트의 소유 신원·저장 형식이 불명확하다."""
+
+
+def agent_settings(project_path):
+    import yaml
+    path = Path(project_path) / 'agents.yaml'
+    if not path.exists():
+        return {}
+    return yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+
+
+def save_agent_settings(project_path, data):
+    """완성한 설정만 같은 디렉터리에서 원자 교체한다."""
+    import os
+    import tempfile
+    import yaml
+    fd, temporary = tempfile.mkstemp(prefix='.agents-', dir=project_path)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            stream.write(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, Path(project_path) / 'agents.yaml')
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def _text_component(value):
+    if (not isinstance(value, str) or not value or value in ('.', '..')
+            or Path(value).name != value or '\\' in value or '\0' in value):
+        raise AgentTextConflict('에이전트 텍스트 신원에 경로를 사용할 수 없습니다.')
+    return value
+
+
+def agent_text_path(project_path, agent, kind, *, data=None, require_exists=True):
+    """저장 선언이 경로를 결정한다. 신형의 누락을 구형 파일로 숨기지 않는다."""
+    pp = Path(project_path)
+    if kind not in ('role', 'note'):
+        raise ValueError('텍스트 종류는 role 또는 note여야 합니다.')
+    data = agent_settings(pp) if data is None else data
+    storage = data.get('agent_text_storage')
+    if storage not in (None, 'id-v1'):
+        raise AgentTextConflict('지원하지 않는 에이전트 텍스트 저장 형식입니다.')
+    if storage == 'id-v1':
+        identity = _text_component(agent.get('id'))
+        path = pp / 'agent_roles' / identity / f'{kind}.txt'
+    else:
+        name = _text_component(agent.get('name', agent.get('id')))
+        if 'name' not in agent and (pp / f'agent_None_{kind}.txt').exists():
+            raise AgentTextConflict('이름 없는 에이전트의 이전 텍스트를 확인해야 합니다.')
+        path = pp / f'agent_{name}_{kind}.txt'
+    # 내부 링크도 쓰기·삭제의 별칭이므로 허용하지 않는다.
+    parent = path.parent
+    while parent != pp:
+        if parent.is_symlink():
+            raise AgentTextConflict('에이전트 텍스트의 심볼릭 링크를 확인해야 합니다.')
+        parent = parent.parent
+    if path.is_symlink():
+        raise AgentTextConflict('에이전트 텍스트의 심볼릭 링크를 확인해야 합니다.')
+    if storage == 'id-v1' and require_exists and not path.is_file():
+        raise AgentTextConflict('ID 저장 텍스트가 누락되었습니다. 복구가 필요합니다.')
+    return path
+
+
+def resolve_text_agent(data, identifier):
+    """이름만 가진 구 소비자도 유일한 저장 신원에 연결한다."""
+    agents = data.get('agents') or []
+    matches = [a for a in agents if a.get('id') == identifier]
+    if not matches:
+        matches = [a for a in agents if a.get('name') == identifier]
+    if len(matches) != 1:
+        raise AgentTextConflict('에이전트 텍스트의 저장 신원을 유일하게 해소할 수 없습니다.')
+    return matches[0]
+
+
+def configured_agent_text_path(project_path, agent, kind):
+    """연구 실행 신원 대신 선택된 템플릿 ID를 사용한다."""
+    pp = Path(project_path)
+    explicit = agent.get('_temporary_role_path')
+    if explicit and kind == 'role':
+        return Path(explicit)
+    data = agent_settings(pp)
+    if data.get('agent_text_storage') == 'id-v1':
+        identity = agent.get('_selected_agent') or agent.get('id')
+        stored = resolve_text_agent(data, identity)
+    else:
+        stored = agent if agent.get("id") or "name" in agent else {**agent, "name": "에이전트"}
+        # 연구 제목은 표시 속성이다. 구 형식에서도 선택된 템플릿 이름을 쓴다.
+        if agent.get('_selected_agent'):
+            stored = resolve_text_agent(data, agent['_selected_agent'])
+    return agent_text_path(pp, stored, kind, data=data)

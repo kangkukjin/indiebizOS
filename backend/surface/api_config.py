@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 import yaml
+from project_manager import agent_text_path
 
 from runtime_utils import get_base_path as _get_base_path
 
@@ -579,7 +580,7 @@ async def auto_assign_tools(project_id: str):
         # 에이전트 정보 수집
         agents_info = []
         for agent in data.get('agents', []):
-            role_file = project_path / f"agent_{agent['name']}_role.txt"
+            role_file = agent_text_path(project_path, agent, "role", data=data)
             role = ""
             if role_file.exists():
                 role = role_file.read_text(encoding='utf-8')
@@ -636,7 +637,7 @@ async def init_tools_if_needed(project_id: str):
         agents_needing_nodes = []
         for agent in data.get('agents', []):
             if agent.get('allowed_nodes') is None:
-                role_file = project_path / f"agent_{agent['name']}_role.txt"
+                role_file = agent_text_path(project_path, agent, "role", data=data)
                 role = ""
                 if role_file.exists():
                     role = role_file.read_text(encoding='utf-8')

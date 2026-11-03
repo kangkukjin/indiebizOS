@@ -84,9 +84,10 @@ class MemberSession:
         notice = self.policy.get("notice") or ""
         if notice:
             role_text += f"\n\n[고지] {notice}\n"
-        (self.dir / f"agent_{agent_name}_role.txt").write_text(role_text, encoding="utf-8")
+        temporary_role = self.dir / f"agent_{agent_name}_role.txt"
+        temporary_role.write_text(role_text, encoding="utf-8")
         from member_runner import MemberRunner
-        cfg = {"name": agent_name, "allowed_nodes": list(self.policy.get("allowed_nodes") or []),
+        cfg = {"_temporary_role_path": str(temporary_role), "name": agent_name, "allowed_nodes": list(self.policy.get("allowed_nodes") or []),
                "_project_path": str(self.dir), "_project_id": "", "ai": {},
                "_member": {"neighbor_id": self.neighbor_id, "device_id": self.device_id, "level": self.level, "limits": {k: self.policy[k] for k in ("hard_token_limit", "deadline_s")}}}
         runner = MemberRunner(cfg)   # id 없음 → 레지스트리 미등록, start() 안 함(폴링 루프 없음)

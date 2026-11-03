@@ -4,6 +4,8 @@
 못했다. 그 논리를 여기로 내려 라우트와 `[others:agents]{op: create|update|delete|start|stop|role|note}` 가 **같은 함수**를
 부른다. 실행 중 러너 명부는 datastore.agent_registry.agent_runners(한 곳).
 """
+import os
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -24,7 +26,16 @@ def _load(project_path: Path) -> dict:
 
 
 def _save(project_path: Path, data: dict) -> None:
-    (project_path / "agents.yaml").write_text(yaml.dump(data, allow_unicode=True, default_flow_style=False), encoding="utf-8")
+    content = yaml.dump(data, allow_unicode=True, default_flow_style=False)
+    fd, temporary = tempfile.mkstemp(prefix=".agents-", dir=project_path)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, project_path / "agents.yaml")
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def _apply_fields(agent: dict, name=None, type=None, allowed_nodes=None, allowed_tools=None, channel=None, email=None) -> dict:
@@ -59,29 +70,89 @@ def create_agent(project_id: str, name: str, type: str = "ai_agent", role: str =
     return new
 
 
+class AgentConflictError(ValueError):
+    """저장 신원이나 텍스트의 소유권이 불명확하여 변경하지 않았다."""
+
+
+def _resolve(data: dict, agent_id: str, *, by_name=False) -> dict:
+    agents = data.get("agents", [])
+    matches = [a for a in agents if a.get("id") == agent_id]
+    if not matches and by_name:
+        matches = [a for a in agents if a.get("name") == agent_id]
+    if len(matches) > 1:
+        raise AgentConflictError("에이전트 식별자가 중복되어 선택할 수 없습니다.")
+    if not matches:
+        raise KeyError(f"에이전트 '{agent_id}' 를 찾을 수 없습니다")
+    return matches[0]
+
+
+def _text_path(pp: Path, agent: dict, kind: str) -> Path:
+    if kind not in ("role", "note"):
+        raise ValueError("텍스트 종류는 role 또는 note여야 합니다.")
+    name = agent.get("name", agent["id"])
+    if not isinstance(name, str) or not name or Path(name).name != name or "\\" in name:
+        raise AgentConflictError("에이전트 이름에 경로를 사용할 수 없습니다.")
+    if "name" not in agent and (pp / f"agent_None_{kind}.txt").exists():
+        raise AgentConflictError("이름 없는 에이전트의 이전 텍스트를 확인해야 합니다.")
+    path = pp / f"agent_{name}_{kind}.txt"
+    if path.is_symlink():
+        raise AgentConflictError("에이전트 텍스트의 심볼릭 링크를 확인해야 합니다.")
+    return path
+
+
+def _check_name(data, agent, name):
+    if any(a is not agent and a.get("name", a.get("id")) == name for a in data.get("agents", [])):
+        raise AgentConflictError("같은 표시 이름의 에이전트가 이미 있습니다.")
+
+
 def update_agent(project_id: str, agent_id: str, **fields) -> dict:
     pp = _project_path(project_id)
     data = _load(pp)
+    agent = _resolve(data, agent_id)
     role = fields.pop("role", None)
-    for i, agent in enumerate(data.get("agents", [])):
-        if agent.get("id") != agent_id:
-            continue
-        old_name = agent.get("name", "")
-        data["agents"][i] = _apply_fields(agent, **fields)
-        new_name = data["agents"][i].get("name", old_name)
-        if old_name and old_name != new_name:
-            # 이름이 바뀌면 역할·메모 파일도 따라간다(옛 라우트는 role 을 함께 줄 때만 옮겨 고아 파일이 남았다)
-            for suffix in ("role", "note"):
-                old_f, new_f = pp / f"agent_{old_name}_{suffix}.txt", pp / f"agent_{new_name}_{suffix}.txt"
-                if old_f.exists() and not new_f.exists():
-                    old_f.rename(new_f)
-                elif old_f.exists():
-                    old_f.unlink()
-        if role is not None:
-            (pp / f"agent_{new_name}_role.txt").write_text(role, encoding="utf-8")
+    updated = _apply_fields(dict(agent), **fields)
+    _check_name(data, agent, updated.get("name", agent_id))
+    pairs = [(_text_path(pp, agent, kind), _text_path(pp, updated, kind))
+             for kind in ("role", "note")]
+    renamed = pairs[0][0] != pairs[0][1]
+    if renamed and any(dst.exists() for src, dst in pairs):
+        raise AgentConflictError("개명 대상의 역할 또는 메모 파일이 이미 있습니다.")
+    created = []
+    originals = {}
+    role_before = None
+    role_path = pairs[0][1]
+    try:
+        if renamed:
+            for index, (src, dst) in enumerate(pairs):
+                if src.exists():
+                    originals[src] = src.read_bytes()
+                content = role.encode("utf-8") if index == 0 and role is not None else originals.get(src)
+                if content is not None:
+                    try:
+                        with dst.open("xb") as stream:
+                            created.append((dst, os.fstat(stream.fileno()).st_ino))
+                            stream.write(content)
+                    except FileExistsError as exc:
+                        raise AgentConflictError("개명 중 목적지 파일이 생겨 변경을 중단했습니다.") from exc
+        elif role is not None:
+            role_before = role_path.read_bytes() if role_path.exists() else None
+            role_path.write_text(role, encoding="utf-8")
+        data["agents"][data["agents"].index(agent)] = updated
         _save(pp, data)
-        return data["agents"][i]
-    raise KeyError(f"에이전트 '{agent_id}' 를 찾을 수 없습니다")
+    except BaseException:
+        for path, inode in created:
+            if path.exists() and path.stat().st_ino == inode:
+                path.unlink()
+        if not renamed and role is not None:
+            if role_before is None:
+                role_path.unlink(missing_ok=True)
+            else:
+                role_path.write_bytes(role_before)
+        raise
+    for src, content in originals.items():
+        if src.exists() and src.read_bytes() == content:
+            src.unlink()
+    return updated
 
 
 def delete_agent(project_id: str, agent_id: str) -> str:
@@ -190,6 +261,6 @@ def agents_op(op: str, params: dict) -> dict:
                 write_text(project_id, agent_id, op, str(params["text"]))
                 return {"success": True, "project_id": project_id, "agent_id": agent_id, op: str(params["text"])}
             return {"success": True, "project_id": project_id, "agent_id": agent_id, op: read_text(project_id, agent_id, op)}
-    except KeyError as exc:
+    except (KeyError, AgentConflictError) as exc:
         return {"success": False, "error": str(exc)}
     return {"success": False, "error": f"알 수 없는 op: {op} (list|info|create|update|delete|start|stop|role|note)"}

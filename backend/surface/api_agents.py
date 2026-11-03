@@ -680,6 +680,8 @@ async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
                                      allowed_nodes=agent_data.allowed_nodes, allowed_tools=agent_data.allowed_tools,
                                      channel=agent_data.channel, email=agent_data.email)
         return {"status": "updated", "agent_id": agent_id}
+    except agent_lifecycle.AgentConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

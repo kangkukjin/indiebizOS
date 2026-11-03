@@ -56,6 +56,27 @@ def test_prior_user_limit_can_ground_authority_stop(supervisor, monkeypatch):
     assert result['status'] == 'UNKNOWN' and not result.get('recoverable')
 
 
+@pytest.mark.parametrize('phase', ['semantic', 'workspace', 'final'])
+def test_evidence_followup_reaches_every_review_phase_without_supervisor_handoff(supervisor, monkeypatch, phase):
+    from final_evaluator import prepare, invoke
+    from evaluation_input import context_sections
+    prepare(supervisor, [])
+    monkeypatch.setattr('final_evaluator.Evaluator._evaluate_achievement', lambda *a, **kw:
+                        (None, 'UNKNOWN\nUNKNOWN_REASON: evidence — C1 source missing', None))
+    result = json.loads(invoke(supervisor, phase=phase))
+    assert result['recoverable']
+    cursor = supervisor._repair_evidence_since
+    source = 'BEGIN actual candidate implementation ' + 'body ' * 1000 + ' END required behavior'
+    supervisor.run_tool('read_candidate', {}, lambda: source)
+    packet = prepare(supervisor, [])
+    _, sections = context_sections(json.dumps(packet['context']))
+    recovered = [row for row in sections if row['role'] == 'recovered']
+    assert recovered and any(source in row['text'] for row in recovered)
+    # Another insufficient review must not drop the first supplementary read.
+    invoke(supervisor, phase=phase)
+    assert supervisor._repair_evidence_since == cursor
+
+
 def test_research_invalid_citation_is_repaired_before_approval(supervisor, monkeypatch, tmp_path):
     import research_capture  # installs the service callback
     from research_context import scope

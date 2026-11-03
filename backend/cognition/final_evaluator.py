@@ -492,6 +492,10 @@ def invoke(controller, prompt="", *, phase="final"):
                       "출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. "
                       "확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n" + feedback)
     if result.get('recoverable'):
+        # Semantic/workspace callers also hand control back to execution. Keep
+        # its subsequent source reads in the existing recovered-evidence lane.
+        if not hasattr(controller, '_repair_evidence_since'):
+            controller._repair_evidence_since = controller.store.sequence
         from evaluation_input import evidence_requests
         parsed = evidence_requests(feedback, packet)
         result['evidence_request_validation'] = parsed

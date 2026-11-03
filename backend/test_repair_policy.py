@@ -12,6 +12,32 @@ import api_repair_continuation as consumer
 from supervisor_handoff import criteria_contract
 
 
+def test_applied_review_resume_finishes_from_real_receipts_without_model_setup(repair, monkeypatch):
+    import repair_resume
+    from repair_continuation import resuming
+    from thread_context import actor_context, get_goal_eval_outcome
+    from test_repair_receipt_flow import command
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    probe = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
+        'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"')
+    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
+                          'active_verify_cmd': probe,
+                          'verification_plan': [{'criterion_id': 'C1', 'command': command(wt)}]})
+    assert applied['complete'], applied
+    row = {'task_id': session['key'], 'staging_task_id': session['key'], 'phase': 'review',
+           'resume_task_id': controller.task, 'agent_id': controller.owner, 'authorized_origin': 'user',
+           'goal': controller.message, 'resume_message': '이어서 마쳐줘', 'framing': controller.framing,
+           'criteria_contract': criteria_contract(controller.message, controller.framing),
+           'response': '검사한 수리 결과', 'repair_policy': 2}
+    monkeypatch.setattr(repair_resume, 'restore_review', lambda *a: pytest.fail('obsolete model checkpoint'))
+    monkeypatch.setattr('system_ai_core._switch_to_role', lambda *a: pytest.fail('unneeded model setup'))
+    with actor_context(agent_id=controller.owner, task_id=controller.task, origin='user'), resuming(row):
+        events = list(repair_resume.review_stream(controller.runner, controller, row))
+    assert events[-1] == {'type': 'final', 'content': row['response']}
+    assert get_goal_eval_outcome()['goal_status'] == 'ACHIEVED'
+
+
 @pytest.mark.parametrize('publication', ['program', 'component'])
 def test_published_repair_uses_same_final_receipts_without_second_model_review(repair, monkeypatch, publication):
     from test_repair_receipt_flow import command

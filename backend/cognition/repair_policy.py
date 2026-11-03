@@ -25,6 +25,17 @@ def enabled(controller):
             and (getattr(controller, "framing", None) or {}).get("_repair_policy") == VERSION)
 
 
+def receipt_completion(controller):
+    """첫 종료와 재개가 같은 기준으로 영수증 완료 경로를 선택한다."""
+    from repair_continuation import current
+    from repair_readiness import requires_code_receipts
+    return (enabled(controller) and requires_code_receipts(controller)
+            and getattr(controller, '_repair_completion_policy', VERSION) == VERSION
+            and not controller.completion_review_required
+            and not (current() or {}).get('pending_delivery')
+            and not controller.delivery.manifest())
+
+
 def failure(stage, message, **details):
     return {"success": False, "applied": False, "error": message, "stage": stage,
             "recovery": {"action": "continue_same_workspace", "stage": stage}, **details}

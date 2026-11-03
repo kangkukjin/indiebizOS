@@ -895,11 +895,8 @@ class Supervisor:
             yield {"type": "text", "content": final}
             yield {"type": "final", "content": final}
             return final
-        from repair_policy import enabled as receipt_repair, finalize as finish_repair
-        from repair_readiness import requires_code_receipts
-        if (receipt_repair(self) and requires_code_receipts(self)
-                and getattr(self, "_repair_completion_policy", 2) == 2
-                and not self.completion_review_required and not self.delivery.manifest()):
+        from repair_policy import receipt_completion, finalize as finish_repair
+        if receipt_completion(self):
             final = finish_repair(self, response)
             yield {"type": "text", "content": final}
             yield {"type": "final", "content": final}

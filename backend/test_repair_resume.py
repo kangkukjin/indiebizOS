@@ -111,6 +111,8 @@ def test_explicit_prior_task_uses_existing_conversation_record(unfinished, histo
 
 
 def test_user_review_resume_authenticates_followup_but_preserves_original_goal(unfinished, monkeypatch):
+    from unittest.mock import create_autospec
+    from agent_pipeline import CognitivePipelineMixin
     root, wt, st, sess, controller = unfinished
     sess['status'] = 'applied'
     st._save_session(str(root), sess)
@@ -118,7 +120,8 @@ def test_user_review_resume_authenticates_followup_but_preserves_original_goal(u
     journal.save({**row, 'phase': 'review', 'applied': True})
     controller.store.text = 'previous reviewed response'
     controller.configure = lambda frame, **kw: setattr(controller, 'framing', frame)
-    controller.runner._refresh_execution_prompt = lambda *a, **kw: None
+    controller.runner._refresh_execution_prompt = create_autospec(
+        CognitivePipelineMixin._refresh_execution_prompt.__get__(controller.runner))
     controller.finalize = lambda response, *a, **kw: iter([{'type': 'final', 'content': response}])
     monkeypatch.setattr(resume, 'restore_review', lambda *a: None)
     monkeypatch.setattr('system_ai_core._switch_to_role', lambda *a: None)

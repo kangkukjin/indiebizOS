@@ -183,14 +183,20 @@ def review_stream(runner, controller, row, cancel_check=None):
     if controller is None:
         raise ValueError("평가 재개에 필요한 감독이 비활성화되어 있습니다")
     framing = inherited_framing(row.get("resume_message", row["goal"]))
+    controller.configure(framing, repair=True)
+    from repair_policy import receipt_completion
+    if receipt_completion(controller):
+        # No model prompt, role swap or obsolete review checkpoint is needed to
+        # compare the same sealed candidate, live bytes, activation and commit.
+        yield from controller.finalize(row.get('response', ''), [], lambda event: None, cancel_check)
+        return
     previous = _switch_to_role(runner, "system_repair")
     key = turn_key_for(runner)
     channel = None
     try:
         issue_grant(agent_id=controller.owner, task_id=controller.task, reason=row["goal"])
-        runner._refresh_execution_prompt(row["goal"], framing, "", None,
+        runner._refresh_execution_prompt(row["goal"], framing, "",
                                          extra_role="보존된 검수 재개. 평가가 지적한 결함만 보완하세요.")
-        controller.configure(framing, repair=True)
         restore_review(controller, row)
         channel = open_turn(key, runner, row["goal"], [], "", framing, repair=True,
                             aliases=[controller.owner])

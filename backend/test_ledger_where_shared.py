@@ -22,7 +22,7 @@ def surfaces(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(PKG / 'data-ops'))
     table = load('ledger_where_table', PKG / 'data-ops/handler.py')
     ledger = load('ledger_where_ops', PKG / 'system_essentials/ledger_ops.py')
-    monkeypatch.setattr(ledger, '_ROOT', tmp_path)
+    monkeypatch.setattr(ledger, "get_base_path", lambda: tmp_path)
     return ledger, table
 
 

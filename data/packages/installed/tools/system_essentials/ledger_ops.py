@@ -17,21 +17,21 @@ from pathlib import Path
 from common.pkg_utils import load_sibling
 file_lock = load_sibling(__file__, "essentials_file_io").file_lock
 from common.value_semantics import values_equal
-from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
+from runtime_utils import get_base_path, expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from common.row_conditions import _match, _WhereError
 from common.field_path import MISSING, parse_path, walk_path  # 점 경로 해석 단일 코어
 
-_ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
-
 
 def _target_path(raw):
+    from thread_context import get_repair_workspace
+    root = Path(get_repair_workspace() or get_base_path()).resolve()
     s = expand_body_path(str(raw or ""))
     path = Path(s)
     if not path.is_absolute():
-        path = _ROOT / path
+        path = root / path
     path = path.resolve()
     try:
-        path.relative_to(_ROOT)
+        path.relative_to(root)
     except ValueError as exc:
         raise ValueError("원장 경로는 indiebizOS 저장소 안이어야 합니다.") from exc
     return path

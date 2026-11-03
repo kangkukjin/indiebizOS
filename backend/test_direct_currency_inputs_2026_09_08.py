@@ -25,7 +25,7 @@ def test_shared_workspace_file_and_missing_ledger_hint(monkeypatch, tmp_path):
     spec = importlib.util.spec_from_file_location('_direct_ledger', ROOT / 'data/packages/installed/tools/system_essentials/ledger_ops.py')
     ledger = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ledger)
-    monkeypatch.setattr(ledger, '_ROOT', tmp_path)
+    monkeypatch.setattr(ledger, "get_base_path", lambda: tmp_path)
     ctx = ToolContext(str(tmp_path / 'data'), 'write_file')
     raw = '~workspace/outputs/shared.json'
     path = Path(ctx.resolve_path(raw))

@@ -85,7 +85,7 @@ def test_trigger_history_limit(trigger, limit, expected):
 def ledger(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(PKG / 'system_essentials'))
     mod = load('system_essentials', 'ledger_ops')
-    monkeypatch.setattr(mod, '_ROOT', tmp_path)
+    monkeypatch.setattr(mod, 'get_base_path', lambda: tmp_path)
     return mod
 
 

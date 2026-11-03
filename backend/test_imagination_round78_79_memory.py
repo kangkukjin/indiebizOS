@@ -218,7 +218,7 @@ def test_ledger_write_lands_in_body_write_ledger(tmp_path, monkeypatch, call):
     import write_ledger
     import thread_context as tc
     ledger = module('system_essentials', 'ledger_ops')
-    monkeypatch.setattr(ledger, '_ROOT', tmp_path)
+    monkeypatch.setattr(ledger, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(write_ledger, '_ROOT', tmp_path)
     monkeypatch.setattr(write_ledger, '_LEDGER_PATH', tmp_path / 'data' / 'write_ledger.jsonl')
     monkeypatch.setattr(tc, 'get_current_agent_id', lambda: 'fixture-agent')
@@ -240,7 +240,7 @@ def test_ledger_write_lands_in_body_write_ledger(tmp_path, monkeypatch, call):
 def test_failed_ledger_write_is_not_logged(tmp_path, monkeypatch):
     import write_ledger
     ledger = module('system_essentials', 'ledger_ops')
-    monkeypatch.setattr(ledger, '_ROOT', tmp_path)
+    monkeypatch.setattr(ledger, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(write_ledger, '_ROOT', tmp_path)
     monkeypatch.setattr(write_ledger, '_LEDGER_PATH', tmp_path / 'data' / 'write_ledger.jsonl')
     out = ledger.op_set({'path': 'data/fixture_ledger.json', 'value': 1})   # target 없는 set = 관문 거절

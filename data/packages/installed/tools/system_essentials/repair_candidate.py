@@ -20,9 +20,10 @@ def digest(value):
 
 def environment(worktree, *, search_paths=None, modules=None, include_npm=True):
     from python_environment_lock import fingerprint as python_fingerprint
+    from repair_live_probe import ENVIRONMENT_VERSION
     npm = Path(worktree) / "frontend/node_modules/.package-lock.json"
     return digest({"python": python_fingerprint(worktree, details=True, search_paths=search_paths, modules=modules)["environment"],
-                   "npm": fingerprint(npm) if include_npm else None})
+                   "npm": fingerprint(npm) if include_npm else None, "repair_environment": ENVIRONMENT_VERSION})
 
 
 def execution_environment(worktree, session, *, search_paths=None):

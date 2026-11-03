@@ -120,7 +120,7 @@ def test_complete_marketing_program_preserves_ledger_and_reports_commit(tmp_path
     library = {r['alias']: r['ibl_code'] for r in json.loads(
         (root / 'data/idioms/legacy_port_seeds.json').read_text()) if r['alias']}
     ledger = load_sibling(str(root / 'data/packages/installed/tools/system_essentials/handler.py'), 'ledger_ops')
-    monkeypatch.setattr(ledger, '_ROOT', tmp_path)
+    monkeypatch.setattr(ledger, "get_base_path", lambda: tmp_path)
     since, connect = observation
     for stage, filename in [('base', 'main_v0'), ('react', 'react_v1')]:
         if stage == 'react':

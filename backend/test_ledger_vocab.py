@@ -29,7 +29,7 @@ sys.path.insert(0, PKG)
 @pytest.fixture
 def lg(tmp_path, monkeypatch):
     import ledger_ops
-    monkeypatch.setattr(ledger_ops, "_ROOT", tmp_path)
+    monkeypatch.setattr(ledger_ops, "get_base_path", lambda: tmp_path)
     return ledger_ops
 
 

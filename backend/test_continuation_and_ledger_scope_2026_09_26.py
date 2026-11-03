@@ -39,7 +39,7 @@ def ledger(tmp_path, monkeypatch):
     spec = importlib.util.spec_from_file_location("ledger_scope_probe", ROOT / "data/packages/installed/tools/system_essentials/ledger_ops.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    monkeypatch.setattr(module, "_ROOT", tmp_path)
+    monkeypatch.setattr(module, "get_base_path", lambda: tmp_path)
     return module
 
 

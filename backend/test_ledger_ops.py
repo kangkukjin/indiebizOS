@@ -14,7 +14,7 @@ LG = load_sibling(str(Path(__file__).resolve().parents[1] /
 @pytest.mark.parametrize('root,target,expected', [
     ([{'id': 'a'}], 'items', 'array'), ({'items': [{'id': 'a'}], 'count': 1}, None, 'object')])
 def test_mismatched_root_reports_shape_without_mutation(tmp_path, monkeypatch, op, root, target, expected):
-    monkeypatch.setattr(LG, '_ROOT', tmp_path)
+    monkeypatch.setattr(LG, "get_base_path", lambda: tmp_path)
     path = tmp_path / 'ledger.json'
     path.write_text(json.dumps(root))
     before = path.read_bytes()
@@ -39,3 +39,41 @@ if __name__ == "__main__":
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+@pytest.mark.parametrize('repair', [False, True])
+@pytest.mark.parametrize('form', ['relative', 'absolute', 'workspace'])
+def test_data_owner_is_independent_of_generation_and_project(tmp_path, monkeypatch, repair, form):
+    live, copy, generation = (tmp_path / name for name in ('live', 'copy', 'generation'))
+    for root in (live, copy, generation):
+        root.mkdir()
+    monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(live))
+    monkeypatch.setenv('INDIEBIZ_CODE_ROOT', str(generation))
+    monkeypatch.setattr('thread_context.get_repair_workspace', lambda: str(copy) if repair else None)
+    owner = copy if repair else live
+    (owner / 'items.json').write_text('[{"id":"owned"}]')
+    (live / 'ledger.json').write_text('[{"id":"live"}]')
+    args = {'path': {'relative': 'new/ledger.json', 'absolute': str(owner / 'new/ledger.json'),
+                     'workspace': '~workspace/new/ledger.json'}[form],
+            'items_file': '~workspace/items.json'}
+    result = LG.op_append(args)
+    assert result['success'], result
+    assert json.loads((owner / 'new/ledger.json').read_text()) == [{'id': 'owned'}]
+    assert json.loads((live / 'ledger.json').read_text()) == [{'id': 'live'}]
+    assert not LG.op_select({'path': str(generation / 'items.json')})['success']
+    if repair:
+        assert not LG.op_select({'path': str(live / 'ledger.json')})['success']
+
+
+@pytest.mark.parametrize('field', ['path', 'items_file'])
+def test_symlink_and_new_parent_escape_remain_rejected(tmp_path, monkeypatch, field):
+    owner, outside = tmp_path / 'owner', tmp_path / 'outside'
+    owner.mkdir(); outside.mkdir()
+    monkeypatch.setattr(LG, 'get_base_path', lambda: owner)
+    (owner / 'escape').symlink_to(outside, target_is_directory=True)
+    (outside / 'items.json').write_text('[{"id":1}]')
+    args = {'path': 'ledger.json', 'items': [{'id': 1}], field: 'escape/items.json'}
+    result = LG.op_append(args)
+    assert not result['success']
+    assert not (owner / 'ledger.json').exists()
+    assert json.loads((outside / 'items.json').read_text()) == [{'id': 1}]

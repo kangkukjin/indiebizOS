@@ -37,7 +37,7 @@ def _load(name, path):
 @pytest.fixture
 def lg(tmp_path, monkeypatch):
     mod = _load("_t_seam_ledger_ops", os.path.join(_PKG, "system_essentials", "ledger_ops.py"))
-    monkeypatch.setattr(mod, "_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "get_base_path", lambda: tmp_path)
     return mod
 
 

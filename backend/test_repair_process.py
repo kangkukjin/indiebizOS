@@ -79,3 +79,112 @@ def test_stale_bytecode_next_to_source_is_not_executed(tmp_path):
     result = run([sys.executable, '-c', 'import subject_mod; print(subject_mod.f())'], tmp_path, env=env, timeout=120)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == '2'
+
+
+@pytest.mark.parametrize('readonly', [False, True])
+def test_nested_runtime_keeps_os_boundary_and_cleans_children(tmp_path, readonly):
+    import os
+    import sys
+    from repair_process import run
+    outside = tmp_path / 'outside'
+    workspace = tmp_path / 'workspace'
+    workspace.mkdir()
+    backend = Path(__file__).resolve().parent
+    inner = '''import os, tempfile
+from pathlib import Path
+p = Path(tempfile.mkdtemp())
+assert p.is_relative_to(Path(os.environ['INDIEBIZ_REPAIR_RUNTIME']))
+try:
+    Path(%r).write_text('escape')
+except PermissionError:
+    pass
+else:
+    raise AssertionError('outside write allowed')
+''' % str(outside)
+    if readonly:
+        inner += '''
+try:
+    Path('readonly-violation').write_text('bad')
+except PermissionError:
+    pass
+else:
+    raise AssertionError('readonly workspace write allowed')
+'''
+    script = f'''import sys, os
+sys.path.insert(0, {str(backend)!r})
+import boot_paths
+from repair_process import run
+from pathlib import Path
+before = set(Path(os.environ['TMPDIR']).iterdir())
+r = run([sys.executable, '-c', {inner!r}], {str(workspace)!r}, readonly={readonly!r})
+assert r.returncode == 0, (r.stdout, r.stderr)
+assert set(Path(os.environ['TMPDIR']).iterdir()) == before
+'''
+    result = run([sys.executable, '-c', script], workspace, timeout=60)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert not outside.exists()
+
+
+
+def test_nested_concurrency_and_scope_rejection(tmp_path):
+    import sys
+    from repair_process import run
+    workspace = tmp_path / 'workspace'
+    workspace.mkdir()
+    backend = Path(__file__).resolve().parent
+    script = f'''import sys, os
+sys.path.insert(0, {str(backend)!r})
+import boot_paths
+from repair_process import run
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+before = set(Path(os.environ['TMPDIR']).iterdir())
+def child(n):
+    return run([sys.executable, '-c', 'print(' + str(n) + ')'], {str(workspace)!r})
+with ThreadPoolExecutor(2) as pool:
+    results = list(pool.map(child, [1, 2]))
+assert [r.stdout.strip() for r in results] == ['1', '2'], results
+assert set(Path(os.environ['TMPDIR']).iterdir()) == before
+try:
+    run([sys.executable, '-c', 'print(1)'], {str(tmp_path)!r})
+except PermissionError:
+    pass
+else:
+    raise AssertionError('parent scope widened')
+'''
+    result = run([sys.executable, '-c', script], workspace, timeout=60)
+    assert result.returncode == 0, result.stderr
+
+
+def test_cancelled_parent_stops_nested_child_before_runtime_cleanup(tmp_path):
+    import sys
+    import psutil
+    from repair_process import run
+    backend = Path(__file__).resolve().parent
+    child = 'import os,time; from pathlib import Path; Path("pid").write_text(str(os.getpid())); time.sleep(60)'
+    script = f'''import sys
+sys.path.insert(0, {str(backend)!r})
+import boot_paths
+from repair_process import run
+run([sys.executable, '-c', {child!r}], {str(tmp_path)!r}, timeout=30)
+'''
+    def cancel():
+        if (tmp_path / 'pid').exists():
+            raise PermissionError('cancel nested probe')
+    with pytest.raises(PermissionError, match='cancel nested probe'):
+        run([sys.executable, '-c', script], tmp_path, check=cancel, timeout=40)
+    assert not psutil.pid_exists(int((tmp_path / 'pid').read_text()))
+
+
+@pytest.mark.system
+def test_original_apply_failures_inside_readonly_parent_pytest():
+    import sys
+    from repair_process import run
+    root = Path(__file__).resolve().parents[1]
+    cases = ['backend/test_repair_training_harness.py::test_fixed_scope_contract_gates_real_apply[correct]',
+             'backend/test_repair_receipt_flow.py::test_real_test_apply_and_completion_without_ai',
+             'backend/test_episode4296_4306_repairs.py::test_semantic_mixed_check_and_visual_evidence_apply[check-1]']
+    result = run([sys.executable, '-m', 'pytest', *cases, '-p', 'no:cacheprovider', '--tb=short'],
+                 root, readonly=True, timeout=180)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert '3 passed' in result.stdout

@@ -287,7 +287,7 @@ def _wait_healthy(cap_s: float) -> bool:
     return False
 
 
-def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) -> dict:
+def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None, live_read=True) -> dict:
     """검사 결과를 원장 갱신보다 먼저 영속화한다. 시간 초과의 부분 출력도 보존한다.
 
     부팅 검사는 짧은 상한, ACTIVE 이후 기능 검사·커밋은 별도 상한을 사용한다.
@@ -304,7 +304,7 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
     receipt = Path(receipt_path).resolve() if receipt_path else home / (uuid.uuid4().hex + ".json")
     if not receipt.is_relative_to(home):
         raise ValueError("검사 영수증 경로가 원장 밖입니다")
-    if not _wait_healthy(VERIFY_HEALTH_WAIT_S):
+    if live_read and not _wait_healthy(VERIFY_HEALTH_WAIT_S):
         _log(f"검증 위탁: 몸이 {VERIFY_HEALTH_WAIT_S:.0f}초 안에 돌아오지 않음 — 그래도 실행")
     _log(f"검증 위탁 실행: {cmd[:160]}")
 
@@ -316,7 +316,7 @@ def _run_post_verify(repo: str, cmd: str, *, timeout=None, receipt_path=None) ->
     try:
         from repair_process import run
         from repair_live_probe import ENVIRONMENT_VERSION
-        r = run(["/bin/sh", "-c", cmd], repo, timeout=timeout, readonly=True, live_read=True)
+        r = run(["/bin/sh", "-c", cmd], repo, timeout=timeout, readonly=True, live_read=live_read)
         result["environment_version"] = ENVIRONMENT_VERSION
         result["exit_code"] = r.returncode
         output = text(r.stdout) + ("\n[stderr] " + text(r.stderr) if r.stderr else "")

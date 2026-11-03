@@ -9,7 +9,7 @@ from pathlib import Path
 from coding_process import sandbox_command
 
 
-def prepare(command, workspace, *, env=None, runtime=None, readonly=False):
+def prepare(command, workspace, *, env=None, runtime=None, readonly=False, write_scopes=()):
     """셸·등록/임시/세션 스크립트가 공유하는 자식 실행 환경."""
     from runtime_utils import get_base_path
     root = Path(workspace).resolve()
@@ -28,6 +28,7 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False):
     clean.update(TMPDIR=str(runtime), TMP=str(runtime), TEMP=str(runtime),
                  INDIEBIZ_BASE_PATH=str(root), INDIEBIZ_MODEL_CONFIG_ROOT=str(model_root),
                  INDIEBIZ_SOURCE_ROOT=str(root),
+                 INDIEBIZ_REPAIR_RUNTIME=str(runtime.resolve()),
                  INDIEBIZ_REPAIR_CHILD="1", PYTHONDONTWRITEBYTECODE="1",
                  # 소스 옆 __pycache__ 는 mtime+size 로만 검증돼 같은 크기·같은 시각의 다른 내용에
                  # 옛 바이트코드를 돌려준다(긴문장 98회차 L98-2). 검사는 빈 런타임 캐시만 본다.
@@ -60,25 +61,37 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False):
     if node:
         clean["PATH"] = str(Path(node).parent) + os.pathsep + clean.get("PATH", os.defpath)
     argv = sandbox_command(command, runtime if readonly else root, runtime,
-                           local_network=True, external_network=True)
+                           local_network=True, external_network=True, write_scopes=write_scopes)
     return argv, clean
 
 
 def run(command, workspace, *, timeout=300, env=None, text=True, readonly=False, live_read=False, **kwargs):
     if live_read and not readonly:
         raise ValueError("운영 읽기 통로는 읽기 전용 활성 검사에서만 사용합니다")
+    from repair_process_bridge import ADDRESS, request
+    check = kwargs.pop("check", None)
+    cwd = kwargs.pop("cwd", None) or str(Path(workspace).resolve())
+    if os.environ.get(ADDRESS) and os.environ.get("INDIEBIZ_REPAIR_CHILD") == "1":
+        return request(command, workspace, timeout=timeout, env=env, readonly=readonly,
+                       live_read=live_read, check=check, cwd=cwd)
+    return _run_local(command, workspace, timeout=timeout, env=env, readonly=readonly,
+                      live_read=live_read, check=check, cwd=cwd)
+
+
+def _run_local(command, workspace, *, timeout, env, readonly, live_read, check, cwd, parent="/tmp", write_scopes=()):
     root = Path(workspace).resolve()
-    with tempfile.TemporaryDirectory(prefix="repair-run-", dir="/tmp") as runtime:
-        argv, clean = prepare(command, root, env=env, runtime=runtime, readonly=readonly)
+    from repair_process_bridge import serve
+    with tempfile.TemporaryDirectory(prefix="repair-run-", dir=parent) as runtime:
+        argv, clean = prepare(command, root, env=env, runtime=runtime, readonly=readonly, write_scopes=write_scopes)
         from script_process import run_process
-        check = kwargs.pop("check", None)
-        cwd = kwargs.pop("cwd", str(root))
         from repair_live_probe import live_probe
-        with live_probe() if live_read else nullcontext() as url:
-            if url:
-                clean["INDIEBIZ_VERIFY_BASE_URL"] = url
-            result = run_process(argv, b"", cwd=cwd, env=clean, timeout=timeout,
-                                 check=check, terminate_descendants=True)
+        with serve(root, runtime, readonly=readonly, live_read=live_read, check=check, write_scopes=write_scopes) as bridge:
+            clean.update(bridge)
+            with live_probe() if live_read else nullcontext() as url:
+                if url:
+                    clean["INDIEBIZ_VERIFY_BASE_URL"] = url
+                result = run_process(argv, b"", cwd=cwd, env=clean, timeout=timeout,
+                                     check=check, terminate_descendants=True)
         if result["timed_out"]:
             raise subprocess.TimeoutExpired(command, timeout, result.get("stdout"), result.get("stderr"))
         return subprocess.CompletedProcess(command, result["exit_code"],

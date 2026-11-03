@@ -66,6 +66,7 @@
     "base/reload_gate",
     "base/repair_live_probe",
     "base/repair_process",
+    "base/repair_process_bridge",
     "base/repair_runtime",
     "base/repair_test_results",
     "base/repeat_guard",
@@ -610,8 +611,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 599,
-    "engine": 567,
+    "total": 600,
+    "engine": 568,
     "blocklist": 32
   }
 }

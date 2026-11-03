@@ -90,6 +90,11 @@ def repair(setup, supervisor, monkeypatch):
     monkeypatch.setattr('red_report.current_owner', lambda: 'owner')
     monkeypatch.setattr('supervision_bus.current', lambda: supervisor)
     monkeypatch.setattr('runtime_utils.get_base_path', lambda: root)
+    # This fixture applies to an isolated file repository, not the running body.
+    import red_apply
+    post_verify = red_apply._run_post_verify
+    monkeypatch.setattr(red_apply, '_run_post_verify',
+                        lambda *a, **kw: post_verify(*a, **kw, live_read=False))
     monkeypatch.setattr('red_apply._load_handler', lambda job: SimpleNamespace(_staging_mod=lambda: st))
     monkeypatch.setattr('final_evaluator.invoke', lambda *a, **kw: pytest.fail('unexpected AI review'))
     st._save_session(str(root), session)

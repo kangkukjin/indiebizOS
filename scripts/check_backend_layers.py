@@ -46,7 +46,7 @@ LAYERS = {
         "recall_relevance",
         "output_publish", "phone_execution_contract",
         "research_context", "research_review",
-        "coding_process", "repair_process", "repair_runtime", "repair_test_results", "repair_live_probe",
+        "coding_process", "repair_process", "repair_process_bridge", "repair_runtime", "repair_test_results", "repair_live_probe",
         "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
         "audit_lifecycle", "execution_workers", "execution_capacity", "task_tree_budget", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",

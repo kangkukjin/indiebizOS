@@ -12,7 +12,7 @@ def available():
     return sys.platform == "darwin" and Path("/usr/bin/sandbox-exec").is_file()
 
 
-def sandbox_command(command, workspace, runtime, *, local_network=False, external_network=False):
+def sandbox_command(command, workspace, runtime, *, local_network=False, external_network=False, write_scopes=()):
     if not available():
         raise RuntimeError("이 몸의 코딩 쓰기 샌드박스는 미지원입니다(macOS 필요)")
     workspace, runtime = Path(workspace).resolve(), Path(runtime).resolve()
@@ -22,6 +22,12 @@ def sandbox_command(command, workspace, runtime, *, local_network=False, externa
               f"(deny file-write* (literal {quote(workspace / '.git')}))",
               f"(deny file-write* (subpath {quote(workspace / '.git')}))",
               ]
+    # A nested check is spawned by the parent outside Seatbelt. Preserve every
+    # ancestor's canonical write boundary as independent kernel deny rules.
+    # Do not resolve these recorded paths again after a possible symlink swap.
+    for scope in write_scopes:
+        choices = " ".join(f"(subpath {quote(path)})" for path in scope)
+        policy.append(f"(deny file-write* (require-not (require-any {choices})))")
     if not external_network:
         policy.append("(deny network*)")
     if local_network:

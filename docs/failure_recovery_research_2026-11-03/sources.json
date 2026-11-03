@@ -1,0 +1,400 @@
+{
+  "recorded_at": "2026-11-04T00:01:53.313144+09:00",
+  "baseline_git": "f4d74381e51fd17e011cf9b24256f6e7df903cd1",
+  "current_git": "f4d74381e51fd17e011cf9b24256f6e7df903cd1",
+  "sources": [
+    {
+      "id": "internal:data/system_docs/anatomy.md",
+      "path": "data/system_docs/anatomy.md",
+      "sha256": "ad5b3d0d63f84b4ea52bb08477db792e894afaf18b2f694956c743836af73f57",
+      "read_scope": "기능 지도·인지/수리/기억/관측 절 및 연결 문서",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:data/system_docs/vision.md",
+      "path": "data/system_docs/vision.md",
+      "sha256": "9785cce51e05a671b23d6b5f7f56d873bef31bbb91adc70a4eed975da947c597",
+      "read_scope": "IBL과 주변 시스템의 진화 목적 및 감각·행동 신경계 절",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:docs/IBL_EVOLUTION_PURPOSE.md",
+      "path": "docs/IBL_EVOLUTION_PURPOSE.md",
+      "sha256": "eb40c4a425cd05ca32c15b75df89ced880c18848eea092fdd39bf4a8f50a4756",
+      "read_scope": "목적·공통 개선·비용·검증 기준",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/task_continuation.py",
+      "path": "backend/cognition/task_continuation.py",
+      "sha256": "2787dcbbe2f8e9a655145202000daed6a16a78e2b5dffb45ba7ef7c7a7f0c85e",
+      "read_scope": "전체: evidence/message/needs_followup/execution_available/continue_task",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/agent_pipeline.py",
+      "path": "backend/cognition/agent_pipeline.py",
+      "sha256": "8b5ae7b656ff9304563ebd34db94f3a56a01dd9776e4383a88a64088eb7e22ad",
+      "read_scope": "625~725 수집, 790~840 후속/채택, 반복 scope 호출 위치",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/base/execution_turn.py",
+      "path": "backend/base/execution_turn.py",
+      "sha256": "452f82157296002f1bb741b2887a5dde6f564478b7023f456e965823545c4298",
+      "read_scope": "Binding, claim_followup, enter/leave",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/base/repeat_guard.py",
+      "path": "backend/base/repeat_guard.py",
+      "sha256": "35ac39698bbfc654c0f2f91d2f3d74b5abdd5d765357cedae9b94014ba0a9ad7",
+      "read_scope": "전체",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/conscious_supervisor.py",
+      "path": "backend/cognition/conscious_supervisor.py",
+      "sha256": "bcadf4bd9c595cc48bc351e8f2d22d984f5564ad9147af8f607dd6aa69ca7db3",
+      "read_scope": "435~529 _finish, 1126~1160 cycle 검사; tick/review 검색 위치",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/supervisor_runtime.py",
+      "path": "backend/cognition/supervisor_runtime.py",
+      "sha256": "2e86b1ab2f9fe0217bde6bee7db299b23a65ff7e02899bed0588a0a7c43cc330",
+      "read_scope": "호출 예산·감독 지시 계약 검색 위치",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/supervisor_review.py",
+      "path": "backend/cognition/supervisor_review.py",
+      "sha256": "8e1c33b7d6c34afae24b96329d80cdbcfd0c2c5db3b475ce24204401c6d4fab6",
+      "read_scope": "증거 회수·예산 및 호출 위치 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/base/execution_situation.py",
+      "path": "backend/base/execution_situation.py",
+      "sha256": "0a1c43e9b02f163feba845e5a9a0d67118ca45d6797c00dd18b86bb1b6f1bae2",
+      "read_scope": "Situation 책임·관측·prepare/ack 위치, native 관측 320~368",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/datastore/situation_evidence.py",
+      "path": "backend/datastore/situation_evidence.py",
+      "sha256": "d87a3c63c3045c13d85cb02a754b8e5b66cbc9389403a4f1e65d5adbd1500430",
+      "read_scope": "attach, observe_result 1~100",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/base/situation_delivery.py",
+      "path": "backend/base/situation_delivery.py",
+      "sha256": "475eea4f5fa1c4e57a0554816e02fb59a5e0f0126736a13dc632956ba5a422b2",
+      "read_scope": "prepare/Delivery 및 provider 연결 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/capability_guard.py",
+      "path": "backend/cognition/capability_guard.py",
+      "sha256": "fd1c71a459f8a697430800d992d90b4d4eac13e7fd7fc680f1975748a1827558",
+      "read_scope": "310~375 판정/조회/공유 후속; adopt_response 연결 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/reflex_execution.py",
+      "path": "backend/cognition/reflex_execution.py",
+      "sha256": "6f106cdd5567344d9329fbe9b0d95719d83c56a65b338713462ca3839a4cd627",
+      "read_scope": "claim_followup/영수증 인계 호출 위치 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/providers/base.py",
+      "path": "backend/providers/base.py",
+      "sha256": "8360c653c1f7ad9f27f6c4171e3f00ad0b9a46ea875efe852f34e4d989bb3189",
+      "read_scope": "80~145 실행 사용량·turn_limit_reason",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/datastore/task_repair.py",
+      "path": "backend/datastore/task_repair.py",
+      "sha256": "912c3826c319e55e7597132a2a24c01d03a90eb6649109a26c48574a065fbc96",
+      "read_scope": "request 82~115 및 부모/범위/후보 생성 심볼 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/repair_resume.py",
+      "path": "backend/cognition/repair_resume.py",
+      "sha256": "0997e13362db589ad62518720d9c6f226336756c3c191cba1f3c19b79d179189",
+      "read_scope": "보존·사용자 재개 심볼 및 review_stream 178~235",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:data/packages/installed/tools/system_essentials/handler.py",
+      "path": "data/packages/installed/tools/system_essentials/handler.py",
+      "sha256": "974117b343c764d0171b48c93358f71a961e4e76bba6f8c86d6c80d780955a2b",
+      "read_scope": "680~710 component/task_repair/일반 dispatch",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:data/packages/installed/tools/system_essentials/body_ops.py",
+      "path": "data/packages/installed/tools/system_essentials/body_ops.py",
+      "sha256": "0bebe74266c95c904e064e78ba46cca66f3992522194021fd6f737e9faceebf6",
+      "read_scope": "620~668 commit diagnostic 및 Git d4dfafbf 부모의 _git_env 절단",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/base/python_environment_lock.py",
+      "path": "backend/base/python_environment_lock.py",
+      "sha256": "f0a92eb50cd8c554a73546e085a2dbd2e9eb2e585dab9bb1e89dbadaab7e35f7",
+      "read_scope": "1~95 environment_lease/fingerprint",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/evaluation_input.py",
+      "path": "backend/cognition/evaluation_input.py",
+      "sha256": "7c78688356e2038b57c38ca4282f48ee1ef6ce492fd459f3587985ddf4981f84",
+      "read_scope": "140~190 evidence_references/evidence_requests 및 revision 정규화 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/final_evaluator.py",
+      "path": "backend/cognition/final_evaluator.py",
+      "sha256": "bc94af41abaa52f69ecacf1b040930acd0272eb9baf15da7f7e97bd7dd57806b",
+      "read_scope": "증거 요청 계약·회수 연결 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/ibl/ibl_v2_runtime.py",
+      "path": "backend/ibl/ibl_v2_runtime.py",
+      "sha256": "7d6f886ff83bdc1c00597eb6c0ba40b9c82817a7c5892cee3815a019c1df85d1",
+      "read_scope": "receipt/reuse 필드와 959~1075 호출 지문·재사용 경계",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/unified_distill.py",
+      "path": "backend/cognition/unified_distill.py",
+      "sha256": "3db4f37bd2efc92cae0583fc911165b275548380394cc14cfcf1d31242c9b9e7",
+      "read_scope": "1~65 가치 선별·원문·부분 성공 계약",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/ibl_distill_gates.py",
+      "path": "backend/cognition/ibl_distill_gates.py",
+      "sha256": "4f9ade51e8cea1285e93b41f158755ce6ffd0fd889878d6d424552455d064e10",
+      "read_scope": "205~255 source closure/select_distill_source",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/associative_recall.py",
+      "path": "backend/cognition/associative_recall.py",
+      "sha256": "2fcef4736c4f36d2e26be368db808fd400d48c407e032a45f61c913251a59c7a",
+      "read_scope": "source/receipt/used/attempted/successful 연결 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/cognition/cognitive_distill.py",
+      "path": "backend/cognition/cognitive_distill.py",
+      "sha256": "de6056d602c3fd2ce2eda992f72183ff96cc049ba14fe44c27b3227e581841c2",
+      "read_scope": "원문 기반 사용자 사실 선택·귀속 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:backend/base/episode_logger.py",
+      "path": "backend/base/episode_logger.py",
+      "sha256": "5dbaeed1f4aeff40e7b63d5f991500ed23fff6bd33873c2ea12985f459a8d570",
+      "read_scope": "schema·보존/집계·run 연결 위치 검색",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:docs/CAPABILITY_CLAIM_GUARD_2026_09_15.md",
+      "path": "docs/CAPABILITY_CLAIM_GUARD_2026_09_15.md",
+      "sha256": "703656687c0143ff38f0537e17e761061211b45a7565b934e116a9c965f9df2a",
+      "read_scope": "기능·예산·오판·전달·검증 한계",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:docs/TASK_CONTINUOUS_REPAIR_DESIGN_2026_10_31.md",
+      "path": "docs/TASK_CONTINUOUS_REPAIR_DESIGN_2026_10_31.md",
+      "sha256": "639cd15f622d517a6b50d68f64ce920df755a3a61939d68ced9a388481f2411e",
+      "read_scope": "구현·시험·지원 한계 절 검색, 제한된 모델 인수와 운영 관측 구별",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:docs/EXECUTION_COMPLETION_REPAIR_PLAN_2026_11_03.md",
+      "path": "docs/EXECUTION_COMPLETION_REPAIR_PLAN_2026_11_03.md",
+      "sha256": "2ee71ac65bfc50aa1dc5ca1f28e5cf036c4c0513bc7711afe441f1a897470d3a",
+      "read_scope": "R0~R5 책임·§13 구현/활성/측정 한계",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "internal:docs/EPISODE_5767_CAPABILITY_CONTINUITY_REPAIR_DESIGN_2026_11_02.md",
+      "path": "docs/EPISODE_5767_CAPABILITY_CONTINUITY_REPAIR_DESIGN_2026_11_02.md",
+      "sha256": "8a6bd6c818dabbd29616b8b10ea8e14c41c6b2bfa7603ec494e4e1576db88f5f",
+      "read_scope": "1~100 원인·참조·설계; 현재 코드·후속 Git과 상태 대조",
+      "kind": "code_or_design_not_operational_effect"
+    },
+    {
+      "id": "external:aws_retry",
+      "path": "external_aws_retry.json",
+      "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+      "title": "시간 제한, 재시도 및 지터를 사용한 백오프",
+      "sha256": "7d81515588c7be8bf61bb75f66b89c969ce3e79f34089b600374fe5a42525846",
+      "text_sha256": "642a9beeee4512192c4c0a2781f663a565cf7a0ea0a0d1ae0db8079573546e82",
+      "text_chars": 7971,
+      "read_scope": "timeout·멱등성·backoff/jitter와 분산계층 재시도 설명 선택",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:expel",
+      "path": "external_expel.json",
+      "url": "https://arxiv.org/html/2308.10144v3",
+      "title": "ExpeL: LLM Agents Are Experiential Learners",
+      "sha256": "2fbde5cc547cadd261e709a0a5e073bfff9461937071d07ed6c7c6bfe4dc4e66",
+      "text_sha256": "82c2dad3b5ef54b99251fb79255ba002333a7cf2da164c47aa9825c8e514d281",
+      "text_chars": 77595,
+      "read_scope": "초록; chars19200:25200 경험/통찰/회상 알고리즘; §5.1 setup, §5.2 및 §6 한계 발췌",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:knowno",
+      "path": "external_knowno.json",
+      "url": "https://robot-help.github.io/",
+      "title": "Robots That Ask For Help: Uncertainty Alignment for Large Language Model Planners",
+      "sha256": "de1d522ebda6004d15aff35cbdaf2344ae88a60e5908c871086240a617ba8c8c",
+      "text_sha256": "9289fdeeaec517be87f74aea5ada2d9752b87e52352889445a7ef5ad97a151bd",
+      "text_chars": 4878,
+      "read_scope": "프로젝트의 초록·목표·접근·실험 소개",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:knowno_pdf",
+      "path": "external_knowno_pdf.json",
+      "url": "https://arxiv.org/pdf/2307.01928",
+      "title": "arXiv:2307.01928v2  [cs.RO]  4 Sep 2023",
+      "sha256": "75d2b39e76afb63cb4a03b033af3e3a1e18a137022f47c9de85265744517dbbe",
+      "text_sha256": "a522d6a8e9db5c2ad60e9cf83d14229095f76e372c1cc8dcb35466f996529afc",
+      "text_chars": 94610,
+      "read_scope": "calibration/MCQA chars8039 이후; limitations chars38009 이후. 전체 실험표 미열람, 정량 개선률은 보고서에 사용하지 않음",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:langgraph",
+      "path": "external_langgraph.json",
+      "url": "https://docs.langchain.com/oss/python/langgraph/durable-execution",
+      "title": "Persistence - Docs by LangChain",
+      "sha256": "7e39172a49b41f4a63d3e5f70d2e42673ff6944486acd990ec90a33802377e7c",
+      "text_sha256": "add4ee5bc3811541355177d366cf0e5a3d3c01c88c75863ea3477b6b9740c21c",
+      "text_chars": 3939,
+      "read_scope": "반환된 Persistence 페이지(요청은 durable-execution); persistence, namespace, 누적비용 설명",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:openhands",
+      "path": "external_openhands.json",
+      "url": "https://docs.openhands.dev/sdk/guides/agent-stuck-detector",
+      "title": "Stuck Detector - OpenHands Docs",
+      "sha256": "bec5bdb26a46c8ea6cd6160afde1bf2082633ded6edfad7fb41c752429f59798",
+      "text_sha256": "8c37d6105c55730337fa630ee56fcde5f91f8fe1a9478edc6a73774d23f19c71",
+      "text_chars": 5061,
+      "read_scope": "공식 설명·예시·pattern 비교 본문",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:openhands_code",
+      "path": "external_openhands_code.json",
+      "url": "https://raw.githubusercontent.com/OpenHands/software-agent-sdk/main/openhands-sdk/openhands/sdk/conversation/stuck_detector.py",
+      "title": "",
+      "sha256": "56c633fd622250dce1b4ad9c9cd785cc9a58a9202163d8e3f7eb1697b017e0b8",
+      "text_sha256": "391a3242f857f5a4df3f2359a41c3a91858832b4938b7cc7e8b160598d7a95b3",
+      "text_chars": 15631,
+      "read_scope": "StuckDetector/is_stuck/수집 및 chars 0:7000; error streak/nudge/alternating/context-window/_event_eq 함수 선택. crawler가 줄바꿈을 접은 텍스트, 실행하지 않음",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:openhands_issue",
+      "path": "external_openhands_issue.json",
+      "url": "https://github.com/OpenHands/OpenHands/issues/10350",
+      "title": "agent: continue long-running command shouldn't trigger \"AgentStuckInLoop\" Error · Issue #10350 · OpenHands/OpenHands · GitHub",
+      "sha256": "5ed9f056da5e7b50aa7416bd7b00d925d0c69e51a12b0a13054422dff76e52c4",
+      "text_sha256": "5a4f4ec6582cfacc086c8e0da3914df94dd0dbc375d679892f0170f7a532d405",
+      "text_chars": 4724,
+      "read_scope": "장기 명령 polling 이슈 및 chars1900:4400 수정·검증 보고. 작성자의 보고, 독립 재현 아님",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:react",
+      "path": "external_react.json",
+      "url": "https://arxiv.org/html/2210.03629v3",
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "sha256": "dc079571868b6ca4fa9f0b7ea9be6b1eea3ad47f5c7d381d2c5950cb3886aca0",
+      "text_sha256": "20215f2b536fd9938b4d585ff7d0431a57c05f7e88507c5efd98d7e2c6d61e98",
+      "text_chars": 103135,
+      "read_scope": "초록·방법·table2 성공/실패 분석, HotpotQA/FEVER 비교·한계 선택",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:reflexion",
+      "path": "external_reflexion.json",
+      "url": "https://arxiv.org/html/2303.11366v4",
+      "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+      "sha256": "e773a1609239c877ec598cd83dbac455af1344fa04997a9e71836d1b1ed18bcb",
+      "text_sha256": "1c65cf508f94961dcabac0a6e1dd9531cf89136d89fcd9ce690e799a571c341b",
+      "text_chars": 57556,
+      "read_scope": "method/evaluator/self-reflection/memory; paragraphs 127,129,135,137,139,142,143,147,210,213,235,236,239,353 중심 검색 발췌. 전체 부록 미열람",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:self_correction",
+      "path": "external_self_correction.json",
+      "url": "https://arxiv.org/html/2310.01798v4",
+      "title": "",
+      "sha256": "920172b2a3306239b78a710f7780808302ef22ddbb6b026859a56dfedf2dd89b",
+      "text_sha256": "1e01eb83965e369ae2c4f230e8dd3f080c3d814d11c8df1b701bc403c9169347",
+      "text_chars": 367,
+      "read_scope": "No document 페이지. 논문 근거 제외; PDF로 대체",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:self_correction_pdf",
+      "path": "external_self_correction_pdf.json",
+      "url": "https://arxiv.org/pdf/2310.01798",
+      "title": "arXiv:2310.01798v2  [cs.CL]  14 Mar 2024",
+      "sha256": "44a8bb7ba47fcd9184d0fa020ed61ccf0a49739fe7887e85e7d0b8bf444e1299",
+      "text_sha256": "d0234b8de0a97ce2060abc7e9d9483ab02e0639a1f583ddf614aa489bc901726",
+      "text_chars": 57912,
+      "read_scope": "초록; benchmark/setup; chars 10600:15100 표2/3와 방법; 결론 chars 26648 이후 발췌",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:survey",
+      "path": "external_survey.json",
+      "url": "https://aclanthology.org/2024.tacl-1.78/",
+      "title": "When Can LLMs Actually Correct Their Own Mistakes? A Critical Survey of Self-Correction of LLMs - ACL Anthology",
+      "sha256": "8c58594730d6fb7c87244a24f6433051cb875f866d6d27f5f836101fd60dc53a",
+      "text_sha256": "33fd476d41e7f7bddea5106a1a91d6996ea8356e43d1eecd7094859515de2dc4",
+      "text_chars": 2248,
+      "read_scope": "초록·서지 정보",
+      "kind": "external_read_only_snapshot"
+    },
+    {
+      "id": "external:survey_pdf",
+      "path": "external_survey_pdf.json",
+      "url": "https://aclanthology.org/2024.tacl-1.78.pdf",
+      "title": "When Can LLMs Actually Correct Their Own Mistakes? A Critical Survey of Self-Correction of LLMs",
+      "sha256": "5aaa3c3d5baa7ecb7290c4699b07c7c0691507ee00942975a2d6c69f56ffeca5",
+      "text_sha256": "c9efeab3b1ecac3461a27d7913353133bc9495f35a80cf110c3d858f1b231d2a",
+      "text_chars": 92812,
+      "read_scope": "초록·분류 및 표1 chars 7200:10500, 후속 조건 비교 검색. 전문 수집/선택 열람",
+      "kind": "external_read_only_snapshot"
+    }
+  ],
+  "episode_coordinates": "world_pulse.db trajectory_event: (episode_id,event_seq), distinct from TurnStore.seq",
+  "privacy": "No private raw conversations or credentials copied to this index. Raw internal evidence remains in existing stores.",
+  "limits": [
+    "No operational repair or failure injection",
+    "No full historical prompt reconstruction",
+    "No independent end-to-end performance experiment",
+    "Public main-branch code is content-hashed, not pinned to a release commit"
+  ]
+}

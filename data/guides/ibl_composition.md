@@ -21,7 +21,7 @@ PC·Android 반환의 `failure.cause`는 원 오류, `failure.recovery`는 구�
 ## 작성 순서
 
 복잡한 새 일의 기본은 **사용자 요구 → 분해 이유 → 함수별 계약 → 구현 → 최상위 조합**이다.
-지역 함수·관용구를 조합하고 반복할 정의만 저장한다. 장문 설명·단계별 모델 호출은 필요 없다.
+[판단 경계](ibl_composition_tools.md#판단-경계와-실행-묶음)까지 조합하고 반복할 정의만 저장한다.
 
 1. 입력·반환·출처·완료 조건을 정한다. 실제 액션 계약은 `execute_ibl(code="",describe=["node:action"])`으로 조회한다(한 번에 1~6개). `describe`와 코드를 함께 주면 조회 성공 후 한 번 실행하고 `descriptions`를 덧붙인다. `check:true`는 검사만, `read_result`는 단독 조회다.
 2. 변수는 값이다. 목록은 `.items/.count`로 감싸지 않고 그대로 전달하며 길이는 `len`으로 구한다.

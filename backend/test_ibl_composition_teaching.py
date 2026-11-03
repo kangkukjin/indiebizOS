@@ -447,3 +447,30 @@ def test_teaching_budget_matches_runtime_contract():
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+@pytest.mark.parametrize('amount', [2, 7])
+def test_fresh_remote_program_preserves_effect_receipt_across_failed_review(tmp_path, monkeypatch, amount):
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_entry import handle_request
+    sent = []
+    def dispatch(runtime, args):
+        sent.append(args['amount'])
+        return {'receipt': len(sent), 'amount': args['amount']}
+    registry = {'fixture:dispatch': Adapter(
+        {'version': 1, 'params': {'amount': 'Number'}, 'result': 'Record', 'effects': ['write_external']}, dispatch)}
+    monkeypatch.setattr('ibl_v2_adapters.load_registry', lambda *a, **kw: registry)
+    code = '''[def:새계산]($n){return $n*3}
+$job = [fixture:dispatch]{amount:[fn:새계산]{n:$n}}
+assert $accepted, "효과는 접수됐지만 내용 검토 미완료", $job
+return $job'''
+    request = {'edition': 2, 'code': code, 'inputs': {'n': amount, 'accepted': False}}
+    failed = handle_request(request, str(tmp_path))
+    assert not failed['success'], failed
+    assert sent == [amount * 3]
+    resumed = handle_request({**request, 'resume': failed['resume']}, str(tmp_path))
+    assert not resumed['success'] and sent == [amount * 3]
+    # New interpretation is a pure follow-up using the retained effect receipt.
+    reviewed = handle_request({'edition': 2, 'code': 'assert $receipt.amount > 0; return $receipt',
+                              'inputs': {'receipt': {'receipt': 1, 'amount': amount * 3}}}, str(tmp_path))
+    assert reviewed['success'] and sent == [amount * 3]

@@ -30,7 +30,8 @@ def test_session_workspace_in_browser(tmp_path):
                       {'id':'52','role':'assistant','content':'**결정 사항**을 보존했습니다.', 'timestamp':'2026-10-15T01:00:01Z','images':[]}]}
     records['old'] = [{'id':str(i),'role':'user','content':f'오래된 대화 {i}',
         'timestamp':f'2026-10-{13 if i <= 2 else 14}T01:00:00Z','images':[]} for i in range(1,51)] + records['old']
-    turns, sent = {}, []
+    turns, sent, steering, steer_requests = {}, [], {}, []
+    steering_mode = {'reject': False, 'drop': False}
     def api(route):
         request = route.request
         path = urlparse(request.url).path
@@ -52,6 +53,21 @@ def test_session_workspace_in_browser(tmp_path):
                 turns[sid]={'id':'turn-'+sid,'state':'running','stream_content':'진행 중인 답변'}
                 next(i for i in items if i['id']==sid).update(running=True,title=body['message'])
                 result={'session_id':sid,'turn_id':'turn-'+sid}
+            elif path.endswith('/steer'):
+                steer_requests.append((sid, body))
+                result = {'accepted': not steering_mode['reject'], 'reason': '실행이 종료되어 접수하지 않았습니다.'}
+                rows = steering.setdefault(sid, [])
+                prior = next((r for r in rows if r['request_id'] == body['request_id']), None)
+                if result['accepted'] and not prior:
+                    rows.append({'id':str(len(rows)), 'request_id':body['request_id'],
+                                 'turn_id':body['turn_id'], 'instruction':body['message'],
+                                 'timestamp':'2026-10-15T02:01:00Z'})
+                if steering_mode['drop']:
+                    steering_mode['drop'] = False
+                    turns[sid]['state'] = 'completed'
+                    next(i for i in items if i['id'] == sid)['running'] = False
+                    route.abort('failed')
+                    return
             elif path.endswith('/cancel'):
                 turns[sid]['state']='cancelled';next(i for i in items if i['id']==sid)['running']=False
                 result={'cancelled':True}
@@ -60,7 +76,8 @@ def test_session_workspace_in_browser(tmp_path):
             else:
                 before=int(parse_qs(urlparse(request.url).query).get('before',['999999'])[0])
                 rows=[r for r in records[sid] if int(r['id']) < before]
-                result={'messages':rows[-50:],'has_older':len(rows)>50,'events':[], 'turn':turns.get(sid),'panels':{}}
+                result={'messages':rows[-50:],'has_older':len(rows)>50,'events':[], 'turn':turns.get(sid),'panels':{},
+                        'steering':steering.get(sid, [])}
         route.fulfill(status=200,content_type='application/json',body=json.dumps(result),headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'})
     try:
         for _ in range(100):
@@ -72,7 +89,8 @@ def test_session_workspace_in_browser(tmp_path):
         with sync_playwright() as pw:
             browser=pw.chromium.launch(headless=True)
             try:
-                page=browser.new_page(viewport={'width':1280,'height':900},timezone_id='Asia/Seoul')
+                context=browser.new_context(viewport={'width':1280,'height':900},timezone_id='Asia/Seoul')
+                page=context.new_page()
                 errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
                 page.route('http://127.0.0.1:8765/**',api)
                 # Reproduce a long-lived Vite server serving the pre-session catalog.
@@ -106,6 +124,20 @@ def test_session_workspace_in_browser(tmp_path):
                 textbox.fill('새 주제 조사');textbox.press('Enter')
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
                 assert sent == [('new1','새 주제 조사')]
+                expect(textbox).to_be_enabled()
+                textbox.fill('국내 자료만 사용해줘');textbox.press('Enter')
+                expect(textbox).to_have_value('')
+                expect(page.get_by_text('국내 자료만 사용해줘',exact=True)).to_be_visible()
+                assert steer_requests[-1][0] == 'new1'
+                assert steer_requests[-1][1]['turn_id'] == 'turn-new1'
+                assert len(sent) == 1
+                steering_mode['reject'] = True
+                textbox.fill('거절되어도 보존할 입력');textbox.press('Enter')
+                expect(page.get_by_text('실행이 종료되어 접수하지 않았습니다.',exact=True)).to_be_visible()
+                expect(textbox).to_have_value('거절되어도 보존할 입력')
+                assert len(steering['new1']) == 1
+                steering_mode['reject'] = False
+                textbox.fill('')
                 page.get_by_role('button',name='새 세션',exact=True).click()
                 expect(page.get_by_text('진행 중인 답변',exact=False)).not_to_be_visible()
                 assert turns['new1']['state']=='running'
@@ -114,6 +146,30 @@ def test_session_workspace_in_browser(tmp_path):
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
                 page.reload()
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
+                expect(page.get_by_text('국내 자료만 사용해줘',exact=True)).to_have_count(1)
+                # 두 번째 창에도 같은 접수 기록이 보이며 다른 새 작업을 만들지 않는다.
+                second = page.context.new_page()
+                second.route('http://127.0.0.1:8765/**', api)
+                second.goto(url+'/#/system-ai')
+                expect(second.get_by_text('국내 자료만 사용해줘',exact=True)).to_be_visible()
+                second.locator('textarea').last.fill('출처도 표시해줘')
+                second.locator('textarea').last.press('Enter')
+                expect(page.get_by_text('출처도 표시해줘',exact=True)).to_be_visible()
+                assert len(sent) == 1
+                second.close()
+                # 접수 뒤 HTTP 응답만 유실되고 실행까지 끝나도 원래 신원으로 확인한다.
+                steering_mode['drop'] = True
+                textbox.fill('결론은 세 줄로');textbox.press('Enter')
+                expect(page.get_by_title('작업 중단')).to_have_count(0)
+                expect(textbox).to_have_value('결론은 세 줄로')
+                lost_request = steer_requests[-1]
+                textbox.press('Enter')
+                expect(textbox).to_have_value('')
+                assert steer_requests[-1] == lost_request
+                assert len(sent) == 1
+                expect(page.get_by_text('결론은 세 줄로',exact=True)).to_have_count(1)
+                page.reload()
+                expect(page.get_by_text('결론은 세 줄로',exact=True)).to_have_count(1)
                 page.get_by_role('button',name='히스토리',exact=True).click()
                 page.get_by_role('button',name='회의 준비',exact=True).click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()

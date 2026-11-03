@@ -15,6 +15,12 @@ class Target(BaseModel):
     agent_id: str = ""
 
 
+class Steering(Target):
+    message: str = Field(min_length=1, max_length=2000)
+    turn_id: str = Field(min_length=1, max_length=128)
+    request_id: str = Field(min_length=1, max_length=128)
+
+
 class Change(Target):
     title: str | None = Field(default=None, max_length=120)
 
@@ -85,6 +91,17 @@ async def send(sid: str, req: Message):
         store.finish(binding, "failed", str(exc))
         raise HTTPException(503, str(exc)) from exc
     return {"turn_id": binding.turn_id, "session_id": sid}
+
+
+@router.post("/{sid}/steer")
+async def steer(sid: str, req: Steering):
+    import asyncio
+    store, _ = get_store(req.target, req.project_id, req.agent_id)
+    try:
+        return await asyncio.to_thread(service.steer, store, sid, req.turn_id,
+                                       req.request_id, req.message)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/{sid}/cancel")

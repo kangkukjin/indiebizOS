@@ -8,7 +8,10 @@ export interface SessionTarget { target: string; project_id?: string; agent_id?:
 export interface SavedSession { id: string; title: string; running?: boolean; created_at?: string; updated_at?: string }
 interface Event { type: string; id?: string; name?: string; input?: Record<string, unknown>; result?: string;
  content?: string; message?: string; is_error?: boolean; todos?: TodoItem[]; questions?: QuestionItem[] }
+interface Steering { id: string; instruction: string; timestamp: string; request_id: string; turn_id: string }
+interface SteeringRequest { message: string; turn_id: string; request_id: string }
 interface Snapshot {
+ steering?: Steering[];
  messages: { id: string; role: string; content: string; timestamp: string; images: string[] }[];
  panels?: { todo?: {todos?: TodoItem[]}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
  has_older: boolean; turn: { id: string; state: string; stream_content?: string; progress?: TurnProgress | null } | null; events: Event[];
@@ -23,6 +26,8 @@ export function useConversationSession(id: string, target: SessionTarget, active
  const [messages, setMessages] = useState<ChatMessage[]>([]), [snapshot, setSnapshot] = useState<Snapshot>();
  const [error, setError] = useState(''), [sending, setSending] = useState(false), [hasOlder, setHasOlder] = useState(false);
  const pending = useRef(false), mounted = useRef(true), loaded = useRef(false);
+ const [sendError, setSendError] = useState('');
+ const retrySteer = useRef<SteeringRequest | null>(null);
  const targetRef = useRef(target); targetRef.current = target;
  const query = sessionQuery(target);
  const load = useCallback(async (before?: string) => {
@@ -66,8 +71,16 @@ export function useConversationSession(id: string, target: SessionTarget, active
  if (running && prog) { const t = [...tools].reverse().find(t => t.status === 'running');
   if (t) t.progress = { action:prog.action, step:prog.step, of:prog.of, reused:prog.reused, detail:prog.detail, at:Date.now() - Math.round((prog.age_s ?? 0) * 1000) } as ToolProgress; }
  const failure = [...(snapshot?.events || [])].reverse().find(e => e.type === 'error');
- const lastAssistant = messages.map(m => m.role).lastIndexOf('assistant');
- const shown = messages.map((m,i) => i === lastAssistant && snapshot?.turn?.state === 'completed' && tools.length ? {...m,toolActivities:tools} : m);
+ // 영속 접수 기록을 먼저 합친 뒤 중간 서술을 배치해 최종 답 앞의 순서를 보존한다.
+ const steering: ChatMessage[] = (snapshot?.steering || []).map(row => ({
+  id:`steer-${row.id}`, role:'user', content:row.instruction,
+  timestamp:new Date(row.timestamp.endsWith('Z') || /[+-]\d\d:\d\d$/.test(row.timestamp)
+   ? row.timestamp : `${row.timestamp.replace(' ', 'T')}Z`)
+ }));
+ const history = [...messages, ...steering.filter(m => !messages.length || m.timestamp >= messages[0].timestamp)]
+  .sort((a,b) => a.timestamp.getTime() - b.timestamp.getTime());
+ const lastAssistant = history.map(m => m.role).lastIndexOf('assistant');
+ const shown = history.map((m,i) => i === lastAssistant && snapshot?.turn?.state === 'completed' && tools.length ? {...m,toolActivities:tools} : m);
  if (interim.length) {
   // 실행 중이면 끝에, 끝났으면 마지막 답 앞에 — 최종 본문이 초안을 그대로 품으면(누적 텍스트가 최종이 된 경우) 그 초안은 거둔다.
   const final = lastAssistant >= 0 && !running ? shown[lastAssistant] : undefined;
@@ -75,17 +88,35 @@ export function useConversationSession(id: string, target: SessionTarget, active
   if (running || lastAssistant < 0) shown.push(...kept); else shown.splice(lastAssistant, 0, ...kept);
  }
  return { messages:shown,
-  loading:sending || running, canSteer:false, streamingContent:running ? snapshot?.turn?.stream_content : '',
+  loading:sending || running, canSteer:running && !sending, streamingContent:running ? snapshot?.turn?.stream_content : '',
   toolHistory:running ? tools : [], thinkingText:running ? thinking : '', todos, questions, planMode:snapshot?.panels?.plan_mode,
-  error:error || failure?.message || failure?.content || (snapshot?.turn?.state === 'interrupted' ? '앱 재시작으로 실행이 중단됐습니다. 기록을 확인하고 이어서 요청하세요.' : undefined),
+  error:sendError || error || failure?.message || failure?.content || (snapshot?.turn?.state === 'interrupted' ? '앱 재시작으로 실행이 중단됐습니다. 기록을 확인하고 이어서 요청하세요.' : undefined),
   hasOlder, loadOlder:async () => {
    try { if (messages[0]) await load(messages[0].id); }
    catch(e) { setError((e as Error).message); }
   },
   send:async (text,files,actionHint) => {
-   if (pending.current || running) return false;
-   pending.current = true; setSending(true); setError('');
-   try { const images = [], documents = []; let message = text;
+   if (pending.current) return false;
+   pending.current = true; setSending(true); setError(''); setSendError('');
+   try {
+    // 응답 유실 시 같은 턴·요청으로 확인한다. 폴링에서 종료됐다고 새 작업으로 바꾸지 않는다.
+    const retry = retrySteer.current;
+    if (retry || running) {
+     if (files.length || actionHint) throw Error('작업 중에는 텍스트 지시만 보낼 수 있습니다. 첨부와 도구 선택은 작업이 끝난 뒤 보내주세요.');
+     if (retry && retry.message !== text) throw Error('앞선 지시의 접수 여부가 확인되지 않았습니다. 이전 내용을 다시 보내 접수를 확인해주세요.');
+     if (!text.trim() || text.length > 2000) throw Error('추가 지시는 1~2000자로 입력해주세요.');
+     const request = retry || {message:text, turn_id:snapshot!.turn!.id, request_id:crypto.randomUUID()};
+     retrySteer.current = request;
+     const receipt = await sessionCall<{accepted:boolean;reason?:string}>(`/${id}/steer`,targetRef.current,'POST',request);
+     retrySteer.current = null;
+     if (!receipt.accepted) {
+      await load().catch(() => undefined);
+      throw Error(receipt.reason || '추가 지시가 접수되지 않았습니다.');
+     }
+     await load().catch(e => setError((e as Error).message));
+     return true;
+    }
+    const images = [], documents = []; let message = text;
     for (const file of files) {
      if (file.type.startsWith('image/')) images.push({ base64:await fileToBase64(file), media_type:file.type });
      else if (isTextFile(file)) message += `\n\n--- ${file.name} ---\n${await file.text()}`;
@@ -93,7 +124,7 @@ export function useConversationSession(id: string, target: SessionTarget, active
     }
     await sessionCall(`/${id}/messages`,targetRef.current,'POST',{message:message || '첨부 자료를 확인해주세요.',images,documents,action_hint:actionHint});
     await load().catch(e => setError((e as Error).message)); return true;
-   } catch(e) { setError((e as Error).message); return false; } finally { pending.current = false; setSending(false); }
+   } catch(e) { setSendError((e as Error).message); return false; } finally { pending.current = false; setSending(false); }
   },
   respondToPanel:async (action,message) => {
    if (pending.current || running) return false;

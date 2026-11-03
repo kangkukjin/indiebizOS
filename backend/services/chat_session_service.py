@@ -58,6 +58,55 @@ def cancel(store, sid):
     return bool(run)
 
 
+def steering_history(store, sid):
+    """접수 사건을 그대로 읽는다. 모델에 전달/처리됐다는 뜻으로 바꾸지 않는다."""
+    import json
+    with sessions.connection(store.path) as conn:
+        store.require(conn, sid)
+        rows = conn.execute("SELECT turn_id,created_at,payload FROM conversation_events "
+                            "WHERE session_id=? AND json_extract(payload,'$.type')=? "
+                            "AND coalesce(json_extract(payload,'$.source'),'user')='user' ORDER BY id",
+                            (sid, "handoff.steer.accepted")).fetchall()
+    return [{**json.loads(row["payload"]), "turn_id": row["turn_id"],
+             "timestamp": row["created_at"]} for row in rows]
+
+
+def steer(store, sid, turn_id, request_id, message):
+    """세션·턴을 고정해 접수한다. 응답 유실 재전송은 영속 접수증으로 돌려준다."""
+    from steer_inbox import post
+    message = message.strip()
+    receipt = {"session_id": sid, "turn_id": turn_id, "request_id": request_id}
+
+    def prior_receipt():
+        prior = next((row for row in steering_history(store, sid)
+                      if row.get("request_id") == request_id), None)
+        if prior is None:
+            return None
+        if prior["turn_id"] != turn_id or prior["instruction"] != message:
+            return {**receipt, "accepted": False, "reason": "같은 요청 신원으로 다른 지시를 보낼 수 없습니다"}
+        return {**receipt, "accepted": True}
+
+    prior = prior_receipt()
+    if prior:
+        return prior
+    run = _running.get((str(Path(store.path).resolve()), sid))
+    if (not run or run.finished or run.cancelled.is_set()
+            or run.session_binding.turn_id != turn_id):
+        return {**receipt, "accepted": False,
+                "reason": "대상 실행이 종료됐거나 중단 중입니다. 입력을 보존했으니 상태를 확인하고 다시 보내주세요."}
+    agent, _, task = run.target
+    if not agent or not task:
+        return {**receipt, "accepted": False, "reason": "작업을 준비 중입니다. 잠시 후 다시 보내주세요."}
+    try:
+        count = post(agent, message, task, require_active=True, request_id=request_id)
+        if not count:
+            return {**receipt, "accepted": False, "reason": "추가 지시를 입력해주세요."}
+    except ValueError as exc:
+        # 다른 재전송이 먼저 접수되고 종료 경계가 닫힌 경우에도 원 접수증을 보존한다.
+        return prior_receipt() or {**receipt, "accepted": False, "reason": str(exc)}
+    return {**receipt, "accepted": True}
+
+
 def snapshot(store, sid, before=None):
     result = store.history(sid, before)
     with sessions.connection(store.path) as conn:
@@ -73,6 +122,7 @@ def snapshot(store, sid, before=None):
     from conversation_sessions import Binding, state_directory
     import json
     state_dir = state_directory(Binding(store.path, sid, store.owner))
+    result["steering"] = steering_history(store, sid)
     result["panels"] = {}
     for name in ("todo", "question", "plan_mode"):
         try:

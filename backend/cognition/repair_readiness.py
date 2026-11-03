@@ -40,6 +40,10 @@ def requires_code_receipts(controller):
         return path.exists() or bool(previous.get("worktree") or previous.get("job_path"))
     if not isinstance(session, dict):
         return True
+    if session.get('repair_policy') == 2 and session.get('status') != 'staging':
+        # Publication changes the activation mechanism, not the completion
+        # contract. V2 already reviewed workspace criteria before sealing.
+        return True
     if session.get('program_activation') and program_published(base, session):
         return False
     if session.get("component_activation") and component_published(base, session):

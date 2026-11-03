@@ -12,6 +12,28 @@ import api_repair_continuation as consumer
 from supervisor_handoff import criteria_contract
 
 
+@pytest.mark.parametrize('publication', ['program', 'component'])
+def test_published_repair_uses_same_final_receipts_without_second_model_review(repair, monkeypatch, publication):
+    from test_repair_receipt_flow import command
+    from thread_context import get_goal_eval_outcome
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    probe = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
+        'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"')
+    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
+                          'active_verify_cmd': probe,
+                          'verification_plan': [{'criterion_id': 'C1', 'command': command(wt)}]})
+    assert applied['complete'], applied
+    saved = st.read_session(str(root), session['key'])
+    saved[publication + '_activation'] = [{'activation': 'active'}]
+    st._save_session(str(root), saved)
+    monkeypatch.setattr('repair_readiness.' + publication + '_published', lambda *a: True)
+    monkeypatch.setattr(st._candidate, 'active_generation_bytes', lambda *a: ('matched', 'publication verified'))
+    events = list(controller.finalize('완료', [], lambda *a, **k: pytest.fail('second model review')))
+    assert events[-1]['type'] == 'final'
+    assert get_goal_eval_outcome()['goal_status'] == 'ACHIEVED'
+
+
 def test_retry_keeps_activation_plan_and_applied_repair_accepts_missing_probe(repair):
     from test_repair_receipt_flow import command
     root, wt, st, session, controller = repair

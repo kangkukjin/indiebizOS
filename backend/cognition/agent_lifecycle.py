@@ -14,8 +14,15 @@ import yaml
 
 
 def _project_path(project_id: str) -> Path:
-    from project_manager import ProjectManager
-    return ProjectManager().get_project_path(project_id)
+    from runtime_utils import get_base_path
+    if (not project_id or Path(project_id).name != project_id
+            or project_id in (".", "..") or "\\" in project_id):
+        raise ValueError("프로젝트 이름에 경로를 사용할 수 없습니다.")
+    root = (get_base_path() / "projects").resolve()
+    path = root / project_id
+    if not path.resolve().is_relative_to(root):
+        raise ValueError("프로젝트 경계 밖의 경로입니다.")
+    return path
 
 
 def _load(project_path: Path) -> dict:
@@ -208,6 +215,25 @@ def read_text(project_id: str, agent_id: str, kind: str) -> str:
 
 def write_text(project_id: str, agent_id: str, kind: str, text: str) -> None:
     text_record(project_id, agent_id, kind, text=text or "")
+
+
+def agent_info(project_id: str, identifier: str) -> dict:
+    """지정 프로젝트의 저장 설정을 한 번 읽고 현재 실행 상태를 투영한다."""
+    from ibl_access import resolve_allowed_nodes
+    from ibl_registry import load_nodes_installed
+    from node_registry import build_agent_descriptor, map_tools_to_capabilities
+    from agent_registry import runner_registry
+    agent = _resolve(_load(_project_path(project_id)), identifier, by_name=True)
+    active_nodes = set(load_nodes_installed().get("nodes", {}))
+    if "allowed_nodes" in agent or "allowed_tools" not in agent:
+        allowed = resolve_allowed_nodes(agent.get("allowed_nodes"))
+        capabilities = sorted(active_nodes if allowed is None else active_nodes & allowed)
+    else:
+        capabilities = map_tools_to_capabilities(agent.get("allowed_tools") or [])
+    descriptor = build_agent_descriptor(project_id, agent, capabilities=capabilities)
+    runner = runner_registry.get(f"{project_id}:{agent['id']}")
+    descriptor["running"] = runner is not None and runner.running
+    return descriptor
 
 
 def start_agent(project_id: str, agent_id: str) -> dict:

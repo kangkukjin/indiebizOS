@@ -199,7 +199,7 @@ def _get_tool_node_map() -> dict:
     return mapping
 
 
-def _map_tools_to_capabilities(allowed_tools: list) -> List[str]:
+def map_tools_to_capabilities(allowed_tools: list) -> List[str]:
     """allowed_tools 목록을 IBL 노드 이름 집합으로 변환"""
     # allowed_tools → IBL 노드 capabilities 매핑
     tool_map = _get_tool_node_map()
@@ -220,14 +220,11 @@ def _extract_agent_tags(project_id: str, agent_name: str, role_desc: str) -> Lis
     return list(set(tags))[:10]
 
 
-def _build_agent_descriptor(project_id: str, agent_config: dict) -> dict:
+def build_agent_descriptor(project_id: str, agent_config: dict, *, capabilities: list) -> dict:
     """에이전트 설정에서 노드 디스크립터 생성"""
     agent_id = agent_config.get("id", "unknown")
     agent_name = agent_config.get("name", "unnamed")
     role_desc = agent_config.get("role_description", "")
-
-    # allowed_tools → IBL 노드 capabilities 매핑
-    capabilities = _map_tools_to_capabilities(agent_config.get("allowed_tools", []))
 
     # 태그: 프로젝트명 + 역할설명에서 추출
     tags = _extract_agent_tags(project_id, agent_name, role_desc)
@@ -271,7 +268,8 @@ def _load_agent_nodes() -> List[Dict]:
             with open(agents_file, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             for agent in data.get("agents", []):
-                descriptor = _build_agent_descriptor(project_id, agent)
+                descriptor = build_agent_descriptor(
+                    project_id, agent, capabilities=map_tools_to_capabilities(agent.get("allowed_tools") or []))
                 nodes.append(descriptor)
         except Exception:
             continue

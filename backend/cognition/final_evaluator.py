@@ -259,6 +259,8 @@ def prepare(controller, tool_calls=None):
                                     if a["path"] not in staged]
     from research_review import submission_paths, review_text, claims
     submitted = submission_paths(artifact_response, controller.project_path)
+    # 공개 URL만 전달한 경우에도 기존 출력 영수증의 산출물을 잃지 않는다.
+    explicit_submission = any(a['path'] in submitted for a in controller.content_artifacts)
     research_documents = []
     from evaluation_input import record
     attachments = []
@@ -270,7 +272,7 @@ def prepare(controller, tool_calls=None):
             research_documents.append({'path': path, 'hash': artifact['hash'], 'text': text})
         attachments.append(record(text, subject=path, source_ref=artifact['evidence_id'],
                                   revision=artifact['evidence_id'],
-                                  role='submission'))
+                                  role='submission' if not explicit_submission or path in submitted else 'support'))
         from cognitive_eval import bounded_attachment
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         # 모델엔 비밀이 가려진 증거 본문을 주되, 변경 감지 지문은 디스크 원문 기준이다.
@@ -424,6 +426,20 @@ def invoke(controller, prompt="", *, phase="final"):
         full_response=True, evaluation_attachments=packet.get('attachments'),
     )
     packet["selection_sources"] = getattr(evaluator, "evaluation_sources", [])
+    if phase == 'final':
+        # 원샷 평가도 같은 감독 예산을 소비한다. 전역 턴 비용에 재청구하지 않는다.
+        usage = getattr(evaluator, 'evaluation_usage', {})
+        spent = controller.phase_usage.setdefault('final', {'input': 0, 'output': 0})
+        for key in ('input', 'output'):
+            if usage.get(key) is not None:
+                spent[key] += usage[key]
+                controller.usage[key] += usage[key]
+                controller.final_usage[key] += usage[key]
+        metrics = getattr(evaluator, 'evaluation_metrics', None) or {}
+        spent['last_input'] = usage.get('input') or metrics.get('estimated_tokens', 0)
+        packet['evaluation_budget'] = copy.deepcopy({
+            'usage': controller.usage, 'final_usage': controller.final_usage,
+            'phase_usage': controller.phase_usage})
     manifest = controller._evaluation_snapshot["response"]
     result = {"status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
               "reason": feedback, "severity": severity, "response_version": manifest["version"],

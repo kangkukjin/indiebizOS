@@ -50,12 +50,12 @@ class EvaluationPrompt(str):
         wanted = terms(self.context)
 
         def render(budget):
-            # Recoveries and explicit staged submissions get a first share; the
-            # remaining budget is shared across every other file/context/trace.
+            # Requested passages, then explicit submissions, then other evidence.
+            # A collected source must not displace the artifact being evaluated.
             recovered = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == 'recovered'}
             sizes = allocate(recovered, budget, cap=budget) if recovered else {}
             preferred = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == 'submission'}
-            sizes.update(allocate(preferred, (budget - sum(sizes.values())) // 2, cap=budget) if preferred else {})
+            sizes.update(allocate(preferred, budget - sum(sizes.values()), cap=budget) if preferred else {})
             left = budget - sum(sizes.values())
             rest = allocate({k: n - sizes.get(k, 0) for k, n in lengths.items()}, left, cap=budget)
             sizes = {k: sizes.get(k, 0) + rest.get(k, 0) for k in lengths}
@@ -223,8 +223,33 @@ def evidence_requests(feedback, packet):
     return result
 
 
+def new_evidence_requests(requests, attachments):
+    """Subtract already recovered ranges; identity includes the immutable revision.
+
+    Only recovered text is guaranteed to have survived selection. Original
+    attachments and reference manifests are not proof of delivery to the model.
+    """
+    covered = {}
+    for row in attachments:
+        if row.get('role') == 'recovered':
+            key = (row.get('source_ref'), row.get('revision'))
+            start = row.get('start', 0)
+            covered.setdefault(key, []).append((start, start + len(row['text'])))
+    pending = []
+    for request in requests:
+        key = (request['evidence_id'], request['revision'])
+        ranges = [(request['start'], request['end'])]
+        for left, right in sorted(covered.get(key, [])):
+            ranges = [(a, b) for start, end in ranges
+                      for a, b in ((start, min(end, left)), (max(start, right), end)) if a < b]
+        for start, end in ranges:
+            pending.append({**request, 'start': start, 'end': end})
+            covered.setdefault(key, []).append((start, end))
+    return pending
+
+
 def recover(controller, requests):
-    """Read only authenticated masked turn evidence; one controller-owned recovery."""
+    """Read only authenticated masked evidence from this turn, preserving revisions."""
     rows = []
     for request in requests:
         if controller.cancelled():

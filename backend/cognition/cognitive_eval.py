@@ -445,6 +445,7 @@ class CognitiveEvalMixin:
         self.goal_outcome = parse_goal_outcome("")
         self.evaluation_failure = None
         self.evaluation_retryable = False
+        self.evaluation_usage = {}
         from evaluation_input import EvaluationPrompt, context_sections, record
         sections = []
         try:
@@ -562,8 +563,13 @@ class CognitiveEvalMixin:
             if visual_artifacts:
                 eval_images = [{"base64": a["base64"], "media_type": a["media_type"]}
                                for a in visual_artifacts]
-            eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
-                                           images=eval_images, role="evaluate")
+            from model_call_context import capture_usage, summarize_usage
+            with capture_usage() as usage:
+                try:
+                    eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
+                                                   images=eval_images, role="evaluate")
+                finally:
+                    self.evaluation_usage = summarize_usage(usage)
             failure = oneshot_failure_details()
             self.evaluation_metrics = prompt.metrics
             if failure:

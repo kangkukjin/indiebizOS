@@ -229,7 +229,7 @@ class Supervisor:
             return self.model_budget_available()
         if phase in {"final", "receipt", "plan_completion"}:
             # 필수 종결 호출은 탐색의 soft 배분으로 막지 않는다. 최종 검수는
-            # max_repairs, 도구 없는 계획 완성은 prepare의 최대 2회로 제한한다.
+            # 결함 보완은 max_repairs, 근거 회수는 새 구간·작업 예산으로 제한한다.
             return True
         bucket = "review" if phase == "review" else "plan"
         spent = self.phase_usage.get(bucket, {})
@@ -930,10 +930,16 @@ class Supervisor:
             # 예전 설정에 2 이상이 남아 있어도 최종 보완은 한 번으로 제한한다.
             max_repairs = min(1, max(0, self.config["max_repairs"]))
             repairs_used, evidence_reads = getattr(self, "_final_repair_counts", (0, 0))
-            # 기존 증거 회수는 실제 결함 수리 기회를 소모하지 않는다.
-            for attempt in range(max_repairs + 2):
+            # 회수는 새 불변 구간이 있을 때만 계속한다. 결함 수리 횟수와 구분한다.
+            attempt = 0
+            while True:
                 if self.cancelled():
                     break
+                from providers.base import turn_limit_reason
+                if limit := turn_limit_reason():
+                    decision = {"status": "UNKNOWN", **limit}
+                    break
+                attempt += 1
                 self.phase = "final"
                 self.call_stop = None
                 yield {"type": "thinking", "content": "평가자가 의식이 정한 달성 기준의 충족 여부를 확인하고 있습니다."}
@@ -974,7 +980,7 @@ class Supervisor:
                 self.log("decision", role="evaluate", validator="goal_eval", decision=decision, response=manifest)
                 from episode_logger import record_trajectory_event
                 record_trajectory_event("validation.completed", {
-                    "validator": "goal_eval", "round": attempt + 1,
+                    "validator": "goal_eval", "round": attempt,
                     "status": {"APPROVED": "ACHIEVED", "REWORK": "NOT_ACHIEVED"}.get(decision["status"], "UNKNOWN"),
                     "review_status": decision["status"], "goal_status": decision.get("goal_status", "UNKNOWN"),
                     "final": False,
@@ -982,8 +988,18 @@ class Supervisor:
                     "response_version": manifest["version"], "store": str(self.store.directory),
                 })
                 evidence_missing = decision["status"] == "UNKNOWN" and decision.get("recoverable")
+                requests = decision.get('evidence_requests', []) if evidence_missing else []
                 if evidence_missing:
-                    if evidence_reads:
+                    if requests:
+                        from evaluation_input import new_evidence_requests
+                        requests = new_evidence_requests(requests, self._evaluation_packet.get('attachments', []))
+                        if not requests:
+                            decision.update(kind='evidence_no_progress',
+                                            reason=decision['reason'] + '\n요청 구간은 이미 전달됐으며 새로 회수할 근거가 없습니다.')
+                            self.log('evaluation.recovery_stopped', role='harness', reason='evidence_no_progress')
+                            break
+                    elif evidence_reads:
+                        # 정확한 범위가 없는 실행자 인계는 기존 한 번만 허용한다.
                         break
                     evidence_reads += 1
                 elif decision["status"] == "REWORK":
@@ -997,15 +1013,17 @@ class Supervisor:
                     break
                 expected = max(self.config["final_input_reserve"],
                                self.phase_usage.get("final", {}).get("last_input", 0))
-                remaining = self.model_budget_remaining()["input"]
+                remaining_budget = self.model_budget_remaining()
+                remaining = remaining_budget["input"]
                 from providers.base import remaining_turn_tokens
                 task_remaining = remaining_turn_tokens()
                 last_input = (getattr(getattr(self.runner.ai, "_provider", None), "_last_prompt_usage", {}) or {}).get("input", 0)
-                direct_recovery = evidence_missing and bool(decision.get('evidence_requests'))
-                recovery_chars = sum(r['end'] - r['start'] for r in decision.get('evidence_requests', []))
+                direct_recovery = bool(requests)
+                recovery_chars = sum(r['end'] - r['start'] for r in requests)
                 cycle_expected = (expected + recovery_chars if direct_recovery else
                                   expected + max(last_input, self.config["repair_context_chars"] // 2))
-                if ((self.config["budget_mode"] == "hard" and remaining < expected)
+                if ((self.config["budget_mode"] == "hard" and
+                     (remaining < cycle_expected or remaining_budget['output'] <= 0))
                         or (task_remaining is not None and task_remaining < cycle_expected)):
                     self.log("repair.skipped", role="harness", reason="재검수 여력 부족", expected_input=expected)
                     decision = {"status": "UNKNOWN", "reason": "재검수 여력이 없어 보완을 시작하지 않았습니다"}
@@ -1020,7 +1038,7 @@ class Supervisor:
                     recovery_started = time.monotonic()
                     try:
                         with self.evaluation_stage('recover'):
-                            recovered = recover(self, decision['evidence_requests'])
+                            recovered = recover(self, requests)
                         changed = snapshot_error(self)
                         if changed:
                             raise ValueError(changed)
@@ -1029,7 +1047,7 @@ class Supervisor:
                         self._resume_evaluation = True
                         review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
                         self.log('evaluation.evidence_recovered', role='harness',
-                                 requests=decision['evidence_requests'],
+                                 requests=requests,
                                  elapsed_s=round(time.monotonic() - recovery_started, 6))
                     except (ValueError, OSError) as exc:
                         decision = {'status': 'UNKNOWN', 'reason': str(exc)}

@@ -20,6 +20,9 @@ def context_window(provider):
     explicit = getattr(provider, "context_window_tokens", None)
     if explicit and int(explicit) > 0:
         return int(explicit)
+    resolve = getattr(provider, "context_limits", None)
+    if callable(resolve) and (limits := resolve()):
+        return limits[0]
     kind = getattr(provider, "CONTEXT_PROVIDER", "unknown")
     model = (getattr(provider, "model", "") or "").lower()
     catalog = _catalog()
@@ -46,7 +49,10 @@ def input_budget(provider, output_tokens=None):
     reserve = int(output_tokens if output_tokens is not None else
                   getattr(provider, "DEFAULT_MAX_TOKENS", 4096))
     # 50/80% 비용 최적화 문턱 폐기. 출력 공간과 추정 오차 여유만 확보한다.
-    return max(1, min(window * 95 // 100, window - reserve - 1024))
+    resolve = getattr(provider, "context_limits", None)
+    limits = resolve() if callable(resolve) else None
+    effective = limits[1] if limits else window * 95 // 100
+    return max(1, min(effective, window - reserve - 1024))
 
 
 def request_chars(provider, messages):

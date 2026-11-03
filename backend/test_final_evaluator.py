@@ -11,6 +11,18 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
+def test_only_explicit_submissions_receive_submission_priority(supervisor, tmp_path):
+    from final_evaluator import prepare
+    report, source = tmp_path / 'report.md', tmp_path / 'source.json'
+    report.write_text('최종 보고서')
+    source.write_text('{"text":"수집 원문"}')
+    supervisor.store.put_response(f'보고서: {report}')
+    packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(source)}, 'result': 'saved'}])
+    roles = {r['subject']: r['role'] for r in packet['attachments']}
+    assert roles[str(report)] == 'submission'
+    assert roles[str(source)] == 'support'
+
+
 @pytest.mark.parametrize('reference,blocked', [
     ('', True),
     ('{"id":"user_request","quote":"재기동 전에는 물어봐"}', False),

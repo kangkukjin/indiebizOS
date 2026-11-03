@@ -169,6 +169,9 @@ def restore_review(controller, row):
             fingerprint["mode"] = "image"
     controller._final_criteria_contract = saved["packet"]["context"]["criteria_contract"]
     controller._final_repair_counts = saved.get("repair_counts", [0, 0])
+    for name, usage in saved['packet'].get('evaluation_budget', {}).items():
+        if name in {'usage', 'final_usage', 'phase_usage'}:
+            setattr(controller, name, usage)
     controller._resume_evaluation = True
     controller._review_row = row
     if controller.store.manifest() != saved["snapshot"]["response"]:

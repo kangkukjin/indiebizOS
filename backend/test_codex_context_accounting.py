@@ -102,6 +102,35 @@ def test_compaction_uses_catalog_maximum_not_half_default(tmp_path, monkeypatch)
     assert p._should_reset_session(800_000) == (False, "")
 
 
+def test_evaluation_uses_cli_catalog_with_effort_and_keeps_transport_limit(tmp_path, monkeypatch):
+    from model_context import context_window, input_budget
+    from model_request_budget import check, InputTooLarge
+    import pytest
+    monkeypatch.setattr('providers.codex._codex_home', lambda: tmp_path)
+    (tmp_path / 'models_cache.json').write_text(json.dumps({'models': [
+        {'slug': 'gpt-5.6-sol', 'max_context_window': 872000,
+         'context_window': 272000, 'effective_context_window_percent': 90}]}))
+    p = _provider()
+    assert p.model.endswith(':high')
+    assert context_window(p) == p.context_limits()[0] == 872000
+    assert input_budget(p) == 784800
+    check(p, 'x' * 300000, reserve=8192)
+    with pytest.raises(InputTooLarge) as error:
+        check(p, 'x' * 1050000, reserve=8192)
+    assert 'chars' in error.value.details['exceeded']
+    p.context_window_tokens = 200000
+    assert context_window(p) == p.context_limits()[0] == 200000
+    assert input_budget(p) == 190000
+
+
+def test_missing_cli_catalog_uses_conservative_fallback_for_bare_selector(tmp_path, monkeypatch):
+    from model_context import context_window
+    monkeypatch.setattr('providers.codex._codex_home', lambda: tmp_path)
+    p = _provider()
+    p.model = 'gpt-6-astra'
+    assert context_window(p) == 128000
+
+
 def test_measured_size_beats_stored_size(monkeypatch):
     """상위 관문: 벤더 실측이 있으면 지난 턴 저장값 대신 그 값으로 리셋을 판정한다."""
     from providers.cli_provider import CliSubprocessProvider

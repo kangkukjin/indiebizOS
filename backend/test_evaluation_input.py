@@ -194,7 +194,7 @@ def test_three_omitted_revisions_recover_and_persist_once(supervisor, monkeypatc
         saved = json.loads((supervisor.store.directory / 'repair_review.json').read_text())
         assert saved['repair_counts'] == [0, 1]
         assert len([r for r in saved['packet']['attachments'] if r['role'] == 'recovered']) == 3
-        # Even another valid request must not trigger another recovery.
+        # Repeating already delivered ranges must not trigger another recovery.
         return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps(requests)
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('duplicate executor recovery')
@@ -243,3 +243,128 @@ def test_workspace_check_reference_is_recoverable_without_conflating_check_id():
     assert refs[0]['evidence_id'] == refs[0]['revision'] == original
     assert refs[0]['recoverable'] and refs[0]['total'] == 90000
     assert refs[0]['criterion_ids'] == ['C1']
+
+
+def test_submission_is_complete_before_large_collected_sources():
+    report = '보고서 앞\n' + '최종 결론과 근거\n' * 1000 + '보고서 끝'
+    prompt = EvaluationPrompt('기준', [
+        *[record('수집 원문\n' * 10000, subject=f'source-{i}', source_ref=str(i)) for i in range(14)],
+        record(report, subject='report', role='submission')])
+    prompt.prepare_request(provider(request_limits={'chars': 40000}))
+    report_meta = next(r for r in prompt.metrics['sections'] if r['subject'] == 'report')
+    assert report_meta['completeness'] == 'complete'
+    assert prompt.metrics['omitted'] == 14
+
+
+def test_new_evidence_ranges_exclude_overlap_and_preserve_revision():
+    from evaluation_input import new_evidence_requests
+    rows = [record('abcd', subject='x', role='recovered', source_ref='x', revision='v1', start=2),
+            record('xx', subject='x', role='recovered', source_ref='x', revision='v1', start=8),
+            record('all text', subject='y', source_ref='y', revision='v1')]
+    request = {'criterion_id': 'C1', 'evidence_id': 'x', 'revision': 'v1', 'start': 0, 'end': 12}
+    result = new_evidence_requests([request, request], rows)
+    assert [(r['start'], r['end']) for r in result] == [(0, 2), (6, 8), (10, 12)]
+    changed = {**request, 'revision': 'v2'}
+    assert new_evidence_requests([changed], rows) == [changed]
+    other = {**request, 'evidence_id': 'y'}
+    assert new_evidence_requests([other], rows) == [other]
+
+
+def test_new_evidence_can_be_recovered_in_multiple_rounds(supervisor, monkeypatch):
+    from supervisor_handoff import criteria_contract
+    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
+    requests = []
+    for text in ['보고서 전체', '구현 원문', '반례 원문']:
+        supervisor.run_tool('read', {}, lambda text=text: text)
+        ref = supervisor.store.evidence(text)
+        requests.append({'criterion_id': cid, 'evidence_id': ref['id'], 'start': 0, 'end': len(text)})
+    calls = []
+
+    def evaluate(prompt, **kw):
+        calls.append(prompt)
+        recovered = [r for r in prompt.sections if r['role'] == 'recovered']
+        assert len(recovered) == len(calls) - 1
+        if len(calls) <= len(requests):
+            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([requests[len(calls) - 1]])
+        return 'ACHIEVED'
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('executor must not rerun')
+    assert finish(supervisor, '응답')[-1]['content'] == '응답'
+    assert len(calls) == 4 and supervisor._final_repair_counts == [0, 3]
+    saved = json.loads((supervisor.store.directory / 'repair_review.json').read_text())
+    assert saved['repair_counts'] == [0, 3]
+    assert len([r for r in saved['packet']['attachments'] if r['role'] == 'recovered']) == 3
+
+
+@pytest.mark.parametrize('stop', ['cancel', 'deadline', 'task_budget', 'supervisor_budget'])
+def test_evidence_recovery_respects_stop_conditions(supervisor, monkeypatch, stop):
+    from model_call_context import record_captured_usage
+    packet, request = request_packet(supervisor)
+    supervisor._resume_evaluation = True
+    calls = []
+    monkeypatch.setattr('providers.base.remaining_turn_tokens', lambda: 1 if calls and stop == 'task_budget' else None)
+    monkeypatch.setattr('providers.base.turn_limit_reason', lambda: (
+        {'kind': 'deadline', 'reason': 'task deadline'} if calls and stop == 'deadline' else None))
+    if stop == 'supervisor_budget':
+        supervisor.config.update(budget_mode='hard', max_input_tokens=80000)
+
+    def evaluate(prompt, **kw):
+        calls.append(prompt)
+        if stop == 'cancel':
+            supervisor.cancel_check = lambda: True
+        record_captured_usage({'input': 79000, 'output': 10}, 1)
+        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([request])
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('executor must not rerun')
+    finish(supervisor, '응답')
+    assert len(calls) == 1
+    assert supervisor.final_usage == {'input': 79000, 'output': 10}
+
+
+def test_recovery_after_checkpoint_does_not_reread_old_ranges(supervisor, monkeypatch):
+    packet, request = request_packet(supervisor)
+    request['revision'] = request['evidence_id']
+    packet['attachments'].extend(recover(supervisor, [request]))
+    supervisor._resume_evaluation = True
+    supervisor._final_repair_counts = [0, 1]
+    calls = []
+
+    def evaluate(prompt, **kw):
+        calls.append(prompt)
+        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([request])
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    result = finish(supervisor, '응답')
+    assert len(calls) == 1
+    assert '이미 전달' in result[-1]['content']
+
+
+def test_review_restore_preserves_evaluation_budget(supervisor, monkeypatch, tmp_path):
+    from final_evaluator import prepare, invoke
+    from repair_continuation import review_checkpoint
+    from repair_resume import restore_review
+    root = tmp_path / 'body'
+    directory = root / 'data/spill/supervision/review'
+    directory.mkdir(parents=True)
+    supervisor.store.directory = directory
+    supervisor.store.put_response('동일 응답')
+    prepare(supervisor)
+    from model_call_context import record_captured_usage
+
+    def evaluate(*args, **kw):
+        record_captured_usage({'input': 1000, 'output': 20}, 1)
+        return 'UNKNOWN\nUNKNOWN_REASON: evidence'
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    invoke(supervisor)
+    supervisor._final_repair_counts = [0, 2]
+    review_checkpoint(supervisor, supervisor._evaluation_packet, supervisor._evaluation_snapshot)
+    supervisor.usage = supervisor.final_usage = {'input': 0, 'output': 0}
+    supervisor.phase_usage = {}
+    monkeypatch.setattr('runtime_utils.get_base_path', lambda: root)
+    restore_review(supervisor, {'review_path': str(directory / 'repair_review.json')})
+    assert supervisor.usage == supervisor.final_usage == {'input': 1000, 'output': 20}
+    assert supervisor.phase_usage['final']['last_input'] == 1000
+    assert supervisor._final_repair_counts == [0, 2]

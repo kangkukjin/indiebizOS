@@ -254,6 +254,7 @@ class CodexProvider(CliSubprocessProvider):
 
     CLI_LABEL = "Codex"
     CLI_DISPLAY = "Codex"
+    CONTEXT_PROVIDER = "codex"  # CLI 캐시 부재를 API 모델의 공시 한도로 대체하지 않는다.
     STATE_PREFIX = "codex"
     SESSION_STORE = _STORE
 
@@ -293,6 +294,14 @@ class CodexProvider(CliSubprocessProvider):
         except (OSError, ValueError, TypeError):
             pass
         return None
+
+    def context_limits(self):
+        """평가 입력과 CLI 실행이 같은 선택자·카탈로그·명시 한도를 사용한다."""
+        explicit = getattr(self, "context_window_tokens", None)
+        if explicit and int(explicit) > 0:
+            window = int(explicit)
+            return window, window * 95 // 100
+        return self._catalog_context_limits()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -634,7 +643,7 @@ class CodexProvider(CliSubprocessProvider):
             cmd += ["-c", f"model_reasoning_effort={_toml_str(effort)}"]
 
         # 공시된 최대 창을 사용한다. 실효 예산을 다시 절반으로 줄이지 않는다.
-        limits = self._catalog_context_limits()
+        limits = self.context_limits()
         if limits:
             window, threshold = limits
             cmd += ["-c", f"model_context_window={window}",

@@ -99,14 +99,41 @@ def test_strict_relation_rejects_empty_model_output(monkeypatch):
 
 
 @pytest.mark.parametrize('history', [['previous'], []])
-def test_explicit_prior_task_uses_existing_conversation_record(unfinished, history):
+@pytest.mark.parametrize('suffix', [' 수리를 완료해줘', '에서 이어오던 수리를 완료해줘'])
+def test_explicit_prior_task_uses_existing_conversation_record(unfinished, history, suffix):
     root, wt, st, sess, controller = unfinished
     old = framing._load('owner')['last']
     old['at'] = '2020-01-01T00:00:00'
     framing._save('owner', {'last': {'task_id': 'unrelated'}, 'repeat': {'old': old}})
-    with resume.user_resume(controller.runner, sess['key'] + ' 수리를 완료해줘', history):
+    with resume.user_resume(controller.runner, sess['key'] + suffix, history):
         assert journal.current()['staging_task_id'] == sess['key']
         assert st.load_session(str(root), 'next')['worktree'] == sess['worktree']
+
+
+def test_user_review_resume_authenticates_followup_but_preserves_original_goal(unfinished, monkeypatch):
+    root, wt, st, sess, controller = unfinished
+    sess['status'] = 'applied'
+    st._save_session(str(root), sess)
+    row = journal.read(controller.task)
+    journal.save({**row, 'phase': 'review', 'applied': True})
+    controller.store.text = 'previous reviewed response'
+    controller.configure = lambda frame, **kw: setattr(controller, 'framing', frame)
+    controller.runner._refresh_execution_prompt = lambda *a, **kw: None
+    controller.finalize = lambda response, *a, **kw: iter([{'type': 'final', 'content': response}])
+    monkeypatch.setattr(resume, 'restore_review', lambda *a: None)
+    monkeypatch.setattr('system_ai_core._switch_to_role', lambda *a: None)
+    monkeypatch.setattr('system_ai_core._restore_provider', lambda *a: None)
+    monkeypatch.setattr('red_grant.issue_grant', lambda **kw: None)
+    monkeypatch.setattr('red_grant.revoke_grant', lambda **kw: None)
+    monkeypatch.setattr('reframe.turn_key_for', lambda *a: 'fixture')
+    monkeypatch.setattr('reframe.open_turn', lambda *a, **kw: None)
+    message = sess['key'] + '에서 이어오던 수리를 완료해줘'
+    with resume.user_resume(controller.runner, message, []):
+        current = journal.current()
+        assert current['goal'] == controller.message != current['resume_message']
+        events = list(resume.review_stream(controller.runner, controller, current))
+    assert events == [{'type': 'final', 'content': 'previous reviewed response'}]
+    assert controller.framing['criteria'] == row['framing']['criteria']
 
 
 def test_resume_relation_requires_execution_intent_and_keeps_history(monkeypatch):

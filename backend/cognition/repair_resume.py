@@ -73,7 +73,7 @@ def user_resume(runner, message, history):
     import re
     records = [last, *(saved.get("repeat") or {}).values()]
     explicit = [r for r in records if r.get("task_id") and
-                re.search(r"(?<![\w-])" + re.escape(r["task_id"]) + r"(?![\w-])", message)]
+                re.search(r"(?<![A-Za-z0-9_-])" + re.escape(r["task_id"]) + r"(?![A-Za-z0-9_-])", message)]
     if len({r["task_id"] for r in explicit}) > 1:
         raise ValueError("재개할 수리 작업을 하나로 지정해야 합니다")
     if explicit:
@@ -182,7 +182,7 @@ def review_stream(runner, controller, row, cancel_check=None):
     from reframe import open_turn, close_turn, turn_key_for
     if controller is None:
         raise ValueError("평가 재개에 필요한 감독이 비활성화되어 있습니다")
-    framing = inherited_framing(row["goal"])
+    framing = inherited_framing(row.get("resume_message", row["goal"]))
     previous = _switch_to_role(runner, "system_repair")
     key = turn_key_for(runner)
     channel = None

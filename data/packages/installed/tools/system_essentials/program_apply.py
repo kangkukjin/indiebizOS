@@ -1,4 +1,4 @@
-"""Apply ordinary package programs through the same verified candidate ledger."""
+"""Shared repair completion/recovery, with the package activation adapter."""
 from pathlib import Path
 
 import program_versions as versions
@@ -74,27 +74,18 @@ def finish(st, repo, session):
     if session.get('module_publication'):
         from red_apply import _load_handler
         return _load_handler({'repo': str(repo)})._load_sibling('program_host_apply').finish(st, repo, session)
-    from red_apply import _load_handler
     from runtime_utils import get_code_root
     from program_runtime import load
-    handler = _load_handler({'repo': str(repo)})
     for row in session['program_activation']:
         manifest = row['manifest']
         package = manifest['package']
         program = load(package, Path(get_code_root()) / 'data/packages/installed/tools' / package, repo)
         row['activation'] = 'active' if program.version == manifest['version'] else 'waiting_calls'
     active = all(r['activation'] == 'active' for r in session['program_activation'])
-    if active:
-        for field, command in (session['readiness'].get('activation_commands') or {}).items():
-            if command and st._candidate.activation(repo, session, field, command, st._save_session).get('state') != 'passed':
-                st._save_session(repo, session)
-                return {'success': False, 'applied': True, 'activated': True,
-                        'stage': 'activation', 'error': '프로그램 활성 검사 미통과', 'key': session['key']}
-    committed = (st._candidate.commit(repo, session, handler._load_sibling('body_ops')) if active else
-                 {'success': False, 'pending_activation': True})
-    recovered = recover_commit_failure(st, repo, session, committed) if active else None
-    if recovered:
-        return recovered
+    result = complete(st, repo, session) if active else None
+    if result and (result.get('rolled_back') or result.get('stage') == 'activation'):
+        return result
+    committed = result['commit'] if result else {'success': False, 'pending_activation': True}
     session['commit'] = committed
     for row in session['program_activation']:
         versions.publish(repo, row['manifest'], row['baseline'], {'session': session['key'], 'commit': committed})
@@ -107,6 +98,30 @@ def finish(st, repo, session):
             'programs': session['program_activation'],
             'message': ('프로그램 판본을 교체했습니다. 원래 업무를 새 호출로 확인하세요.' if active else
                         '해당 프로그램의 진행 호출이 끝나기를 기다립니다. 종료 후 자동으로 활성 확인·각인합니다.')}
+
+
+def complete(st, repo, session, *, activate=True):
+    """Shared activation checks, imprint and rejected-commit recovery for every route.
+
+    The generation controller calls the same flow with activation deferred until
+    its replacement worker is ready. Publication adapters only own the swap.
+    """
+    from red_apply import _load_handler
+    if activate:
+        for field, command in (session.get('readiness', {}).get('activation_commands') or {}).items():
+            if command and st._candidate.activation(repo, session, field, command, st._save_session).get('state') != 'passed':
+                st._save_session(repo, session)
+                return {'success': False, 'applied': True, 'activated': True,
+                        'stage': 'activation', 'error': '프로그램 활성 검사 미통과', 'key': session['key']}
+    handler = _load_handler({'repo': str(repo)})
+    committed = st._candidate.commit(repo, session, handler._load_sibling('body_ops'))
+    recovered = recover_commit_failure(st, repo, session, committed)
+    if recovered:
+        return recovered
+    session['commit'] = committed
+    st._save_session(repo, session)
+    return {'success': bool(committed.get('success')), 'applied': True, 'activated': activate,
+            'stage': 'complete' if activate else 'commit', 'key': session['key'], 'commit': committed}
 
 
 def recover_commit_failure(st, repo, session, committed):
@@ -154,8 +169,8 @@ def recover(st, repo, session):
                 temporary = output.name
             os.chmod(temporary, item['before']['mode'])
             os.replace(temporary, path)
-    rows = versions.read(repo)
-    for row in session['program_activation']:
+    rows = versions.read(repo) if session.get('program_activation') else None
+    for row in session.get('program_activation', []):
         package = row['manifest']['package']
         if (rows.get(package) or {}).get('version') == row['manifest']['version']:
             previous = session.get('program_previous', {}).get(package)
@@ -163,7 +178,8 @@ def recover(st, repo, session):
                 rows[package] = previous
             else:
                 rows.pop(package, None)
-    versions.atomic_json(versions.home(repo) / 'active.json', rows)
+    if rows is not None:
+        versions.atomic_json(versions.home(repo) / 'active.json', rows)
     session.update(status='staging', verified=False)
     session.pop('program_activation', None)
     st._candidate.invalidate(session)

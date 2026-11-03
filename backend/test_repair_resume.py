@@ -199,3 +199,23 @@ def test_applied_resume_follows_existing_task_binding_across_http_thread(unfinis
                 assert row is None and not activation and key == 'next'
         finally:
             supervision_bus.unregister(binding)
+
+
+def test_confirmed_recovery_reopens_same_candidate_in_current_execution(unfinished, monkeypatch):
+    from repair_context import activation_only
+    root, wt, st, sess, controller = unfinished
+    row = {**journal.read(controller.task), 'resume_task_id': 'next',
+           'staging_task_id': sess['key'], 'phase': 'verify_remaining', 'applied': True,
+           'result': {'outcome': 'healthy'}}
+    sess['status'] = 'applied'
+    st._save_session(str(root), sess)
+    with journal.resuming(row):
+        assert activation_only()
+        # The application service owns this transition after confirmed recovery.
+        sess.update(status='staging', verified=False)
+        st._save_session(str(root), sess)
+        assert not activation_only()
+        continued = st.load_session(str(root), 'next')
+        assert continued['worktree'] == sess['worktree']
+        assert continued['resumed_from'] == sess['key']
+        assert (wt / 'a.txt').read_text() == 'completed partial work'

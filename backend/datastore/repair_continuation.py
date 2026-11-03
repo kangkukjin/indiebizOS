@@ -77,13 +77,20 @@ def resuming(row):
 
 def current():
     row = _current.get()
-    if row is not None:
-        return row
-    # HTTP/MCP already resolves its task through the active supervisor. Reuse
-    # that binding instead of inventing another transport/context registry.
-    from supervision_bus import current as supervisor_current
-    controller = supervisor_current()
-    return getattr(controller, 'repair_continuation', None) if controller else None
+    if row is None:
+        # HTTP/MCP already owns task identity through its active supervisor.
+        from supervision_bus import current as supervisor_current
+        controller = supervisor_current()
+        row = getattr(controller, 'repair_continuation', None) if controller else None
+    if row and (row.get('applied') or (row.get('result') or {}).get('outcome') == 'healthy'):
+        task = row.get('staging_task_id') or row.get('task_id')
+        session = staging_session(task) if task else None
+        if session and session.get('status') == 'staging':
+            # Recovery changed the authoritative session. The old continuation
+            # snapshot must not prohibit editing until another task is created.
+            return {**row, 'applied': False, 'phase': 'execution',
+                    'staging_task_id': session['key']}
+    return row
 
 
 def inherited_framing(message):

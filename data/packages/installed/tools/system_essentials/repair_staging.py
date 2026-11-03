@@ -1005,18 +1005,12 @@ def _complete_immediate(repo, sess, result, ti):
     if _reload_triggering(sess) and ((current() or {}).get("result") or {}).get("outcome") != "healthy":
         return {**result, "complete": False, "message": "기존 적용 영수증의 활성 확인을 기다립니다"}
     sess = read_session(repo, sess["key"]) or sess
-    for field in ("verify_cmd", "active_verify_cmd"):
-        command = (sess.get("readiness", {}).get("activation_commands") or {}).get(field)
-        if command:
-            checked = _candidate.activation(repo, sess, field, command, _save_session)
-            if checked.get("state") != "passed":
-                out = _outcomes.finish(sess, result)
-                if checked.get("error"):
-                    out.update(error=checked["error"], stage="activation", complete=False, success=False)
-                return out
-    committed = commit_applied(repo, sess["key"])
-    sess = read_session(repo, sess["key"]) or sess
-    sess["commit"] = committed
+    handler = __import__("red_apply")._load_handler({"repo": repo})
+    completed = handler._load_sibling("program_apply").complete(
+        __import__("types").SimpleNamespace(**globals()), repo, sess)
+    if completed.get("rolled_back") or completed.get("stage") == "activation":
+        return completed
+    committed = completed["commit"]
     out = _outcomes.finish(sess, result)
     if committed.get("success"):
         _root_note("note_publish", repo, {"key": sess["key"], "repo": repo, "task_id": sess.get("root_task_id")},
@@ -1139,15 +1133,12 @@ def commit_applied(repo, key):
     sess = read_session(repo, key)
     if not sess:
         return {"success": False, "error": "수리 세션이 없습니다"}
-    body_spec = importlib.util.spec_from_file_location(
-        "system_essentials_repair_body", os.path.join(os.path.dirname(__file__), "body_ops.py"))
-    body = importlib.util.module_from_spec(body_spec)
-    body_spec.loader.exec_module(body)
+    handler = __import__("red_apply")._load_handler({"repo": repo})
     with _candidate.locked(repo, "application"):
-        result = _candidate.commit(repo, sess, body)
-        sess["commit"] = result
-        _save_session(repo, sess)
-        return result
+        result = handler._load_sibling("program_apply").complete(
+            __import__("types").SimpleNamespace(**globals()), repo, sess, activate=False)
+        return {**result["commit"], **({"rolled_back": True, "error": result.get("error")}
+                                      if result.get("rolled_back") else {})}
 
 
 def op_status(ti):

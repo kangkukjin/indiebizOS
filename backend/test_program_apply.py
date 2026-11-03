@@ -152,3 +152,46 @@ def test_commit_uncertainty_and_concurrent_edits_never_trigger_recovery(setup):
     assert apply.recover_commit_failure(st, str(repo), session,
                                        {'success': False, 'commit_not_created': True}) is None
     assert (root / 'helper.py').read_bytes() == before
+
+
+def test_restart_controller_uses_same_commit_recovery_before_worker_swap(setup, monkeypatch):
+    from types import SimpleNamespace
+    from restart_protocol import atomic_json
+    from restart_red import apply_job, reservation
+    repo, root, st, session, apply, runtime = setup
+    target = repo / 'backend/base/runtime_utils.py'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text('VALUE = 1\n')
+    subprocess.run(['git', 'add', str(target)], cwd=repo, check=True)
+    subprocess.run(['git', 'commit', '-qm', 'restart baseline'], cwd=repo, check=True)
+    candidate = st.stage_file(str(repo), 'restart-retry', str(target))
+    Path(candidate).write_text('VALUE = 2\n')
+    session = st.read_session(str(repo), 'restart-retry')
+    session.update(program_policy=1, repair_policy=2)
+    st._candidate.seal(str(repo), session, [{'gate': 'fixture', 'passed': True}],
+                       {'status': 'APPROVED'}, {'criteria': [{'id': 'C1', 'text': 'restart correction'}]})
+    session.update(status='apply_scheduled', scheduled_at='fixture')
+    st._save_session(str(repo), session)
+    handler = _load_handler()
+    handler._REPO_ROOT = repo
+    monkeypatch.setattr(handler, '_staging_mod', lambda: st)
+    monkeypatch.setattr('red_apply._load_handler', lambda job: handler)
+    # Process ownership is tested by the controller suite; exercise the real
+    # shared write/commit/recovery against Git without a live restart here.
+    monkeypatch.setattr(st, 'perform_scheduled_apply', lambda repo, key, **kw:
+                        st._perform_apply(repo, session, [], None, None))
+    job = {'repo': str(repo), 'key': session['key'], 'task_id': session['key'],
+           'scheduled_at': 'fixture', 'readiness_hash': st._candidate.digest(session['readiness'])}
+    job_path = repo / st.SESSION_DIRNAME / (session['key'] + '.apply.json')
+    atomic_json(job_path, job)
+    hook = repo / '.git/hooks/pre-commit'
+    hook.write_text('#!/bin/sh\necho core-hook-rejected\nexit 1\n')
+    hook.chmod(0o755)
+    result = apply_job(repo, job_path, reservation(job))
+    assert result['rolled_back'] and not result['applied'] and not result['verified']
+    assert 'core-hook-rejected' in result['error']
+    assert target.read_text() == 'VALUE = 1\n'
+    restored = st.read_session(str(repo), session['key'])
+    assert restored['status'] == 'staging' and restored['worktree'] == session['worktree']
+    assert Path(candidate).read_text() == 'VALUE = 2\n'
+    assert 'readiness' not in restored

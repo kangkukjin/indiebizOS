@@ -84,6 +84,9 @@ def apply_job(base, path, expected=None):
         if out.get("applied"):
             # 2026-10-27 재설계: 각인은 활성 전에 한다 — 수리 델타 반영·커밋 → 그 정본으로 세대 봉인 → 교체.
             out["commit"] = staging.commit_applied(str(base), job["key"])
+            if out["commit"].get("rolled_back"):
+                out.update(success=False, applied=False, verified=False, rolled_back=True,
+                           stage="staging", error=out["commit"].get("error"))
             sealed = (staging.read_session(str(base), job["key"]) or {}).get("sealed") or {}
             out["published_files"] = {rel: (item.get("after") or {}).get("sha") for rel, item in sealed.items()
                                       if item.get("after")}

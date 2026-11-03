@@ -1,5 +1,8 @@
 """기준의 의미 검토 소유권과 검사 중 정본 충돌의 조기 중단."""
 import pytest
+import shlex
+import subprocess
+import sys
 import boot_paths  # noqa: F401
 from test_repair_receipt_flow import repair  # noqa: F401
 from test_repair_workspace_completion import setup  # noqa: F401
@@ -7,6 +10,45 @@ from test_conscious_supervisor import supervisor  # noqa: F401
 import repair_policy as policy
 import api_repair_continuation as consumer
 from supervisor_handoff import criteria_contract
+
+
+def test_retry_keeps_activation_plan_and_applied_repair_accepts_missing_probe(repair):
+    from test_repair_receipt_flow import command
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    probe = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
+        'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"')
+    session['activation_commands'] = {'verify_cmd': probe}
+    st._save_session(str(root), session)
+    args = {'_repo_root': str(root), '_grant_key': session['key']}
+    applied = st.op_apply({**args, 'verification_plan': [{'criterion_id': 'C1', 'command': command(wt)}]})
+    assert applied['applied'] and applied['commit']['success'], applied
+    saved = st.read_session(str(root), session['key'])
+    assert saved['activation_checks']['verify_cmd']['state'] == 'passed'
+    assert not policy.completion(saved, {}, root)[0]  # Functional active probe still absent.
+    head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root)
+    completed = st.op_apply({**args, 'active_verify_cmd': probe})
+    assert completed['complete'], completed
+    saved = st.read_session(str(root), session['key'])
+    assert saved['activation_checks']['active_verify_cmd']['state'] == 'passed'
+    assert policy.completion(saved, {}, root)[0]
+    assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root) == head
+    assert not st.op_apply({**args, 'active_verify_cmd': ''})['success']
+    assert st.op_apply(args)['complete']  # Omission retains the successful probe.
+
+
+def test_supplementary_probe_failure_does_not_repeat_publication_or_claim_completion(repair):
+    from test_repair_receipt_flow import command
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    args = {'_repo_root': str(root), '_grant_key': session['key']}
+    applied = st.op_apply({**args, 'verification_plan': [{'criterion_id': 'C1', 'command': command(wt)}]})
+    head = applied['commit']['commit']
+    failed = st.op_apply({**args, 'active_verify_cmd': shlex.quote(sys.executable) + ' -c "raise SystemExit(1)"'})
+    assert failed['applied'] and not failed['complete'] and failed['stage'] == 'activation'
+    assert (root / 'a.txt').read_text() == 'fixed'
+    assert failed['commit']['commit'] == head
+    assert not policy.completion(st.read_session(str(root), session['key']), {}, root)[0]
 
 
 @pytest.mark.parametrize('entry', ['receipt', 'finalize'])

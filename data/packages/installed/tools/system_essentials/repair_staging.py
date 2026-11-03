@@ -947,8 +947,10 @@ def op_apply(ti):
         if not bundle["passed"]:
             return {"success": False, "applied": False, "checks": [bundle],
                     "error": "폰 번들 사본 생성 실패. 같은 사본에서 보완하세요"}
-    sess["activation_commands"] = {k: str(ti.get(k) or "").strip()
-                                    for k in ("verify_cmd", "active_verify_cmd")}
+    try:
+        _candidate.activation_plan(sess, ti)
+    except ValueError as exc:
+        return {"success": False, "applied": False, "error": str(exc)}
     if "verification_plan" in ti:
         sess["verification_plan"] = ti["verification_plan"]
     approval = controller.prepare_repair(repo, sess, verify, _candidate)
@@ -967,11 +969,8 @@ def op_apply(ti):
     finalize = ti.get("_red_finalize")
 
     # 공유 워커 구현은 턴 종료 후 외부 제어자가 교체한다.
-    verify_cmd = (ti.get("verify_cmd") or "").strip()
-    active_verify_cmd = (ti.get("active_verify_cmd") or "").strip()
-    if max(len(verify_cmd), len(active_verify_cmd)) > 2000:
-        return {"success": False, "applied": False,
-                "error": "검증 명령이 너무 깁니다(2000자 상한) — 스크립트 경로를 주세요."}
+    verify_cmd = sess["activation_commands"].get("verify_cmd", "")
+    active_verify_cmd = sess["activation_commands"].get("active_verify_cmd", "")
 
     if _reload_triggering(sess):
         out = _schedule_deferred_apply(repo, sess, checks, verify_cmd, active_verify_cmd)
@@ -994,6 +993,11 @@ _root_note = _outcomes.root_note
 def _complete_immediate(repo, sess, result, ti):
     if not result.get("applied"):
         return result
+    try:
+        _candidate.activation_plan(sess, ti)
+    except ValueError as exc:
+        return {"success": False, "applied": True, "error": str(exc)}
+    _save_session(repo, sess)
     if sess.get("program_activation"):
         handler = __import__("red_apply")._load_handler({"repo": repo})
         return handler._load_sibling("program_apply").resume(

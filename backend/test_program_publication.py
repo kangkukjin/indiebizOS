@@ -357,6 +357,15 @@ def test_sealed_generation_absorbs_runtime_bytes_without_test_artifacts(tmp_path
     root, receipt = pub.selected(repo, fresh)
     assert root == fresh and receipt['version'] == row['version']
     assert pub.selected_path(repo, fresh, 'backend/services/feature.py').read_text() == 'VALUE = 2\n'
+    session['module_publication'] = row
+    assert pub.activation_matches(repo, fresh, session)
+    # Excluding tests from a runtime generation must not exclude their source
+    # from the canonical/verified publication comparison.
+    (repo / 'backend/test_feature.py').write_text('changed after verification\n')
+    assert not pub.activation_matches(repo, fresh, session)
+    (repo / 'backend/test_feature.py').write_text(changes['backend/test_feature.py'])
+    (repo / 'backend/services/feature.py').write_text('VALUE = 99\n')
+    assert not pub.activation_matches(repo, fresh, session)
 
 
 def test_missing_body_catalog_does_not_poison_previous_catalog_cache(tmp_path, monkeypatch):

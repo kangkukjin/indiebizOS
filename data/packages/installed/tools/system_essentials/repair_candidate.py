@@ -580,6 +580,28 @@ def locked(repo, key, *, nonblocking=False):
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
+def activation_plan(session, request):
+    """생략한 검사는 보존한다. 적용 뒤에는 읽기 검사 추가만 허용한다."""
+    applied = session.get('status') == 'applied'
+    commands = dict(((session.get('readiness') or {}).get('activation_commands') if applied else
+                     session.get('activation_commands')) or {})
+    for field in ('verify_cmd', 'active_verify_cmd'):
+        if field not in request:
+            continue
+        command = str(request[field] or '').strip()
+        if len(command) > 2000:
+            raise ValueError('검증 명령이 너무 깁니다(2000자 상한) — 스크립트 경로를 주세요.')
+        if applied and commands.get(field) and command != commands[field]:
+            raise ValueError('적용한 활성 확인 계획은 제거하거나 바꿀 수 없습니다: ' + field)
+        commands[field] = command
+    session['activation_commands'] = commands
+    if applied:
+        # Existing read-only probe isolation owns execution. Adding evidence does
+        # not reopen source publication or weaken the approved workspace criteria.
+        session.setdefault('readiness', {})['activation_commands'] = dict(commands)
+    return commands
+
+
 def activation(repo, session, field, command, save):
     """이미 실행한 활성 확인은 영수증으로 회수한다. 결과 불명 명령은 반복하지 않는다."""
     import uuid

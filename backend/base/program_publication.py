@@ -154,9 +154,12 @@ def activation_matches(repo, code, session):
     root, row = selected(repo, code)
     if not row or row.get('activation') != 'active':
         return False
+    from generation_store import sealed, _excluded
+    generation = sealed(root)
     return all(row.get('owners', {}).get(p) == session['key'] and
                file_hash(Path(repo) / p) == (item.get('after') or {}).get('sha') and
-               file_hash(root / p) == (item.get('after') or {}).get('sha')
+               (file_hash(root / p) == (item.get('after') or {}).get('sha') or
+                generation and _excluded(p) and row['files'].get(p) == (item.get('after') or {}).get('sha'))
                for p, item in session.get('sealed', {}).items() if not item.get('artifact'))
 
 

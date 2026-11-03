@@ -17,39 +17,30 @@ from surface_assets import read_asset, asset_snapshot
 
 @asset_snapshot()
 def phone_html(*, display=True) -> str:
-    from launcher_web_shell import (
-        SHELL_HEAD_HTML,
-        SHELL_PANEL_AUTOPILOT_HTML,
-        SHELL_PANEL_MANUAL_HTML,
-        SHELL_PANEL_APP_HTML,
-        SHELL_TAIL_HTML,
-    )
-    from launcher_app_common import LAUNCHER_COMMON_JS
-    from launcher_render_core import LAUNCHER_CORE_JS
-    from launcher_app_autopilot import LAUNCHER_AUTOPILOT_JS
-    from launcher_app_manual import LAUNCHER_MANUAL_JS
-    from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
-    from launcher_web_render import LAUNCHER_RENDER_JS
+    from launcher_app_common import load_common_js
+    from launcher_render_core import load_core_js
+    from launcher_app_autopilot import load_autopilot_js
+    from launcher_web_render import load_render_js
     PHONE_SURFACES_HTML = read_asset('phone/phone_surfaces_html.html')
     PHONE_SETSURFACE_JS = read_asset('phone/phone_setsurface_js.js')
     PHONE_APPHOME_JS = read_asset('phone/phone_apphome_js.js')
     """폰네이티브 표면 HTML — 3탭 마크업 + 3탭 JS 조립."""
     html = (
-        SHELL_HEAD_HTML
+        read_asset('remote/shell_head_html.html')
         + PHONE_SURFACES_HTML
-        + SHELL_PANEL_AUTOPILOT_HTML
-        + SHELL_PANEL_MANUAL_HTML
-        + SHELL_PANEL_APP_HTML
-        + SHELL_TAIL_HTML
-        + LAUNCHER_COMMON_JS
-        + LAUNCHER_CORE_JS   # 공용 렌더 코어 — 원격런처와 같은 자리(LAUNCHER_COMMON_JS 바로 뒤)
+        + read_asset('remote/shell_panel_autopilot_html.html')
+        + read_asset('remote/shell_panel_manual_html.html')
+        + read_asset('remote/shell_panel_app_html.html')
+        + read_asset('remote/shell_tail_html.html')
+        + load_common_js()
+        + load_core_js()   # 공용 렌더 코어 — 원격런처와 같은 자리(load_common_js() 바로 뒤)
         + PHONE_SETSURFACE_JS
-        + LAUNCHER_AUTOPILOT_JS
-        + LAUNCHER_MANUAL_JS
-        + LAUNCHER_APPMODE_HEAD_JS
+        + load_autopilot_js()
+        + read_asset('remote/launcher_manual_js.js')
+        + read_asset('remote/launcher_appmode_head_js.js')
         + PHONE_APPHOME_JS
-        + LAUNCHER_APPMODE_REST_JS
-        + LAUNCHER_RENDER_JS
+        + read_asset('remote/launcher_appmode_rest_js.js')
+        + load_render_js()
     )
     if not display:
         return html

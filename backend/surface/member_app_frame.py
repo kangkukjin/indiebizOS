@@ -7,13 +7,12 @@ from surface_assets import read_asset, asset_snapshot
 def frame_html(display=True):
     from surface_assets import render_template
     LAUNCHER_COMMON_JS = '<script>\n' + read_asset('shared/launcher_common_js.js')
-    from launcher_render_core import LAUNCHER_CORE_JS
-    from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
+    from launcher_render_core import load_core_js
     LAUNCHER_RENDER_JS = render_template('remote/launcher_render_js.js', display_js=read_asset('remote/display.js'))
     head = read_asset('member/head.html')
     bridge = read_asset('member/bridge.js')
     bridge += read_asset('static/member_app_requests.js')
-    html = head + LAUNCHER_COMMON_JS + LAUNCHER_CORE_JS + LAUNCHER_APPMODE_HEAD_JS + LAUNCHER_APPMODE_REST_JS + LAUNCHER_RENDER_JS.split('</script>')[0] + bridge + '</script><!--INDIE_DISPLAY--></html>'
+    html = head + LAUNCHER_COMMON_JS + load_core_js() + read_asset('remote/launcher_appmode_head_js.js') + read_asset('remote/launcher_appmode_rest_js.js') + LAUNCHER_RENDER_JS.split('</script>')[0] + bridge + '</script><!--INDIE_DISPLAY--></html>'
 
     if not display:
         return html

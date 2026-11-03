@@ -198,5 +198,38 @@ def test_xray_translation_bundle_is_registered_and_sealed(tmp_path, monkeypatch,
         assets.read_asset('i18n/xray.json')
 
 
+def test_surface_assembly_does_not_import_dynamic_fragments(monkeypatch):
+    import importlib
+    modules = ['launcher_web_shell', 'launcher_web_app', 'launcher_web_render',
+               'launcher_app_common', 'launcher_app_autopilot', 'launcher_app_appmode',
+               'launcher_app_manual', 'launcher_app_sessions', 'launcher_app_warehouse',
+               'launcher_render_core']
+    def reject(name):
+        if name.startswith(('LAUNCHER_', 'SHELL_')):
+            pytest.fail('내부 조립이 동적 export를 사용했습니다: ' + name)
+        raise AttributeError(name)
+    for name in modules:
+        monkeypatch.setattr(importlib.import_module(name), '__getattr__', reject)
+    from launcher_surface_remote import launcher_html, remote_display
+    from launcher_surface_phone import phone_html
+    from member_shell import member_html
+    from member_app_frame import frame_html
+    with assets.source_build():
+        for render in (launcher_html, phone_html, member_html, frame_html):
+            assert '<' in render(display=False)
+        assert remote_display()
+
+
+def test_phone_only_reads_its_shell_panels():
+    from launcher_surface_phone import phone_html
+    with assets.source_build(), assets.track_reads() as reads:
+        html = phone_html(display=False)
+    assert '<' in html
+    assert 'remote/shell_panel_app_html.html' in reads
+    assert 'remote/shell_panel_forage_html.html' not in reads
+    assert 'remote/shell_panel_warehouse_html.html' not in reads
+    assert 'remote/launcher_apphome_js.js' not in reads
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

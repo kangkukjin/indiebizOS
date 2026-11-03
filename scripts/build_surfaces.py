@@ -31,12 +31,12 @@ def hashes(data):
 def render_all():
     from launcher_surface_remote import launcher_html
     from launcher_surface_phone import phone_html
-    from launcher_lite import LAUNCHER_LITE_HTML, lite_display
+    from launcher_lite import lite_html, lite_display
     from member_shell import member_html
     from member_app_frame import frame_html
     from surface_display import member_display, launcher_display
     from launcher_surface_remote import remote_display
-    pages = dict(remote=launcher_html(), phone=phone_html(), lite=LAUNCHER_LITE_HTML,
+    pages = dict(remote=launcher_html(), phone=phone_html(), lite=lite_html(),
                  member=member_html(), browser=member_html(browser=True),
                  desktop=member_html(desktop=True), frame=frame_html())
     displays = {

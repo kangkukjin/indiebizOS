@@ -1,15 +1,12 @@
-"""화면 자산의 호환 진입점. 원본은 frontend/surfaces, 본문은 판본별로 읽는다."""
+"""선택된 화면 판본을 명시적으로 조립한다. 동적 이름은 외부 import 호환용이다."""
 from surface_assets import read_asset
 
 
-def _parts():
-    from launcher_app_sessions import LAUNCHER_SESSIONS_JS
-    LAUNCHER_AUTOPILOT_JS = read_asset('remote/launcher_autopilot_js.js')
-    LAUNCHER_AUTOPILOT_JS += LAUNCHER_SESSIONS_JS
-    return {'LAUNCHER_AUTOPILOT_JS': LAUNCHER_AUTOPILOT_JS}
+def load_autopilot_js():
+    return read_asset('remote/launcher_autopilot_js.js') + read_asset('remote/launcher_sessions_js.js')
 
 
 def __getattr__(name):
-    if name not in ('LAUNCHER_AUTOPILOT_JS',):
-        raise AttributeError(name)
-    return _parts()[name]
+    if name == 'LAUNCHER_AUTOPILOT_JS':
+        return load_autopilot_js()
+    raise AttributeError(name)

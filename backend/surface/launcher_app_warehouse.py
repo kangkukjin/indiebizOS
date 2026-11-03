@@ -1,13 +1,11 @@
-"""화면 자산의 호환 진입점. 원본은 frontend/surfaces, 본문은 판본별로 읽는다."""
+"""선택된 화면 판본을 명시적으로 조립한다. 동적 이름은 외부 import 호환용이다."""
 from surface_assets import read_asset
 
 
-def _parts():
-    LAUNCHER_WAREHOUSE_JS = read_asset('remote/launcher_warehouse_js.js')
-    return {'LAUNCHER_WAREHOUSE_JS': LAUNCHER_WAREHOUSE_JS}
+ASSETS = {'LAUNCHER_WAREHOUSE_JS': 'remote/launcher_warehouse_js.js'}
 
 
 def __getattr__(name):
-    if name not in ('LAUNCHER_WAREHOUSE_JS',):
-        raise AttributeError(name)
-    return _parts()[name]
+    if name in ASSETS:
+        return read_asset(ASSETS[name])
+    raise AttributeError(name)

@@ -1,0 +1,218 @@
+{
+  "surface_comparison": {
+    "remote/False": {
+      "sha256": "330d0a0f0889c32236f124d9d0b8536dd609b3cdc84532f699635ee8e31b6ab1",
+      "bytes": 1517630,
+      "same_bytes": true,
+      "removed_assets": [],
+      "added_assets": []
+    },
+    "remote/True": {
+      "sha256": "3f13eb0636e36589001a95acf91347083043b4bd23aa3a8a4e953a7d813ac7e9",
+      "bytes": 2746438,
+      "same_bytes": true,
+      "removed_assets": [],
+      "added_assets": []
+    },
+    "phone/False": {
+      "sha256": "90834b9acd381368a486f4c0aa5250e3069f513749d49de3b19a719ed07f8327",
+      "bytes": 277907,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "remote/shell_panel_forage_html.html",
+        "remote/shell_panel_warehouse_html.html",
+        "remote/shell_surfaces_html.html",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "phone/True": {
+      "sha256": "794631bb572a7035b6130d4bdd610a9fceeea0602fbbea804a6b79e57fc59671",
+      "bytes": 384622,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "remote/shell_panel_forage_html.html",
+        "remote/shell_panel_warehouse_html.html",
+        "remote/shell_surfaces_html.html",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "member/False": {
+      "sha256": "999228156e99ebf2da10cab22dc41bc24db435f02e05333b30ac2f870e468186",
+      "bytes": 290354,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "member/True": {
+      "sha256": "b6598f9f4cd227b711da927d48bc28a1c66614a8e5a31a036984c930df1807ee",
+      "bytes": 355385,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "browser/False": {
+      "sha256": "c8ce546e4122dcb3145898346000040ec07b47d7fcc67613f0ddd5112dd21fbb",
+      "bytes": 329739,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "browser/True": {
+      "sha256": "b95ff37e8d6f0a4ce6193aa905b19e89d4383b04a05c08914e78316c076340d2",
+      "bytes": 397671,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "desktop/False": {
+      "sha256": "696ebb9e780c62c586c36aed3c327da40b3cc3d4a64659591702256e62d2dbbc",
+      "bytes": 290614,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "desktop/True": {
+      "sha256": "370afa189ec95f84e6b2a474d4af2b7abe9c34549cd8b18a1b5efd394e4c65e3",
+      "bytes": 355878,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js",
+        "shared/launcher_setsurface_js.js"
+      ],
+      "added_assets": []
+    },
+    "frame/False": {
+      "sha256": "a1a516692f395fe7498d88e3e36165d3791ed0e912765cbef32e1069e423d312",
+      "bytes": 174020,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js"
+      ],
+      "added_assets": []
+    },
+    "frame/True": {
+      "sha256": "754705647d278eea002a3f328b5e6e12c4477c24758f9191ea6fbbce64deb282",
+      "bytes": 221012,
+      "same_bytes": true,
+      "removed_assets": [
+        "remote/launcher_apphome_js.js"
+      ],
+      "added_assets": []
+    },
+    "lite/False": {
+      "sha256": "f93003eba353a59111d221d34eb0c697d772a2dd75aa6a49e008046c19b153d2",
+      "bytes": 26636,
+      "same_bytes": true,
+      "removed_assets": [],
+      "added_assets": []
+    },
+    "lite/True": {
+      "sha256": "c59558f43c1457a4f03eb48b5d8f0a7d1f12d918b6376b9f40c04eff1ba82251",
+      "bytes": 44928,
+      "same_bytes": true,
+      "removed_assets": [],
+      "added_assets": []
+    }
+  },
+  "migration_audit": {
+    "read_only": true,
+    "counts": {
+      "projects": 26,
+      "requires_review": 20,
+      "legacy_eligible": 6
+    },
+    "error_types": {
+      "AgentTextConflict": 20
+    },
+    "applied": false
+  },
+  "layer_comparison": {
+    "existing_modules": 1475,
+    "changed_layers": 0,
+    "baseline_edges": 4,
+    "pure_core_closure": 18,
+    "cross_layer_cycles": 0,
+    "private_symbol_leaks": 0
+  },
+  "full_regression": {
+    "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile",
+    "passed": 12414,
+    "skipped": 24,
+    "failed": 0,
+    "seconds": 454.45,
+    "junit_counts": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "24",
+      "tests": "12438",
+      "time": "454.236",
+      "timestamp": "2026-11-03T23:18:11.169857+09:00",
+      "hostname": "Mac-mini.local"
+    }
+  },
+  "active_code": {
+    "phase": "ACTIVE",
+    "code_digest": "0d3ffc7c7ebc732eaa3bbc550b634049",
+    "checked_files": {
+      "backend/boot_paths.py": true,
+      "backend/cognition/agent_cognitive.py": true,
+      "backend/cognition/agent_lifecycle.py": true,
+      "backend/cognition/member_session.py": true,
+      "backend/cognition/prompt_composition.py": true,
+      "backend/cognition/routing_system.py": true,
+      "backend/datastore/node_registry.py": true,
+      "backend/datastore/project_manager.py": true,
+      "backend/migrate_agent_text.py": true,
+      "backend/surface/api_agents.py": true,
+      "backend/surface/api_config.py": true,
+      "backend/surface/launcher_app_appmode.py": true,
+      "backend/surface/launcher_app_autopilot.py": true,
+      "backend/surface/launcher_app_common.py": true,
+      "backend/surface/launcher_app_manual.py": true,
+      "backend/surface/launcher_app_sessions.py": true,
+      "backend/surface/launcher_app_warehouse.py": true,
+      "backend/surface/launcher_surface_phone.py": true,
+      "backend/surface/launcher_surface_remote.py": true,
+      "backend/surface/launcher_web_app.py": true,
+      "backend/surface/launcher_web_render.py": true,
+      "backend/surface/launcher_web_shell.py": true,
+      "backend/surface/member_app_frame.py": true,
+      "backend/surface/member_shell.py": true,
+      "data/packages/installed/extensions/conversation/my_conversations.py": true
+    }
+  },
+  "active_surface": {
+    "version": "05d08d77b0476c85ba1ad065f8b78b105d4f72f821e4f6a9fe6ea7c680f9003f",
+    "previous": "1a3d8f61c60606fd802a7c5bd5d58e9b2ad3b5c26a8adc176752f9a50a1a10be",
+    "endpoint": "http://127.0.0.1:8765/launcher/app",
+    "http_status": 200,
+    "bytes": 2746438,
+    "sha256": "3f13eb0636e36589001a95acf91347083043b4bd23aa3a8a4e953a7d813ac7e9",
+    "matches_built_remote_html": true
+  },
+  "render_core_guard": {
+    "explicit_call_check": true,
+    "self_test": "passed",
+    "product_code_unchanged_after_full_regression": true
+  }
+}

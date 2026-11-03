@@ -14,10 +14,10 @@ from surface_assets import asset_snapshot, read_asset
 def launcher_html(*, display=True) -> str:
     """검증된 번역 셸 또는 한국어 원문. 네트워크·사용자 데이터 전송 없음."""
     with asset_snapshot():
-        from launcher_web_shell import LAUNCHER_SHELL_HTML
-        from launcher_web_app import LAUNCHER_APP_JS
-        from launcher_web_render import LAUNCHER_RENDER_JS
-        source = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+        from launcher_web_shell import load_shell_html
+        from launcher_web_app import load_app_js
+        from launcher_web_render import load_render_js
+        source = load_shell_html() + load_app_js() + load_render_js()
         html = localized_html(source, "remote")
         if not display:
             return html
@@ -60,11 +60,11 @@ def display_messages(source):
 
 @asset_snapshot()
 def remote_display():
-    from launcher_web_shell import LAUNCHER_SHELL_HTML
-    from launcher_web_app import LAUNCHER_APP_JS
-    from launcher_web_render import LAUNCHER_RENDER_JS
+    from launcher_web_shell import load_shell_html
+    from launcher_web_app import load_app_js
+    from launcher_web_render import load_render_js
     from surface_display import launcher_display
     with asset_snapshot():
-        source = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+        source = load_shell_html() + load_app_js() + load_render_js()
         return launcher_display(localized_html(source, 'remote'), 'remote', raw_html=source,
                                 rendered_code=localized_display(source), messages=display_messages(source))

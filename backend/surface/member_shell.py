@@ -12,8 +12,9 @@ def member_html(*, browser=False, desktop=False, display=True):
     if browser and desktop:
         raise ValueError('회원 표면 어댑터는 하나만 선택해야 합니다')
     with asset_snapshot():
-        from launcher_app_common import LAUNCHER_COMMON_JS
+        from launcher_app_common import load_common_js
         from member_workspace_ui import workspace_js
+        common_js = load_common_js()
         browser_js = ('\n'.join(read_asset('static/' + name) for name in BROWSER_ASSETS)
                       .replace('</script', '<\\/script') if browser else '')
         sidebar = render_template('member/sidebar.html', artifacts=read_asset('member/browser_artifacts.html') if browser else '')
@@ -31,7 +32,7 @@ def member_html(*, browser=False, desktop=False, display=True):
                 browser_style=read_asset('member/browser.css') if browser else '',
                 login=read_asset('member/browser_login.html') if browser else '',
                 main_attrs=' id="memberWorkspace" hidden' if browser else '',
-                sidebar=sidebar, panels=panels, common_js=LAUNCHER_COMMON_JS,
+                sidebar=sidebar, panels=panels, common_js=common_js,
                 host_js=host_js, workspace_js=workspace_js(browser=browser), browser_js=browser_js,
                 desktop_script='<script src="workspace.cjs"></script>' if desktop else '', display_script=display_script)
 

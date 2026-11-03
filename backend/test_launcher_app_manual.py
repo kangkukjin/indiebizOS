@@ -23,10 +23,10 @@ def cockpit(request, browser):
     with source_build():
         if request.param == 'source':
             # Import again under source_build: dynamic modules deliberately use snapshots.
-            from launcher_web_shell import LAUNCHER_SHELL_HTML
-            from launcher_web_app import LAUNCHER_APP_JS
-            from launcher_web_render import LAUNCHER_RENDER_JS
-            html = LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+            from launcher_web_shell import load_shell_html
+            from launcher_web_app import load_app_js
+            from launcher_web_render import load_render_js
+            html = load_shell_html() + load_app_js() + load_render_js()
         else:
             html = launcher_html(display=False)
             assert 'window.__ui=' in html, 'Build the UI catalog before acceptance tests'

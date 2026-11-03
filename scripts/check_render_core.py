@@ -13,6 +13,7 @@ backend/static/app_render_core.js 하나로 모은 뒤, 이 가드가 세 가지
 사용: python3 scripts/check_render_core.py [--self-test]
 """
 
+import ast
 import os
 import re
 import sys
@@ -128,9 +129,19 @@ def check(root: str = ROOT) -> list:
             continue
         with open(path, encoding="utf-8") as f:
             body = f.read()
-        if "LAUNCHER_CORE_JS" not in body:
+        try:
+            tree = ast.parse(body, filename=rel)
+        except SyntaxError as exc:
+            issues.append(f"{rel}: 표면 조립 구문 오류: {exc}")
+            continue
+        if not any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "load_core_js"
+            for node in ast.walk(tree)
+        ):
             issues.append(
-                f"{rel}: 표면 조립에 LAUNCHER_CORE_JS 가 없습니다 — 그 표면의 앱 탭은 "
+                f"{rel}: 표면 조립에 load_core_js() 호출이 없습니다 — 그 표면의 앱 탭은 "
                 "jget/tpl 부터 전부 undefined 로 죽습니다."
             )
 
@@ -179,12 +190,12 @@ def _self_test() -> int:
             ok = False
 
     with tempfile.TemporaryDirectory() as td:
-        for rel in ["backend/static", "frontend/src/components/generic"]:
+        for rel in ["backend/static", "backend/surface", "frontend/src/components/generic"]:
             os.makedirs(os.path.join(td, rel), exist_ok=True)
         shutil.copy(CORE, os.path.join(td, "backend", "static", "app_render_core.js"))
         for rel in SURFACES:
             with open(os.path.join(td, rel), "w", encoding="utf-8") as f:
-                f.write("LAUNCHER_CORE_JS\n")
+                f.write("html = load_core_js()\n")
         expect("깨끗한 트리 = 위반 0", check(td) == [])
 
         # 재정의 심기
@@ -196,10 +207,10 @@ def _self_test() -> int:
 
         # 표면 누락 심기
         with open(os.path.join(td, SURFACES[1]), "w", encoding="utf-8") as f:
-            f.write("# 코어 안 실음\n")
-        expect("표면 누락 검출", any("LAUNCHER_CORE_JS" in i for i in check(td)))
+            f.write("from launcher_render_core import load_core_js\n# load_core_js()\n")
+        expect("표면 누락 검출", any("load_core_js()" in i for i in check(td)))
         with open(os.path.join(td, SURFACES[1]), "w", encoding="utf-8") as f:
-            f.write("LAUNCHER_CORE_JS\n")
+            f.write("html = load_core_js()\n")
 
         # 목록에 없는 미디어 라우트 심기 (④)
         hpath = os.path.join(td, "backend", "handler_fake.py")

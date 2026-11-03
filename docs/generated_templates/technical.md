@@ -2,7 +2,7 @@
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
   `base`({{layers_base}}) → `datastore`({{layers_datastore}}) → `ibl`({{layers_ibl}}) → `cognition`({{layers_cognition}}) → `services`({{layers_services}}) → `surface`({{layers_surface}}). `.py` 총 {{backend_py}}개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
-  - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
+  - 새 backend 모듈 = 층 폴더 바로 아래에 둔다. `scripts/check_backend_layers.py`가 실제 경로에서 소속을 파생하며 동명·중첩·잘못된 위치를 거절한다. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`({{layers_common}}) · `backend/providers/`({{layers_providers}}, AI 프로바이더 스트리밍) · `backend/channels/`({{layers_channels}}) · `backend/drivers/`({{layers_drivers}})
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/{installed,not_installed}/tools/`: 보유 도구 패키지 (**{{tools_n}}개** — op 분기 **{{op_pkgs}}개**가 `_OP_DISPATCHERS` 표준)

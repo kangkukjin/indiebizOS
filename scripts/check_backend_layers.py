@@ -12,7 +12,7 @@
   ibl       IBL 언어·실행 엔진·도구 적재
   cognition 인지·에이전트·시스템AI·자기점검
   services  폴러·스케줄러·연동·제작
-  surface   HTTP 라우터·런처·포털·공개면 (api_*/launcher_*/portal_* 프리픽스 자동)
+  surface   HTTP 라우터·런처·포털·공개면 (실제 surface 폴더 소속)
   (assembly api.py·boot_common = 조립 루트 — 뭐든 import 해도 되지만, 아무도 이들을
    import 하면 안 된다)
 
@@ -22,7 +22,7 @@
 
 물리 이동(2026-08-05) 후: 층=디렉토리(backend/base·datastore·ibl·cognition·services·
 surface). 모듈 이름은 평면 유지(boot_paths 가 sys.path 에 층 디렉토리 등재) — 이 가드가
-위치=선언 일치까지 검사한다.
+경로에서 소속을 파생하고 동명·잘못된 위치를 검사한다.
 
 사용: python3 scripts/check_backend_layers.py
       python3 scripts/check_backend_layers.py --self-test
@@ -37,123 +37,6 @@ BACKEND = os.path.join(ROOT, "backend")
 
 ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
-LAYERS = {
-    "base": {
-        "yaml_content",
-        "execution_situation", "situation_delivery",
-        "update_maintenance", "component_runtime", "component_registry",
-        "program_modules", "program_publication", "program_boundary", "program_dependencies", "program_runtime", "program_versions",
-        "recall_relevance",
-        "output_publish", "phone_execution_contract",
-        "research_context", "research_review",
-        "coding_process", "repair_process", "repair_process_bridge", "repair_runtime", "repair_test_results", "repair_live_probe",
-        "execution_commit", "embedding_guard", "python_environment_lock", "tool_completion", "completion_lease", "history_excerpt", "distill_receipts", "trajectory_payload", "corpus_policy",
-        "audit_lifecycle", "execution_workers", "execution_capacity", "task_tree_budget", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
-        "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
-        "generation_store", "control_base",
-        "desktop_notify", "device_registry", "doc_ir", "document_converter", "control_conditions",
-        "member_jobs", "member_enrollment", "member_runtime", "member_model_settings", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys", "hardware_registry",
-        "ai_candidates", "imap_reader", "logging_utils", "mime_compat", "model_resolver", "model_context", "model_request_budget", "nip17", "nip44",
-        "resident_store", "phone_jobs", "principal", "approval_tokens", "action_requires", "task_receipts", "warehouse_paths", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
-        "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
-        "steer_inbox", "thread_context", "execution_turn", "thumbnails", "window_requests", "write_ledger",
-        "file_script", "script_process", "script_workspace", "task_cancellation",
-    },
-    "data": {
-        "situation_evidence",
-        "capability_history", "control_observations", "function_store", "ibl_example_index", "function_memory",
-        "member_activity",
-        "research_store", "research_questions", "research_evidence", "research_plans", "notebook_store", "research_lifecycle",
-        "distill_ledger", "repair_continuation", "component_continuation", "task_repair", "repair_context", "repair_root",
-        "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
-        "record_admin", "record_assets", "record_facade",
-        "tree_recall", "tree_doc", "forage_recall_store",
-        "office_store", "document_store", "coding_store", "vocabulary_policy", "vocabulary_state", "pursuit_history", "execution_identity", "agent_registry", "body_trust", "boot_status", "business_manager",
-        "calendar_manager", "calendar_rules", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
-        "forage_memory", "forage_doc", "forage_evidence", "forage_evidence_doc", "source_observation", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
-        "ibl_signature_slot", "ibl_name_search", "ibl_returns_observed", "ibl_example_batch", "ibl_usage_db",
-        "install_approvals",
-        "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
-        "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
-        "red_grant", "red_report", "red_watchdog", "restart_red", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
-        "conversation_sessions", "task_worker_store", "conversation_handoff", "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
-        "warehouse_catalog", "warehouse_directory", "warehouse_items",
-        "websocket_manager", "xray_stream", "media_store",
-    },
-    "ibl": {
-        "capability_consumers", "script_mutation", "capability_changes", "capability_change_checks",
-        "ibl_situation",
-        "reusable_catalog", "function_library", "function_revalidation", "function_consumers", "function_install",
-        "repair_execution_scope", "ibl_script_session", "ibl_file_script", "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
-        "ibl_v2_case", "ibl_v2_exits", "ibl_v2_recovery", "ibl_v2_repeat", "ibl_v2_semantic", "ibl_v2_semantic_store", "ibl_v2_binding", "ibl_v2_component", "ibl_v2_component_runtime", "ibl_v2_repair_graph", "ibl_v2_repair", "ibl_v2_completion", "ibl_v2_access", "ibl_v2_requirements", "ibl_v2_preflight", "ibl_v2_analysis", "ibl_v2_call_analysis", "ibl_v2_narrow", "ibl_value_checks", "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "tool_batch", "ibl_v2_store", "ibl_document_value", "ibl_member_library", "ibl_run_journal", "ibl_run_control", "ibl_function_control", "ibl_continuations", "ibl_remote_call", "ibl_scheduled", "ibl_callable_contract", "ibl_dependencies", "ibl_contract_drift",
-        "member_bridge", "member_profile", "member_files",
-        # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
-        # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
-        # 명시 배정이 우선한다. 디렉토리화 때 개명 후보.
-        "api_engine", "api_pipeline", "api_transforms",
-        "capability_card", "channel_engine", "event_engine", "ibl_access", "ibl_control_blocks",
-        "ibl_engine", "ibl_envelope", "ibl_result_transport", "ibl_executors", "ibl_exec_output", "ibl_exec_goal",
-        "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_typecheck",
-        "ibl_ops", "ibl_param_vocab",
-        "ibl_progress",
-        "ibl_scanner", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
-        "ibl_safety", "ibl_translate", "package_manager", "vocabulary_lifecycle", "vocabulary_desktop", "vocabulary_archive", "vocabulary_import", "tool_context",
-        "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
-        "workflow_contract",
-        "workflow_verdict", "workflow_store",
-    },
-    "cognition": {
-        "research_planning",
-        "member_cli",
-        "member_codex",
-        "research_runner",
-        "agent_lifecycle",   # ⑩ 몸의 명사 생애주기(2026-10-05)
-        "unified_distill", "distill_memory_adapters",
-        "associative_recall",
-        "capability_guard", "capability_guard_runtime", "task_continuation",
-        "member_local_tools", "member_runner", "member_session", "client_workflows",
-        "agent_cognitive", "agent_communication", "agent_goals",
-        "weekly_audits",
-        "agent_pipeline", "dialogue_continuation", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view", "model_value_preview",
-        "body_ask", "cognitive_consciousness", "cognitive_distill",
-        "cognitive_eval", "final_evaluator", "evaluation_input", "repair_readiness", "repair_policy", "repair_check_runner", "repair_resume", "cognitive_recall", "cognitive_trace", "history_checkpoint",
-        "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "health_probes", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
-        "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "checked_program_sources", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value", "ibl_v2_experience",
-        "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "supervisor_interventions", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope", "reflex_execution",
-        "todo_bridge", "reframe", "framing_inheritance", "routing_system", "switch_runner",
-        "system_ai_core", "system_ai_plans", "system_ai_runner",
-        "system_ai_tools", "system_hooks", "system_tools", "delegation_tasks", "task_workers",
-        "system_tools_delegate", "system_tools_ibl", "vocab_crystallization",
-        "vocab_overlap_audit", "component_lifecycle", "guide_downscale", "capability_age", "capability_inventory",
-        "world_pulse", "world_pulse_collectors", "world_pulse_health",
-    },
-    "services": {
-        "tv_transport",
-        "research_library", "research_capture", "research_task_session", "research_threads", "research_view",
-        "hardware_driver_status", "resident_pcs", "resident_transfer_io", "phone_transfer_wire", "resident_terminal", "resident_terminal_lan", "resident_desktop", "resident_screen",
-        "phone_remote_execution", "phone_limb_transfer", "phone_updates", "phone_native_control", "limb_http_transport",
-        "limb_client",   # 이 몸이 허브의 손발이 되는 클라이언트(폰 전용, 2026-10-13)
-        "session_lease", "media_sessions", "media_signaling",   # 미디어 통신(2026-10-13, docs/MEDIA_COMMUNICATION_DESIGN)
-        "launcher_ops", "chat_room_ops", "warehouse_ops", "warehouse_admin", "channel_settings_ops", "media_ops",   # ⑩ 몸의 명사 생애주기(2026-10-05)
-        "spreadsheet_grid", "spreadsheet_templates", "spreadsheet_conversion_types", "spreadsheet_formats", "spreadsheet_changes", "spreadsheet_imports", "spreadsheet_workspace", "spreadsheet_files", "document_hwp", "document_pdf", "document_formats", "document_pages", "document_imports", "document_office_ai", "document_creation", "document_office", "resource_links", "office_resources", "office_sessions", "document_workspace", "coding_git", "coding_projects", "coding_collaboration", "coding_worker_tools", "workspace_sessions",
-        "record_dispatch", "record_adapters",
-        "member_desktop_requests", "client_agent",
-        "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper", "restart_candidates", "control_launcher",
-        "calendar_actions", "calendar_html", "cdn_provision",
-        "channel_poller", "ffmpeg_provision", "gen_newspaper",
-        "generate_newspaper", "hippocampus_provision", "indienet", "model_settings_view",
-        "ingest_engine", "execution_trace", "execution_trace_scope",
-        "indienet_common", "indienet_publish", "indienet_relay",
-        "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
-        "nas_webapp", "nostr_phone_bridge", "oneshot_facade",
-        "phone_notifications", "sync_exchange", "chat_streams", "chat_runs", "chat_session_service",
-        "report_html", "scheduler", "warehouse_adapters", "warehouse_feed",
-    },
-    # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
-    # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)
-    "surface": {"surface_assets", "surface_display", "launcher_app_sessions", "member_device_auth", "api_member_desktop","api_member_pcs", "record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
-}
-SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common", "file_script_cli"}
 #: 층 배정 밖 — 시험과 **원장 일회성 유지보수 스크립트**(migrate_/retire_). 폰 번들의
 #: _force_exclude_glob 과 같은 부류를 가리킨다(data/bodies/android.json) — 두 자리가 갈리면
@@ -174,18 +57,23 @@ BASELINE = {
 }
 
 
-def layer_of(m: str):
-    """모듈의 층 이름 / 'ASSEMBLY' / None(검사 밖) / 'UNASSIGNED'."""
-    if m in ASSEMBLY:
-        return "ASSEMBLY"
-    if m.startswith(EXEMPT_PREFIX) or m in EXEMPT:
-        return None
-    for name in ORDER:
-        if m in LAYERS[name]:
-            return name          # 명시 배정이 프리픽스 규칙보다 우선 (api_engine 부류)
-    if m.startswith(SURFACE_PREFIX):
-        return "surface"
-    return "UNASSIGNED"
+def layer_of(m: str, layers):
+    """호출자가 수집한 경로표만 사용한다. 이름 접두사는 층을 추론하지 않는다."""
+    return layers.get(m, "UNASSIGNED")
+
+
+def module_layers(paths):
+    directory_layers = {directory: layer for layer, directory in LAYER_DIR_OF.items()}
+    result = {}
+    for name, relative in paths.items():
+        directory = os.path.dirname(relative)
+        if name in ASSEMBLY:
+            result[name] = "ASSEMBLY"
+        elif name.startswith(EXEMPT_PREFIX) or name in EXEMPT:
+            result[name] = None
+        else:
+            result[name] = directory_layers.get(directory, "UNASSIGNED")
+    return result
 
 
 def _import_targets(node):
@@ -207,17 +95,20 @@ def module_paths(backend_dir):
     """{모듈명: 상대경로} — 층 디렉토리까지 재귀 (모듈 이름은 평면 유일)."""
     out = {}
     for dirpath, dirs, files in os.walk(backend_dir):
-        dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
-        for f in files:
+        dirs[:] = sorted(d for d in dirs if d not in _SKIP_DIRS)
+        for f in sorted(files):
             if f.endswith(".py"):
                 rel = os.path.relpath(os.path.join(dirpath, f), backend_dir)
-                out[f[:-3]] = rel.replace(os.sep, "/")
+                rel = rel.replace(os.sep, "/")
+                if f[:-3] in out:
+                    raise ValueError(f"동명 backend 모듈: {out[f[:-3]]} / {rel}")
+                out[f[:-3]] = rel
     return out
 
 
-def build_graph(backend_dir):
+def build_graph(backend_dir, paths=None):
     """backend 평면 모듈 그래프 — 톱레벨+함수-안 import 전부."""
-    paths = module_paths(backend_dir)
+    paths = module_paths(backend_dir) if paths is None else paths
     mods = set(paths)
     graph = {}
     for name in sorted(mods):
@@ -225,8 +116,8 @@ def build_graph(backend_dir):
             with open(os.path.join(backend_dir, paths[name]),
                       encoding="utf-8") as f:
                 tree = ast.parse(f.read())
-        except (OSError, SyntaxError, UnicodeDecodeError):
-            continue
+        except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+            raise ValueError(f"검사 입력 해석 실패: {paths[name]}: {exc}") from exc
         deps = set()
         for n in ast.walk(tree):
             for t in _import_targets(n):
@@ -236,38 +127,34 @@ def build_graph(backend_dir):
     return graph
 
 
-def misplaced_modules(backend_dir):
-    """물리 위치 ≠ 층 선언 — 디렉토리가 곧 선언이 되도록 강제 (물리 이동 후)."""
+def misplaced_modules(backend_dir, paths=None, layers=None):
+    """층의 직속 파일 및 루트에만 둘 수 있는 예외·조립 파일을 확인한다."""
+    paths = module_paths(backend_dir) if paths is None else paths
+    layers = module_layers(paths) if layers is None else layers
     bad = []
-    for name, rel in sorted(module_paths(backend_dir).items()):
-        lay = layer_of(name)
-        d = os.path.dirname(rel)
-        if lay in ("ASSEMBLY", "UNASSIGNED"):
-            expect = ""          # 조립 루트·미배정은 backend 루트
-        elif lay is None:
-            expect = ""          # 검사 밖(test_/migrate_/retire_/생성기)도 루트
-        else:
-            expect = LAYER_DIR_OF[lay]
-        if name in ("boot_paths", "conftest"):
-            expect = ""          # 부트스트랩은 루트가 정위치
-        if d != expect:
-            bad.append(f"{name}: {d or '(루트)'} 에 있으나 층 선언은 {expect or '(루트)'}")
+    for name, rel in sorted(paths.items()):
+        layer = layer_of(name, layers)
+        directory = os.path.dirname(rel)
+        if layer == "UNASSIGNED":
+            bad.append(f"{rel}: 일반 모듈은 지정 층 폴더 바로 아래에 있어야 합니다")
+        elif (layer is None or layer == "ASSEMBLY") and directory:
+            bad.append(f"{rel}: 예외·조립 모듈은 backend 루트에 있어야 합니다")
     return bad
 
 
-def find_violations(graph):
+def find_violations(graph, layers):
     """(위반 간선 리스트, 미배정 모듈 리스트, 조립 루트 역참조 리스트)."""
     rank = {n: i for i, n in enumerate(ORDER)}
     viol, unassigned, into_assembly = [], [], []
     for m in sorted(graph):
-        lm = layer_of(m)
+        lm = layer_of(m, layers)
         if lm == "UNASSIGNED":
             unassigned.append(m)
             continue
         if lm is None or lm == "ASSEMBLY":
             continue
         for t in sorted(graph[m]):
-            lt = layer_of(t)
+            lt = layer_of(t, layers)
             if lt == "ASSEMBLY":
                 into_assembly.append(f"{m} -> {t}")
                 continue
@@ -278,7 +165,7 @@ def find_violations(graph):
     return viol, unassigned, into_assembly
 
 
-def cross_layer_cycles(graph):
+def cross_layer_cycles(graph, layers):
     """층을 가로지르는 순환(SCC) 목록 — 2026-08-05 ⑦ 후반부에 0 이 됐다. 재발=차단.
 
     같은 층 안의 순환(인지 클러스터·파서 쌍 부류)은 같은 미래 디렉토리 안 문제라
@@ -313,10 +200,10 @@ def cross_layer_cycles(graph):
             walk(v)
     bad = []
     for comp in out:
-        layers = {layer_of(m) for m in comp}
-        layers.discard(None)
-        if len(layers) > 1:
-            bad.append((sorted(layers, key=lambda x: (x is None, str(x))), sorted(comp)))
+        component_layers = {layer_of(m, layers) for m in comp}
+        component_layers.discard(None)
+        if len(component_layers) > 1:
+            bad.append((sorted(component_layers, key=lambda x: (x is None, str(x))), sorted(comp)))
     return bad
 
 
@@ -342,9 +229,9 @@ _LEAF_PKG = "common"
 _HOST_PKGS = ("drivers", "providers", "channels")
 
 
-def _core_module_paths(backend_dir):
+def _core_module_paths(backend_dir, paths=None):
     """폐포 검사용 경로표 — 평면 모듈 + 서브패키지(common/drivers/providers/channels)."""
-    out = dict(module_paths(backend_dir))
+    out = dict(module_paths(backend_dir) if paths is None else paths)
     for pkg in (_LEAF_PKG,) + _HOST_PKGS:
         d = os.path.join(backend_dir, pkg)
         if not os.path.isdir(d):
@@ -360,8 +247,8 @@ def _closure_deps(path, known):
     try:
         with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
-    except (OSError, SyntaxError, UnicodeDecodeError):
-        return set()
+    except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+        raise ValueError(f"검사 입력 해석 실패: {path}: {exc}") from exc
     deps = set()
     for n in ast.walk(tree):
         names = []
@@ -377,9 +264,11 @@ def _closure_deps(path, known):
     return deps
 
 
-def pure_core_leaks(backend_dir, roots=PURE_CORE_ROOTS):
+def pure_core_leaks(backend_dir, roots=PURE_CORE_ROOTS, *, paths=None, layers=None):
     """뿌리의 전이 폐포가 숙주에 닿은 자리 — (모듈, 도달 경로) 목록. 없으면 폐포 크기만."""
-    known = _core_module_paths(backend_dir)
+    paths = module_paths(backend_dir) if paths is None else paths
+    layers = module_layers(paths) if layers is None else layers
+    known = _core_module_paths(backend_dir, paths)
     roots = [r for r in roots if r in known]
     seen, order = set(roots), list(roots)
     parent = {r: None for r in roots}
@@ -391,7 +280,7 @@ def pure_core_leaks(backend_dir, roots=PURE_CORE_ROOTS):
         # ibl_edition의 전이 의존도 아래에서 계속 검사한다.
         if m.startswith(f"{_LEAF_PKG}."):
             pass
-        elif m.startswith(_HOST_PKGS) or (layer_of(m) != "ibl" and m != "ibl_edition"):
+        elif m.startswith(_HOST_PKGS) or (layer_of(m, layers) != "ibl" and m != "ibl_edition"):
             chain, x = [], m
             while x:
                 chain.append(x)
@@ -421,8 +310,8 @@ def _private_imports(path):
     try:
         with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read())
-    except (OSError, SyntaxError, UnicodeDecodeError):
-        return []
+    except (OSError, SyntaxError, UnicodeDecodeError) as exc:
+        raise ValueError(f"검사 입력 해석 실패: {path}: {exc}") from exc
     out = []
     for n in ast.walk(tree):
         if isinstance(n, ast.ImportFrom) and n.level == 0 and n.module:
@@ -434,13 +323,17 @@ def _private_imports(path):
     return out
 
 
-def private_symbol_leaks(backend_dir, pkg_tools=PKG_TOOLS):
+def private_symbol_leaks(backend_dir, pkg_tools=None, *, paths=None, layers=None):
     """ibl 층(+사전 이음매)의 사적 심볼을 층 밖에서 import 하는 자리 목록."""
-    guarded = set(LAYERS["ibl"]) | SEAM_MODULES
+    paths = module_paths(backend_dir) if paths is None else paths
+    layers = module_layers(paths) if layers is None else layers
+    if pkg_tools is None:
+        pkg_tools = os.path.join(os.path.dirname(backend_dir), "data/packages/installed/tools")
+    guarded = {name for name, layer in layers.items() if layer == "ibl"} | SEAM_MODULES
     bad = []
 
-    for name, rel in sorted(module_paths(backend_dir).items()):
-        lay = layer_of(name)
+    for name, rel in sorted(paths.items()):
+        lay = layer_of(name, layers)
         if lay is None:            # test_*/migrate_*/retire_* 등 검사 밖 — 화이트박스 시험은 정당
             continue
         if lay == "ibl" or name in SEAM_MODULES:
@@ -465,17 +358,19 @@ def private_symbol_leaks(backend_dir, pkg_tools=PKG_TOOLS):
 
 
 def main() -> int:
-    graph = build_graph(BACKEND)
-    viol, unassigned, into_assembly = find_violations(graph)
+    paths = module_paths(BACKEND)
+    layers = module_layers(paths)
+    graph = build_graph(BACKEND, paths)
+    viol, unassigned, into_assembly = find_violations(graph, layers)
     errors = []
 
-    misplaced = misplaced_modules(BACKEND)
+    misplaced = misplaced_modules(BACKEND, paths, layers)
     if misplaced:
         errors.append(
-            "물리 위치 ≠ 층 선언 — 디렉토리가 곧 선언이다. git mv 또는 LAYERS 갱신:\n"
+            "층 폴더 경계 위반 — 모듈을 소유 층의 직속 경로에 둘 것:\n"
             + "\n".join(f"  {m}" for m in misplaced))
 
-    spanning = cross_layer_cycles(graph)
+    spanning = cross_layer_cycles(graph, layers)
     if spanning:
         errors.append(
             "층을 가로지르는 순환 — 매듭의 재발. 등록(의존 역전)이나 데이터 하향으로\n"
@@ -485,21 +380,21 @@ def main() -> int:
 
     if unassigned:
         errors.append(
-            "층 미배정 모듈 — check_backend_layers.py 의 LAYERS 에 배정할 것:\n"
+            "층 미배정 모듈 — backend의 소유 층 폴더로 이동할 것:\n"
             + "\n".join(f"  {m}" for m in unassigned))
     if into_assembly:
         errors.append(
             "조립 루트(api/boot_common)를 import — 조립은 아무도 참조하지 않는다:\n"
             + "\n".join(f"  {e}" for e in into_assembly))
 
-    core_bad, core_n = pure_core_leaks(BACKEND)
+    core_bad, core_n = pure_core_leaks(BACKEND, paths=paths, layers=layers)
     if core_bad:
         errors.append(
             "순수 코어(문법·통화 계약)가 숙주에 닿았다 — 표준은 몸을 몰라야 한다.\n"
             "도달 경로(오른쪽이 뿌리). 숙주 의존은 코어 밖(엔진·실행기)으로 옮길 것:\n"
             + "\n".join(f"  {v}" for v in core_bad))
 
-    leaks = private_symbol_leaks(BACKEND)
+    leaks = private_symbol_leaks(BACKEND, paths=paths, layers=layers)
     if leaks:
         errors.append(
             "ibl 층의 사적 심볼을 층 밖에서 import — 사적 심볼은 계약이 아니다.\n"
@@ -529,85 +424,63 @@ def main() -> int:
 
 
 def self_test() -> int:
-    # 가짜 그래프로 판정 로직 검증
-    fake = {
-        "logging_utils": set(),            # base
-        "conversation_db": {"api_xray"},   # data -> surface (baseline 에 있음)
-        "ibl_engine": {"logging_utils"},   # 아래로 — 정상
-        "api_xray": {"ibl_engine"},        # 위에서 아래로 — 정상
-        "api_new": {"api"},                # 조립 루트 역참조
-    }
-    viol, unassigned, into_asm = find_violations(fake)
-    assert viol == ["conversation_db -> api_xray"], viol
-    assert into_asm == ["api_new -> api"], into_asm
-    assert unassigned == [], unassigned
-    # 미배정 감지
-    v2, un2, _ = find_violations({"totally_new_module": set()})
-    assert un2 == ["totally_new_module"], un2
-    # 층 판정
-    assert layer_of("api_anything") == "surface"
-    assert layer_of("test_foo") is None
-    assert layer_of("migrate_bar") is None
-    assert layer_of("retire_bar") is None
-    assert layer_of("api") == "ASSEMBLY"
-    assert layer_of("ibl_v2_parser") == "ibl"
-    # 교차층 순환 검출: data ↔ surface 인공 순환
-    fake_cyc = {"conversation_db": {"api_xray"}, "api_xray": {"conversation_db"}}
-    bad = cross_layer_cycles(fake_cyc)
-    assert len(bad) == 1 and set(bad[0][1]) == {"conversation_db", "api_xray"}, bad
-    # 같은 층 안 순환은 허용 (파서 쌍 부류)
-    fake_ok = {"ibl_v2_parser": {"ibl_v2_ir"}, "ibl_v2_ir": {"ibl_v2_parser"}}
-    assert cross_layer_cycles(fake_ok) == [], "같은 층 순환이 오탐"
-    # 물리 위치 = 층 선언 (물리 이동 후 불변식)
-    assert misplaced_modules(BACKEND) == [], misplaced_modules(BACKEND)[:5]
-    # 사적 심볼 월경: 판정 로직 + 실측 0 (A부가 부채를 0으로 만들었다 — 후퇴 금지)
-    import tempfile as _tf
-    with _tf.TemporaryDirectory() as td:
-        os.makedirs(os.path.join(td, "cognition"))
-        os.makedirs(os.path.join(td, "ibl"))
-        with open(os.path.join(td, "cognition", "body_ask.py"), "w") as f:
-            f.write("def f():\n    from ibl_access import _secret\n")   # 층 밖 → 잡힌다
-        with open(os.path.join(td, "ibl", "ibl_engine.py"), "w") as f:
-            f.write("from ibl_access import _friend\n")                 # 층 안 → 규칙 밖
-        found = private_symbol_leaks(td, pkg_tools=os.path.join(td, "없는패키지"))
-        assert len(found) == 1 and "body_ask.py:2" in found[0], found
-    assert private_symbol_leaks(BACKEND) == [], private_symbol_leaks(BACKEND)[:5]
-    # 순수 코어 폐포: 판정 로직(직접·전이·common 허용) + 실측 닫힘
-    with _tf.TemporaryDirectory() as td:
-        for d in ("ibl", "datastore", "common"):
-            os.makedirs(os.path.join(td, d), exist_ok=True)
-        w = lambda d, f, s: open(os.path.join(td, d, f), "w").write(s)  # noqa: E731
-        w("common", "currency.py", "")
-        w("datastore", "conversation_db.py", "")
-        w("ibl", "ibl_registry.py", "")
-        # ① common 만 기대는 뿌리 = 정상
-        w("ibl", "ibl_envelope.py", "from common.currency import x\n")
-        assert pure_core_leaks(td, roots=["ibl_envelope"]) == ([], 2), \
-            pure_core_leaks(td, roots=["ibl_envelope"])
-        # ② 숙주 직접 도달 = 잡힌다
-        w("ibl", "ibl_ops.py", "def f():\n    from conversation_db import x\n")
-        bad, _ = pure_core_leaks(td, roots=["ibl_ops"])
-        assert bad == ["conversation_db ← ibl_ops"], bad
-        # ③ 전이 도달도 잡힌다 (파서 → 엔진 → 사전)
-        w("ibl", "ibl_engine.py", "from ibl_registry import x\n")
-        w("ibl", "ibl_v2_parser.py", "from ibl_engine import x\n")
-        bad, _ = pure_core_leaks(td, roots=["ibl_v2_parser"])
-        assert bad == ["ibl_registry ← ibl_engine ← ibl_v2_parser"], bad
-    core_bad, core_n = pure_core_leaks(BACKEND)
-    assert core_bad == [], core_bad
-    assert core_n >= len(PURE_CORE_ROOTS), core_n
-    # 실그래프: 교차층 순환 0 이어야 한다 (2026-08-05 달성 불변식)
-    graph0 = build_graph(BACKEND)
-    assert cross_layer_cycles(graph0) == [], "실그래프에 교차층 순환 존재"
-    # 실그래프에서 BASELINE 정합(신규 0 · 부실 0)이어야 자기모순이 없다
-    graph = build_graph(BACKEND)
-    viol, unassigned, into_asm = find_violations(graph)
-    assert not unassigned, f"미배정: {unassigned}"
-    assert not [v for v in viol if v not in BASELINE], "self-test: 새 위반 존재"
-    assert not (BASELINE - set(viol)), "self-test: 부실 BASELINE 존재"
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        def write(relative, content=""):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+        write("base/foundation.py")
+        write("datastore/records.py", "import api_surface")
+        write("surface/api_surface.py", "import records")
+        write("ibl/api_new.py", "import foundation")
+        write("ibl/new_language.py")
+        write("cognition/consumer.py", "from new_language import _private")
+        write("api.py")
+        write("surface/entry.py", "import api")
+        paths = module_paths(td)
+        layers = module_layers(paths)
+        graph = build_graph(td, paths)
+        assert layers["api_new"] == "ibl"
+        assert misplaced_modules(td, paths, layers) == []
+        assert find_violations(graph, layers) == (["records -> api_surface"], [], ["entry -> api"])
+        assert cross_layer_cycles(graph, layers) == [(["data", "surface"], ["api_surface", "records"])]
+        assert len(private_symbol_leaks(td)) == 1
+        write("common/value.py")
+        write("ibl/root.py", "from common.value import x")
+        assert pure_core_leaks(td, roots=["root"]) == ([], 2)
+        write("ibl/root.py", "import api_new")
+        write("ibl/api_new.py", "import records")
+        assert pure_core_leaks(td, roots=["root"])[0] == ["records ← api_new ← root"]
+        write("unexpected/nested.py")
+        write("plain.py")
+        write("surface/test_wrong.py")
+        assert len(misplaced_modules(td)) == 3
+        write("surface/records.py")
+        try:
+            module_paths(td)
+        except ValueError as exc:
+            assert "datastore/records.py" in str(exc) and "surface/records.py" in str(exc)
+        else:
+            raise AssertionError("동명 파일을 덮어썼다")
+        (root / "surface/records.py").unlink()
+        write("ibl/broken.py", "def ???")
+        try:
+            build_graph(td)
+        except ValueError as exc:
+            assert "ibl/broken.py" in str(exc)
+        else:
+            raise AssertionError("구문 오류를 누락했다")
+    assert main() == 0
     print("[OK] check_backend_layers self-test 통과")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(self_test() if "--self-test" in sys.argv else main())
+    try:
+        sys.exit(self_test() if "--self-test" in sys.argv else main())
+    except (ValueError, OSError) as exc:
+        print(f"[FAIL] backend 층 가드: {exc}")
+        sys.exit(1)

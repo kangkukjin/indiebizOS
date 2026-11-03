@@ -48,7 +48,7 @@ IBL과 주변 시스템의 개선·설계·평가를 시작할 때는 `data/syst
 
 - **파일 1500줄 제한**(pre-commit 강제). 넘치면 형제 모듈로 분할.
 - 새 backend 모듈 = 층 폴더(`backend/{base,datastore,ibl,cognition,services,surface}/`)
-  + `scripts/check_backend_layers.py` 의 `LAYERS` 배정. 독립 스크립트는 맨 위
+  직속 파일로 둔다. `scripts/check_backend_layers.py`가 경로에서 층을 파생한다. 독립 스크립트는 맨 위
   `import boot_paths`.
 - 패키지(data/packages/…) 안의 모듈 파일명이 backend 모듈명과 겹치면 안 된다
   (모듈 그림자 관문이 차단 — `<패키지>_<이름>.py` 식으로 개명).

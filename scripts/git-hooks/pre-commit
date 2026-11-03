@@ -242,7 +242,7 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|scripts/check_backend_layers\.py)
     echo "" >&2
     echo "[pre-commit] backend 층 위반 — 커밋 차단." >&2
     echo "[pre-commit]   • 로직을 아래층 모듈로 내리거나 등록(의존 역전)으로 끊기" >&2
-    echo "[pre-commit]   • 새 모듈은 check_backend_layers.py LAYERS 에 층 배정" >&2
+    echo "[pre-commit]   • 새 모듈은 소유 층 폴더 바로 아래에 배치(동명 금지)" >&2
     echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
     exit 1
   fi

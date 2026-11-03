@@ -9,11 +9,18 @@ import boot_paths  # noqa: E402,F401
 
 def main():
     try:
-        if sys.argv[1:] == ['--check-worktree']:
+        if sys.argv[1:2] in (['--check-worktree'], ['--check-files']):
             from capability_changes import roots
             from capability_change_checks import check, changed_files
             root, _ = roots()
-            result = check(root, changed_files(root))
+            explicit = sys.argv[1] == '--check-files'
+            if explicit and not sys.argv[2:]:
+                raise ValueError('--check-files 뒤에 이 요청의 파일을 지정하세요.')
+            if not explicit and sys.argv[2:]:
+                raise ValueError('--check-worktree는 전체 변경 검사입니다. 파일 지정은 --check-files를 쓰세요.')
+            result = check(root, sys.argv[2:] if explicit else changed_files(root))
+            result['scope_source'] = 'explicit_files' if explicit else 'whole_worktree'
+            result['imprint_scope'] = False
         else:
             from capability_changes import operate
             result = operate(json.load(sys.stdin))

@@ -311,3 +311,31 @@ def test_script_imprint_has_exact_paths_and_rejects_foreign_registry_changes(bod
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_explicit_check_scope_and_candidate_change(tmp_path, monkeypatch):
+    import subprocess
+    from capability_change_checks import check
+    (tmp_path / 'owned.py').write_text('before')
+    (tmp_path / 'other.py').write_text('another task')
+    def execute(argv, **kwargs):
+        if 'select_tests.py' in str(argv):
+            assert argv[-1] == 'owned.py' and 'other.py' not in argv
+            return subprocess.CompletedProcess(argv, 0, 'backend/test_owned.py', 'explicit selection')
+        (tmp_path / 'owned.py').write_text('changed during check')
+        return subprocess.CompletedProcess(argv, 0, 'passed', '')
+    monkeypatch.setattr('capability_change_checks.subprocess.run', execute)
+    result = check(tmp_path, ['owned.py'])
+    assert result['files'] == ['owned.py']
+    assert result['candidate_changed'] and not result['ok']
+    assert (tmp_path / 'other.py').read_text() == 'another task'
+
+
+def test_pending_apply_keeps_stage_observations_and_recovery():
+    receipt = {'complete': False, 'verified': True, 'applied': False,
+               'recovery': {'action': 'wait_for_controller'}}
+    value = changes.operate({'op': 'completion', 'receipt': receipt})
+    assert not value['complete']
+    assert value['stages']['verified'] is True and value['stages']['applied'] is False
+    assert value['stages']['delivered'] is None
+    assert value['recovery'] == receipt['recovery']

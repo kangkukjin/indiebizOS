@@ -94,7 +94,9 @@ return $반영.value
 - `source_change`: 커밋 또는 기존 자기수리 영수증. 적용 예약·각인 실패는 완료가 아니다.
 
 어휘의 빌드·교재 검토와 영향 기반 회귀는 기존 관문을 따른다. 필요하면
-`.venv/bin/python data/scripts/capability_change.py --check-worktree`로 현재 변경의
-기존 시험 선택기·빌드 신선도·층 검사를 연결한다. 긴 검사는 기존 배경 작업 방식으로 실행한다.
+`.venv/bin/python data/scripts/capability_change.py --check-files 파일1 파일2`로 요청 범위를
+지정해 기존 시험 선택기·빌드 신선도·층 검사를 연결한다. `--check-worktree`는 동시 작업을
+포함한 전체 변경 검사다. 반환된 `files`·`scope_source`를 확인하며 이 범위를 각인 허가로
+해석하지 않는다. 검사 도중 파일이 바뀌면 `candidate_changed:true`, `ok:false`다. 긴 검사는 기존 배경 작업 방식으로 실행한다.
 본문·설명·용례의 의미를 자동으로 만들어 맞다고 판정하지 않는다. 새 정의는 기존 원장 검색에서
 발견되며, 필요 없는 합성 용례·상시 소개를 추가하지 않는다. 아직 전후 시간·전체 토큰 절감률은 측정하지 않았다.

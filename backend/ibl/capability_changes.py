@@ -306,7 +306,7 @@ def _program(plan, mutation, *, verify_only=False):
     for index, probe in enumerate(plan['probes']):
         lines.append(f'$probe{index} = ' + _call('self:workflow', {'op': 'run', 'edition': 2,
                      'pipeline': probe['code'], 'inputs': probe.get('inputs', {})}))
-        lines.append(f'assert $probe{index}.value == ' + _literal(probe['expected']) + ', "변경 후 동작 검사 실패"')
+        lines.append(f'assert $probe{index}.value == ' + _literal(probe['expected']) + ', "변경 후 동작 검사 실패", {stage:"verify",plan:$plan,next:{op:"verify",requires:"explicit probes"}}')
     if plan['kind'] == 'script':
         lines.append('$finish = ' + control('finish_plan'))
         lines.append('$source_change = [self:workflow]{op:"run",edition:2,pipeline:$finish.program}')
@@ -396,7 +396,10 @@ def operate(args):
         receipt = args['receipt']
         complete = receipt.get('complete') is True
         return {'success': True, 'complete': complete, 'completed': complete, 'required': True,
-                'receipt': receipt, 'next': 'none' if complete else 'existing repair recovery'}
+                'receipt': receipt,
+                'stages': {key: receipt.get(key) for key in ('saved', 'verified', 'applied', 'activated', 'delivered')},
+                'recovery': receipt.get('recovery'),
+                'next': 'none' if complete else 'existing repair recovery'}
     if op == 'verify':
         saved = copy.deepcopy(args['plan'])
         validate_plan(saved)

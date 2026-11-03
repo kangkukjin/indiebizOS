@@ -1,4 +1,5 @@
 """Reuse the repository's build and test selectors, without a second test policy."""
+import hashlib
 import subprocess
 import sys
 import time
@@ -24,7 +25,15 @@ def changed_files(root):
 
 
 def check(root, files, *, prepare=False):
-    root = Path(root)
+    root = Path(root).resolve()
+    files = sorted(set(files))
+    for name in files:
+        if not (root / name).resolve().is_relative_to(root) or Path(name).is_absolute():
+            raise ValueError('검사 파일은 현재 저장소의 상대경로여야 합니다.')
+    def snapshot():
+        return {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+                if (root / name).is_file() else None for name in files}
+    before = snapshot()
     started = time.monotonic()
     if not files:
         return {'success': True, 'ok': True, 'items': [], 'files': [], 'behavior_verified': False}
@@ -56,6 +65,8 @@ def check(root, files, *, prepare=False):
             items.append({'step': name, 'ok': False, 'exit_code': None, 'summary': '검사 시간 초과'})
         if not items[-1]['ok']:
             break
-    return {'success': True, 'ok': all(row['ok'] for row in items), 'items': items,
+    after = snapshot()
+    return {'success': True, 'ok': all(row['ok'] for row in items) and (prepare or before == after), 'items': items,
+            'candidate_before': before, 'candidate_after': after, 'candidate_changed': before != after,
             'selection': result.stderr[-4000:], 'files': files,
             'seconds': round(time.monotonic() - started, 3), 'behavior_verified': False}

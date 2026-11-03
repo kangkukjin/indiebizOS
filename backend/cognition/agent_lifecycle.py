@@ -63,11 +63,28 @@ def create_agent(project_id: str, name: str, type: str = "ai_agent", role: str =
     data = _load(pp)
     new = _apply_fields({"id": f"agent_{uuid.uuid4().hex[:8]}", "active": True}, name=name, type=type,
                         allowed_nodes=allowed_nodes, allowed_tools=allowed_tools, channel=channel, email=email)
+    _check_name(data, None, name)
+    role_path = _text_path(pp, new, "role")
+    note_path = _text_path(pp, new, "note")
+    if role_path.exists() or note_path.exists():
+        raise AgentConflictError("새 에이전트의 역할 또는 메모 파일이 이미 있습니다.")
     data.setdefault("agents", []).append(new)
-    _save(pp, data)
-    if role:
-        (pp / f"agent_{name}_role.txt").write_text(role, encoding="utf-8")
+    created = False
+    try:
+        if role is not None:
+            with role_path.open("x", encoding="utf-8") as stream:
+                created = True
+                stream.write(role)
+        _save(pp, data)
+    except BaseException:
+        if created:
+            role_path.unlink(missing_ok=True)
+        raise
     return new
+
+
+class AgentConfigMissingError(FileNotFoundError):
+    """설정 파일의 부재와 실제 파일 I/O 실패를 구분한다."""
 
 
 class AgentConflictError(ValueError):
@@ -158,34 +175,39 @@ def update_agent(project_id: str, agent_id: str, **fields) -> dict:
 def delete_agent(project_id: str, agent_id: str) -> str:
     pp = _project_path(project_id)
     data = _load(pp)
-    for i, agent in enumerate(data.get("agents", [])):
-        if agent.get("id") == agent_id:
-            name = agent.get("name")
-            del data["agents"][i]
-            _save(pp, data)
-            for suffix in ("role", "note"):
-                f = pp / f"agent_{name}_{suffix}.txt"
-                if f.exists():
-                    f.unlink()
-            return name
-    raise KeyError(f"에이전트 '{agent_id}' 를 찾을 수 없습니다")
+    agent = _resolve(data, agent_id)
+    paths = [_text_path(pp, agent, kind) for kind in ("role", "note")]
+    name = agent.get("name", agent_id)
+    _check_name(data, agent, name)
+    data["agents"].remove(agent)
+    _save(pp, data)
+    for path in paths:
+        path.unlink(missing_ok=True)
+    return name
+
+
+def text_record(project_id: str, agent_id: str, kind: str, *, text=None,
+                project_path=None) -> dict:
+    """입구가 설정을 재조회하지 않도록 공개 이름과 본문만 반환한다."""
+    pp = Path(project_path) if project_path is not None else _project_path(project_id)
+    if not (pp / "agents.yaml").exists():
+        raise AgentConfigMissingError("에이전트 설정을 찾을 수 없습니다.")
+    data = _load(pp)
+    agent = _resolve(data, agent_id)
+    _check_name(data, agent, agent.get("name", agent_id))
+    path = _text_path(pp, agent, kind)
+    if text is not None:
+        path.write_text(text, encoding="utf-8")
+    content = path.read_text(encoding="utf-8") if path.exists() else ""
+    return {kind: content, "agent_name": agent.get("name", agent_id)}
 
 
 def read_text(project_id: str, agent_id: str, kind: str) -> str:
-    pp = _project_path(project_id)
-    agent = next((a for a in _load(pp).get("agents", []) if a.get("id") == agent_id), None)
-    if not agent:
-        raise KeyError(f"에이전트 '{agent_id}' 를 찾을 수 없습니다")
-    f = pp / f"agent_{agent.get('name')}_{kind}.txt"
-    return f.read_text(encoding="utf-8") if f.exists() else ""
+    return text_record(project_id, agent_id, kind)[kind]
 
 
 def write_text(project_id: str, agent_id: str, kind: str, text: str) -> None:
-    pp = _project_path(project_id)
-    agent = next((a for a in _load(pp).get("agents", []) if a.get("id") == agent_id), None)
-    if not agent:
-        raise KeyError(f"에이전트 '{agent_id}' 를 찾을 수 없습니다")
-    (pp / f"agent_{agent.get('name')}_{kind}.txt").write_text(text or "", encoding="utf-8")
+    text_record(project_id, agent_id, kind, text=text or "")
 
 
 def start_agent(project_id: str, agent_id: str) -> dict:
@@ -193,9 +215,7 @@ def start_agent(project_id: str, agent_id: str) -> dict:
     from agent_runner import AgentRunner
     pp = _project_path(project_id)
     data = _load(pp)
-    agent_config = next((a for a in data.get("agents", []) if a.get("id") == agent_id), None)
-    if not agent_config:
-        raise KeyError(f"에이전트 '{agent_id}' 를 찾을 수 없습니다")
+    agent_config = _resolve(data, agent_id)
     runners = agent_runners.setdefault(project_id, {})
     if agent_id in runners and getattr(runners[agent_id].get("runner"), "running", False):
         return {"status": "already_running", "agent_id": agent_id}
@@ -261,6 +281,6 @@ def agents_op(op: str, params: dict) -> dict:
                 write_text(project_id, agent_id, op, str(params["text"]))
                 return {"success": True, "project_id": project_id, "agent_id": agent_id, op: str(params["text"])}
             return {"success": True, "project_id": project_id, "agent_id": agent_id, op: read_text(project_id, agent_id, op)}
-    except (KeyError, AgentConflictError) as exc:
+    except (KeyError, AgentConfigMissingError, AgentConflictError) as exc:
         return {"success": False, "error": str(exc)}
     return {"success": False, "error": f"알 수 없는 op: {op} (list|info|create|update|delete|start|stop|role|note)"}

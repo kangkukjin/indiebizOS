@@ -1,4 +1,5 @@
 """HTTP agent commands retain conversation ownership for task delegation."""
+import asyncio
 import boot_paths  # noqa: F401
 from types import SimpleNamespace
 
@@ -98,6 +99,66 @@ def test_command_training_preserves_separate_history_and_worker_ownership(tmp_pa
         assert conn.execute("SELECT COUNT(*) FROM messages WHERE contact_type='rehearsal' AND session_id IS NOT NULL").fetchone()[0] == 0
 
 
+
+
+def test_role_note_http_and_lifecycle_share_storage(tmp_path, monkeypatch):
+    import api_agents as api
+    import agent_lifecycle as lifecycle
+    import yaml
+    monkeypatch.setattr(api, 'project_manager', SimpleNamespace(get_project_path=lambda _: tmp_path))
+    monkeypatch.setattr(lifecycle, '_project_path', lambda _: tmp_path)
+    (tmp_path / 'agents.yaml').write_text(yaml.safe_dump({'agents': [{'id': 'a', 'name': 'one'}]}))
+    assert asyncio.run(api.get_agent_role('p', 'a')) == {'role': '', 'agent_name': 'one'}
+    assert asyncio.run(api.update_agent_role('p', 'a', api.AgentRole(role='role'))) == {'status': 'saved', 'agent_name': 'one'}
+    assert lifecycle.read_text('p', 'a', 'role') == 'role'
+    lifecycle.write_text('p', 'a', 'note', 'memo')
+    assert asyncio.run(api.get_agent_note('p', 'a')) == {'note': 'memo'}
+    assert asyncio.run(api.save_agent_note('p', 'a', api.AgentNote(note=''))) == {'status': 'saved'}
+    assert lifecycle.read_text('p', 'a', 'note') == ''
+
+
+@pytest.mark.parametrize('state', ['missing', 'empty', 'no_id', 'broken', 'duplicate', 'nameless', 'legacy_none'])
+def test_text_endpoint_absence_and_error_contract(tmp_path, monkeypatch, state):
+    import api_agents as api
+    from fastapi import HTTPException
+    import yaml
+    monkeypatch.setattr(api, 'project_manager', SimpleNamespace(get_project_path=lambda _: tmp_path))
+    data = {'agents': [{'id': 'a', 'name': 'one'}]}
+    if state == 'no_id':
+        data['agents'] = []
+    elif state == 'duplicate':
+        data['agents'] *= 2
+    elif state in ('nameless', 'legacy_none'):
+        data['agents'] = [{'id': 'a'}]
+        if state == 'legacy_none':
+            (tmp_path / 'agent_None_role.txt').write_text('orphan')
+    if state != 'missing':
+        (tmp_path / 'agents.yaml').write_text('' if state == 'empty' else '[' if state == 'broken' else yaml.safe_dump(data))
+    if state in ('missing', 'empty', 'no_id'):
+        assert asyncio.run(api.get_agent_note('p', 'a')) == {'note': ''}
+        expected = 404
+    elif state == 'nameless':
+        assert asyncio.run(api.update_agent_role('p', 'a', api.AgentRole(role='x'))) == {'status': 'saved', 'agent_name': 'a'}
+        assert (tmp_path / 'agent_a_role.txt').read_text() == 'x'
+        return
+    else:
+        expected = 500 if state == 'broken' else 409
+    with pytest.raises(HTTPException) as raised:
+        asyncio.run(api.get_agent_role('p', 'a'))
+    assert raised.value.status_code == expected
+
+
+def test_update_conflict_is_http_409(tmp_path, monkeypatch):
+    import api_agents as api
+    import agent_lifecycle as lifecycle
+    import yaml
+    from fastapi import HTTPException
+    monkeypatch.setattr(lifecycle, '_project_path', lambda _: tmp_path)
+    (tmp_path / 'agents.yaml').write_text(yaml.safe_dump({'agents': [{'id': 'a', 'name': 'one'}, {'id': 'b', 'name': 'two'}]}))
+    with pytest.raises(HTTPException) as raised:
+        asyncio.run(api.update_agent('p', 'a', api.AgentUpdate(name='two')))
+    assert raised.value.status_code == 409
+
+
 if __name__ == "__main__":
-    import sys
-    raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+    raise SystemExit(pytest.main([__file__]))

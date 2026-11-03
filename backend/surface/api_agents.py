@@ -508,117 +508,43 @@ def get_agent_task(project_id: str, agent_id: str, task_id: str, wait: int = 0):
 
 # ============ 에이전트 노트/역할 ============
 
+def _agent_text(project_id, agent_id, kind, *, text=None, missing_ok=False):
+    import agent_lifecycle
+    try:
+        return agent_lifecycle.text_record(
+            project_id, agent_id, kind, text=text,
+            project_path=project_manager.get_project_path(project_id))
+    except (KeyError, agent_lifecycle.AgentConfigMissingError) as exc:
+        if missing_ok:
+            return {kind: ""}
+        raise HTTPException(status_code=404, detail=str(exc))
+    except agent_lifecycle.AgentConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("/projects/{project_id}/agents/{agent_id}/note")
 async def get_agent_note(project_id: str, agent_id: str):
-    """에이전트 메모 조회"""
-    try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            return {"note": ""}
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        for agent in data.get("agents", []):
-            if agent.get("id") == agent_id:
-                agent_name = agent.get("name", agent_id)
-                note_file = project_path / f"agent_{agent_name}_note.txt"
-                if note_file.exists():
-                    return {"note": note_file.read_text(encoding='utf-8')}
-                return {"note": ""}
-
-        return {"note": ""}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    record = _agent_text(project_id, agent_id, "note", missing_ok=True)
+    return {"note": record["note"]}
 
 
 @router.put("/projects/{project_id}/agents/{agent_id}/note")
 async def save_agent_note(project_id: str, agent_id: str, note_data: AgentNote):
-    """에이전트 메모 저장"""
-    try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        for agent in data.get("agents", []):
-            if agent.get("id") == agent_id:
-                agent_name = agent.get("name", agent_id)
-                note_file = project_path / f"agent_{agent_name}_note.txt"
-                note_file.write_text(note_data.note, encoding='utf-8')
-
-                return {"status": "saved"}
-
-        raise HTTPException(status_code=404, detail=f"에이전트 '{agent_id}'를 찾을 수 없습니다.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    _agent_text(project_id, agent_id, "note", text=note_data.note)
+    return {"status": "saved"}
 
 
 @router.get("/projects/{project_id}/agents/{agent_id}/role")
 async def get_agent_role(project_id: str, agent_id: str):
-    """에이전트 역할 조회"""
-    try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        for agent in data.get("agents", []):
-            if agent.get("id") == agent_id:
-                agent_name = agent.get("name", agent_id)
-                role_file = project_path / f"agent_{agent_name}_role.txt"
-
-                role = ""
-                if role_file.exists():
-                    role = role_file.read_text(encoding='utf-8')
-
-                return {"role": role, "agent_name": agent_name}
-
-        raise HTTPException(status_code=404, detail=f"에이전트 '{agent_id}'를 찾을 수 없습니다.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return _agent_text(project_id, agent_id, "role")
 
 
 @router.put("/projects/{project_id}/agents/{agent_id}/role")
 async def update_agent_role(project_id: str, agent_id: str, role_data: AgentRole):
-    """에이전트 역할 저장"""
-    try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-
-        for agent in data.get("agents", []):
-            if agent.get("id") == agent_id:
-                agent_name = agent.get("name", agent_id)
-                role_file = project_path / f"agent_{agent_name}_role.txt"
-                role_file.write_text(role_data.role, encoding='utf-8')
-
-                return {"status": "saved", "agent_name": agent_name}
-
-        raise HTTPException(status_code=404, detail=f"에이전트 '{agent_id}'를 찾을 수 없습니다.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    record = _agent_text(project_id, agent_id, "role", text=role_data.role)
+    return {"status": "saved", "agent_name": record["agent_name"]}
 
 
 # ============ 에이전트 CRUD ============
@@ -632,6 +558,8 @@ async def create_agent(project_id: str, agent_data: AgentUpdate):
                                                  allowed_nodes=agent_data.allowed_nodes, allowed_tools=agent_data.allowed_tools,
                                                  channel=agent_data.channel, email=agent_data.email)
         return {"status": "created", "agent": _redact_agent_secrets(new_agent)}
+    except agent_lifecycle.AgentConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -698,5 +626,7 @@ async def delete_agent(project_id: str, agent_id: str):
         return {"status": "deleted", "agent_id": agent_id, "name": name}
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except agent_lifecycle.AgentConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -77,5 +77,17 @@ def test_duplicate_name_rejected_even_without_files(project):
     assert snapshot(project) == before
 
 
-if __name__ == "__main__":
+def test_same_legacy_name_is_ambiguous_for_read_and_create(project):
+    data = lifecycle._load(project)
+    data['agents'].append({'id': 'b', 'name': 'old'})
+    lifecycle._save(project, data)
+    before = snapshot(project)
+    with pytest.raises(lifecycle.AgentConflictError):
+        lifecycle.read_text('p', 'a', 'role')
+    with pytest.raises(lifecycle.AgentConflictError):
+        lifecycle.create_agent('p', 'old', role='other')
+    assert snapshot(project) == before
+
+
+if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

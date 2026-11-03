@@ -391,3 +391,21 @@ def test_runtime_diagnostics_can_be_read_without_opening_state_writes(repair):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_host_indexes_new_candidate_for_builders_without_changing_canonical_index(repair):
+    repo, wt, st, controller, call = repair
+    index = (repo / '.git/index').read_bytes()
+    result = call('write_file', {'path': 'data/scripts/new_build_input.py', 'content': 'VALUE = 1\n'})
+    assert result['success'], result
+    session = st.read_session(str(repo), 'script-repair')
+    st._candidate.collect(str(repo), session)
+    command = ['git', 'ls-files', '--', 'data/scripts/new_build_input.py']
+    assert subprocess.check_output(command, cwd=wt, text=True).strip() == 'data/scripts/new_build_input.py'
+    assert not subprocess.check_output(command, cwd=repo, text=True).strip()
+    assert (repo / '.git/index').read_bytes() == index
+    # Existing acceptance contracts still fail before any host index update.
+    (wt / 'backend/test_existing.py').write_text('def test_existing(): pass\n')
+    with pytest.raises(PermissionError):
+        st._candidate.collect(str(repo), session)
+    assert (repo / '.git/index').read_bytes() == index

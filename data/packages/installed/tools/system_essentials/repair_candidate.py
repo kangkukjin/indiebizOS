@@ -209,6 +209,17 @@ def collect(repo, session):
                 raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' +
                                       ', '.join([*scope['protected'], *scope['unmanaged']]))
             session.update(program_scope=scope, program_analysis_hash=token)
+    # Builders discover source with git ls-files. Only the host may publish
+    # validated new candidate paths to this worktree's index; the sandbox must
+    # never gain access to the shared repository metadata for git add.
+    added = [r['rel'] for r in files.values() if r['base'] is None and r['op'] == 'write']
+    if added and (wt / '.git').exists():
+        listed = subprocess.run(['git', 'ls-files', '--others', '--exclude-standard', '-z', '--', *added],
+                                cwd=wt, capture_output=True, check=True, timeout=30)
+        untracked = [os.fsdecode(p) for p in listed.stdout.split(b'\0') if p]
+        if untracked:
+            subprocess.run(['git', 'add', '--intent-to-add', '--', *untracked], cwd=wt,
+                           capture_output=True, check=True, timeout=30)
     from execution_situation import emit, current as current_situation
     if current_situation():
         emit({'kind': 'code_candidate', 'workspace': str(wt.resolve()), 'session': session.get('id')},

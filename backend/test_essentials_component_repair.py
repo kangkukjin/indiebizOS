@@ -346,5 +346,28 @@ print(json.dumps({'result': result, 'pid': os.getpid()}))
     assert commits[0] == commits[1], '복구된 적용 영수증을 다시 커밋하면 안 된다'
 
 
+def test_component_commit_rejection_uses_shared_recovery_and_same_candidate(setup):
+    repo, source, handler, turn = setup
+    before = source.read_text()
+    candidate_text = revised(before)
+    assert invoke(handler, repo, 'write_file', {'path': str(source), 'content': candidate_text})['staged']
+    hook = repo / '.git/hooks/pre-commit'
+    hook.write_text('#!/bin/sh\necho component-hook-rejected\nexit 1\n')
+    hook.chmod(0o755)
+    result = invoke(handler, repo, 'patch_op', {'op': 'apply'})
+    assert result['rolled_back'] and not result['applied'], result
+    assert 'component-hook-rejected' in result['error']
+    assert source.read_text() == before
+    session = handler._staging_mod().read_session(str(repo), turn.component_session)
+    assert session['status'] == 'staging' and not session['verified']
+    assert (repo / session['worktree'] / source.relative_to(repo)).read_text() == candidate_text
+    with pytest.raises(ValueError):
+        runtime.call('web.naver_response', {'type': 'news', 'response': {'results': []}})
+    hook.write_text('#!/bin/sh\nexit 0\n')
+    done = invoke(handler, repo, 'patch_op', {'op': 'apply'})
+    assert done['success'] and done['commit']['success']
+    assert runtime.call('web.naver_response', {'type': 'news', 'response': {'results': []}}) == []
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

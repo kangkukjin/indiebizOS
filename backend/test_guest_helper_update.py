@@ -19,6 +19,9 @@ from test_resident_pcs import registry, publish_test_mac_release  # noqa: F401
 @pytest.fixture
 def update_pc(pc, monkeypatch):
     import runtime_utils
+    import ibl_registry
+    # Only helper artifacts live in the fixture; keep the compiled catalog.
+    monkeypatch.setattr(ibl_registry, '_nodes_path', ibl_registry.vocabulary_path())
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: pc.path)
     dist = pc.path / 'helper/dist'
     dist.mkdir(parents=True)

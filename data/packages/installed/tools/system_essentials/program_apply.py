@@ -169,6 +169,11 @@ def recover(st, repo, session):
                 temporary = output.name
             os.chmod(temporary, item['before']['mode'])
             os.replace(temporary, path)
+    if session.get('component_activation'):
+        from red_apply import _load_handler
+        handler = _load_handler({'repo': str(repo)})
+        handler._component_scope().recover(handler, Path(repo), session)
+        session.pop('component_activation', None)
     rows = versions.read(repo) if session.get('program_activation') else None
     for row in session.get('program_activation', []):
         package = row['manifest']['package']

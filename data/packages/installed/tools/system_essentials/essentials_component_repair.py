@@ -321,9 +321,10 @@ def recover(handler, repo, session):
 
 def finish(handler, repo, session):
     st = handler._staging_mod()
-    committed = st._candidate.commit(str(repo), session, handler._load_sibling('body_ops'))
-    session['commit'] = committed
-    st._save_session(str(repo), session)
+    result = handler._load_sibling('program_apply').complete(st, str(repo), session)
+    if result.get('rolled_back') or result.get('stage') == 'activation':
+        return result
+    committed = result['commit']
     versions = []
     for row in session['component_activation']:
         spec, version = row['spec'], row['version']

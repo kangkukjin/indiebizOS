@@ -460,7 +460,7 @@ agent/task 바인딩에서 찾는다. 직접 호출과 HTTP 도구가 동일한 
 
 ### 공통 수리 종료 처리
 
-`program_apply.complete`가 패키지·모듈·재시작 경로의 활성 검사·각인·각인 거절 복구를
+`program_apply.complete`가 등록 순수 부품·패키지·모듈·재시작 경로의 활성 검사·각인·각인 거절 복구를
 소유한다. `program_host_apply.finish`, 패키지 `finish`, 일반 즉시 적용, 외부 제어자의
 `commit_applied`는 이를 호출한다. 재시작 경로만 새 실행본을 만들기 전에 각인하고
 활성 검사는 기동 뒤 수행한다. 검사 실행은 공통 `repair_candidate.activation`과

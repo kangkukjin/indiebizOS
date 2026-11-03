@@ -396,5 +396,9 @@
     "No full historical prompt reconstruction",
     "No independent end-to-end performance experiment",
     "Public main-branch code is content-hashed, not pinned to a release commit"
-  ]
+  ],
+  "source_path_rules": {
+    "internal": "Relative to canonical repository root",
+    "external": "Relative to outputs/failure_recovery_research_2026-11-03 (local source snapshots, not Git tracked)"
+  }
 }

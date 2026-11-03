@@ -166,6 +166,10 @@ def evidence_references(packet):
         for field in ('input', 'result'):
             ref = call.get(field) or {}
             add(ref.get('id'), ref.get('id'), ref.get('chars'), f'evidence_index[{index}].{field}')
+    for row in packet.get('context', {}).get('workspace_evidence', []):
+        ref = row.get('evidence_ref') or {}
+        add(ref.get('id'), ref.get('id'), ref.get('chars'),
+            'workspace_check:' + str(row.get('id', '')), row.get('criterion_ids', []))
     for row in refs.values():
         row['recoverable'] = bool(not row['ambiguous'] and re.fullmatch(r'[0-9a-f]{64}', row['evidence_id'])
                                   and row['revision'] == row['evidence_id'])

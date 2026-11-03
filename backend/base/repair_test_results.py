@@ -1,5 +1,6 @@
 """수리 검사의 실제 보고서. 셸 성공과 기능 검사 통과를 구분한다."""
 import json
+import os
 import re
 import shlex
 import uuid
@@ -55,13 +56,34 @@ def invocation(command, workspace):
     if any(t.startswith(("--junit", "--test-reporter", "--collect-only")) for t in tokens):
         raise ValueError("검사 보고서 옵션은 호스트가 지정합니다. 명령에서 보고서/수집 전용 옵션을 제거하세요")
     report = Path(workspace).resolve() / "data/spill/repair_checks" / (uuid.uuid4().hex + ".xml")
+    observer_env = {}
     if pytest:
         report.parent.mkdir(parents=True, exist_ok=True)
-        tokens.append("--junitxml=" + str(report))
+        tokens.extend(["-p", "repair_test_results", "--junitxml=" + str(report)])
+        observer_env["INDIEBIZ_REPAIR_TEST_EVENTS"] = str(Path(workspace).resolve() / "data/system_ai_state/repair_check_events" / report.stem)
+        observer_env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(Path(__file__).resolve().parent),
+                                                        env.get("PYTHONPATH", os.environ.get("PYTHONPATH", ""))]))
     else:
         tokens.insert(1, "--test-reporter=tap")
     return {"argv": tokens, "cwd": str(cwd), "kind": "pytest" if pytest else "node",
-            "report": str(report) if pytest else None, "env": env}
+            "report": str(report) if pytest else None, "env": env, "observer_env": observer_env}
+
+
+def selected_invocation(command, workspace):
+    """Recognize the existing selector substitution, without evaluating a shell."""
+    match = re.fullmatch(r"([^$`]+)\$\(([^()$`]+)\)([^$`]*)", command)
+    if not match:
+        return None
+    try:
+        prefix, selector, suffix = (shlex.split(part) for part in match.groups())
+    except ValueError:
+        return None
+    is_pytest = prefix and (Path(prefix[0]).name in {"pytest", "pytest3"} or
+                            Path(prefix[0]).name.startswith("python") and prefix[1:3] == ["-m", "pytest"])
+    if (not is_pytest or len(selector) < 2 or not Path(selector[0]).name.startswith("python")
+            or (Path(workspace) / selector[1]).resolve() != (Path(workspace) / "scripts/select_tests.py").resolve()):
+        return None
+    return {"prefix": prefix, "selector": selector, "suffix": suffix}
 
 
 def summary(spec, output, exit_code):
@@ -93,7 +115,62 @@ def summary(spec, output, exit_code):
                             and result["failures"] == 0 and result["skipped"] == 0)
     except (OSError, ValueError, ET.ParseError) as exc:
         result["error"] = str(exc)
+    if spec["kind"] == "pytest":
+        result["scope"] = _pytest_scope(spec)
+        scope = result["scope"]
+        if (not scope.get("observed") or scope.get("not_run") or scope.get("conflict")
+                or scope.get("failed") or scope.get("skipped")
+                or len(scope.get("collected", [])) != result["tests"]):
+            result["passed"] = False
     return result
+
+
+def pytest_configure(config):
+    """Optional pytest plugin: collection and outcomes survive -x and missing JUnit."""
+    raw = os.environ.get("INDIEBIZ_REPAIR_TEST_EVENTS")
+    if not raw:
+        return
+    directory = Path(raw)
+    directory.mkdir(parents=True, exist_ok=True)
+    worker = getattr(config, "workerinput", {}).get("workerid", "main")
+
+    class Observer:
+        def pytest_collection_finish(self, session):
+            if session.items:
+                (directory / (worker + ".collection.json")).write_text(
+                    json.dumps([item.nodeid for item in session.items]))
+
+        def pytest_runtest_logreport(self, report):
+            with (directory / (worker + ".outcomes.jsonl")).open("a") as stream:
+                stream.write(json.dumps({"id": report.nodeid, "phase": report.when,
+                                         "outcome": report.outcome}) + "\n")
+    config.pluginmanager.register(Observer(), "repair_scope_observer")
+
+
+def _pytest_scope(spec):
+    directory = Path(spec.get("observer_env", {}).get("INDIEBIZ_REPAIR_TEST_EVENTS")
+                     or Path(spec["report"]).with_suffix(".events"))
+    collections, outcomes = [], {}
+    try:
+        for path in sorted(directory.glob("*.collection.json")):
+            collections.append(json.loads(path.read_text()))
+        for path in sorted(directory.glob("*.outcomes.jsonl")):
+            for line in path.read_text().splitlines():
+                row = json.loads(line)
+                outcomes.setdefault(row["id"], {})[row["phase"]] = row["outcome"]
+        collected = collections[0] if collections else []
+        states = {}
+        for node in collected:
+            phases = outcomes.get(node, {})
+            states[node] = ("failed" if "failed" in phases.values() else
+                            "skipped" if "skipped" in phases.values() else
+                            "passed" if phases.get("call") == phases.get("teardown") == "passed" else "not_run")
+        return {"observed": bool(collections), "collected": collected,
+                "conflict": any(row != collected for row in collections),
+                **{state: [node for node, outcome in states.items() if outcome == state]
+                   for state in ("passed", "failed", "skipped", "not_run")}}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return {"observed": False, "conflict": True, "error": str(exc)}
 
 
 def _go_summary(output):

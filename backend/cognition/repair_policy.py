@@ -40,8 +40,16 @@ def prepare(controller, repo, session, verify, candidate):
         return failure("policy", "진행 중인 이전 판본 수리는 기존 정책으로 마무리해야 합니다")
     contract = copy.deepcopy(getattr(controller, "_final_criteria_contract", None)
                              or criteria_contract(controller.message, controller.framing))
-    plan = session.get("verification_plan") or []
+    plan = copy.deepcopy(session.get("verification_plan") or [])
     criteria = {c["id"]: c for c in contract["criteria"] if c.get("verification_phase") != "activation"}
+    if isinstance(plan, list) and all(isinstance(item, dict) for item in plan):
+        bound = {(item.get("criterion_id"), item.get("command")) for item in plan}
+        for old in session.get("execution_checks", []):
+            for cid in old.get("criterion_ids", []):
+                pair = (cid, old.get("command"))
+                if cid in criteria and pair[1] and pair not in bound:
+                    plan.append({"criterion_id": cid, "command": pair[1], "method": "test"})
+                    bound.add(pair)
     if not criteria or not isinstance(plan, list) or not plan or len(plan) > 40:
         return failure("plan", "요청의 각 기능 기준에 검사 명령 또는 의미 검토를 연결하세요", missing_criteria=list(criteria))
     if any(not isinstance(p, dict) or p.get("criterion_id") not in criteria
@@ -97,11 +105,19 @@ def prepare(controller, repo, session, verify, candidate):
             record = run_check(repo, session, candidate, item["command"], controller)
         except (ValueError, OSError) as exc:
             return finish(failure("test", str(exc), missing_criteria=[item["criterion_id"]]))
+        report = record.get("test_report") or {}
+        if report.get("cases") or report.get("scope", {}).get("collected"):
+            record["criterion_ids"] = sorted(set(record.get("criterion_ids", [])) | {item["criterion_id"]})
         evidence.append(record)
         if record.get("status") != "passed" or not (record.get("test_report") or {}).get("passed"):
             return finish(failure("test", "관련 검사가 통과하지 않았습니다", checks=[record],
                                   missing_criteria=[item["criterion_id"]]))
-        coverage.append({"criterion_id": item["criterion_id"], "status": "passed", "evidence_ids": [record["id"]]})
+        coverage.append({"criterion_id": item["criterion_id"], "status": "passed", "evidence_ids": [record["id"]],
+                         "check_evidence": [check_evidence(record)]})
+    unresolved = unresolved_checks(session, candidate.digest(before), env)
+    if unresolved:
+        return finish(failure("test", "같은 후보에 미해결 검사 실패가 남아 있습니다. 원래 범위를 다시 검사하세요",
+                              checks=unresolved))
     drift = candidate.conflicts(repo, session)
     if drift:
         return finish(failure("conflict", "검사 중 정본이 변경됐습니다. 적용 관문을 실행하지 않습니다",
@@ -169,6 +185,20 @@ def prepare(controller, repo, session, verify, candidate):
                    "regression_evidence": regression, "test_weakening": weakening})
 
 
+def check_evidence(record):
+    return {key: record.get(key) for key in ("id", "command", "candidate_hash", "before_hash",
+                                            "environment_hash", "test_report", "selection", "evidence_ref", "failure_kind")}
+
+
+def unresolved_checks(session, candidate_hash, environment_hash):
+    latest = {}
+    for row in session.get("execution_checks", []):
+        if (row.get("before_hash") == row.get("candidate_hash") == candidate_hash
+                and row.get("environment_hash") == environment_hash and row.get("test_report")):
+            latest[row.get("command")] = row
+    return [check_evidence(row) for row in latest.values() if row.get("status") != "passed"]
+
+
 def regression_evidence(session, plan):
     """같은 검사가 수정 전 실패·수정 후 통과했는가(G5 원 증상 재검사의 사본 측 근거).
 
@@ -227,7 +257,8 @@ def normalize_coverage(decision, observations, supporting):
             invalid.append({"criterion_id": row.get("criterion_id"), "unknown_ids": unknown,
                             "missing_current_check": not anchors})
             continue
-        row.update(evidence_ids=anchors, supporting_evidence_ids=supplements)
+        row.update(evidence_ids=anchors, supporting_evidence_ids=supplements,
+                   check_evidence=[check_evidence(r) for r in observations if r["id"] in anchors])
         covered.add(row.get("criterion_id"))
     return covered, invalid
 
@@ -241,7 +272,7 @@ def semantic_review(controller, contract, criteria, session, evidence):
         limited = {**contract, "criteria": list({c["id"]: c for c in criteria}.values())}
         packet["criteria"] = json.dumps(limited, ensure_ascii=False)
         packet["context"].update(criteria_contract=limited, evaluation_target="repair_semantic",
-                                  workspace=session["worktree"], workspace_evidence=[{**r, "output": r.get("output", "")[:15000] + "\n" + r.get("output", "")[-15000:]} for r in evidence],
+                                  workspace=session["worktree"], workspace_evidence=evidence,
                                   workspace_files=[r["rel"] for r in session["files"].values()])
         from red_apply import _load_handler
         candidate = _load_handler({"repo": str(__import__("runtime_utils").get_base_path())})._staging_mod()._candidate

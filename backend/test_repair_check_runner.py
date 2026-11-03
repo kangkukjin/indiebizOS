@@ -100,3 +100,70 @@ def test_explicit_shell_failure_recovery_remains_supported(repair):
     result = execute(str(root), session, st._candidate, 'false || echo recovered', controller)
     assert result['exit_code'] == 0 and 'recovered' in result['output']
     assert result['status'] == 'unverified'
+
+
+def test_interrupted_scope_preserves_unrun_and_narrow_pass_cannot_erase_failure(repair):
+    root, wt, st, session, controller = repair
+    (wt / 'test_scope.py').write_text('def test_a(): assert False\ndef test_b(): pass\n')
+    cmd = shlex.quote(sys.executable) + ' -m pytest test_scope.py -x'
+    failed = execute(str(root), session, st._candidate, cmd, controller)
+    scope = failed['test_report']['scope']
+    assert scope['failed'] == ['test_scope.py::test_a']
+    assert scope['not_run'] == ['test_scope.py::test_b']
+    narrow = execute(str(root), session, st._candidate,
+                     shlex.quote(sys.executable) + ' -m pytest test_scope.py::test_b', controller)
+    assert narrow['status'] == 'passed'
+    remaining = policy.unresolved_checks(session, narrow['candidate_hash'], narrow['environment_hash'])
+    assert [r['id'] for r in remaining] == [failed['id']]
+
+
+@pytest.mark.parametrize('kind', ['permission', 'cancel', 'timeout', 'changed'])
+def test_failure_diagnosis_preserves_missing_report(repair, monkeypatch, kind):
+    import subprocess
+    root, wt, st, session, controller = repair
+    def fail(*args, **kwargs):
+        if kind == 'changed':
+            (wt / 'a.txt').write_text('changed during check')
+            return subprocess.CompletedProcess([], 0, 'partial', '')
+        if kind == 'timeout':
+            raise subprocess.TimeoutExpired('pytest', 1, output='original output')
+        if kind == 'cancel':
+            monkeypatch.setattr(controller, 'cancelled', lambda: True)
+        raise PermissionError('original permission failure')
+    monkeypatch.setattr('repair_process.run', fail)
+    row = execute(str(root), session, st._candidate, 'python -m pytest test.py', controller)
+    assert row['failure_kind'] == {'permission': 'environment', 'cancel': 'cancelled',
+                                  'timeout': 'timeout', 'changed': 'candidate_changed'}[kind]
+    assert row['test_report']['error']
+    assert row['status'] != 'passed'
+
+
+def test_selected_scope_is_recorded_without_shell_substitution(repair):
+    root, wt, st, session, controller = repair
+    (wt / 'scripts').mkdir(exist_ok=True)
+    (wt / 'scripts/select_tests.py').write_text("import sys\nprint('test_selected.py')\nprint('selected from changed files', file=sys.stderr)\n")
+    (wt / 'test_selected.py').write_text('def test_selected(): pass\n')
+    python = shlex.quote(sys.executable)
+    command = f'{python} -m pytest $({python} scripts/select_tests.py --explain)'
+    record = execute(str(root), session, st._candidate, command, controller)
+    assert record['status'] == 'passed', record
+    assert record['selection']['selected'] == ['test_selected.py']
+    assert 'changed files' in record['selection']['selector_diagnostic']
+    assert record['test_report']['scope']['collected'] == ['test_selected.py::test_selected']
+    assert record['command'] == command
+
+
+def test_original_required_scope_survives_candidate_change_and_narrower_plan(repair):
+    root, wt, st, session, controller = repair
+    (wt / 'test_required.py').write_text('def test_a(): assert False\ndef test_b(): pass\n')
+    command = shlex.quote(sys.executable) + ' -m pytest test_required.py -x'
+    session['verification_plan'] = [{'criterion_id': 'C1', 'command': command}]
+    failed = policy.prepare(controller, str(root), session, st.verify, st._candidate)
+    assert not failed['success']
+    assert session['execution_checks'][-1]['criterion_ids'] == ['C1']
+    (wt / 'a.txt').write_text('new candidate')
+    session['verification_plan'] = [{'criterion_id': 'C1', 'command': command.replace('test_required.py -x', 'test_required.py::test_b')}]
+    result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
+    assert not result['success'] and result['stage'] == 'test'
+    assert result['checks'][0]['command'] == command
+    assert result['checks'][0]['test_report']['scope']['not_run'] == ['test_required.py::test_b']

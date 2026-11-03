@@ -97,3 +97,23 @@ def test_env_assignment_without_a_single_test_command_is_not_a_receipt(tmp_path,
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('state', ['missing', 'contradictory', 'partial', 'complete'])
+def test_pytest_junit_requires_matching_observed_scope(tmp_path, state):
+    from pathlib import Path
+    spec = invocation('python -m pytest test_example.py', tmp_path)
+    Path(spec['report']).write_text('<testsuite><testcase classname="test_example" name="test_a"/></testsuite>')
+    if state != 'missing':
+        directory = Path(spec['observer_env']['INDIEBIZ_REPAIR_TEST_EVENTS'])
+        directory.mkdir(parents=True)
+        collected = ['test_example.py::test_a']
+        if state == 'partial':
+            collected.append('test_example.py::test_b')
+        (directory / 'main.collection.json').write_text(json.dumps(collected))
+        if state == 'contradictory':
+            (directory / 'other.collection.json').write_text(json.dumps(['test_example.py::test_c']))
+        (directory / 'main.outcomes.jsonl').write_text('\n'.join(json.dumps(
+            {'id': collected[0], 'phase': phase, 'outcome': 'passed'}) for phase in ['setup', 'call', 'teardown']))
+    result = summary(spec, '', 0)
+    assert result['passed'] == (state == 'complete')

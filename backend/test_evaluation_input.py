@@ -231,3 +231,15 @@ def test_recovered_segment_is_never_silently_retruncated():
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_workspace_check_reference_is_recoverable_without_conflating_check_id():
+    from evaluation_input import evidence_references
+    original = 'a' * 64
+    packet = {'context': {'workspace_evidence': [{'id': 'check-1',
+        'evidence_ref': {'id': original, 'chars': 90000}, 'criterion_ids': ['C1']}]}}
+    refs = evidence_references(packet)
+    assert len(refs) == 1
+    assert refs[0]['evidence_id'] == refs[0]['revision'] == original
+    assert refs[0]['recoverable'] and refs[0]['total'] == 90000
+    assert refs[0]['criterion_ids'] == ['C1']

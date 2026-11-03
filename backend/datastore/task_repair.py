@@ -8,26 +8,13 @@ from pathlib import Path
 import component_continuation as parent_tasks
 import repair_continuation as journal
 
-from program_boundary import describe
-
-# Compatibility for callers inspecting the former governance set. Ownership is
-# now decided by program_boundary, never by an allow list of implementation names.
-CONTROL_GOVERNANCE = frozenset({
-    'backend/boot_paths.py', 'backend/base/component_registry.py',
-    'backend/common/completion_contract.py', 'backend/datastore/repair_root.py',
-    'backend/datastore/restart_red.py',
-})
+from program_boundary import describe, eligible
 NOTICE = '필요한 구현 수리를 같은 업무의 사본에서 진행합니다. 검사·반영 뒤 원래 업무를 자동으로 이어갑니다.'
 
 
 def implementation_unit(relative):
     item = describe(relative)
     return item['owner'] if item and item['mutable'] else None
-
-
-def eligible(relative):
-    item = describe(relative)
-    return bool(item and item['mutable'] and item['kind'] not in {'script', 'vocabulary'})
 
 
 def valid_paths(paths):
@@ -40,7 +27,7 @@ def scope(row):
     return (row or {}).get('task_scope')
 
 
-def check_delta(session, relatives):
+def check_delta(session, relatives, *, current=None):
     limit = scope(session)
     active = scope(journal.current())
     if active and limit != active:
@@ -53,6 +40,12 @@ def check_delta(session, relatives):
     from program_boundary import change
     support = {p for p in relatives if (change(p, session.get('baseline', {}).get(p),
                {'pending': True}) or {}).get('kind') == 'test'}
+    # Only collection with actual bytes may accept an official owner's output.
+    # A file-path preflight cannot borrow a previous registry receipt.
+    if current is not None:
+        support.update(p for p in relatives if (item := change(
+            p, session.get('baseline', {}).get(p), current.get(p),
+            managed=session.get('managed_files'))) and item['mutable'] and item['kind'] == 'managed')
     outside = set(relatives) - set(paths) - session.get('derived_files', {}).keys() - support
     if outside:
         raise PermissionError('업무 수리 범위 밖 변경: ' + ', '.join(sorted(outside)))

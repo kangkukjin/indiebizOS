@@ -78,7 +78,7 @@ def _find_repo_root():
     return None  # 미탐지 시 RED 가드 fail-open(정상 쓰기를 막지 않음 > 안전 과잉)
 
 _REPO_ROOT = _find_repo_root()
-_RED_ZONE_DIRS = ("backend", "frontend", "scripts")
+from program_boundary import LIVE_CODE_ROOTS as _RED_ZONE_DIRS
 # 사람 전용 승인 상태 파일 — 에이전트가 IBL 파일 쓰기로 자가승인하면 게이트가 무의미해진다.
 # ([self:install_lib] 공급망 방어 게이트. 승인 채널은 HTTP /install-approvals/* 뿐.)
 _PROTECTED_STATE_FILES = ("data/system_ai_state/install_approvals.json",)
@@ -166,8 +166,8 @@ def _red_zone_violation(abs_path: str) -> str | None:
     if root is None:
         return None  # 이 몸 밖(남의 저장소·시스템 파일·/tmp) — 종전대로 허용
     from execution_turn import current as execution_binding
-    from program_boundary import protected_reason
-    protected = protected_reason(os.path.relpath(real, root).replace(os.sep, "/"))
+    protected = _load_sibling('repair_tool_scope').protected_write_reason(
+        __import__('types').SimpleNamespace(**globals()), real, root)
     if protected and execution_binding() is not None:
         return ("Error: 보호 코어·기존 검사 계약은 업무 중 에이전트가 변경할 수 없습니다: "
                 + protected + ". 일반 프로그램은 한정 사본에서 수정하며, 코어 개발은 외부 개발 경로가 맡습니다.")

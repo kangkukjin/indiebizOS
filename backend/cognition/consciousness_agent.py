@@ -168,6 +168,8 @@ class ConsciousnessAgent:
         if structure:
             self._prompt += f"\n\n<system_structure>\n{structure}\n</system_structure>"
 
+        from program_boundary import guidance
+        self._prompt += '\n\n<program_boundary>\n' + guidance() + '\n</program_boundary>'
         self._supervisor_prompt = self._prompt  # 감독은 작업대로 필요한 스키마를 읽는다.
         # IBL 환경 주입 — 도구 없는 호환 경로는 문법서 + 액션 카탈로그 전체.
         # 작업 구조와 상상실행을 실제 능력에 근거해 판단한다. build_environment =

@@ -16,6 +16,7 @@ import execution_turn
 import repair_continuation as journal
 import task_repair as repair
 import red_grant
+import api_repair_continuation  # noqa: F401 — 임시 경로 lambda를 소비자 import에 남기지 않는다
 import model_resolver  # noqa: F401 — 임시 몸 경로를 패치하기 전에 정본 설정 경로를 결속
 from thread_context import actor_context
 from providers.base import turn_token_scope, ProviderMetrics, read_turn_tokens
@@ -94,6 +95,30 @@ def test_propose_preserves_parent_and_stages_without_grant(env):
     assert journal.read(parent['task_id'])['status'] == 'waiting_repair'
 
 
+def test_ordinary_task_can_request_script_repair_without_core_grant(env):
+    path = env.repo / 'data/scripts/reader.py'
+    path.parent.mkdir(parents=True)
+    path.write_text('VALUE = 1\n')
+    subprocess.run(['git', 'add', 'data/scripts/reader.py'], cwd=env.repo, check=True)
+    subprocess.run(['git', 'commit', '-qm', 'existing script'], cwd=env.repo, check=True)
+    env.path = path
+    parent, child = propose(env)
+    assert child['task_scope']['paths'] == ['data/scripts/reader.py']
+    assert parent['goal'] == env.turn.request
+    assert path.read_text() == 'VALUE = 1\n'
+    assert (env.repo / child['worktree'] / 'data/scripts/reader.py').read_text() == 'VALUE = 2\n'
+    assert red_grant.active_grant(task_id='original') is None
+
+
+def test_boundary_query_is_not_intercepted_by_a_component_session(env):
+    env.turn.component_session = 'existing-component'
+    result = invoke(env.handler, env.repo, 'patch_op',
+                    {'op': 'status', 'path': 'backend/base/program_boundary.py'})
+    assert result['success'] and result['items'][0]['kind'] == 'core'
+    assert env.turn.component_session == 'existing-component'
+    assert not env.turn.continuation_key
+
+
 def test_invalid_candidate_reports_error_without_arming_parent(env):
     result = invoke(env.handler, env.repo, 'patch_op', {'op': 'propose', 'path': str(env.path),
                     'reason': '파서 결함', 'content': 'def broken(:'})
@@ -116,12 +141,18 @@ def test_control_contract_and_checks_are_not_automatic_repair_targets(path):
     'data/packages/installed/tools/system_essentials/tool_fake.py',
     'backend/base/future_program.py', 'data/packages/installed/tools/web/handler.py',
     'data/packages/installed/tools/web/parsers/news.py', 'backend/services/document_scanner.py',
+    'data/scripts/development_checks.py', 'data/ibl_nodes_src/sense.yaml',
 ])
 def test_related_runtime_implementations_can_be_repaired(path):
     assert repair.eligible(path)
 
 
-@pytest.mark.parametrize('path', sorted(repair.CONTROL_GOVERNANCE))
+@pytest.mark.parametrize('path', [
+    'backend/boot_paths.py', 'backend/base/component_registry.py',
+    'backend/common/completion_contract.py', 'backend/datastore/repair_root.py',
+    'backend/datastore/restart_red.py', 'backend/cognition/cognitive_consciousness.py',
+    'backend/cognition/consciousness_agent.py', 'backend/cognition/prompt_builder.py',
+    'backend/cognition/reframe.py', 'backend/cognition/framing_inheritance.py'])
 def test_runtime_ownership_does_not_include_authority_and_completion(path):
     assert not repair.eligible(path)
 

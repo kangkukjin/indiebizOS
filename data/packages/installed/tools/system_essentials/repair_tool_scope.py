@@ -11,6 +11,29 @@ FILE_TOOLS = WRITE_TOOLS | {"read_op", "read_file", "list_directory", "run_comma
 PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source", "dest", "destination", "args_file"}
 
 
+def protected_write_reason(handler, path, body_root):
+    """The file gate must use the same baseline as candidate preflight.
+
+    Only this task's owned staging workspace may add a new acceptance test.
+    Live files, other candidates and direct registry writes stay protected.
+    """
+    from program_boundary import protected_reason, change
+    relative = Path(path).relative_to(body_root).as_posix()
+    reason = protected_reason(relative)
+    if not reason or not handler._red_grant_active():
+        return reason
+    st, repo = handler._staging_mod(), str(handler._REPO_ROOT)
+    session = st.read_session(repo, handler._staging_key())
+    if (not session or not session.get('program_policy') or session.get('status') != 'staging'
+            or session.get('reused_by') or session.get('owner') != st._repair_owner()
+            or (Path(repo) / session['worktree']).resolve() != Path(body_root).resolve()):
+        return reason
+    from task_repair import check_delta
+    check_delta(session, [relative])
+    item = change(relative, session['baseline'].get(relative), {'pending': True})
+    return None if item and item['mutable'] else reason
+
+
 def prepare(self_module, name, payload, project):
     if name == "body_op" and payload.get("op") == "commit":
         raise PermissionError("수리 델타의 각인은 self:patch apply 이후 적용 서비스가 수행합니다")
@@ -205,6 +228,8 @@ def managed_write(st, repo, key, operation):
                 path.write_bytes(before)
                 path.chmod(mode)
             return result
+        from script_mutation import validate_task_scope
+        validate_task_scope(session, before, path.read_bytes() if path.exists() else None)
         after = st._candidate.fingerprint(path)
         old = session.get('managed_files', {}).get(relative)
         session.setdefault('managed_files', {})[relative] = {

@@ -508,6 +508,7 @@ class CognitivePipelineMixin:
         original_provider = None
         _reframe_channel = None
         _repair_granted_task = None  # 이 런이 발급한 RED 그랜트의 task_id (finally 회수용)
+        from program_boundary import repair_requested
         if parent_resume:
             from component_continuation import framing
             from dialogue_continuation import recall_query
@@ -515,7 +516,7 @@ class CognitivePipelineMixin:
         elif force_role:
             # 표면별 전용 에이전트: 의식 건너뛰고 지정 모델(기본 경량)로 바로 실행.
             original_provider = _switch_to_role(self, force_role)
-        elif request_type == "REPAIR":
+        elif repair_requested(request_type):
             # 시스템 자기수정 경로 (헌법 2026-08-05): 사람 승인 게이트(Floor #4) 폐기 대신
             # ①사람 명령 태스크 ②고급 모델 승격 ③의식 각성(토글 OFF 여도 강제) + 기계 안전판.
             # 의식은 토글과 무관하게 깨운다 — _run_consciousness_or_reuse 는 토글을 안 본다.
@@ -535,25 +536,17 @@ class CognitivePipelineMixin:
                                                                     repair=True)
             from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
             _origin = get_task_origin()
-            if (isinstance(consciousness_output, dict)
-                    and consciousness_output.get("needs_repair") is False
-                    and self._tag_override(message) != "REPAIR"):
-                request_type = "THINK"
-                record_trajectory_event("cognition.route", {
-                    "request_type": "THINK", "previous_request_type": "REPAIR",
-                    "reason": "consciousness_rejected_core_repair", "reflex": False,
-                    "force_role": "", "intent": "task",
-                })
-                print("[수리] 의식이 코어 수정 불필요로 정정 — RED 그랜트 없이 THINK 실행")
-            elif _origin == "user" and utterance_author != "agent":
+            # REPAIR grants an isolated program workspace, never protected core.
+            # A false model hint must not strand an authorized non-core repair.
+            if _origin == "user" and utterance_author != "agent":
                 original_provider = _switch_to_role(self, "system_repair")
                 from red_grant import issue_grant
                 _g_task = get_current_task_id()
                 _repair_grant_agent = get_current_agent_id() or "system_ai"
-                issue_grant(agent_id=_repair_grant_agent,
-                            task_id=_g_task, reason=message)
-                _repair_granted_task = _g_task
-                print(f"[수리] RED 그랜트 발급 (task={_g_task}) — 고급 모델·의식 각성 경로")
+                _issued_grant = issue_grant(agent_id=_repair_grant_agent, task_id=_g_task, reason=message)
+                if _issued_grant:
+                    _repair_granted_task = _g_task
+                    print(f"[수리] 프로그램 수리 그랜트 발급 (task={_g_task}) — 보호 코어 제외")
             else:
                 # 자율 태스크 — 승격·그랜트 없음. 의식 framing 은 하되
                 # RED 쓰기는 게이트가 막고 [self:patch]{op:"propose"} 경로를 안내한다.
@@ -561,7 +554,7 @@ class CognitivePipelineMixin:
         elif request_type == "THINK":
             consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
             # 늦은 REPAIR 승격 (2026-08-20, ep1264): 분류기의 REPAIR 는 '수리' 의미론이라
-            # 코어를 건드리는 개발 명령("강의 창에 버튼 만들어줘")을 놓치고, 그러면 그랜트
+            # 일반 프로그램 개발 명령("강의 창에 버튼 만들어줘")을 놓치고, 그러면 그랜트
             # 없이 주행해 apply 가 거부된다. 전체 맥락을 본 의식이 needs_repair 를 선언하면
             # REPAIR 분기와 같은 한도(사람 명령)로 승격·그랜트를 발급한다 —
             # 헌법 3조건 중 의식 각성은 THINK 경로가 이미 충족한 자리다.
@@ -573,10 +566,10 @@ class CognitivePipelineMixin:
                     from red_grant import issue_grant
                     _g_task = get_current_task_id()
                     _repair_grant_agent = get_current_agent_id() or "system_ai"
-                    issue_grant(agent_id=_repair_grant_agent,
-                                task_id=_g_task, reason=message)
-                    _repair_granted_task = _g_task
-                    print(f"[수리] 늦은 REPAIR 승격 (task={_g_task}) — 의식 needs_repair 선언")
+                    _issued_grant = issue_grant(agent_id=_repair_grant_agent, task_id=_g_task, reason=message)
+                    if _issued_grant:
+                        _repair_granted_task = _g_task
+                        print(f"[수리] 늦은 프로그램 수리 승격 (task={_g_task})")
                     # 분류기가 놓친 수리 턴이라 의식은 수리 교리 없이 규정을 세웠다 —
                     # 교리를 싣고 한 번 더 깨워 규정(가설 원인 사슬·apply 기준)을 수리 턴 것으로 바꾼다.
                     _re = self._run_consciousness_or_reuse(message, history, execution_memory, repair=True)

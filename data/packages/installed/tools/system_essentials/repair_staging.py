@@ -71,7 +71,6 @@ _surfaces_spec = importlib.util.spec_from_file_location(
 _surfaces = importlib.util.module_from_spec(_surfaces_spec)
 _surfaces_spec.loader.exec_module(_surfaces)
 
-
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
 # ★옛 제안 원장(통합 전 세대). propose 가 여기+selfpatch-* 워크트리를 따로 써서 apply 가
 # 원리적으로 못 봤다(실측 08-18: 제안 7건 누적 / 적용 0건). 지금은 제안도 세션이라
@@ -1157,6 +1156,8 @@ def op_status(ti):
     repo, key = _ctx(ti)
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
+    if ti.get('path'):
+        return __import__('program_boundary').path_status(ti['path'], repo)
     d = os.path.join(repo, SESSION_DIRNAME)
     items = []
     for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:

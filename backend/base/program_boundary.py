@@ -7,6 +7,37 @@ activation mechanism. Shared modules use stable call boundaries and explicit sta
 from pathlib import PurePosixPath
 
 
+# These roots require staged code publication, not permission to alter core.
+LIVE_CODE_ROOTS = ('backend', 'frontend', 'scripts')
+
+
+def repair_requested(request_type, framing=None):
+    """A repair route supplies a workspace; it never authorizes protected core.
+
+    A model's false 'needs_repair' used to revoke an already requested repair
+    merely because scripts needed no core edit. Actual deltas, not this hint,
+    determine publication and completion receipts.
+    """
+    return request_type == 'REPAIR' or bool((framing or {}).get('needs_repair'))
+
+
+def guidance():
+    """Shared contract supplied to planning and execution; path decisions stay here."""
+    return (
+        '수리 경계 정본: backend/base/program_boundary.py의 describe/change. '
+        '대상이 불명확하면 [self:patch]{op:"status",path:"정본 상대 경로"}로 현재 소유권을 조회한다. '
+        '코어는 기본 지침·권한·격리·언어·목표와 완료 판정을 집행하는 보호 구현이다. '
+        '보호 코어는 수리 그랜트가 있어도 내부에서 변경할 수 없다. '
+        '일반 프로그램(backend 모듈·frontend·scripts·도구 패키지·data/scripts·개인 사전)은 '
+        '공통 소유권 판정에 따라 사본 수정→관련 검사→self:patch apply→활성 확인·각인으로 수리한다. '
+        'needs_repair는 이 프로그램 사본 작업의 필요 여부이며 코어 변경 여부가 아니다. '
+        'REPAIR로 시작한 사용자 요청은 needs_repair:false여도 이 경로를 유지한다. '
+        '관용구 등 관리 정의만 개정하면 소유 API의 검증·판본 저장·새 호출로 완료한다. '
+        '그랜트만으로 코드 적용·재기동·커밋을 요구하지 않으며 실제 후보 변경이 있을 때만 요구한다. '
+        '작업 목표·검사 기준은 유지하고 보호 코어 변경이 필요하면 그 경계와 미완료를 보고한다.'
+    )
+
+
 # These are authority/validation/lifetime enforcement, not a list of features.
 # Keep the reason alongside the boundary so additions remain reviewable.
 CORE_MODULES = {
@@ -17,6 +48,9 @@ CORE_MODULES = {
     'tool_loader': 'implementation loading', 'ibl_routing': 'call authority',
     'ibl_access': 'call authority', 'ibl_principal': 'call authority',
     'agent_pipeline': 'execution and grant issuance',
+    'cognitive_consciousness': 'repair routing', 'consciousness_agent': 'goal framing',
+    'prompt_builder': 'agent instructions', 'prompt_composition': 'agent instructions',
+    'reframe': 'goal revision', 'framing_inheritance': 'goal and authority inheritance',
     'final_evaluator': 'completion criteria', 'supervisor_handoff': 'goal ownership',
     'consciousness': 'goal ownership', 'conscious_supervisor': 'goal ownership',
     'supervision_bus': 'supervision authority', 'supervision_hook': 'supervision authority',
@@ -116,6 +150,12 @@ def describe(relative):
         return None
     reason = protected_reason(relative)
     if reason:
+        if relative in MANAGED_RESOURCES:
+            return {'kind': 'managed', 'owner': MANAGED_RESOURCES[relative],
+                    'reason': reason, 'mutable': False, 'activation': 'owner-revision'}
+        if reason == 'existing acceptance contract':
+            return {'kind': 'acceptance', 'owner': 'existing-tests', 'reason': reason,
+                    'mutable': False, 'activation': 'external-development'}
         return {'kind': 'core', 'owner': 'protected-core', 'reason': reason,
                 'mutable': False, 'activation': 'external-development'}
     parts = path.parts
@@ -142,6 +182,26 @@ def describe(relative):
 
 def eligible(relative):
     return bool((describe(relative) or {}).get('mutable'))
+
+
+def path_status(raw, repo):
+    """Read-only ownership query for self:patch status; never create a workspace."""
+    from pathlib import Path
+    from runtime_utils import expand_body_path
+    try:
+        path = Path(expand_body_path(raw))
+        root = Path(repo).resolve()
+        relative = path.resolve().relative_to(root).as_posix() if path.is_absolute() else raw
+        if not canonical(relative) or not (root / relative).resolve().is_relative_to(root):
+            raise ValueError('정본 내부의 정규 경로가 필요합니다')
+        relative = (root / relative).resolve().relative_to(root).as_posix()
+        item = describe(relative) or {'kind': 'unmanaged', 'mutable': False, 'activation': None}
+        return {'success': True, 'items': [{'path': relative, **item,
+                'decision': 'static-ownership', 'source': 'backend/base/program_boundary.py'}],
+                'message': '정적 소유권 조회입니다. 새 검사·관리 원장·파생물의 실제 변경은 '
+                           '기준 판본과 공식 소유자 영수증으로 change가 판정합니다.'}
+    except (ValueError, TypeError, OSError) as exc:
+        return {'success': False, 'error': str(exc)}
 
 
 def plan(paths):

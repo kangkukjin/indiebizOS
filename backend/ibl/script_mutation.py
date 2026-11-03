@@ -43,6 +43,29 @@ def publish(root, path, directory, write, before, after, sid):
             'callers': [r['location'] for r in impact['callers']], 'unknown': impact['unknown']}
 
 
+def validate_task_scope(session, before, after):
+    """A shared registry receipt cannot change scripts outside a task's paths."""
+    limit = session.get('task_scope')
+    if not limit:
+        return
+    import yaml
+    from program_boundary import canonical
+    before, after = yaml.safe_load(before or '{}') or {}, yaml.safe_load(after or '{}') or {}
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        raise ValueError('스크립트 등록부 형식이 유효하지 않습니다')
+    allowed = set(limit.get('paths') or [])
+    for sid in before.keys() | after.keys():
+        if before.get(sid) == after.get(sid):
+            continue
+        for registry in (before, after):
+            if sid not in registry:
+                continue
+            entry = registry[sid]
+            name = entry.get('file') if isinstance(entry, dict) else None
+            if not canonical(name) or 'data/scripts/' + name not in allowed:
+                raise PermissionError('업무 수리 범위 밖 스크립트 등록 변경: ' + str(sid))
+
+
 @contextmanager
 def activation_scope(repo, session):
     """Serialize candidate registry publication with the live definition owner."""
@@ -66,6 +89,8 @@ def validate_candidate(repo, session):
     item = session.get('sealed', {}).get(relative)
     if not item:
         return
+    validate_task_scope(session, base64.b64decode(item.get('before_data') or ''),
+                        base64.b64decode(item.get('data') or ''))
     before = yaml.safe_load(base64.b64decode(item['before_data'])) if item.get('before_data') else {}
     after = yaml.safe_load(base64.b64decode(item['data'])) if item.get('data') else {}
     before, after = before or {}, after or {}

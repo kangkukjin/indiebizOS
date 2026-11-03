@@ -612,7 +612,8 @@ def _repair_turn_block(builder) -> str:
         if active_grant(task_id=get_current_task_id() or None,
                         agent_id=get_current_agent_id() or None) is None:
             return ""
-        return builder._load_file("fragments/13_repair.md") or ""
+        from program_boundary import guidance
+        return guidance() + '\n\n' + (builder._load_file("fragments/13_repair.md") or "")
     except Exception as e:
         logger.debug(f"[prompt_builder] 수리 교리 주입 생략 (무시): {e}")
         return ""

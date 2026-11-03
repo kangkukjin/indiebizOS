@@ -14,11 +14,11 @@ from test_conscious_supervisor import verdict
 
 
 @pytest.mark.parametrize("repair,tag,origin,expected", [
-    (False, None, "user", False), (False, "REPAIR", "user", True),
+    (False, None, "user", True), (False, "REPAIR", "user", True),
     (True, None, "user", True), (None, None, "user", True),
     ("false", None, "user", True), (True, None, "scheduler", False),
 ])
-def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch,
+def test_noncore_hint_preserves_requested_repair(supervisor, monkeypatch,
                                                         repair, tag, origin, expected):
     from agent_pipeline import CognitivePipelineMixin
     import thread_context as tc
@@ -46,7 +46,7 @@ def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch
     runner.ai._provider = None
     runner.ai.process_message_stream = lambda **kw: iter([{"type": "final", "content": "완료"}])
     supervisor.runner, supervisor.enabled = runner, False
-    monkeypatch.setattr("red_grant.issue_grant", lambda **kw: grants.append(kw))
+    monkeypatch.setattr("red_grant.issue_grant", lambda **kw: grants.append(kw) or kw)
     monkeypatch.setattr("system_ai_core._switch_to_role", lambda r, role: switches.append(role))
     monkeypatch.setattr("episode_logger.record_trajectory_event", lambda k, d: traces.append((k, d)))
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
@@ -55,8 +55,7 @@ def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch
     assert not [e for e in events if e["type"] == "error"], events
     assert bool(grants) is expected
     assert ("system_repair" in switches) is expected
-    if repair is False and tag is None:
-        assert [d for k, d in traces if k == "cognition.route"][-1]["request_type"] == "THINK"
+    assert not [d for k, d in traces if d.get('reason') == 'consciousness_rejected_core_repair']
 
 
 def test_repair_rounds_include_unique_responses_but_not_supervision():

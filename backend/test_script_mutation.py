@@ -38,5 +38,25 @@ def test_new_live_caller_prevents_prepared_contract_break(body):
         assert registry.read_bytes() == before
 
 
+@pytest.mark.parametrize('change', ['remove', 'redirect', 'metadata'])
+def test_scoped_publication_cannot_change_another_script(body, change):
+    root, _ = body
+    before = {'owned': {'file': 'owned.py'}, 'other': {'file': 'other.py'}}
+    after = {k: dict(v) for k, v in before.items()}
+    if change == 'remove':
+        after.pop('other')
+    elif change == 'redirect':
+        after['other']['file'] = 'owned.py'
+    else:
+        after['other']['description'] = 'out of scope'
+    session = {'task_scope': {'paths': ['data/scripts/owned.py']},
+               'sealed': {'data/scripts/registry.yaml': {
+                   'before_data': base64.b64encode(yaml.safe_dump(before).encode()).decode(),
+                   'data': base64.b64encode(yaml.safe_dump(after).encode()).decode()}}}
+    with pytest.raises(PermissionError, match='범위 밖'):
+        with activation_scope(root, session):
+            pytest.fail('shared registry may not expand the scoped repair')
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

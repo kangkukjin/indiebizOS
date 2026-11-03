@@ -13,7 +13,7 @@ def direct_framing(message):
             "criteria": [{"text": message, "user_quote": message, "verification_phase": "workspace"}],
             "capability_focus": {"hint": "변경 대상부터 확인하세요. 관리 연산으로 개정하는 정의·데이터는 그 연산으로 수정하고 새 호출로 검증합니다. "
                 "관용구는 workflow detail의 revision을 expected_revision으로 save합니다. 코드 적용 없이 원래 목표를 평가합니다. "
-                "실행·해석·권한·작업 지속·생존의 실제 구현 변경이 필요할 때만 같은 사본에서 수정·검사하세요. "
+                "보호 코어 밖의 일반 프로그램 구현 변경이 필요하면 같은 사본에서 수정·검사하세요. "
                 "apply에 verification_plan:[{criterion_id:'C1', command:'단일 pytest, node --test 또는 go test 명령', "
                 "method:'test'}]를 전달하면 같은 후보의 검사 결과를 재사용하거나 검사 후 적용합니다. "
                 "판단이 필요한 조건은 method:'semantic'으로 지정합니다. 생성/빌드는 검사 전에 끝내세요. "

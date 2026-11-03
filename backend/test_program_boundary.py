@@ -95,5 +95,56 @@ def test_script_helpers_and_consumers_are_part_of_dependency_inputs(tmp_path):
     assert 'data/scripts/unrelated.py' not in scope['inputs']
 
 
+def test_common_boundary_drives_task_admission_and_path_query(tmp_path, monkeypatch):
+    import program_boundary as boundary
+    import task_repair
+    from test_repair_staging import _load_handler
+    st = _load_handler()._staging_mod()
+    path = 'backend/services/new_algorithm.py'
+    assert task_repair.eligible(path)
+    result = st.op_status({'_repo_root': str(tmp_path), 'path': path})
+    assert result['items'][0]['mutable']
+    monkeypatch.setitem(boundary.CORE_MODULES, 'new_algorithm', 'new authority contract')
+    assert not task_repair.eligible(path)
+    result = st.op_status({'_repo_root': str(tmp_path), 'path': path})
+    assert result['items'][0]['reason'] == 'new authority contract'
+    assert not result['items'][0]['mutable']
+    assert not (tmp_path / 'data/system_ai_state').exists()
+    assert not st.op_status({'_repo_root': str(tmp_path), 'path': '../outside.py'})['success']
+    assert not st.op_status({'_repo_root': str(tmp_path), 'path': '/tmp/outside.py'})['success']
+    assert boundary.describe('data/scripts/registry.yaml')['kind'] == 'managed'
+    assert boundary.describe('backend/test_existing.py')['kind'] == 'acceptance'
+
+
+def test_task_scope_accepts_only_exact_managed_receipt(monkeypatch):
+    import task_repair
+    monkeypatch.setattr('repair_continuation.current', lambda: None)
+    path = 'data/scripts/registry.yaml'
+    after = {'sha': 'official', 'mode': 420}
+    session = {'baseline': {}, 'task_scope': {'paths': ['data/scripts/calculator.py']},
+               'managed_files': {path: {'owner': 'script-registry', 'fingerprint': after}}}
+    task_repair.check_delta(session, [path], current={path: after})
+    with pytest.raises(PermissionError, match='범위 밖'):
+        task_repair.check_delta(session, [path])
+    with pytest.raises(PermissionError, match='범위 밖'):
+        task_repair.check_delta(session, [path], current={path: {'sha': 'manual'}})
+
+
+def test_planner_and_executor_receive_the_same_boundary_guidance(tmp_path, monkeypatch):
+    import program_boundary
+    from consciousness_agent import ConsciousnessAgent
+    from prompt_builder import _repair_turn_block
+    from types import SimpleNamespace
+    monkeypatch.setattr(program_boundary, 'guidance', lambda: 'CURRENT_BOUNDARY_CONTRACT')
+    monkeypatch.setattr('runtime_utils.get_base_path', lambda: tmp_path)
+    monkeypatch.setattr('prompt_builder.get_system_structure_core', lambda: '')
+    monkeypatch.setattr('red_grant.active_grant', lambda **kw: {'task_id': 'test'})
+    agent = object.__new__(ConsciousnessAgent)
+    agent._load_prompt()
+    executor = _repair_turn_block(SimpleNamespace(_load_file=lambda p: 'execution doctrine'))
+    assert 'CURRENT_BOUNDARY_CONTRACT' in agent._supervisor_prompt
+    assert 'CURRENT_BOUNDARY_CONTRACT' in executor
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

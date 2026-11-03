@@ -192,7 +192,7 @@ def collect(repo, session):
         derived.accept(__import__('types').SimpleNamespace(**globals()), repo, session,
                        current, [r['rel'] for r in files.values()])
     from task_repair import check_delta
-    check_delta(session, [r['rel'] for r in files.values()])
+    check_delta(session, [r['rel'] for r in files.values()], current=current)
     session["files"] = files
     if session.get('program_policy'):
         from program_dependencies import analyse, with_derived_inputs
@@ -327,7 +327,6 @@ def seal(repo, session, checks, decision, criteria):
 
 def validate(repo, session):
     from task_repair import check_delta, parent_of
-    check_delta(session, (session.get('sealed') or {}).keys())
     parent_of(session, repo)
     ready, payload = session.get("readiness") or {}, session.get("sealed") or {}
     expected_version = 2 if session.get("repair_policy") == 2 else VERSION
@@ -344,6 +343,7 @@ def validate(repo, session):
     if ignored_source_files(Path(repo) / session["worktree"]):
         raise ValueError("검증 이후 적용 묶음에 없는 소스가 생겼습니다")
     current = inventory(Path(repo) / session["worktree"], session.get("artifact_paths", []))
+    check_delta(session, payload.keys(), current=current)
     if session.get('program_policy'):
         from program_boundary import candidate_plan
         ownership = candidate_plan(session, current)

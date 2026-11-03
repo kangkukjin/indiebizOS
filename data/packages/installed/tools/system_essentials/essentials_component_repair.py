@@ -105,6 +105,8 @@ def restore_session(st, repo, turn, requested=None, *, automatic=False):
 def handle(handler, payload, context):
     if handler._red_grant_active():
         return None
+    if context.tool_name == 'patch_op' and payload.get('op') == 'status' and payload.get('path'):
+        return None  # Ownership inspection never resumes or selects a component session.
     turn = binding()
     if not turn:
         return None

@@ -62,7 +62,7 @@ def user_resume(runner, message, history):
     from repair_continuation import read, resuming, staging_session
     from thread_context import get_task_origin, get_current_agent_id, get_current_task_id
     from principal import is_owner
-    if (current() or not history or get_task_origin() != "user" or not is_owner()):
+    if (current() or get_task_origin() != "user" or not is_owner()):
         yield
         return
     from framing_inheritance import _load, agent_key, _judge_relation, _age_s, FOLLOWUP_MAX_AGE_S
@@ -78,6 +78,9 @@ def user_resume(runner, message, history):
         raise ValueError("재개할 수리 작업을 하나로 지정해야 합니다")
     if explicit:
         last = explicit[0]
+    elif not history:
+        yield
+        return
     prior = read(last.get("task_id", ""))
     seen = set()
     while prior and prior.get('status') == 'continued' and prior.get('child_task_id'):

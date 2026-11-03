@@ -76,7 +76,8 @@ def test_unrelated_or_unauthorized_request_cannot_inherit(unfinished, monkeypatc
         history = []
     elif change == 'not_user':
         monkeypatch.setattr('thread_context.get_task_origin', lambda: 'scheduler')
-    with resume.user_resume(controller.runner, '#repair another task', history):
+    # The fixture's literal task ID is "task"; this request must not name it.
+    with resume.user_resume(controller.runner, '#repair another goal', history):
         assert journal.current() is None
     assert not st.read_session(str(root), sess['key']).get('reused_by')
 
@@ -97,12 +98,13 @@ def test_strict_relation_rejects_empty_model_output(monkeypatch):
         framing._judge_relation({'message': 'prior'}, '#repair continue', strict=True)
 
 
-def test_explicit_prior_task_uses_existing_conversation_record(unfinished):
+@pytest.mark.parametrize('history', [['previous'], []])
+def test_explicit_prior_task_uses_existing_conversation_record(unfinished, history):
     root, wt, st, sess, controller = unfinished
     old = framing._load('owner')['last']
     old['at'] = '2020-01-01T00:00:00'
     framing._save('owner', {'last': {'task_id': 'unrelated'}, 'repeat': {'old': old}})
-    with resume.user_resume(controller.runner, sess['key'] + ' 수리를 완료해줘', ['previous']):
+    with resume.user_resume(controller.runner, sess['key'] + ' 수리를 완료해줘', history):
         assert journal.current()['staging_task_id'] == sess['key']
         assert st.load_session(str(root), 'next')['worktree'] == sess['worktree']
 

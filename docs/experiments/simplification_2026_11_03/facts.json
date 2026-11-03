@@ -1,0 +1,24 @@
+{
+  "head": "61c4cb8ffeb2671ccc127c963b295089f816064f",
+  "layer_modules": 590,
+  "layer_mismatches": {},
+  "layer_history": {
+    "LAYERS_only_AST": 216,
+    "other_logic": 17
+  },
+  "agent_cache": {
+    "before": "first",
+    "after_update": "first",
+    "after_invalidate": "second",
+    "capabilities": []
+  },
+  "rename_collision": {
+    "source_exists": false,
+    "destination": "existing destination",
+    "saved_name": "taken"
+  },
+  "duplicate_collection": {
+    "input_files": 2,
+    "returned_entries": 1
+  }
+}

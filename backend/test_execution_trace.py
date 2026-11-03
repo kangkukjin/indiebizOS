@@ -542,3 +542,20 @@ def test_historical_task_evidence_is_readonly_and_scoped(trace, with_new_identit
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('conflict', [False, True])
+def test_billable_replay_is_deduplicated_across_pages_and_conflict_stays_unknown(trace, conflict):
+    svc, root = trace
+    with sqlite3.connect(root / 'data/world_pulse.db') as conn:
+        data = {'call_id': 'parent', 'round_index': 1, 'accounting': 'billable_usage',
+                'input': 999 if conflict else 100, 'output': 10}
+        conn.execute('INSERT INTO trajectory_event VALUES(?,?,?,?,?,?,?,?,?)',
+                     (trajectory_run_id('shared-task'), 99, 1, 'shared-task', '', '',
+                      'model.usage', json.dumps(data), 'usage'))
+    result = pages(svc, episode_id=1, limit=2)[-1]
+    assert result['usage']['measured'] == FIXTURE['expected_usage']
+    assert result['usage']['records'] == 3
+    assert result['usage']['duplicates_removed'] == 1
+    assert ('conflicting_billable_usage' in result['usage']['partial_reasons']) == conflict
+    assert not result['usage']['complete']

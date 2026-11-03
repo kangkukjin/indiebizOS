@@ -17,6 +17,7 @@ executor 스레드(run_stream)에 걸쳐 있어도, executor 디스패치 시 `c
 """
 
 import json
+import uuid
 import hashlib
 from typing import Optional
 import os
@@ -561,7 +562,7 @@ def notify_usage(provider: str, model: str, latency_ms: float, usage: dict):
     role = _current_role.get("") or "execution"
     from model_call_context import fields
     step = {"event": "usage", "role": role, "latency_ms": int(latency_ms), **fields(),
-            "accounting": "billable_usage"}
+            "accounting": "billable_usage", "usage_id": uuid.uuid4().hex}
     if provider:
         step["provider"] = provider
     if model:

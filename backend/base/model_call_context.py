@@ -258,3 +258,16 @@ def admit_model_round():
     call = _call.get()
     if call is not None:
         start_round(call)
+
+
+def billable_identity(data):
+    """Only persisted billing identities can collapse repeated observations.
+
+    Legacy call/round pairs follow the completed-episode accounting contract.
+    Missing call identities remain distinct and unattributed.
+    """
+    if data.get('usage_id'):
+        return ('usage', data['usage_id'])
+    if data.get('call_id') and data.get('round_index') is not None:
+        return ('round', data['call_id'], data['round_index'])
+    return None

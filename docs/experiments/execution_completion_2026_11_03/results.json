@@ -1,0 +1,618 @@
+{
+  "model_comparison": {
+    "manifest": {
+      "limits": {
+        "model_calls": 4,
+        "per_call_seconds": 90,
+        "total_seconds": 420,
+        "input_bytes_per_call": 32000,
+        "observed_tokens_stop": 40000,
+        "output_chars": 12000
+      },
+      "provider": "CodexProvider",
+      "harness_sha256": "8457761fa875f93508448dd1b1b34cb4458c2aef0361d4aa180bcf13196bbe12",
+      "model": "gpt-6-astra:high",
+      "fresh_history": true,
+      "isolated_stores": true,
+      "token_policy": "Measured token stop between calls; provider output cap is adapter-dependent. One call can overshoot the measured stop. Unreported usage is unknown.",
+      "method": "Synthetic tasks, real provider and production compile/store/search/control/review. No expected result or selected function name is given to later sessions.",
+      "order": [
+        [
+          "report_table",
+          "before"
+        ],
+        [
+          "report_table",
+          "after"
+        ],
+        [
+          "remote_review",
+          "after"
+        ],
+        [
+          "remote_review",
+          "before"
+        ]
+      ],
+      "repeats_per_condition_task": 1,
+      "guide_sha256": "2613f46fa046cbcfeec98f3bfd4e2c105006dddf3ba02905e88f47db7206db8f",
+      "input_sha256": "77a8480fddf6b8cd162c2504d84971b224f02635e5610f8b585c92f613641611",
+      "comparison": "Only appended guide differs; current model/settings, fresh no-tool sessions, synthetic fixed-latency effects.",
+      "exclusions": [
+        "No statistical performance conclusion at n=1.",
+        "No real-service latency or complete user workflow measured.",
+        "Provider usage and elapsed time include the authoring call only."
+      ]
+    },
+    "provider_output_token_hint": 3000,
+    "raw_path": "data/outputs/execution_completion_compare_20261103/result.json",
+    "raw_sha256": "6b46d22cb5c5b91d4f2840b0348a9ea8b013cb277d66780737945ac90973d627",
+    "calls": [
+      {
+        "prompt": "IBL edition 2, JSON으로만 응답: {\"code\":\"실행 프로그램\"}.\n변수 $x, 대입 $x=식, return 식, 레코드 {key:값}, 배열 [1,2], 함수 ($r)=>식,\nmap(목록,함수), sum(숫자목록), len(목록), assert 조건,\"실패설명\",진단값.\n외부 도구 [fixture:dispatch]{amount:숫자}는 {receipt:문자열,amount:숫자}를 반환.\n이 계약 이외 도구/저장 함수/파일/원격 서비스는 없다. 입력은 $rows, $approved 등으로 읽는다.\n행 $rows의 qty*price를 전부 합쳐 보고서 값 {total:합계,count:행수}를 반환하라. 빈 입력은 실패여야 한다. 단위는 모두 원이다. 행 예시나 정답값은 주어지지 않는다.",
+        "answer": "{\"code\":\"assert len($rows)>0,\\\"빈 입력은 허용되지 않습니다\\\",{count:len($rows)}\\nreturn {total:sum(map($rows,($r)=>$r.qty*$r.price)),count:len($rows)}\"}",
+        "usage": {
+          "total_input_tokens": 12419,
+          "total_output_tokens": 148,
+          "total_cache_read_tokens": 0,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 10109.54,
+          "avg_request_latency_ms": 10109.54,
+          "reasoning_tokens": null
+        },
+        "billable": [
+          {
+            "call_id": "ae5c5d3a3765462791182808d1b5e9a9",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|평가→고급",
+            "measured": true,
+            "elapsed_ms": 10110,
+            "input": 12419,
+            "output": 148,
+            "cache_read": 0,
+            "cache_create": 0
+          }
+        ],
+        "elapsed_s": 10.683792958036065,
+        "error": null,
+        "failure": null
+      },
+      {
+        "prompt": "IBL edition 2, JSON으로만 응답: {\"code\":\"실행 프로그램\"}.\n변수 $x, 대입 $x=식, return 식, 레코드 {key:값}, 배열 [1,2], 함수 ($r)=>식,\nmap(목록,함수), sum(숫자목록), len(목록), assert 조건,\"실패설명\",진단값.\n외부 도구 [fixture:dispatch]{amount:숫자}는 {receipt:문자열,amount:숫자}를 반환.\n이 계약 이외 도구/저장 함수/파일/원격 서비스는 없다. 입력은 $rows, $approved 등으로 읽는다.\n행 $rows의 qty*price를 전부 합쳐 보고서 값 {total:합계,count:행수}를 반환하라. 빈 입력은 실패여야 한다. 단위는 모두 원이다. 행 예시나 정답값은 주어지지 않는다.\n작성 지침:\n\n\n독립 조회·명시 투영·계산·기계 검사·출력은 한 프로그램으로 잇고, 원문 해석이나 행동 선택이\n달라지는 곳에서 값·판본·원문 참조를 반환한다. 보고서는 본문→변환→검수→전달, 표는\n독립 조회→단위/판본 확인→계산, 원격 작업은 접수증→기존 완료 대기→효과 확인으로 잇는다.\n짧은 모델 폴링이나 미확인 효과의 재전송을 반복하지 않는다. 빈 결과를 성공으로 바꾸지 않는다.\n`resume`은 기존 영수증 회수, `reuse`는 계약상 유효한 읽기 재사용이다. 변경된 입력의 검사·승인을\n승계하지 않는다. 안정된 반복 절차만 [능력 변경](capability_change.md)으로 저장하며,\n단순 셸/Python 작업은 그대로 쓴다. 등록 수·IBL 비율은 성과가 아니다.\n",
+        "answer": "{\"code\":\"$count=len($rows)\\nassert $count>0,\\\"입력 행이 비어 있습니다\\\",$count\\n$total=sum(map($rows,($r)=>$r.qty*$r.price))\\nreturn {total:$total,count:$count}\"}",
+        "usage": {
+          "total_input_tokens": 12646,
+          "total_output_tokens": 191,
+          "total_cache_read_tokens": 8448,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 10657.02,
+          "avg_request_latency_ms": 10657.02,
+          "reasoning_tokens": null
+        },
+        "billable": [
+          {
+            "call_id": "1ebed5eea4244a4b95e809dac770b2dd",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|평가→고급",
+            "measured": true,
+            "elapsed_ms": 10657,
+            "input": 12646,
+            "output": 191,
+            "cache_read": 8448,
+            "cache_create": 0
+          }
+        ],
+        "elapsed_s": 11.649643958546221,
+        "error": null,
+        "failure": null
+      },
+      {
+        "prompt": "IBL edition 2, JSON으로만 응답: {\"code\":\"실행 프로그램\"}.\n변수 $x, 대입 $x=식, return 식, 레코드 {key:값}, 배열 [1,2], 함수 ($r)=>식,\nmap(목록,함수), sum(숫자목록), len(목록), assert 조건,\"실패설명\",진단값.\n외부 도구 [fixture:dispatch]{amount:숫자}는 {receipt:문자열,amount:숫자}를 반환.\n이 계약 이외 도구/저장 함수/파일/원격 서비스는 없다. 입력은 $rows, $approved 등으로 읽는다.\n입력 $n의 3배를 시험용 원격 dispatch로 한 번 접수하고 접수증을 보존하라. 그 뒤 사람이 판단한 $approved가 false이면 접수증을 진단값으로 반환하며 실패, true일 때만 그 접수증을 최종 반환하라. 내용 검토 미완료를 성공으로 숨기지 마라.\n작성 지침:\n\n\n독립 조회·명시 투영·계산·기계 검사·출력은 한 프로그램으로 잇고, 원문 해석이나 행동 선택이\n달라지는 곳에서 값·판본·원문 참조를 반환한다. 보고서는 본문→변환→검수→전달, 표는\n독립 조회→단위/판본 확인→계산, 원격 작업은 접수증→기존 완료 대기→효과 확인으로 잇는다.\n짧은 모델 폴링이나 미확인 효과의 재전송을 반복하지 않는다. 빈 결과를 성공으로 바꾸지 않는다.\n`resume`은 기존 영수증 회수, `reuse`는 계약상 유효한 읽기 재사용이다. 변경된 입력의 검사·승인을\n승계하지 않는다. 안정된 반복 절차만 [능력 변경](capability_change.md)으로 저장하며,\n단순 셸/Python 작업은 그대로 쓴다. 등록 수·IBL 비율은 성과가 아니다.\n",
+        "answer": "{\"code\":\"$receipt=[fixture:dispatch]{amount:$n*3}; assert $approved == true,\\\"내용 검토 미완료: 사람의 승인이 필요합니다\\\",$receipt; return $receipt\"}",
+        "usage": {
+          "total_input_tokens": 12668,
+          "total_output_tokens": 142,
+          "total_cache_read_tokens": 8448,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 9589.0,
+          "avg_request_latency_ms": 9589.0,
+          "reasoning_tokens": null
+        },
+        "billable": [
+          {
+            "call_id": "dad453a389d44be58c0ad05d8583a78c",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|평가→고급",
+            "measured": true,
+            "elapsed_ms": 9589,
+            "input": 12668,
+            "output": 142,
+            "cache_read": 8448,
+            "cache_create": 0
+          }
+        ],
+        "elapsed_s": 10.108988542109728,
+        "error": null,
+        "failure": null
+      },
+      {
+        "prompt": "IBL edition 2, JSON으로만 응답: {\"code\":\"실행 프로그램\"}.\n변수 $x, 대입 $x=식, return 식, 레코드 {key:값}, 배열 [1,2], 함수 ($r)=>식,\nmap(목록,함수), sum(숫자목록), len(목록), assert 조건,\"실패설명\",진단값.\n외부 도구 [fixture:dispatch]{amount:숫자}는 {receipt:문자열,amount:숫자}를 반환.\n이 계약 이외 도구/저장 함수/파일/원격 서비스는 없다. 입력은 $rows, $approved 등으로 읽는다.\n입력 $n의 3배를 시험용 원격 dispatch로 한 번 접수하고 접수증을 보존하라. 그 뒤 사람이 판단한 $approved가 false이면 접수증을 진단값으로 반환하며 실패, true일 때만 그 접수증을 최종 반환하라. 내용 검토 미완료를 성공으로 숨기지 마라.",
+        "answer": "{\"code\":\"$receipt = [fixture:dispatch]{amount:$n * 3}\\nassert $approved == true,\\\"내용 검토 미완료: 사람의 승인이 필요합니다\\\",$receipt\\nreturn $receipt\"}",
+        "usage": {
+          "total_input_tokens": 12441,
+          "total_output_tokens": 216,
+          "total_cache_read_tokens": 8448,
+          "total_requests": 1,
+          "total_retries": 0,
+          "total_errors": 0,
+          "total_tool_calls": 0,
+          "last_request_latency_ms": 13789.46,
+          "avg_request_latency_ms": 13789.46,
+          "reasoning_tokens": null
+        },
+        "billable": [
+          {
+            "call_id": "9e0c48a52c2a4d24b4a4d9944be6cc52",
+            "parent_call_id": null,
+            "role": "oneshot:execution",
+            "phase": "execution",
+            "provider": "Codex",
+            "model": "gpt-6-astra:high",
+            "round_index": 1,
+            "tier": "고급",
+            "source": "gear:최대|평가→고급",
+            "measured": true,
+            "elapsed_ms": 13789,
+            "input": 12441,
+            "output": 216,
+            "cache_read": 8448,
+            "cache_create": 0
+          }
+        ],
+        "elapsed_s": 14.329474749974906,
+        "error": null,
+        "failure": null
+      }
+    ],
+    "results": {
+      "0-report_table-before": {
+        "accepted": true,
+        "elapsed_s": 10.748522249981761,
+        "error": null,
+        "effects": [],
+        "observations": [
+          {
+            "inputs": {
+              "rows": [
+                {
+                  "qty": 2,
+                  "price": 13
+                },
+                {
+                  "qty": 4,
+                  "price": 7
+                }
+              ]
+            },
+            "result": {
+              "success": true,
+              "value": {
+                "total": 54,
+                "count": 2
+              },
+              "error": null,
+              "diagnostic": null
+            },
+            "effect_count": 0,
+            "resumed_success": null,
+            "effects_after_resume": null
+          },
+          {
+            "inputs": {
+              "rows": [
+                {
+                  "qty": 2,
+                  "price": 13
+                },
+                {
+                  "qty": 4,
+                  "price": 7
+                },
+                {
+                  "qty": 1,
+                  "price": 9
+                }
+              ]
+            },
+            "result": {
+              "success": true,
+              "value": {
+                "total": 63,
+                "count": 3
+              },
+              "error": null,
+              "diagnostic": null
+            },
+            "effect_count": 0,
+            "resumed_success": null,
+            "effects_after_resume": null
+          },
+          {
+            "inputs": {
+              "rows": []
+            },
+            "result": {
+              "success": false,
+              "value": null,
+              "error": "빈 입력은 허용되지 않습니다",
+              "diagnostic": {
+                "code": "ASSERTION_FAILED",
+                "kind": "runtime",
+                "message": "빈 입력은 허용되지 않습니다",
+                "frames": [],
+                "has_partial": false,
+                "partial": null,
+                "evidence": [
+                  13
+                ],
+                "details": {
+                  "count": 0
+                },
+                "source_span": {
+                  "source_hash": "0fc4cd0bb4d9adc4d2dc39e7cbe2c2353a0ac8724ebbeca63008cdb330e1870b",
+                  "start": 0,
+                  "end": 56,
+                  "line": 1,
+                  "column": 1
+                }
+              }
+            },
+            "effect_count": 0,
+            "resumed_success": null,
+            "effects_after_resume": null
+          }
+        ]
+      },
+      "1-report_table-after": {
+        "accepted": false,
+        "elapsed_s": 11.677257499657571,
+        "error": null,
+        "effects": [],
+        "observations": [
+          {
+            "inputs": {
+              "rows": [
+                {
+                  "qty": 2,
+                  "price": 13
+                },
+                {
+                  "qty": 4,
+                  "price": 7
+                }
+              ]
+            },
+            "result": {
+              "success": false,
+              "value": null,
+              "error": "실행 전 검사에서 거절했습니다: Record가 필요하지만 Number입니다. (TYPE)",
+              "diagnostic": null
+            },
+            "effect_count": 0,
+            "resumed_success": null,
+            "effects_after_resume": null
+          },
+          {
+            "inputs": {
+              "rows": [
+                {
+                  "qty": 2,
+                  "price": 13
+                },
+                {
+                  "qty": 4,
+                  "price": 7
+                },
+                {
+                  "qty": 1,
+                  "price": 9
+                }
+              ]
+            },
+            "result": {
+              "success": false,
+              "value": null,
+              "error": "실행 전 검사에서 거절했습니다: Record가 필요하지만 Number입니다. (TYPE)",
+              "diagnostic": null
+            },
+            "effect_count": 0,
+            "resumed_success": null,
+            "effects_after_resume": null
+          },
+          {
+            "inputs": {
+              "rows": []
+            },
+            "result": {
+              "success": false,
+              "value": null,
+              "error": "실행 전 검사에서 거절했습니다: Record가 필요하지만 Number입니다. (TYPE)",
+              "diagnostic": null
+            },
+            "effect_count": 0,
+            "resumed_success": null,
+            "effects_after_resume": null
+          }
+        ]
+      },
+      "2-remote_review-after": {
+        "accepted": true,
+        "elapsed_s": 10.163045666180551,
+        "error": null,
+        "effects": [
+          12,
+          27
+        ],
+        "observations": [
+          {
+            "inputs": {
+              "n": 4,
+              "approved": false
+            },
+            "result": {
+              "success": false,
+              "value": null,
+              "error": "내용 검토 미완료: 사람의 승인이 필요합니다",
+              "diagnostic": {
+                "code": "ASSERTION_FAILED",
+                "kind": "runtime",
+                "message": "내용 검토 미완료: 사람의 승인이 필요합니다",
+                "frames": [],
+                "has_partial": false,
+                "partial": null,
+                "evidence": [
+                  15
+                ],
+                "details": {
+                  "receipt": "fixture-1",
+                  "amount": 12
+                },
+                "source_span": {
+                  "source_hash": "398ed49113ea5d3bdf76d5ffc180477864cff72f1ecb2241e58bbe769df4397b",
+                  "start": 42,
+                  "end": 102,
+                  "line": 1,
+                  "column": 43
+                }
+              }
+            },
+            "effect_count": 1,
+            "resumed_success": false,
+            "effects_after_resume": 1
+          },
+          {
+            "inputs": {
+              "n": 9,
+              "approved": true
+            },
+            "result": {
+              "success": true,
+              "value": {
+                "receipt": "fixture-2",
+                "amount": 27
+              },
+              "error": null,
+              "diagnostic": null
+            },
+            "effect_count": 1,
+            "resumed_success": null,
+            "effects_after_resume": null
+          }
+        ]
+      },
+      "3-remote_review-before": {
+        "accepted": true,
+        "elapsed_s": 14.460039833560586,
+        "error": null,
+        "effects": [
+          12,
+          27
+        ],
+        "observations": [
+          {
+            "inputs": {
+              "n": 4,
+              "approved": false
+            },
+            "result": {
+              "success": false,
+              "value": null,
+              "error": "내용 검토 미완료: 사람의 승인이 필요합니다",
+              "diagnostic": {
+                "code": "ASSERTION_FAILED",
+                "kind": "runtime",
+                "message": "내용 검토 미완료: 사람의 승인이 필요합니다",
+                "frames": [],
+                "has_partial": false,
+                "partial": null,
+                "evidence": [
+                  15
+                ],
+                "details": {
+                  "receipt": "fixture-1",
+                  "amount": 12
+                },
+                "source_span": {
+                  "source_hash": "3c13519829b0ead8a1e1d04b1ed33cc642bd5f355673c1f292c704b3a91b565d",
+                  "start": 45,
+                  "end": 105,
+                  "line": 2,
+                  "column": 1
+                }
+              }
+            },
+            "effect_count": 1,
+            "resumed_success": false,
+            "effects_after_resume": 1
+          },
+          {
+            "inputs": {
+              "n": 9,
+              "approved": true
+            },
+            "result": {
+              "success": true,
+              "value": {
+                "receipt": "fixture-2",
+                "amount": 27
+              },
+              "error": null,
+              "diagnostic": null
+            },
+            "effect_count": 1,
+            "resumed_success": null,
+            "effects_after_resume": null
+          }
+        ]
+      }
+    },
+    "elapsed_s": 47.114573375321925,
+    "conclusion": "No performance superiority established; one generated program failed the runtime type contract."
+  },
+  "operational_verification": {
+    "generation": "9f8343526dcccbfddcf841ebe8288176",
+    "phase": "ACTIVE",
+    "code_digest": "7904db9633401852b6258a89d0ea0e91",
+    "generation_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/restart_control/generations/7904db9633401852b6258a89d0ea0e91",
+    "matched_files": [
+      "backend/base/repair_process.py",
+      "backend/base/repair_process_bridge.py",
+      "backend/base/repair_test_results.py",
+      "backend/cognition/repair_check_runner.py",
+      "backend/cognition/repair_policy.py",
+      "backend/ibl/capability_changes.py",
+      "backend/services/execution_trace.py",
+      "data/packages/installed/tools/system_essentials/ledger_ops.py"
+    ],
+    "ledger_success": true,
+    "ledger_count": 1,
+    "data_sha256": "1d15b1b14d17be8339623b62be7814b5cd63a58fb7b3dee938823ea32cec76a5",
+    "data_unchanged": true
+  },
+  "historical_baseline": {
+    "episode": {
+      "id": 5774,
+      "task_id": "task_6045d2d8",
+      "run_id": "run_211ede856c533d61457a",
+      "started_at": "2026-11-03T11:25:03.914713",
+      "ended_at": "2026-11-03T11:52:16.448719",
+      "total_ms": 1632532
+    },
+    "joined_runs": [
+      "run_211ede856c533d61457a"
+    ],
+    "billable_records": 5,
+    "duplicates_removed": 0,
+    "conflicts": [],
+    "measured": {
+      "input": 9092093,
+      "output": 48720,
+      "cache_read": 8664064,
+      "cache_create": 0
+    },
+    "input_plus_output": 9140813,
+    "roles": {
+      "oneshot:classify": {
+        "records": 1,
+        "input": 4942,
+        "output": 2,
+        "cache_read": 3584
+      },
+      "consciousness": {
+        "records": 2,
+        "input": 62448,
+        "output": 9069,
+        "cache_read": 4352
+      },
+      "execution": {
+        "records": 1,
+        "input": 8910184,
+        "output": 39195,
+        "cache_read": 8656128
+      },
+      "oneshot:evaluate": {
+        "records": 1,
+        "input": 114519,
+        "output": 454,
+        "cache_read": 0
+      }
+    },
+    "calls_started": 5,
+    "calls_finished": 5,
+    "unmeasured_calls": [],
+    "unattributed_usage": 0,
+    "invalid_fields": [],
+    "usage_partial": [],
+    "complete": false,
+    "limitations": [
+      "Unbound subprocess experiments cannot be assigned without call/run identities.",
+      "Cache read is a subset of input; never added again.",
+      "Only episode.total_ms is wall time; parallel call latencies are not summed.",
+      "Missing usage and conflicting records are not replaced with zero."
+    ],
+    "user_corrections": null
+  },
+  "regression": {
+    "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile",
+    "passed": 12222,
+    "skipped": 24,
+    "failed": 0,
+    "seconds": 428.66,
+    "system_included": true,
+    "skip_reasons": {
+      "collection skipped": 1,
+      "Windows UIAutomation assemblies required; native fixture also supports remote validation": 1,
+      "explicit local conversion test": 1,
+      "Windows PowerShell required; same fixture can run on registered Windows PC": 1,
+      "상시 관용구 0건": 1,
+      "explicit local app acceptance": 4,
+      "수리 훈련 시험 대상 — INDIEBIZ_REPAIR_TRAINING_SUBJECT=1 로 켠다": 4,
+      "관용구 원장이 비어 있음": 1,
+      "로컬 문서 엔진 실인수": 1,
+      "explicit real-model probe": 2,
+      "set MEMBER_DESKTOP_TEST_BINARY to the built Go executor": 1,
+      "explicit local engine acceptance": 3,
+      "explicit scale measurement": 1,
+      "로컬 ONLYOFFICE 실인수 명시 실행": 1,
+      "explicit engine test": 1
+    },
+    "junit_sha256": "f6a2ddc2516dfd459d491817fe13de69f146b791d72cfffb7fec0223edec2f96"
+  }
+}

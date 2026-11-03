@@ -12,6 +12,7 @@ import sqlite3
 import hashlib
 from collections import Counter
 from common.value_semantics import numeric_value
+from model_call_context import billable_identity
 
 
 def experiment_usage(directory):
@@ -78,7 +79,7 @@ def aggregate(database, episode_id):
             finished[cid] = data
         if kind != 'model.usage' or data.get('accounting') != 'billable_usage':
             continue  # response snapshots and boundary timings are not new charges.
-        key = (cid, data.get('round_index')) if cid else (row['run_id'], row['event_seq'])
+        key = billable_identity(data) or (row['run_id'], row['event_seq'])
         charges = {k: data.get(k) for k in ('input', 'output', 'cache_read', 'cache_create')}
         if key in seen:
             if seen[key] == charges:

@@ -23,7 +23,7 @@ TOKEN_TTL = 900
 MAX_TOKEN = 64000
 TOKEN_FIELDS = ("input", "output", "cache_read", "cache_create", "reasoning")
 SAFE_FIELDS = {"call_id", "parent_call_id", "provider", "model", "role", "phase", "round_index",
-               "accounting", "usage_partial", "response_id", "status", "version", "gate", "event",
+               "accounting", "usage_id", "usage_partial", "response_id", "status", "version", "gate", "event",
                "hash", "bytes", "manifest_hash",
                "path", "size", "elapsed_ms", "latency_ms", "elapsed_s", "is_error", "operation", "name",
                "event_type", "first_elapsed_s", "chunks",
@@ -112,6 +112,7 @@ class ExecutionTrace:
             stores = dict(previous.get("stores", {}))
             usage = previous.get("usage") or {"measured": {}, "unattributed_records": 0,
                                               "records": 0, "partial_reasons": []}
+            usage_seen = dict(previous.get("usage_seen", {}))
             evaluations = dict(previous.get("evaluations", {}))
             sources, events, evidence = [], [], []
             sources.append({k: v for k, v in task_source.items() if k != "rows"})
@@ -185,17 +186,28 @@ class ExecutionTrace:
                 if observed is not None:
                     evaluations[str(row["episode_id"])] = {**observed, "source_ref": ev["source_ref"]}
                 if row["kind"] == "model.usage" and data.get("accounting") == "billable_usage":
-                    usage["records"] += 1
-                    if not data.get("call_id"):
-                        usage["unattributed_records"] += 1
-                    for key in TOKEN_FIELDS:
-                        if key not in data:
-                            continue
-                        number = numeric_value(data[key])
-                        if number is None or number < 0:
-                            usage["partial_reasons"].append("invalid_usage_number")
-                        else:
-                            usage["measured"][key] = usage["measured"].get(key, 0) + number
+                    from model_call_context import billable_identity
+                    identity = billable_identity(data)
+                    key = fingerprint(identity) if identity else record
+                    charge = fingerprint({k: data.get(k) for k in TOKEN_FIELDS})
+                    previous_charge = usage_seen.get(key)
+                    if previous_charge:
+                        usage["duplicates_removed"] = usage.get("duplicates_removed", 0) + 1
+                        if previous_charge != charge:
+                            usage["partial_reasons"].append("conflicting_billable_usage")
+                    else:
+                        usage_seen[key] = charge
+                        usage["records"] += 1
+                        if not data.get("call_id"):
+                            usage["unattributed_records"] += 1
+                        for key in TOKEN_FIELDS:
+                            if key not in data:
+                                continue
+                            number = numeric_value(data[key])
+                            if number is None or number < 0:
+                                usage["partial_reasons"].append("invalid_usage_number")
+                            else:
+                                usage["measured"][key] = usage["measured"].get(key, 0) + number
                 if data.get("usage_partial"):
                     usage["partial_reasons"].append("usage_partial")
                 if row["kind"].startswith("supervision.") and data.get("store"):
@@ -323,7 +335,7 @@ class ExecutionTrace:
             usage["coverage"] = "recorded_billable_events_only; best_effort_observation_cannot_prove_full_billing"
             expired = any(s.get("reason") == "cursor_expired" for s in sources)
             next_cursor = seal({"purpose": "cursor", "scope": scope, "metadata": metadata,
-                                "positions": positions, "stores": stores, "usage": usage, "evaluations": evaluations,
+                                "positions": positions, "stores": stores, "usage": usage, "usage_seen": usage_seen, "evaluations": evaluations,
                                 "last_event": state["last_event"], "diagnostics": sorted(set(diagnostics))}) if more and not expired else None
             if next_cursor and len(next_cursor) > MAX_TOKEN:
                 next_cursor = None

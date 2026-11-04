@@ -1,0 +1,152 @@
+{
+  "head": "280112f28a444b7a2aba5b282869e1bb6e052cb7",
+  "source_sha256": {
+    "backend/ibl/vocabulary_lifecycle.py": "54a5fa06f77b23995db8a75523927fb8663756c8e7ee6a4784a513185faaba8d",
+    "backend/ibl/tool_loader.py": "31281afb58575c9aa993a87a2dbdfc26a06830deffb9d7852cacdb9fcbaf7dcc",
+    "backend/surface/api_ibl.py": "3d97164a1fe5556a2337995227753d01a86d854c9f0fe95a8acd55accc2df7e6",
+    "mcp_server.py": "536f9bdd4aa97cff931db9d713d590c9d4c78ecc012bd54008d6c2eebe3a6db7",
+    "backend/base/program_runtime.py": "f1db5c85729170d129a86fb10f02bdef2bc7e1f293eb379d1b6ab8a18010aab0",
+    "backend/datastore/vocabulary_state.py": "f660ca2cd61c430009a7d603688df4dda5a7d764fa39b8f96bd80b3d2bebb564",
+    "backend/test_surface_param_parity.py": "6fd79d56b226684308979eabb3bda27f8d81c0d580298a6d863842e14aed3fac"
+  },
+  "activation": [
+    {
+      "profile": "owner",
+      "error": "캐시 갱신 실패: synthetic cache failure",
+      "state_after_failure": {
+        "version": 1,
+        "revision": 12,
+        "active": {
+          "pkg": true
+        },
+        "profiles": {
+          "member": {
+            "active": {
+              "pkg": true
+            }
+          }
+        }
+      },
+      "cache_reset_calls_before_retry": 2,
+      "retry": {
+        "success": true,
+        "status": "sleeping",
+        "package_id": "pkg",
+        "active": false,
+        "changed": true,
+        "revision": 13,
+        "message": "잠재웠습니다"
+      },
+      "cache_reset_calls_after_retry": 3,
+      "writes": [
+        {
+          "version": 1,
+          "revision": 11,
+          "active": {
+            "pkg": false
+          },
+          "profiles": {
+            "member": {
+              "active": {
+                "pkg": true
+              }
+            }
+          }
+        },
+        {
+          "version": 1,
+          "revision": 12,
+          "active": {
+            "pkg": true
+          },
+          "profiles": {
+            "member": {
+              "active": {
+                "pkg": true
+              }
+            }
+          }
+        },
+        {
+          "version": 1,
+          "revision": 13,
+          "active": {
+            "pkg": false
+          },
+          "profiles": {
+            "member": {
+              "active": {
+                "pkg": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "profile": "member",
+      "error": "캐시 갱신 실패: synthetic cache failure",
+      "state_after_failure": {
+        "version": 1,
+        "revision": 11,
+        "active": {
+          "pkg": true
+        },
+        "profiles": {
+          "member": {
+            "active": {
+              "pkg": false
+            }
+          }
+        }
+      },
+      "cache_reset_calls_before_retry": 1,
+      "retry": {
+        "success": true,
+        "status": "sleeping",
+        "package_id": "pkg",
+        "profile": "member",
+        "active": false,
+        "changed": false
+      },
+      "cache_reset_calls_after_retry": 1,
+      "writes": [
+        {
+          "version": 1,
+          "revision": 11,
+          "active": {
+            "pkg": true
+          },
+          "profiles": {
+            "member": {
+              "active": {
+                "pkg": false
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "member_implicit_default": {
+    "before_member_active": true,
+    "reported_result": {
+      "success": true,
+      "status": "sleeping",
+      "package_id": "pkg",
+      "profile": "member",
+      "active": false,
+      "changed": false
+    },
+    "after_member_active": true,
+    "writes": []
+  },
+  "loader_fast_path": {
+    "returned_package": "old_package",
+    "calls": [
+      "current owner new_package is active"
+    ],
+    "scope": "Current function's cached branch with synthetic ownership change; no live package modified."
+  },
+  "limitations": "Extracted real function bodies with in-memory stubs. Not full integration, pytest, real filesystem atomicity or concurrency validation."
+}

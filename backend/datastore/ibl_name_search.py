@@ -81,8 +81,9 @@ def search_aliased(db, query: str, top_k: int = 5, alpha: float = None,
                 lex[i] = hit / len(tokens)
     scored = []
     for i in ids:
-        if sem:
-            sc = alpha * sem.get(i, 0.0) + (1 - alpha) * lex.get(i, 0.0)
+        # 다른 후보의 벡터가 있어도 이 후보의 미색인을 유사도 0으로 취급하지 않는다.
+        if i in sem:
+            sc = alpha * sem[i] + (1 - alpha) * lex.get(i, 0.0)
         else:
             sc = lex.get(i, 0.0) * 0.8       # 시맨틱 없이 낱말만 맞은 것은 그 자체로 확답이 아니다
         if sc > 0:

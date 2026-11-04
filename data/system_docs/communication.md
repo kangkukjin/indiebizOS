@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py, chat_streams.py, chat_runs.py, execution_workers.py, vocabulary_state.py, vocabulary_lifecycle.py
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 see_also: [architecture.md, scheduler_guide.md, technical.md]
 ---
 
@@ -1148,6 +1148,13 @@ C 완료 → pending=0, 통합 보고 → 시스템AI
 취소·실패·예산 소진의 미처리 지시는 다음 요청에 복구 문맥으로 전달한다. 중단된 도구는
 기존 시작/결과 사건과 접수증을 함께 읽고, 결과 불확실 상태를 완료로 추정하거나 과거
 쓰기를 자동 재제출하지 않는다. 계약·한계·회귀는 `docs/DIALOGUE_HANDOFF.md` 참조.
+
+시스템 AI·앱메이커·일반 프로젝트의 React 대화창은 실행 중 텍스트를
+`POST /chat-sessions/{sid}/steer`로 보낸다. 현재 세션·턴·소유자를 확인한 뒤 기존 인박스로
+전달하며, 응답 유실 시 같은 요청 신원으로 접수를 확인한다. 한 지시는 2,000자, 미전달 지시는
+작업당 5건까지이며, 작업 중 첨부·도구 선택은 지원하지 않는다. 종료·취소 중인 턴이나 다른
+소유자의 실행은 거절하고 입력을 보존한다. 이 입력 UI의 지원 범위는 React 대화창이며
+원격 경량·회원·폰 전용 화면으로 일반화하지 않는다. [화면·영수증 계약](../../docs/CONVERSATION_SESSIONS_2026_10_15.md#작업-중-추가-지시-2026-11-03).
 
 ### WebSocket 위임 감지 (시스템 AI)
 

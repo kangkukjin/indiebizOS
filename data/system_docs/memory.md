@@ -9,7 +9,7 @@ owner_code: >
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, execution_identity.py, pursuit_history.py, execution_trace.py,
   tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -134,6 +134,8 @@ see_also: [architecture.md, ibl.md]
 질문에는 안정된 ID와 판본, 잠정 답변, 지지·반박 근거, 남은 확인·다음 조사를 저장한다. 근거는 현재 실행에서 읽은 `version_ref`·`extraction_revision`·문단 locator·정확한 quote에 묶는다. 다른 대화의 자료나 AI의 이전 답변은 새 외부 근거로 채택하지 않는다. 과거 근거의 보존과 이번 턴의 새 관측도 구분한다.
 
 `self:project`의 `thread_update`·`thread_messages`로 질문을 갱신·조회하고, `self:notebook`으로 해당 대화의 자료를 검색·이어 읽는다. 낡은 `expected_revision`은 충돌로 반환하며 이력을 덮어쓰지 않는다. 질문의 `answered` 종결에는 잠정 답변·지지 근거·빈 gaps와 반박별 검토 판단이 필요하다. 종결은 참 인증이 아니며 새 발견을 반영하면 다시 열린다. 다음 턴에는 작은 질문 요약만 자동 회수하고 세부 근거는 필요할 때 읽는다.
+
+질문 요약에는 주체·판본 지문(`revision_digest`)과 생략 필드·근거 참조를 남긴다. 상세 회수는 요약과 같은 판본을 선택하며 최신 질문을 옛 요약에 섞지 않는다. 최종 검수에는 질문 상태와 실제 읽은 원문의 주장별 구간을 함께 전달한다. 질문·읽기 판본이 바뀌면 이전 snapshot 승인을 이어 쓰지 않는다. 일반 프로젝트 심층연구도 실제 대화/과제 신원으로 자료를 보존하지만 시스템 AI·회원 대화의 자동 연결은 아직 지원하지 않는다. [구현 범위와 검증](../../docs/RESEARCH_ABILITY_REPAIR_2026_11_04.md).
 
 이는 모든 대화의 심층 기억에 자료 전문을 쌓는 경로가 아니다. 연구의 자료 모드·대화 경계와 최종 응답 후 장기 기억 선별은 각각 유지한다. [연구 프로젝트](../guides/research_project.md) · [질문 사용법](../guides/research_questions.md) · [근거 계약](../../docs/RESEARCH_QUESTION_EVIDENCE_CONTRACT_2026_10_13.md).
 

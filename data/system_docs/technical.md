@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -228,6 +228,10 @@ IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 �
 
 연구 대화·질문은 기존 `self:project`의 `thread_*` 연산, 자료실은 `self:notebook`의 `project_ref`·`thread_ref` 범위를 사용한다. 실행 신원은 `base/research_context.py`, 실행은 `cognition/research_runner.py`, 자료 획득은 `services/research_capture.py`·`research_library.py`, 원문·질문·근거 원장은 `datastore/research_store.py`·`research_questions.py`·`research_evidence.py`가 맡는다. 정본은 각 프로젝트의 `conversations.db`와 `research/objects`이며 FTS 색인은 복구 가능하다. [연구 사용·복구](../guides/research_project.md) · [질문 판본](../guides/research_questions.md).
 
+연구 질문 요약은 `revision_digest`·생략 필드/참조와 상세 회수 경로를 보존한다. 검수는 `research_review`의 주장별 원문 구간과 질문 판본을 함께 받으며, 질문 또는 읽기 영수증 판본이 바뀌면 snapshot을 무효화한다. `segments`의 좌표는 해당 읽기 영수증의 문자열 기준이며 원 문서 전체 좌표가 아니다. 일반 프로젝트의 심층연구는 실제 대화/과제 신원으로 자료실에 연결하고, 시스템 AI·회원의 자동 자료실 연결은 미지원 상태로 남긴다. [연구 능력 계약](../../docs/RESEARCH_ABILITY_REPAIR_2026_11_04.md).
+
+연구 결과의 비용은 `datastore/research_measurement.py`와 `scripts/measure_research_result.py`가 기존 에피소드·호출 계보를 읽기 전용으로 집계한다. 청구 신원 중복을 제거하고 캐시·추론의 부분집합을 다시 더하지 않으며, 미측정·충돌·미귀속을 보존한다. 산출물 SHA-256에 같은 판본의 사람 검토 기록을 연결할 수 있다. 모델을 재호출하거나 운영 DB를 고치지 않는다.
+
 내장 브라우저는 기존 `limbs:browser`의 `driver:embedded`다. Electron main이 등록한 포식 탭만 제어하며 로컬 연결·계정 금고·인증 인계를 담당한다. DOM 본문은 cursor로 이어 읽고 수집 범위와 출처를 보존한다. 변경 적용에는 Electron 재시작이 필요하다. [브라우저 설계와 지원 연산](../../docs/EMBEDDED_BROWSER_AGENT_DESIGN_2026_10_12.md).
 본문 수집이 만든 임시 탭은 종료 시 화면 목록에서도 제거한다. 수집 때문에 열린 브라우저 패널은 마지막 임시 탭이 닫히면 자동으로 닫고, 이미 열려 있던 패널이나 사용자가 조작을 이어받은 화면은 유지한다. 탭 생성 중 탐색 실패도 임시 탭을 정리한다.
 
@@ -257,7 +261,7 @@ IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 �
 
 ### 의식 감독·검수의 실행 조건
 
-- 기본 사용자 턴은 `conscious_supervisor`가 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 계획을 검수까지 이어가고, EXECUTE/Reflex는 정상 조회의 추가 호출을 생략하다가 실패·세계 변경·긴 작업에서 승격한다. 강제 내부 역할은 제외한다.
+- `conscious_supervisor`는 의식이 활성인 턴의 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 명시한 달성 기준을 검수까지 이어가며, 의식 없는 REFLEX·EXECUTE는 도구 실패·쓰기·장시간 실행에도 감독·최종평가로 승격하지 않는다. 관측된 실패 뒤 한 번의 실행자 후속은 별도 `task_continuation` 경로이며 새로운 평가 호출이 아니다.
 - `supervision_bus`는 agent+task로 구분한 실제 도구 경계다. 의식의 직접 실행은 실행자가 멈춘 경계에서 동일한 기존 도구·권한으로 수행한다. MCP 연결은 `/ibl/supervision`, Claude Code 네이티브는 `supervision_hook.py`를 사용한다. Codex 네이티브의 개입은 다음 MCP IBL 경계까지 지연될 수 있다.
 - 중간 관찰의 모델 잠금은 실행을 막지 않는다. 시작 예고는 진척이 아니며, 확정된 지시만 실행 경계에서 전달한다. Claude Code의 응답 ID별 중간 usage로 예산을 갱신한다. `state`는 변경분, `evidence id=ibl:node:action`은 현재 액션 계약이다. 턴 전체 비용은 작업대 `cost.json`, 응답 이후 기억 후처리는 `postprocess.json`이다.
 - 후보는 `data/spill/supervision/<turn-id>/`에 저장한다. 전체 본문 검수·버전·해시가 맞으면 그대로 전송한다. 보완은 `patch`의 유일한 문자열 치환(`old_string/new_string`, 같은 블록은 `replacements`)이나 블록 교체로 원자적으로 적용한다. 빈 판정/API 오류/누락된 본문은 `UNKNOWN`이며 통과시키지 않는다.
@@ -265,7 +269,9 @@ IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 �
 - 설정은 `world_pulse_config.json`의 `conscious_supervisor` 객체. `budget_mode=soft`가 기본이며 계획·중간 점검 몫을 분리하고 소프트 초과는 추가 탐색을 막되 진행 중 판정을 버리지 않는다. 최종 검수·보완 횟수와 호출 시간은 계속 제한한다. 명시적 `hard` 모드는 구형 엄격 배분을 유지한다. 기본값의 정본은 `conscious_supervisor.DEFAULTS`다.
 - 전체 작업의 실제 제한은 선택 설정 `agent_resource_limits.{hard_token_limit,deadline_s}`다. 기본은 둘 다 미설정이며 실행·의식·내부 원샷의 공통 원장으로 집계한다. 캐시를 포함한 input+output 관측량이며 금액이 아니다. 보완 전에 재검수 예상량도 점검한다. CLI 내부의 사용량 보고 지연 때문에 개별 API 요청 직전의 정확한 한도 보장은 아니다.
 - 감독은 대상 오류·목표·작업의 유효 조건으로 지시 신선도를 판단한다. 무관한 크롤링 진척은 기존 지시를 무효화하지 않는다. 반복은 최근 24회 안의 최대 8호출 순환 비교와 실행 수명 안의 동일 입력·실제 결과 관측으로 세며, 실제 진행·새 결과가 이슈 세대를 닫는다(2026-10-24·26). `supervision_checkpoint`를 반환한 제작 사전 검사에서는 실행 경계가 잠시 멈추고 읽기 검수가 가능하다. 재사용 검수는 파일·의존 입력·명시한 검사기 파일·기준 지문과 범위를 대조하며 최종 승인을 대신하지 않는다.
-- 범위가 한정된 보완은 캐시 재개 입력과 새 입력의 휴리스틱 비교로 문맥을 선택한다. 원문·작업 ID·변수는 유지하고 긴 인계는 증거 참조로 넘긴다. 비교는 벤더 가격이나 지연시간 예측이 아니다. 구현·검증 기록은 `docs/AGENT_EFFICIENCY_REPAIRS_2026_09_11.md`다. 감독을 끄거나 신원 없는 호출에서는 기존 GoalEval/SelfReflect가 호환 경로로 남는다.
+- 범위가 한정된 보완은 캐시 재개 입력과 새 입력의 휴리스틱 비교로 문맥을 선택한다. 원문·작업 ID·변수는 유지하고 긴 인계는 증거 참조로 넘긴다. 비교는 벤더 가격이나 지연시간 예측이 아니다. 구현·검증 기록은 `docs/AGENT_EFFICIENCY_REPAIRS_2026_09_11.md`다. GoalEval 호환 경로도 의식의 명시적 기준이 있을 때만 사용한다. 기준 없는 자기반성 우회 호출은 없다.
+
+평가 입력의 예산은 `evaluation_input`이 소유하며 Codex에서는 CLI와 같은 `context_limits`를 읽는다. 요청한 원문 구간 → 명시 제출물 → 기타 근거 순서로 선택하고, 원본 snapshot의 판본·역할을 보존한다. 같은 판본의 새 구간은 이어서 회수하되 구간 반복·취소·hard 예산·입력 초과에서 종료한다. 실제 평가 사용량과 회수 상태는 감독 체크포인트로 이어진다. 이 원문 회수와 결함 수정의 1회 보완은 별개다. [계약과 검증](../../docs/LANGUAGE_BOUNDARY_REPAIR_DESIGN_2026_11_02.md#2026-11-04--평가-입력과-연속-근거-회수-수리).
 
 ## IBL 도구 — execute_ibl
 

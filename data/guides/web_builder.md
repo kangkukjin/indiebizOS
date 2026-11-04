@@ -5,18 +5,17 @@
 ## 반복 작업은 등록 관용구로 시작한다
 
 갱신 필요성 평가·현재 상태 확인에도 이 절을 사용한다. 관용구는 현재 판본으로 등록되어
-있으며 본문을 재작성하지 않고 이름으로 호출한다. 계약은 `describe:["fn:홈페이지살펴보기"]`
-처럼 조회할 수 있다(직접 HTTP 호출은 `edition:2`도 명시). 새 사이트 제작은 아래 A 절,
+있으며 본문을 재작성하지 않고 이름으로 호출한다. 계약은 함수 이름으로 조회하고 입력·반환·실패를 확인한다. 고정 문장을 복사하지 않고 직접 조합한다. 새 사이트 제작은 아래 A 절,
 기존 사이트는 다음 표에서 시작한다.
 
-| 요청 | 호출 | 반환·완료 조건 |
+| 요청 | 관용구·입력 | 반환·완료 조건 |
 |---|---|---|
-| 지금 홈페이지를 살펴봐 | `[fn:홈페이지살펴보기]{사이트:"등록된-site-id",화면:true}` | `site`와 `items`(content·links·screen), `ok/failed`. 화면은 데스크톱 1280×800 캡처다. |
-| 홈페이지 갱신이 필요할까 | `[fn:홈페이지갱신검토자료]{사이트:"등록된-site-id",저장소:"제품 저장소 경로",기준시각:"2026-09-18T16:28:00+09:00",정본문서:["정본 문서의 절대경로"],화면:true}` | `page/history/documents/ok`. 현재 페이지·정본문서 전문·기준시각 이후 커밋 전건. 자료 수집이며 갱신 판단·수정·배포를 대신하지 않는다. |
-| 실제 수정에 착수 | `[fn:웹앱작업준비]{프로젝트:"사이트 소스 경로"}` | README·규칙·설정·Git 상태·검사 목록. 문서는 앞 120줄이며 필요한 나머지만 읽는다. |
-| 수정 후 검사 | `[fn:웹앱검사하기]{프로젝트:"사이트 소스 경로",검사:["build"]}` | 선언된 검사별 성공·실패·로그. `ok=true`인지 확인한다. test가 선언돼 있으면 검사 목록에 추가한다. |
+| 지금 홈페이지를 살펴봐 | `홈페이지살펴보기` — 사이트·화면 여부 | `site`와 `items`(content·links·screen), `ok/failed`. 화면은 데스크톱 1280×800 캡처다. |
+| 홈페이지 갱신이 필요할까 | `홈페이지갱신검토자료` — 사이트·저장소·기준시각·정본문서·화면 여부 | `page/history/documents/ok`. 현재 페이지·정본문서 전문·기준시각 이후 커밋 전건. 자료 수집이며 갱신 판단·수정·배포를 대신하지 않는다. |
+| 실제 수정에 착수 | `웹앱작업준비` — 프로젝트 | README·규칙·설정·Git 상태·검사 목록. 문서는 앞 120줄이며 필요한 나머지만 읽는다. |
+| 수정 후 검사 | `웹앱검사하기` — 프로젝트·검사 목록 | 선언된 검사별 성공·실패·로그. `ok=true`인지 확인한다. test가 선언돼 있으면 검사 목록에 추가한다. |
 
-- **사이트 선택**: ID를 모르면 `[engines:web_site]{op:"list"}` 한 번으로 실제 ID를 확인한다.
+- **사이트 선택**: ID를 모르면 `engines:web_site`의 list로 실제 ID를 확인한다.
   폴더명·표시 이름을 ID로 추측하지 않는다. 이름이 모호하면 대상부터 정한다.
 - **비교 기준**: 제품 저장소는 홈페이지 소스 저장소와 다를 수 있다. 마지막 반영 커밋·배포 기록 등
   확인한 시각을 시간대와 함께 전달한다. registry의 수정일을 배포 완료 시각으로 간주하지 않는다.
@@ -40,7 +39,7 @@
 배포 `url:null`이면 배포 목록에서 주소를 확인한다.
 검사 계약: `webapp.md` · 구현·검증: `docs/HOMEPAGE_IDIOMS_2026_09_24.md`.
 
-- **새 프로젝트 기본 템플릿**: Next.js + shadcn/ui + TypeScript
+- **새 프로젝트 템플릿**: React 상호작용·컴포넌트 확장이 필요할 때 Next.js + shadcn/ui + TypeScript를 기본 후보로 쓴다. 정적 문서만 필요하면 단순 정적 생성과 운영 비용을 비교한다.
 - **기존 프로젝트**: 등록된 기술 스택·빌드 스크립트·배포처를 유지한다. Cloudflare나 정적 사이트를 Next.js/Vercel로 간주하지 않는다.
 - **강점**: 완전한 코드 제어, 컴포넌트 단위 설계, React 생태계 활용
 - **적합**: 홈페이지, 블로그, 포트폴리오, 랜딩 페이지, 웹앱 등 모든 웹사이트
@@ -53,11 +52,20 @@
 - **진실 소스와 *메시지*를 맞춘다**: 이 사이트가 설명하는 대상(제품·README·스펙)이 *지금* 무엇을 말하는지 읽고, 페이지의 메시지가 그것과 어긋나면 *페이지를 고친다.* 수치만 맞추는 게 아니라 — 강조점·포지셔닝이 바뀌었으면 그게 페이지에 올라와야 한다. (예: README의 핵심 메시지가 바뀌었는데 히어로 카피가 옛 메시지 그대로면, 그 카피를 바꾼다.)
 - **디폴트로 수렴하지 않는다**: 손대고 나면 아래 [디자인 품질 체크리스트]로 스스로 끌어올린다. 파란 버튼·가운데 히어로에서 멈추지 않는다.
 
+## 구축과 유지에서 먼저 정할 것
+
+- **방문자 과업**: 누구에게 무엇을 이해시키고 어떤 행동으로 연결할지 정한다. 콘텐츠 목록·소유자 소개만으로 사용 흐름을 대신하지 않는다. 사용자 요구와 AI의 효과 가설을 구분한다.
+- **보존 목록**: 기존 제목·본문·링크·사용자 자료·저장 데이터와 실제 렌더 경로를 기준선에 남긴다. 전면 재구축은 이전 비용과 보존 방법을 설명할 수 있을 때 선택한다.
+- **출처와 권한**: 정본 파일이나 과거 공개물이라는 위치만으로 사용자 작성을 인증하지 않는다. 확인된 원문과 기존 내용으로 가능한 변경을 우선한다. 새 홍보 문구와 기능상의 접근성 안내를 구분한다.
+- **구조 선택**: 정적 안내는 현재 정적 생성 경로를 유지한다. 편집 담당자·빈도·승인 흐름이 별도 편집 시스템을 필요로 할 때 CMS를 비교한다. 기술 교체만으로 정보 구조나 검증 결함이 해소된다고 가정하지 않는다.
+- **상태 전이 검증**: 탐색 변경은 Tab·Shift+Tab·Enter·Escape, 닫힌 뒤 포커스, 화면 너비 전환, 짧은 화면의 마지막 링크, 목적지 포커스와 고정 헤더 가림을 검사한다. 일반 탐색을 모달이나 ARIA menu로 자동 격상하지 않는다.
+- **작은 변경의 비용**: 관련 화면·흐름을 재사용하고 변경·실패가 영향을 준 검사만 반복한다. 성능 점수, 시각 판독, 실제 동작, 사용자 성과를 구분한다. 장기 재방문·전환율 향상을 이번 검수로 주장하지 않는다.
+
 ## 기존 사이트 유지보수
 
 갱신 계기(정본 변경·미감·기능)를 가르고 기준점 커밋에서 증분 수정한다. 정본 판본 기록과
 실제 렌더 경로를 대조하고, 사용자 자료·기존 내용을 보존한다. 미리보기에서 측정한 뒤
-운영으로 승격·재측정하고 배포 커밋에 태그를 남긴다.
+운영으로 올려 재측정하고 배포한 소스 판본을 남긴다. 태그는 저장소 권한이 허용할 때만 쓴다.
 **갱신 전에 [유지보수 상세 절차](../../docs/WEB_SITE_MAINTENANCE_2026_10_30.md)를 읽는다.**
 정본 문구·성능·폰트·빌드 환경의 판단 기준과 82건 분석 근거는 이 문서에 보존한다.
 
@@ -65,10 +73,10 @@
 
 이 작업은 web 액션만의 일이 아니다. **indiebizOS의 IBL 전체가 네 재료 창고다.** 텍스트만 채우거나, 누가 미리 넣어둔 파일만 쓰지 말고, 필요한 걸 *만들어서* 쓴다. 막히면 먼저 떠올린다 — *"이 일에 indiebizOS의 어떤 능력이 도움이 되나?"*
 
-- **이미지가 빈약하면 만든다**: `[engines:image_gemini]`(Nano Banana 2)로 히어로 배경·일러스트·아이콘을 생성하고 `[engines:image_read]{op: "critic"}`로 채점해 통과분만 쓴다. (단, 추상 일러스트보다 *실제 제품·화면 스크린샷*이 신뢰를 준다 — 있으면 그쪽이 우선.)
-- **도식·목업이 필요하면**: `[self:slide]{op:"create"}` / `[engines:render]{op:"html"}`로 다이어그램을 PNG로 렌더해 임베드.
-- **데이터를 보여줘야 하면**: `[table:chart]`로 차트를. 그리고 *진짜 수치*는 추측하지 말고 소스(README·레지스트리·실제 데이터)에서 길어온다.
-- **결과를 눈으로 본다**: `[engines:image_read]`로 스크린샷을 실제로 읽어 확인한다(아래 [배포 후 시각 검증]).
+- **이미지가 빈약하면 만든다**: `engines:image_gemini`(Nano Banana 2)로 히어로 배경·일러스트·아이콘을 생성하고 `engines:image_read`로 채점해 통과분만 쓴다. (단, 추상 일러스트보다 *실제 제품·화면 스크린샷*이 신뢰를 준다 — 있으면 그쪽이 우선.)
+- **도식·목업이 필요하면**: `self:slide` / `engines:render`로 다이어그램을 PNG로 렌더해 임베드.
+- **데이터를 보여줘야 하면**: `table:chart`로 차트를. 그리고 *진짜 수치*는 추측하지 말고 소스(README·레지스트리·실제 데이터)에서 길어온다.
+- **결과를 눈으로 본다**: `engines:image_read`로 스크린샷을 실제로 읽어 확인한다(아래 [배포 후 시각 검증]).
 
 web 액션은 *출발점*이지 울타리가 아니다.
 
@@ -76,31 +84,31 @@ web 액션은 *출발점*이지 울타리가 아니다.
 
 | 액션 | op | 용도 |
 |---|---|---|
-| `[engines:web]` | create | 새 프로젝트/페이지 생성 (target: site/page) |
+| `engines:web` | create | 새 프로젝트/페이지 생성 (target: site/page) |
 | | build | 프로덕션 빌드 (project_path) |
 | | deploy | Vercel 배포 (project_path + production) |
 | | preview | 로컬 미리보기 서버 (project_path + action: start/stop/status) — **기본 op** |
 | | snapshot | 등록 사이트 현재 상태 요약 — 파일 구조·git·페이지·의존성·배포 설정 (site_id) |
 | | check | Lighthouse 품질 검사 (site_id + checks) |
 | | styles | shadcn 테마 편집 (project_path + theme 프리셋/custom_colors HSL + border_radius) |
-| `[engines:web_component]` | catalog | 컴포넌트/섹션 카탈로그 조회 (kind: components/sections) |
+| `engines:web_component` | catalog | 컴포넌트/섹션 카탈로그 조회 (kind: components/sections) |
 | | fetch | 컴포넌트 다운로드 (component) — **기본 op** |
 | | add | shadcn/ui 설치 (component + project_path) |
-| `[engines:web_site]` | list/register/remove/update | 사이트 레지스트리 CRUD |
+| `engines:web_site` | list/register/remove/update | 사이트 레지스트리 CRUD |
 
 ## 두 가지 시나리오 명확 구분
 
 ### A. 새 홈페이지 만들기
 
-1. `[engines:web]{op:"create",target:"site"}`로 프로젝트를 만든다.
+1. `engines:web`의 create에서 target=site로 프로젝트를 만든다.
 2. `web_component`의 `catalog/add`로 필요한 컴포넌트를 고르고 설치한다.
-3. `[engines:web]{op:"create",target:"page"}`로 섹션을 조합하고 내용을 작성한다.
+3. `engines:web`의 create에서 target=page로 섹션을 조합하고 내용을 작성한다.
 4. `web`의 `styles` 또는 파일 편집으로 스타일을 조정한다.
 5. `web`의 `preview`로 실제 화면을 확인하고 문제를 수정한다.
 6. `web`의 `build` 성공을 확인한 뒤 배포 방식에 맞게 배포하고 실제 URL을 확인한다.
 7. `web_site`의 `register`로 등록하고 아래 배포 후 시각 검증을 수행한다.
 
-각 호출의 필수 인자는 아래 상세 예제를 따른다.
+각 단계의 필수 인자는 아래 계약 안내와 현재 액션 정의를 따른다.
 
 ### B. 기존 홈페이지 수정
 
@@ -108,25 +116,23 @@ web 액션은 *출발점*이지 울타리가 아니다.
 
 선택한 브라우저 `driver`는 navigate부터 snapshot·click·screenshot까지 일관되게 명시한다. 재탐색·화면 변경 뒤에는 이전 요소 ref를 재사용하지 않는다. 시간 초과가 나면 연결 상태를 확인하고 다른 통로로 전환할 근거를 얻은 뒤 진행한다. 설정 후보 파일은 디렉토리 목록으로 실제 이름을 확인해 읽고, 문서·스킬은 전체 줄 수를 넘겨 조회하거나 같은 본문을 겹쳐 읽지 않는다.
 
-기존 사이트는 처음부터 만들지 않는다 — `web`의 `op:create,target:site`는 새 사이트 전용이다. 시작은 `[engines:web_site]{op: "list"}`: registry가 사이트의 *루트 경로·배포 URL·기술 스택*을 알려준다. 프로젝트 *위치*를 ls/find로 다시 찾을 필요는 없다(registry가 안다). 단, *무엇을 고칠지* 알려면 그 프로젝트 *안*(`src/app`, `src/components/sections` 등)은 `[self:list]`·`[self:read]`로 둘러봐 구조를 파악한다 — 위치 찾기와 구조 파악은 다른 일이다.
+기존 사이트는 처음부터 만들지 않는다 — `web`의 `op:create,target:site`는 새 사이트 전용이다. 시작은 `engines:web_site`의 list: registry가 사이트의 *루트 경로·배포 URL·기술 스택*을 알려준다. 프로젝트 *위치*를 ls/find로 다시 찾을 필요는 없다(registry가 안다). 단, *무엇을 고칠지* 알려면 그 프로젝트 *안*(`src/app`, `src/components/sections` 등)은 `self:list`·`self:read`로 둘러봐 구조를 파악한다 — 위치 찾기와 구조 파악은 다른 일이다.
 
 권장 흐름(상황에 맞게 조정):
-```
-web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞게 수정 → 빌드 → 배포 → 시각 검증
-```
+등록 → 현재 배포본·렌더 경로 확인 → 수정 → 빌드·핵심 흐름 검사 → 배포 → 운영 검증으로 진행한다.
 
-0. **기준점과 계기**: 사이트 저장소의 미커밋 변경을 먼저 커밋하고, 정본 판본 기록이 있으면 그 이후의 정본 변경부터 대조한다(위 [기존 사이트 유지보수]).
+0. **기준점과 계기**: HEAD·미커밋 변경을 구분하고 이번 작업에서 허용된 파일만 커밋한다. 다른 작업을 일괄 커밋하지 않는다. 커밋 제한이 있으면 diff·지문·복원 사본·배포 영수증으로 보존하고 한계를 밝힌다.  정본 판본 기록이 있으면 그 이후의 정본 변경부터 대조한다(위 [기존 사이트 유지보수]).
 1. **web_site(op=list)**: 사이트의 루트 경로·배포 URL 확보. ★**registry의 `site_id`는 폴더명과 다를 수 있다** — 폴더가 `indiebiz-homepage`여도 id는 `indiebiz-os-홈페이지`다. 폴더명을 site_id로 추측해 넣지 말고 list가 준 id를 그대로 쓴다(2026-08-17 실측: 추측해서 ERR 1라운드 낭비).
-2. **현재 페이지 파악**: `[sense:crawl]{url: "배포URL"}`로 라이브 텍스트를 빠르게 읽고, `[self:read]`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `[engines:web]{op:check, checks:["screenshot"]}` 또는 `[limbs:browser]{op:screenshot}` — `op:snapshot`은 스크린샷이 아니라 파일 구조·git 등 상태 요약이다.)
+2. **현재 페이지 파악**: `sense:crawl`로 라이브 텍스트를 빠르게 읽고, `self:read`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `engines:web` 또는 `limbs:browser` — `op:snapshot`은 스크린샷이 아니라 파일 구조·git 등 상태 요약이다.)
 
    ★**"많이 바뀌었으니 반영해줘" 류 요청의 진실 소스는 정해져 있다** — 무엇이 바뀌었는지를 찾아 헤매지 말고 이 둘을 먼저 읽는다:
    `README.ko.md`(또는 `README.md`)와 `data/system_docs/system_structure.md`. 이 둘과 현재 페이지의 *메시지*를 대조하면 고칠 것이 나온다. (2026-08-17 실측: 이 지점에서 4분 30초를 배회했다 — 첫 쓰기까지 41회 호출 중 38회가 읽기였다.)
    사이트에 정본 판본 기록이 있으면 그 기록 이후 바뀐 문서·커밋만 읽는다. 전문을 다시 읽는 것은 기록이 없거나 메시지 전체를 재검토할 때다.
-3. **목적에 맞게 수정**: `[self:edit]`로 코드를 고친다 — 단순 문자열 교체가 아니라, 위 [목적] 절 기준으로 페이지가 그 목적에 더 잘 복무하도록.
-4. **빌드**: `[engines:web]{op:build}` — 프로젝트의 `npm run build`를 실행한다. lint 스크립트가 없으면 생략한다. 실제 갱신된 산출물 경로가 하나일 때 `output_dir`로 반환하며, 여러 개이거나 확인되지 않으면 null과 후보·사유를 반환한다. null을 `.next`로 대체하지 말고 프로젝트 설정에서 확인한다. 빌드 성공 전엔 배포하지 않는다.
-5. **배포**: 이 사이트가 *어떻게* 배포되는지부터 확인한다(아래 [빌드 및 배포]). git 연동 자동배포일 수도, vercel CLI 토큰 방식일 수도 있다. 배포 전에 변경을 커밋하고, 미리보기에서 측정한 뒤 운영으로 올린다.
+3. **목적에 맞게 수정**: `self:edit`로 코드를 고친다 — 단순 문자열 교체가 아니라, 위 [목적] 절 기준으로 페이지가 그 목적에 더 잘 복무하도록.
+4. **빌드**: `engines:web`의 build — 프로젝트의 `npm run build`를 실행한다. lint 스크립트가 없으면 생략한다. 실제 갱신된 산출물 경로가 하나일 때 `output_dir`로 반환하며, 여러 개이거나 확인되지 않으면 null과 후보·사유를 반환한다. null을 `.next`로 대체하지 말고 프로젝트 설정에서 확인한다. 빌드 성공 전엔 배포하지 않는다.
+5. **배포**: 이 사이트가 *어떻게* 배포되는지부터 확인한다(아래 [빌드 및 배포]). git 연동 자동배포일 수도, vercel CLI 토큰 방식일 수도 있다. 콘텐츠 반영 판본은 실제 검토한 범위만 빌드 전에 기록한다. 허용된 변경만 커밋하거나 기준점 보존 절차로 묶고, 미리보기에서 측정한 뒤 운영으로 올린다.
 6. **시각 검증**: 아래 [배포 후 시각 검증]을 거쳐야 "완료".
-7. **기록**: 운영에 나간 커밋에 `live-날짜` 태그를 붙이고, 정본 판본 기록이 있으면 갱신해 커밋한다.
+7. **기록**: 배포 ID·주소와 실제 배포한 소스 판본·검사 결과를 연결한다. 태그는 커밋이 허용된 정확한 운영 판본에만 붙인다. 배포 뒤 소스를 바꾸면 그 수정은 운영에 반영되지 않은 것이다.
 
 기존 사이트에는 새 프로젝트 생성을 호출하지 않는다. 위 흐름을 변경 범위에 맞게 적용한다.
 
@@ -141,25 +147,9 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 | `remove` | 사이트 등록 해제 | site_id |
 | `update` | 사이트 정보 수정 | site_id + 수정할 필드 |
 
-### 사용 예시
-```
-# 새 사이트 등록
-[engines:web_site]{op: "register", name: "내 블로그", local_path: "/path/to/site", repo_url: "https://github.com/user/my-blog", deploy_url: "https://my-blog.vercel.app"}
-
-# 목록 조회
-[engines:web_site]{op: "list"}
-
-# 삭제
-[engines:web_site]{op: "remove", site_id: "my-blog"}
-
-# 수정
-[engines:web_site]{op: "update", site_id: "my-blog", deploy_url: "https://new-url.vercel.app"}
-```
 
 빈번한 호출이면 sites.json 직접 읽기도 가능:
-```
-[self:read]{path: "/Users/.../indiebizOS/data/packages/installed/tools/web-builder/sites.json"}
-```
+레지스트리 파일을 직접 읽을 때도 현재 데이터 루트를 확인한다.
 
 ## web {op:"check"} 점검 항목
 
@@ -171,24 +161,12 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 | `lighthouse` | 성능, 접근성, SEO 점수, Core Web Vitals, 개선 기회 |
 | `screenshot` | 스크린샷 캡처 |
 
-### 사용 예시
-```
-# 전체 점검 (기본) — list가 돌려준 site_id 사용
-[engines:web]{op: "check", site_id: "indiebiz-os-홈페이지"}
-
-# 상태만 확인
-[engines:web]{op: "check", site_id: "indiebiz-os-홈페이지", checks: ["status"]}
-
-# Lighthouse만
-[engines:web]{op: "check", site_id: "indiebiz-os-홈페이지", checks: ["lighthouse"]}
-
-# URL 직접 지정 (등록되지 않은 사이트도 가능)
-[engines:web]{op: "check", url: "https://example.com"}
-```
 
 ## web {op:"create"} 상세
 
 ### target=site (신규 프로젝트)
+
+name·template·features·output_dir을 요구에 맞춰 선택한다. 실제 필수 항목은 현재 계약으로 확인한다.
 
 #### 템플릿 종류
 
@@ -207,24 +185,13 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 - `seo`: SEO 메타태그 최적화
 - `pwa`: Progressive Web App
 
-#### 예시
-```
-[engines:web]{op: "create", target: "site", name: "my-homepage", template: "landing", features: ["dark_mode", "seo"], output_dir: "/path/to/output"}
-```
-
+#
 ### target=page (기존 프로젝트에 페이지 추가)
 
-먼저 사용 가능한 섹션 카탈로그 확인:
-```
-[engines:web_component]{op: "catalog", kind: "sections"}
-```
-원하는 섹션을 골라 페이지 생성:
-```
-[engines:web]{op: "create", target: "page", project_path: "/path/to/project", page_name: "about", sections: ["hero-centered", "features-grid", "cta-banner"], metadata: {title: "About"}}
-```
+카탈로그에서 지원 섹션을 선택한 뒤 project_path·page_name·sections·metadata를 명시한다.
 
 ### 직접 코드 작성
-복잡한 구조는 [self:write]로 직접 디렉토리 골격을 만들고, package.json·Next.js 설정을 직접 작성한 뒤 `[engines:web_site]{op: "register"}`로 레지스트리에 등록하는 흐름이 더 유연합니다.
+복잡한 구조는 self:write로 직접 디렉토리 골격을 만들고, package.json·Next.js 설정을 직접 작성한 뒤 `engines:web_site`로 레지스트리에 등록하는 흐름이 더 유연합니다.
 
 ## web_component 상세
 
@@ -235,48 +202,21 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 | `add` | shadcn/ui 컴포넌트를 프로젝트에 설치 | shadcn CLI |
 | `fetch` | 외부 CDN/레지스트리에서 코드 가져오기 | HTTP |
 
-### 사용 예시
-```
-# shadcn 설치 (단일)
-[engines:web_component]{op: "add", project_path: "/path", component: "button"}
 
-# 외부 가져오기 (코드 확인)
-[engines:web_component]{op: "fetch", component: "Navigation", style: "new-york", output_format: "code"}
-```
-
-여러 개 한꺼번에 설치는 CLI가 더 효율적:
-```
-run_command('cd /path && npx shadcn@latest add button card dialog tabs --yes')
-```
+여러 컴포넌트 설치를 묶을 때는 같은 프로젝트·패키지 관리자·잠금파일을 유지한다.
 
 ## 컴포넌트와 섹션 선택
 
 지원 목록은 카탈로그에서 조회하고 반환된 이름을 사용한다.
-```ibl
-[engines:web_component]{op:"catalog",kind:"components",category:"form"}
-[engines:web_component]{op:"catalog",kind:"sections"}
-```
 컴포넌트 category는 `all`, `layout`, `form`, `data`, `feedback`, `navigation`, `overlay`다.
 
 ### 섹션 props 예시
-```
-# hero-simple
-{"title": "메인 제목", "subtitle": "부제목", "cta_text": "시작하기"}
-
-# features-grid
-{"title": "주요 기능", "features": [{"title": "기능1", "description": "설명", "icon": "아이콘"}]}
-
-# pricing-cards
-{"title": "가격", "plans": [{"name": "Free", "price": "0원", "features": ["기능1"]}]}
-```
+섹션의 현재 props 계약에 따라 제목·부제목·링크·항목 배열을 실제 자료에 연결한다.
 
 ## 스타일 편집
 
 shadcn 테마·색상·모서리 반경은 `styles`로 편집한다.
-```ibl
-[engines:web]{op:"styles",project_path:"/path/to/project",theme:"purple",border_radius:"md"}
-```
-임의 CSS나 프로젝트별 Tailwind·theme 설정은 해당 파일을 읽고 `[self:edit]`로 직접 수정한다.
+임의 CSS나 프로젝트별 Tailwind·theme 설정은 해당 파일을 읽고 `self:edit`로 직접 수정한다.
 기존 CSS 구조와 버전을 확인한 뒤 아래 변수 예시를 적용한다.
 
 ### globals.css에서 수정할 주요 CSS 변수
@@ -289,11 +229,6 @@ shadcn 테마·색상·모서리 반경은 `styles`로 편집한다.
 }
 ```
 
-### 편집 예시
-```
-[self:read]{path: "/path/to/project/src/app/globals.css"}
-[self:edit]{path: "/path/to/project/src/app/globals.css", old_string: "--primary: 221.2 83.2% 53.3%", new_string: "--primary: 262.1 83.3% 57.8%"}
-```
 
 ## web {op:"preview"} 사용법
 
@@ -305,49 +240,25 @@ shadcn 테마·색상·모서리 반경은 `styles`로 편집한다.
 | `stop` | 실행 중인 서버 중지 |
 | `status` | 서버 상태 확인 |
 
-### 사용 예시
-```
-# 서버 시작 (기본 포트 3000)
-[engines:web]{op: "preview", project_path: "/path", action: "start"}
 
-# 다른 포트로 시작
-[engines:web]{op: "preview", project_path: "/path", port: 3001}
-
-# 서버 상태 확인
-[engines:web]{op: "preview", project_path: "/path", action: "status"}
-
-# 서버 중지
-[engines:web]{op: "preview", project_path: "/path", action: "stop"}
-```
-
-실행 후 브라우저에서 `http://localhost:3000` 접속.
+project_path·action·port를 지정하고 반환된 실제 URL로 접속한다. 기본 포트를 추정하지 않는다. 종료에는 자신이 시작한 서버의 영수증을 사용한다.
 
 ## 빌드 및 배포
 
 ### 빌드
-```
-[engines:web]{op: "build", project_path: "/path/to/project"}
-```
+
+프로젝트의 선언된 build 명령을 실행하고 종료 코드와 로그를 확인한다.
 실패 시: 에러 로그 분석 → 타입 에러/import 오류 수정 후 재빌드. 빌드 성공 전까지 배포 금지.
 
 ### 배포
-```
-# 프로덕션 배포
-[engines:web]{op: "deploy", project_path: "/path/to/project", production: true}
 
-# 프로젝트 이름 지정
-[engines:web]{op: "deploy", project_path: "/path/to/project", production: true, project_name: "my-site"}
-```
+현재 배포 대상의 project_path·production·필요한 project_name을 명시한다.
 
 **배포 방식부터 확인한다 (사이트마다 다름):**
 - git 연동 자동배포가 설정된 사이트면 `git push`만으로 반영된다.
 - 아니면 vercel CLI 배포이고, **통로는 위 `deploy` op 하나다.** op 가 `$VERCEL_TOKEN`(없으면 로컬 `vercel login`)으로 인증하고 출력의 토큰을 가린다. 셸에서 `vercel deploy` 를 직접 치지 말 것 — 토큰이 명령줄·로그에 실리고 실행 이력(성공률·증류)에도 남지 않는다.
 - 셸의 `vercel whoami` 실패만 보고 "배포 불가"로 판단하지 말 것 — 셸에는 토큰이 없을 수 있다. `deploy` op 의 결과(`error`·`solution`)로 판정한다.
 
-### 파이프라인
-```
-[engines:web]{op: "build", project_path: "/path"} >> [engines:web]{op: "deploy", project_path: "/path", production: true} >> [engines:web]{op: "check", site_id: "내-사이트"}
-```
 
 ## 이미지가 필요할 때 (생성 → public/ 저장 → 참조)
 
@@ -357,22 +268,19 @@ shadcn 테마·색상·모서리 반경은 `styles`로 편집한다.
 
 | 액션 | 용도 |
 |---|---|
-| `[engines:image_gemini]` | AI 이미지 생성 (Nano Banana 2). **`style_preset`을 사이트 톤과 통일**해 일관된 일러스트/배경/아이콘 생성 |
-| `[self:slide]{op:"create"}` / `[engines:render]{op:"html"}` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG, 뷰포트별 1행) |
-| `[engines:image_read]{op: "critic"}` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes). `criteria: "web"` 을 주면 data/criteria/web.yaml 취향 파일이 기준. `prescreen: '$it.prescreen'` 을 넘기면 렌더 진단(콘솔 오류·빈 화면)을 실제 이미지·목적과 함께 검수하며 진단만으로 실패시키지 않음 |
+| `engines:image_gemini` | AI 이미지 생성 (Nano Banana 2). **`style_preset`을 사이트 톤과 통일**해 일관된 일러스트/배경/아이콘 생성 |
+| `self:slide` / `engines:render` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG, 뷰포트별 1행) |
+| `engines:image_read` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes). `criteria: "web"` 을 주면 data/criteria/web.yaml 취향 파일이 기준. `prescreen: '$it.prescreen'` 을 넘기면 렌더 진단(콘솔 오류·빈 화면)을 실제 이미지·목적과 함께 검수하며 진단만으로 실패시키지 않음 |
 
 ### 절차
-```
-1. [engines:image_gemini]{prompt: "...히어로 배경, 미니멀, 사이트 톤과 일관", style_preset: "<사이트 톤과 동일하게 통일>", output_path: "{project_path}/public/hero.png"}
-2. [engines:image_read]{op: "critic", path: "{project_path}/public/hero.png", intent: "히어로 배경으로 적합한가 / 톤 일관 / 텍스트 가독 방해 없음"}   # passed=false면 프롬프트 보정 후 재생성
-3. 코드에서 /hero.png 로 참조 (Next.js는 public/ 루트가 / 경로)
-```
+
+설명할 목적과 사이트 톤을 정해 생성하고, 반환 경로의 실제 이미지를 판독한 뒤 public 자산과 코드 참조를 연결한다.
 - **style_preset은 사이트 전체에서 하나로 통일**한다 — 히어로·아이콘·배경이 제각각 톤이면 아마추어처럼 보인다.
 - 생성물은 반드시 `image_read`(op:critic)로 1차 채점하고 통과한 것만 임베드한다.
 
 ## 디자인 품질 체크리스트
 
-`[engines:web]{op: "check"}`의 Lighthouse는 **성능·접근성·SEO 점수일 뿐 미적 품질을 측정하지 않는다.** 기준이 없으면 결과물이 shadcn 디폴트(파란 버튼·가운데 정렬 히어로)로 수렴한다. 페이지를 만들거나 고친 뒤 아래를 자가 점검한다.
+`engines:web`의 Lighthouse는 **성능·접근성·SEO 점수일 뿐 미적 품질을 측정하지 않는다.** 기준이 없으면 결과물이 shadcn 디폴트(파란 버튼·가운데 정렬 히어로)로 수렴한다. 페이지를 만들거나 고친 뒤 아래를 자가 점검한다.
 
 - [ ] **시각 위계**: 가장 중요한 메시지(주 헤드라인·핵심 CTA)가 한눈에 가장 먼저 들어오는가. 레벨은 **크기 → 굵기 → 명도 대비** 순으로 만든다. 크기를 더 못 벌리는 자리(h4·h5가 본문 크기와 겹치는 구간)는 **두께로** 위계를 살린다.
 - [ ] **여백(breathing room)**: 간격 스케일 **4·8·16·24·32·48·64·96px** 안에서만 고른다(임의 값 금지). 섹션 간 세로 패딩 데스크탑 **80~120px**. 값은 8px 그리드에 맞추되 **어느 값을 쓸지는 요소 간 관계 강도로** 정한다 — 강한 관계 쌍일수록 가깝게, 타이틀–서브 < 서브–문단 < 새 섹션으로 단조 증가, 마진은 큰 요소에서 파생.
@@ -391,7 +299,7 @@ shadcn 테마·색상·모서리 반경은 `styles`로 편집한다.
 1. **텍스트 위에 텍스트를 얹지 마라.** 썸네일이 그 자체로 글자가 큰 이미지(슬라이드·포스터·유튜브 썸네일)면 스크림을 아무리 강화해도 제목이 이깁니다. 노브를 돌리지 말고 **구조를 바꿔라** — 이미지와 텍스트를 위아래로 분리하면 충돌이 0이 되고 제목이 첫 시선을 가져옵니다.
 2. **Tailwind v4 캐스케이드 레이어 함정.** `@import "tailwindcss"` 뒤에 쓴 **레이어 밖 CSS가 유틸리티 클래스를 이깁니다**(특이도와 무관 — 언레이어드 우선). `globals.css`에 `a { color: inherit }`가 그냥 있으면 `<a className="text-white">`가 무시되고, 색 클래스 없는 자식 `<h1>`이 body 색을 상속해 **검은 배경에 검은 글자**가 됩니다. 리셋류는 반드시 `@layer base { ... }`로 감쌀 것.
 3. **글자를 키웠으면 그릇도 키워라.** `overflow-hidden` 컨테이너 안의 폰트 크기만 올리면 글자 윗부분이 잘립니다. 크기 조정은 항상 `py`·`leading`과 함께.
-4. **판독은 반드시 한다.** 위 1·2·3 전부 코드 리뷰로는 안 보였고 `[engines:image_read]`로 스크린샷을 읽어서 잡혔습니다. 특히 2번은 **원래도 있던 잠복 버그**였는데 밝은 이미지 위라 가려져 있었습니다.
+4. **판독은 반드시 한다.** 위 1·2·3 전부 코드 리뷰로는 안 보였고 `engines:image_read`로 스크린샷을 읽어서 잡혔습니다. 특히 2번은 **원래도 있던 잠복 버그**였는데 밝은 이미지 위라 가려져 있었습니다.
 
 ## 배포 후 시각 검증 (필수)
 

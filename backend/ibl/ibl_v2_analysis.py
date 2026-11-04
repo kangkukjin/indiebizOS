@@ -19,16 +19,25 @@ JSON_RUNTIME_HINTS = {
     "nonfinite_number": "NaN·Infinity는 JSON 숫자가 아닙니다. 원 계산을 확인하고, 미확인 값은 원인과 함께 명시적으로 표현하세요.",
 }
 
+RESULT_JSON_HINT = (
+    'Result는 성공·실패를 감싼 값입니다. is_ok로 구분하고 성공은 unwrap, 실패는 '
+    'error_of로 필요한 필드를 선택한 뒤 json()에 전달하세요. '
+    '원형 Result는 json() 대신 반환하여 value_wire·결과 참조로 보존할 수 있습니다.')
+
 
 def runtime_hint(fault):
     """Give cause-specific advice without changing the value rejection contract."""
     if fault.code not in {"NON_JSON_RESULT", "NONFINITE_RESULT"}:
         return None
+    if (fault.details.get('reason') == 'unsupported_type'
+            and fault.details.get('value_type') in ('Result', 'ResultValue')):
+        return RESULT_JSON_HINT
     return JSON_RUNTIME_HINTS.get(
         fault.details.get("reason"),
         "진단의 경로와 값 타입을 확인하고 JSON으로 표현할 값을 명시적으로 선택하세요.")
 
 HINTS = {
+    "NON_JSON_RESULT": JSON_RUNTIME_HINTS['unsupported_type'] + ' ' + RESULT_JSON_HINT,
     "RECORD_RELATION_LIMIT": "확장할 레코드 후보를 조건으로 먼저 좁히거나 필요한 공통 필드를 선택하세요. 후보별 나머지 필드는 실행 때 확인합니다.",
     "REQUIREMENT_CONFLICT": "같은 입력의 무조건 요구를 함께 만족시킬 수 없습니다. 별개 입력으로 나누거나 조건/복구 경계를 명시하세요.",
     "CALLABLE_REQUIREMENT": "함수의 declared_requirements에 맞는 인자 방식·반환 타입·효과를 가진 콜백을 전달하세요.",
@@ -533,6 +542,45 @@ def row_flow_type(compiler, node, contract, args, fields, values, result, env, n
     return result
 
 
+def json_argument(compiler, node, typ):
+    """Check known structural exclusions; leave unknown values to strict JSON at runtime.
+
+    This is not a second serializer: numeric precision and text contents remain
+    owned by public_result. Walk each shared type once, with bounded diagnostics.
+    """
+    pending, seen, uncertain = [(typ, '$')], set(), False
+    while pending and len(seen) < 4096:
+        current, path = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if current.kind in ('Unit', 'Callable', 'Result', 'ForeignRef'):
+            compiler.issue(
+                node, 'NON_JSON_RESULT', f'json()의 {path}에 있는 {current.kind}는 JSON 값이 아닙니다.',
+                actual=current.kind,
+                details={'reason': 'unsupported_type', 'path': path, 'value_type': current.kind},
+                hint=RESULT_JSON_HINT if current.kind == 'Result' else JSON_RUNTIME_HINTS['unsupported_type'])
+            return
+        if current.kind == 'Union':
+            pending.extend((member, path) for member in current.item)
+        elif current.kind == 'List':
+            children = ([(child, f'{path}[{i}]') for i, child in enumerate(current.positions)]
+                        if current.positions is not None else [(current.item or UNKNOWN, path + '[*]')])
+            pending.extend(children)
+        elif current.kind == 'Record':
+            uncertain |= current.open or current.observed
+            if not current.observed:
+                pending.extend((child, (path + '.' + key)[:256]) for key, child in current.fields)
+        elif current.kind == 'Unknown':
+            uncertain = True
+    if uncertain or pending:
+        guard = {'source_span': span(compiler.source, node),
+                 'expected': 'json()의 미확정 값은 실행 시 JSON 표현 가능성을 확인합니다.',
+                 'actual': str(typ), 'call_path': list(compiler.call_path)}
+        if guard not in compiler.guards:
+            compiler.guards.append(guard)
+
+
 def builtin_type(compiler, node, name, types, env=None, names=None, readonly=None):
     """Structural obligations only; never invoke a callback or external tool."""
     from common.expression_functions import CONTRACTS
@@ -659,6 +707,8 @@ def builtin_type(compiler, node, name, types, env=None, names=None, readonly=Non
             return Type('Text', literal=str(types[0].literal))
         return TEXT
     if name == 'json':
+        if types:
+            json_argument(compiler, nodes[0], types[0])
         return TEXT
     if name == 'evidence':
         return Type('Record')

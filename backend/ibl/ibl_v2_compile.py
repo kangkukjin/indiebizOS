@@ -130,7 +130,8 @@ class Compiler(CallAnalysis):
         # Value failures remain observable inside recovery expressions. Syntax,
         # effects, permissions and definition contracts are still compile errors.
         if self.catch_value_faults and code in {
-                'TYPE', 'NUMBER_REQUIRED', 'ARITHMETIC', 'FIELD_TYPE', 'MISSING_FIELD', 'FORMAT_TYPE'}:
+                'TYPE', 'NUMBER_REQUIRED', 'ARITHMETIC', 'FIELD_TYPE', 'MISSING_FIELD', 'FORMAT_TYPE',
+                'NON_JSON_RESULT'}:
             item.update(expected='복구 경계 안에서 실행 시 확인', recoverable=True)
             if item not in self.guards:
                 self.guards.append(item)

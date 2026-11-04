@@ -174,6 +174,7 @@ $failure=[try] {{
   [table:each]{{items:[1,0],mode:"{mode}"}} {{
     assert $it>0,"positive required"
   }}
+  return {{completed:true}}
 }} [catch] {{ $error }}
 '''
     rejected = handle_request(

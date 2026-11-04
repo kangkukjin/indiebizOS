@@ -48,10 +48,15 @@ def test_json_decimals_are_business_values(registry, code, expected):
 @pytest.mark.parametrize('bad', [UNIT, Decimal('0.10000000000000001')])
 def test_json_failure_stops_write_and_can_be_caught(registry, tmp_path, bad):
     local = load_registry(str(tmp_path))
-    result = run('[self:write]{path:"must_not_exist.json",content:json($bad)}',
-                 local, {'bad': bad})
+    plan = compile_program('[self:write]{path:"must_not_exist.json",content:json($bad)}',
+                           local, {'bad': bad})
+    result = Runtime(plan, {'bad': bad}).run()
     assert result['success'] is False
-    assert result['diagnostic']['code'] == 'NON_JSON_RESULT'
+    if bad is UNIT:
+        assert not result['executed']
+        assert any(i['code'] == 'NON_JSON_RESULT' for i in plan.issues)
+    else:
+        assert result['diagnostic']['code'] == 'NON_JSON_RESULT'
     assert not list(tmp_path.rglob('must_not_exist.json'))
     assert value('[try]{return json($bad)}[catch]{return $error.code}',
                  registry, {'bad': bad}) == 'NON_JSON_RESULT'

@@ -131,12 +131,15 @@ def test_result_field_error_teaches_typed_unwrap(registry):
     ('return json({n:123456789.123456789*2})', {}, "precision_loss", "round(", "$error"),
     ('return json($x)', {"x": '{"a":1,"a":2}'}, "duplicate_key", "중복", "round("),
 ])
-def test_runtime_json_hint_matches_structured_reason(source, inputs, reason, expected, excluded):
+def test_json_hint_matches_structured_reason_at_static_or_runtime_boundary(source, inputs, reason, expected, excluded):
     plan = compile_program(source, inputs=inputs)
-    assert not plan.issues, plan.issues
     result = Runtime(plan, inputs).run()
     assert not result["success"]
-    diagnostic = result["diagnostic"]
+    if plan.issues:
+        assert not result['executed']
+        diagnostic = plan.issues[0]
+    else:
+        diagnostic = result["diagnostic"]
     assert diagnostic["code"] == "NON_JSON_RESULT"
     assert diagnostic["details"]["reason"] == reason
     assert diagnostic["details"]["path"].startswith("$")
@@ -147,6 +150,7 @@ def test_caught_unit_partial_gets_report_recovery_advice():
     plan = compile_program('''
 $failure=[try] {
   [table:each]{items:[1,0],mode:"effect"} { assert $it>0,"positive required" }
+  return {completed:true}
 } [catch] { $error }
 return json($failure)
 ''')
@@ -157,3 +161,87 @@ return json($failure)
         "reason": "unsupported_type", "path": "$.partial[0]", "value_type": "Unit"}
     assert "$error" in diagnostic["hint"] and "value_wire" in diagnostic["hint"]
     assert "round(" not in diagnostic["hint"]
+
+
+@pytest.mark.parametrize('expression', ['$rows', '{nested:[$rows]}',
+                                        '($flag ? $rows : [1])'])
+def test_json_collect_rejected_before_external_reads(expression):
+    from ibl_v2_adapters import Adapter
+    from ibl_v2_types import BOOL
+    calls = []
+    registry = {'probe:read': Adapter(
+        {'version': 1, 'params': {}, 'result': 'Text', 'effects': ['read_external']},
+        lambda rt, args: calls.append('read') or 'document')}
+    source = ('$rows=[1,2] >> [table:each]{on_error:"collect"}{return [probe:read]{}}; '
+              'return json(' + expression + ')')
+    plan = compile_program(source, registry, input_types={'flag': BOOL})
+    issue = next(i for i in plan.issues if i['code'] == 'NON_JSON_RESULT')
+    assert issue['actual'] == 'Result'
+    assert all(word in issue['hint'] for word in ('is_ok', 'unwrap', 'error_of'))
+    assert source[issue['source_span']['start']:issue['source_span']['end']] == expression.strip('()')
+    result = Runtime(plan, {'flag': True}).run()
+    assert not result['success'] and not result['executed']
+    assert calls == []
+
+
+@pytest.mark.parametrize('prefix,call', [
+    ('', 'json({nested:[abs]})'),
+    ('$serialize=json;', '$serialize({nested:[abs]})'),
+    ('[def:serialize]($value){return json($value)};', '[fn:serialize]{value:{nested:[abs]}}'),
+])
+def test_json_nested_callable_rejected_through_callable_analysis(prefix, call):
+    plan = compile_program(prefix + 'return ' + call)
+    issue = next(i for i in plan.issues if i['code'] == 'NON_JSON_RESULT')
+    assert issue['actual'] == 'Callable' and issue['details']['path'] == '$.nested[0]'
+    assert not Runtime(plan).run()['executed']
+
+
+@pytest.mark.parametrize('value', [None, {'rows': [1, 'ok', True]}, 'literal text'])
+def test_unknown_json_input_keeps_runtime_guard_and_accepts_business_values(value):
+    import json
+    from ibl_v2_types import UNKNOWN
+    plan = compile_program('return json($value)', input_types={'value': UNKNOWN})
+    assert not plan.issues and plan.guards
+    result = Runtime(plan, {'value': value}).run()
+    assert result['success'] and json.loads(result['value']) == value
+
+
+@pytest.mark.parametrize('kind', ['unit', 'result', 'foreign'])
+def test_unknown_json_input_keeps_strict_runtime_rejection(kind):
+    from ibl_v2_ir import UNIT, ResultValue
+    from ibl_v2_types import UNKNOWN
+    from common.foreign_ref import ForeignRef
+    values = {'unit': UNIT, 'result': ResultValue(True, 1)}
+    if kind == 'foreign':
+        # External object handles are transported explicitly, never plain JSON.
+        value = ForeignRef('provider', 'owner', 'environment', 'generation', 'object', 'type')
+    else:
+        value = values[kind]
+    plan = compile_program('return json($value)', input_types={'value': UNKNOWN})
+    assert not plan.issues and plan.guards
+    result = Runtime(plan, {'value': value}).run()
+    assert not result['success'] and result['diagnostic']['code'] == 'NON_JSON_RESULT'
+    if kind == 'result':
+        assert 'unwrap' in result['diagnostic']['hint']
+
+
+@pytest.mark.parametrize('source,expected', [
+    ('[try]{return json({f:abs})}[catch]{return $error.code}', 'NON_JSON_RESULT'),
+    ('json({f:abs}) ?? "recovered"', 'recovered'),
+    ('$rows=[] >> [table:each]{on_error:"collect"}{return $it}; return json($rows)', '[]'),
+    ('$rows=[1,2] >> [table:each]{on_error:"collect"}{return $it}; '
+     '$plain=$rows >> [table:each]{return unwrap($it)}; return json($plain)', '[1, 2]'),
+])
+def test_json_recovery_empty_collect_and_unwrap_remain_usable(source, expected):
+    plan = compile_program(source)
+    assert not plan.issues, plan.issues
+    result = Runtime(plan).run()
+    assert result['success'] and result['value'] == expected
+
+
+def test_json_observed_fields_are_not_static_rejection_evidence():
+    from ibl_v2_types import Type, UNIT_T
+    typ = Type('Record', fields=(('sample', UNIT_T),), observed=True)
+    plan = compile_program('return json($row)', input_types={'row': typ})
+    assert not plan.issues and plan.guards
+    assert Runtime(plan, {'row': {'different': 1}}).run()['success']

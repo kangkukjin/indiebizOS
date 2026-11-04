@@ -820,7 +820,7 @@ def iteration_type(compiler, site, items, options, analyze):
         return result
     if options['on_error'] == 'collect':
         result = Type('Result', item=result)
-    return Type('List', item=result)
+    return Type('List', item=result, positions=() if items.positions == () else None)
 
 
 def record_type(compiler, entries):

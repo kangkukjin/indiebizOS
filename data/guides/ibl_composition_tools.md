@@ -279,6 +279,11 @@ legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_descripti
 
 ### JSON 원장과 검침 상태
 
+Result 목록을 그대로 `json()`에 넣지 않는다. `is_ok`로 나누고 성공은 `unwrap`,
+실패는 `error_of`에서 필요한 필드를 골라 일반 목록·레코드로 만든 뒤 저장한다.
+`json()`은 알려진 Result·Unit·함수·외부 참조를 중첩 구조까지 사전 검사한다.
+미확정 값은 실행 시 검사하며 `try/catch`·fallback의 값 오류 복구는 유지한다.
+
 `[self:write]{content:json($rows)}`는 format 생략 시 맨 배열 원문을 저장한다.
 `format:"json"`을 명시하면 목록도 `{items,count}` 봉투로 저장한다. `원장에누적`의
 현재 함수는 전자를 쓴다. `self:ledger`의 select/append/upsert는 맨 배열에 target을

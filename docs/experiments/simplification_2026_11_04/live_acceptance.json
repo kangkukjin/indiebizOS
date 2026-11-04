@@ -1,0 +1,25 @@
+{
+  "backend_phase": "ACTIVE",
+  "generation_digest": "14fc2a7df62f77eb88bd7ee97103301e",
+  "source_matches": {
+    "backend/datastore/vocabulary_state.py": true,
+    "backend/ibl/vocabulary_lifecycle.py": true,
+    "backend/ibl/tool_loader.py": true,
+    "backend/base/ibl_request_contract.py": true,
+    "backend/surface/api_ibl.py": true,
+    "mcp_server.py": true
+  },
+  "fresh_stdio_mcp": true,
+  "rest_and_mcp": {
+    "success": true,
+    "executed": true,
+    "value": {
+      "marker": "episode5808-contract",
+      "flag": false,
+      "optional": null,
+      "empty": []
+    },
+    "edition": 2,
+    "plan_hash": "7621a1ce1b1c0b5094500d00aee0d04a737e83c1d26c4ebf0008a560053af5da"
+  }
+}

@@ -299,34 +299,10 @@ async def execute_ibl_code(req: IBLRequest):
                     from system_tools import _execute_ibl_unified
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서
                     # 옛 호출의 tool_input 모양을 바꾸지 않는다(무회귀).
-                    _ti = {"code": req.code}
-                    for field in ("composition", "completion", "repair"):
-                        if getattr(req, field) is not None:
-                            _ti[field] = getattr(req, field)
-                    if req.edition is not None:
-                        _ti["edition"] = req.edition
-                    if req.function_refs is not None:
-                        _ti["function_refs"] = req.function_refs
-                    if req.value_protocols is not None:
-                        _ti["value_protocols"] = req.value_protocols
-                    if req.inputs is not None:
-                        _ti["inputs"] = req.inputs
+                    from ibl_request_contract import project_execution_options
+                    _ti = project_execution_options(req.model_dump())
                     if req.declared_inputs is not None:
                         _ti["declared_inputs"] = req.declared_inputs
-                    if req.describe is not None:
-                        _ti["describe"] = req.describe
-                    if req.read_result is not None:
-                        _ti["read_result"] = req.read_result
-                    if req.resume is not None:
-                        _ti["resume"] = req.resume
-                    if req.reuse is not None:
-                        _ti["reuse"] = req.reuse
-                    if req.budget is not None:
-                        _ti["budget"] = req.budget
-                    if req.code_edits is not None:
-                        _ti["code_edits"] = req.code_edits
-                    if req.check:
-                        _ti["check"] = True
                     from supervision_bus import current as supervisor_current
                     supervisor = supervisor_current(agent_id, req.task_id)
                     from completion_lease import channel_cancelled

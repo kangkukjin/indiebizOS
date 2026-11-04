@@ -315,6 +315,8 @@ async def execute_ibl(code: str, project_path: str = "",
     reuse={run_id,models:false}면 모델만 새로 판단합니다.
     inputs 값 자리의 {"$ref": result_ref.id, "path": [...]}는 저장된 결과를 복사 없이 전달합니다.
     """
+    from ibl_request_contract import project_execution_options
+    execution_options = project_execution_options(locals())
     # ctx 는 FastMCP 가 자동 주입(모델에 노출 안 됨). HTTP 경로면 헤더에서 신원을 꺼낸다.
     if origin is not None and origin != "training":
         raise ValueError('origin은 "training" 또는 생략만 허용합니다.')
@@ -323,35 +325,9 @@ async def execute_ibl(code: str, project_path: str = "",
     agent_id = h_agent or DEFAULT_AGENT_ID
     task_id = h_task or DEFAULT_TASK_ID
     effective_origin = origin or h_origin or DEFAULT_TASK_ORIGIN
-    payload = {"code": code, "project_path": effective_path}
     from ibl_edition import authoring_request
-    for field, value in (("composition", composition), ("completion", completion), ("repair", repair)):
-        if value is not None:
-            payload[field] = value
-    if function_refs is not None:
-        payload["function_refs"] = function_refs
-    if value_protocols is not None:
-        payload["value_protocols"] = value_protocols
-    if budget is not None:
-        payload["budget"] = budget
-    if edition is not None:
-        payload["edition"] = edition
-    payload = authoring_request(payload)
-    if inputs is not None:
-        payload["inputs"] = inputs
-    if describe is not None:
-        payload["describe"] = describe
-    if read_result is not None:
-        payload["read_result"] = read_result
-    # 없을 때만 빼서 옛 호출의 payload 모양을 바꾸지 않는다(무회귀) — B23-1
-    if resume is not None:
-        payload["resume"] = resume
-    if reuse is not None:
-        payload["reuse"] = reuse  # 고친 프로그램의 읽기 영수증 재사용(2026-09-26)
-    if code_edits is not None:
-        payload["code_edits"] = code_edits  # 참조한 원문의 조각 치환(긴문장 L18-7)
-    if check:
-        payload["check"] = True   # 정적 통화 검사만(실행 없음) — 2026-09-05
+    payload = authoring_request(execution_options)
+    payload["project_path"] = effective_path
     if agent_id:
         payload["agent_id"] = agent_id  # 신원이 있을 때만 전달 (없으면 현 동작 그대로)
     if task_id:

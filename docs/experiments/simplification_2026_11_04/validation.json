@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-04",
+  "command": ".venv/bin/python3 -m pytest backend/ -n auto --dist loadfile",
+  "system_tests_included": true,
+  "tests": 12555,
+  "passed": 12531,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 24,
+  "seconds": 495.319,
+  "skip_reasons": {
+    "collection skipped": 1,
+    "Windows UIAutomation assemblies required; native fixture also supports remote validation": 1,
+    "explicit local conversion test": 1,
+    "Windows PowerShell required; same fixture can run on registered Windows PC": 1,
+    "상시 관용구 0건": 1,
+    "explicit local app acceptance": 4,
+    "수리 훈련 시험 대상 — INDIEBIZ_REPAIR_TRAINING_SUBJECT=1 로 켠다": 4,
+    "관용구 원장이 비어 있음": 1,
+    "로컬 문서 엔진 실인수": 1,
+    "로컬 ONLYOFFICE 실인수 명시 실행": 1,
+    "explicit real-model probe": 2,
+    "set MEMBER_DESKTOP_TEST_BINARY to the built Go executor": 1,
+    "explicit local engine acceptance": 3,
+    "explicit scale measurement": 1,
+    "explicit engine test": 1
+  },
+  "source_sha256": {
+    "backend/datastore/vocabulary_state.py": "9b81fef6afaf9bedd6855a685ae1b8c3756a504cf817584c244fe60dcc51c4d9",
+    "backend/ibl/vocabulary_lifecycle.py": "8c78dd53910928d804794d0ff3798e9a434beaf3d2ab92662beebbf8bbd93d69",
+    "backend/ibl/tool_loader.py": "62e8410eea571fe0d99a2e5c8778b433f70505c0e02d99c9a379233fe1f21447",
+    "backend/base/ibl_request_contract.py": "779b786df67dea80c4bc5f1af011020f5e3c2bd916a444ba3e3d2f25846bf63d",
+    "backend/surface/api_ibl.py": "f6a306dabffcc3c31624203fa6d57acecfe168c92b4766b2524b7203eb98e951",
+    "mcp_server.py": "8b5f4f3ec9e98571a48601156b8b80ad87f720ff5865b854d59d350be4c575de",
+    "backend/test_tool_loader.py": "6caa5703cdeafbd57c9d72c7e7dba39605258ae8b0682d4e16f280245f6efa9b",
+    "backend/test_ibl_request_contract.py": "623f350eac1312cdbf8fb16e4f754e8e643627e23825fa0e844c58d088dbd90a",
+    "backend/test_vocabulary_lifecycle.py": "57a3c14f92bfe0c17178cb5f3438e25e7d6643a0df1a76261b69576da34d4d69"
+  },
+  "notes": [
+    "Earlier full run failed the direct-script pytest delegation guard; both new test entry points were corrected before this clean full run.",
+    "No live-store tracked-file change warning in this final run."
+  ]
+}

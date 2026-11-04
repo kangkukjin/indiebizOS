@@ -1,0 +1,84 @@
+{
+  "direct": {
+    "baseline": "47ed150e",
+    "packages": 20,
+    "calls_per_batch": 50,
+    "scope": "Synthetic warm lookup only, not execution or model latency",
+    "outer_inventory_scope": false,
+    "before": {
+      "batch_ms": [
+        83.11779145151377,
+        81.70445822179317,
+        82.3334576562047,
+        82.08845742046833,
+        80.50012495368719
+      ],
+      "median_ms": 82.08845742046833,
+      "stat_calls_per_batch": [
+        12500,
+        12500,
+        12500,
+        12500,
+        12500
+      ]
+    },
+    "after": {
+      "batch_ms": [
+        43.27970836311579,
+        43.00445783883333,
+        43.03120914846659,
+        43.180583976209164,
+        43.723708018660545
+      ],
+      "median_ms": 43.180583976209164,
+      "stat_calls_per_batch": [
+        6600,
+        6600,
+        6600,
+        6600,
+        6600
+      ]
+    }
+  },
+  "engine_scope": {
+    "baseline": "47ed150e",
+    "packages": 20,
+    "calls_per_batch": 50,
+    "scope": "Synthetic warm lookup only, not execution or model latency",
+    "outer_inventory_scope": true,
+    "before": {
+      "batch_ms": [
+        41.513375006616116,
+        42.313000187277794,
+        41.40220768749714,
+        41.64191707968712,
+        41.99395887553692
+      ],
+      "median_ms": 41.64191707968712,
+      "stat_calls_per_batch": [
+        6400,
+        6400,
+        6400,
+        6400,
+        6400
+      ]
+    },
+    "after": {
+      "batch_ms": [
+        43.28041709959507,
+        43.363084085285664,
+        43.14816743135452,
+        45.985834673047066,
+        45.14866694808006
+      ],
+      "median_ms": 43.363084085285664,
+      "stat_calls_per_batch": [
+        6600,
+        6600,
+        6600,
+        6600,
+        6600
+      ]
+    }
+  }
+}

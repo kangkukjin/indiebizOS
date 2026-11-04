@@ -1,4 +1,4 @@
-"""Research-only probes: extract current functions; replace all operational dependencies.
+"""Historical probes: extract the recorded baseline functions; replace all operational dependencies.
 
 No application imports, network calls, package activation or source edits.
 Run from the canonical repository root with Python's standard library.
@@ -15,11 +15,16 @@ import types
 from typing import Any, Optional
 
 ROOT = Path(__file__).resolve().parents[3]
+BASELINE = "280112f28a444b7a2aba5b282869e1bb6e052cb7"
+
+
+def source(relative):
+    return subprocess.check_output(["git", "show", f"{BASELINE}:{relative}"], cwd=ROOT)
 
 
 def extracted(relative, names, namespace):
     path = ROOT / relative
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(source(relative))
     selected = [node for node in tree.body
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and node.name in names]
@@ -112,10 +117,10 @@ if __name__ == "__main__":
     paths = ["backend/ibl/vocabulary_lifecycle.py", "backend/ibl/tool_loader.py",
              "backend/surface/api_ibl.py", "mcp_server.py", "backend/base/program_runtime.py",
              "backend/datastore/vocabulary_state.py", "backend/test_surface_param_parity.py"]
-    result = {"head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-              "source_sha256": {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in paths},
+    result = {"head": BASELINE,
+              "source_sha256": {p: hashlib.sha256(source(p)).hexdigest() for p in paths},
               "activation": [activation("owner"), activation("member")],
               "member_implicit_default": member_implicit_default(),
               "loader_fast_path": loader_fast_path(),
-              "limitations": "Extracted real function bodies with in-memory stubs. Not full integration, pytest, real filesystem atomicity or concurrency validation."}
+              "limitations": "Extracted baseline function bodies with in-memory stubs. Not full integration, pytest, real filesystem atomicity or concurrency validation."}
     print(json.dumps(result, ensure_ascii=False, indent=2))

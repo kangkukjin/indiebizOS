@@ -34,6 +34,7 @@
     "base/history_excerpt",
     "base/ibl_code_corpus",
     "base/ibl_edition",
+    "base/ibl_request_contract",
     "base/image_envelopes",
     "base/imap_reader",
     "base/korean_utils",
@@ -613,8 +614,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 602,
-    "engine": 570,
+    "total": 603,
+    "engine": 571,
     "blocklist": 32
   }
 }

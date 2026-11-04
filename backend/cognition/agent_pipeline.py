@@ -826,6 +826,7 @@ class CognitivePipelineMixin:
                     self, message, final_content, eval_tool_calls, history,
                     collect=_collect, images=images, supervisor=_supervisor,
                     cancel_check=cancel_check,
+                    review_pending=_evaluation_enabled,
                     enabled=not (force_role or _clarify_text or context_update))
             if final_content and not pending():
                 final_content = yield from adopt_response(

@@ -48,6 +48,10 @@ AUTHORITY_EVIDENCE: {"id":"authority_evidence의 id", "quote":"조건을 증명�
 실행자의 주장이나 내부 계획은 이 근거가 아니다. 근거 없이 별도 요청으로 넘기면 REWORK(research)로
 현재 허용 수단을 확인하고 self:patch의 필요한 구현 수리 또는 다른 방법으로 원래 업무를 계속하게 한다.
 진행 상태·다음 행동·완료 주장이 관측한 결과 및 실제 의존 관계와 일치하는지 확인한다.
+recovery_incidents는 과거 실패·효과 미확인의 관측 이력이다. 남아 있다는 이유만으로 보완시키지 않는다.
+후속 결과가 같은 대상·조건의 실패를 해소했는지, 현재 완료 기준에 여전히 영향을 주는지 실행 근거와 대조한다.
+무관한 성공이나 실행자의 완료 주장으로 해소를 추정하지 않는다. 실제 기준 결함은 REWORK,
+판정 근거 부족은 UNKNOWN/evidence로 기존 원문을 회수한다. 해소·무관 판단은 실패 사실을 삭제하거나 성공 영수증으로 바꾸지 않는다.
 완료 요청에 전체 goal_criteria가 제공되면 그 전체 목표도 별도로 판정한다.
 정확한 보고의 승인만으로 실제 목표 달성을 인정하지 않는다. 필요한 근거가 없으면 미확정이다.
 """
@@ -305,6 +309,8 @@ def prepare(controller, tool_calls=None):
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(),
                "jobs": list(controller.job_states.values())}
+    from recovery_observation import view as recovery_view
+    context['recovery_incidents'] = recovery_view(calls, controller, final=True)
     if controller.framing.get('_research_coverage'):
         context['research_coverage'] = controller.framing['_research_coverage']
     from capability_guard import call_evidence, candidate_matches, user_evidence

@@ -188,6 +188,32 @@ def test_controller_reads_existing_evidence_once_without_executor(supervisor, mo
     assert len(calls) == 2
 
 
+def test_mixed_newline_source_recovers_full_original_range_without_reexecution(supervisor, monkeypatch):
+    from supervisor_handoff import criteria_contract
+    from thread_context import get_goal_eval_outcome
+    text = '앞🙂\r\n대조 근거\r단독 CR\n끝\r\n'
+    supervisor.run_tool('read', {}, lambda: text)
+    ref = supervisor.store.evidence(text)
+    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
+    evaluations = []
+
+    def evaluate(prompt, **kwargs):
+        evaluations.append(prompt)
+        if len(evaluations) == 1:
+            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([
+                {'criterion_id': cid, 'evidence_id': ref['id'], 'revision': ref['id'],
+                 'start': 0, 'end': ref['chars']}])
+        recovered = [r for r in prompt.sections if r['role'] == 'recovered']
+        assert any(r['text'] == text and r['total'] == len(text) for r in recovered)
+        return 'ACHIEVED'
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('원문 회수에 실행자 불필요')
+    finish(supervisor, '응답')
+    assert len(evaluations) == 2
+    assert get_goal_eval_outcome()['status'] == 'ACHIEVED'
+
+
 def test_dedup_keeps_subjects_and_every_explicit_criterion_relation():
     rows = [record('same', subject='first', source_ref='r', criterion_ids=['C1']),
             record('same', subject='second', source_ref='r', criterion_ids=['C2'])]

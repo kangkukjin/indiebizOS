@@ -99,13 +99,19 @@ def digest(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _read_exact(path):
+    """인증·문자 좌표는 저장 원문 기준이다. CRLF/CR도 정규화하지 않는다."""
+    with path.open(encoding="utf-8", newline="") as stream:
+        return stream.read()
+
+
 def evidence_integrity(directory, key, text):
     """Read-only certification, shared by input references and trace inspection."""
     try:
         certificate = Path(directory) / (key + ".evidence.json")
         if certificate.is_symlink():
             return "unknown", [[]]
-        encoded = certificate.read_text(encoding="utf-8")
+        encoded = _read_exact(certificate)
         record = json.loads(encoded)
         paths = record["masked_paths"]
         if (digest(encoded) == key and record["version"] == 1 and record["text"] == text
@@ -214,7 +220,7 @@ class TurnStore:
     def _publish_evidence(self, name, text):
         temp = None
         try:
-            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.directory,
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="", dir=self.directory,
                                              prefix=".evidence-", delete=False) as stream:
                 temp = Path(stream.name)
                 stream.write(text)
@@ -231,7 +237,7 @@ class TurnStore:
     def masked_paths(self, key):
         """Verified transformations, or [[]] for unverified historical/corrupt data."""
         try:
-            text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
+            text = _read_exact(self.directory / (key + ".txt"))
         except OSError:
             return [[]]
         return self._evidence_integrity(key, text)[1]
@@ -240,7 +246,7 @@ class TurnStore:
         if not re.fullmatch(r"[0-9a-f]{64}", key or ""):
             raise ValueError("잘못된 증거 ID")
         try:
-            text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
+            text = _read_exact(self.directory / (key + ".txt"))
         except FileNotFoundError:
             # 저장소는 대화(작업)별 네임스페이스다. 내부 경로·OS 문구 대신 참조의 범위를 알린다.
             raise EvidenceNotFound(
@@ -307,7 +313,7 @@ class TurnStore:
                 path = directory / (key + ".txt")
                 if path.is_symlink() or not path.is_file():
                     continue
-                text = path.read_text(encoding="utf-8")
+                text = _read_exact(path)
                 integrity, masked = evidence_integrity(directory, key, text)
                 if integrity != "verified":
                     raise EvidenceNotFound("앞 턴에 저장된 결과이지만 원문 인증을 확인할 수 없어 이어 쓸 수 없습니다 — "
@@ -564,7 +570,7 @@ def read_trace_document(root, store_id, name, offset=0, limit=12000, expected=No
         if st.st_size > 4 * 1024 * 1024:
             raise ReadFault("partial", "document_size_budget")
         # Evidence is content addressed; responses additionally require approved bytes.
-        text = path.read_text(encoding="utf-8")
+        text = _read_exact(path)
         actual_hash = digest(text)
         if name.startswith("response-v"):
             review_path = safe_child(directory, "review_status.json")

@@ -11,6 +11,54 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
+@pytest.mark.parametrize('state', ['resolved', 'unresolved', 'missing_evidence'])
+def test_final_review_owns_failures_and_only_defects_open_execution(supervisor, monkeypatch, state):
+    from task_continuation import continue_task
+    from test_capability_guard import drain
+    supervisor.run_tool('check_widget', {'target': 'widget'},
+                        lambda: {'success': False, 'error': 'focus missing'})
+    supervisor.run_tool('check_widget' if state == 'resolved' else 'read_guide', {},
+                        lambda: 'focus restored; 30 checks passed' if state == 'resolved' else 'guide only')
+    before = supervisor.recovery.view()
+    evaluations, repairs = [], []
+
+    def evaluate(prompt, **kwargs):
+        evaluations.append(prompt)
+        context = supervisor._evaluation_packet['context']
+        assert context['recovery_incidents'] == supervisor.recovery.view()
+        assert context['recovery_incidents'] and 'focus missing' in prompt
+        assert '후속 결과가 같은 대상·조건의 실패를 해소했는지' in kwargs['system_prompt']
+        if state == 'missing_evidence':
+            return 'UNKNOWN\nUNKNOWN_REASON: evidence — C1 실제 대상 상태가 없음'
+        if state == 'unresolved' and len(evaluations) == 1:
+            assert 'guide only' in prompt
+            return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: research\n'
+                    'DEFECTS: [{"criterion_id":"C1","evidence":"focus missing; guide only",'
+                    '"repair":"실제 대상의 초점을 복구하고 확인"}]')
+        assert 'focus restored; 30 checks passed' in prompt
+        return 'ACHIEVED'
+
+    def repair(prompt, **kwargs):
+        repairs.append(prompt)
+        supervisor.run_tool('check_widget', {}, lambda: 'focus restored; 30 checks passed')
+        block = supervisor.store.blocks[0]
+        supervisor.store.patch(supervisor.store.version, [
+            {'id': block['id'], 'hash': block['hash'], 'text': '수정 결과'}])
+        yield {'type': 'final', 'content': '보완 결과'}
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = repair
+    _, response = drain(continue_task(supervisor.runner, supervisor.message, '결과', [], [],
+                                     collect=lambda event: None, supervisor=supervisor, review_pending=True))
+    assert not evaluations and not repairs and supervisor.recovery.view() == before
+    finish(supervisor, response)
+    assert len(evaluations) == (1 if state == 'resolved' else 2)
+    assert len(repairs) == (0 if state == 'resolved' else 1)
+    assert tc.get_goal_eval_outcome()['status'] == ('UNKNOWN' if state == 'missing_evidence' else 'ACHIEVED')
+    # 최종 판단은 과거 실패를 관측 성공/영수증으로 둔갑시키지 않는다.
+    assert supervisor.recovery.view() == before
+
+
 def test_only_explicit_submissions_receive_submission_priority(supervisor, tmp_path):
     from final_evaluator import prepare
     report, source = tmp_path / 'report.md', tmp_path / 'source.json'

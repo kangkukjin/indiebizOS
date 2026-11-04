@@ -71,14 +71,22 @@ def execution_available(supervisor=None):
 
 
 def continue_task(runner, request, response, calls, history, *, collect,
-                  cancel_check=None, images=None, supervisor=None, enabled=True):
+                  cancel_check=None, images=None, supervisor=None, enabled=True,
+                  review_pending=False):
     rows = recovery_view(calls, supervisor, final=True)
     candidates = pending(rows)
     if not candidates:
         return response
+    # 의미 판단은 이미 예정된 최종 검수가 소유한다. 실패 이력만으로 그 전에
+    # 실행자를 다시 열지 않는다. 기준 없는 경로·영수증 종료에는 이관하지 않는다.
+    from repair_policy import receipt_completion
+    review_owned = (review_pending and getattr(supervisor, 'enabled', False)
+                    and getattr(supervisor, 'evaluation_enabled', False)
+                    and not receipt_completion(supervisor))
     stop = ('disabled' if not enabled or not response else
             'cancelled' if cancel_check and cancel_check() else
-            turn_limit_reason() or ('handoff_owned' if not execution_available(supervisor) else ''))
+            turn_limit_reason() or ('handoff_owned' if not execution_available(supervisor) else
+                                   'final_review_owned' if review_owned else ''))
     if not stop and not claim_followup("observed_failure"):
         stop = 'followup_consumed'
     if stop:

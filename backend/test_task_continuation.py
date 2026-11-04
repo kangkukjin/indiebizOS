@@ -6,6 +6,7 @@ import pytest
 import execution_turn
 import task_continuation as tc
 from test_capability_guard import drain
+from test_conscious_supervisor import supervisor  # noqa: F401
 
 
 @pytest.fixture
@@ -19,7 +20,7 @@ def turn(monkeypatch):
     execution_turn._current.reset(token)
 
 
-def run(calls, *, cancel=None, events=None, enabled=True, supervisor=None):
+def run(calls, *, cancel=None, events=None, enabled=True, supervisor=None, review_pending=False):
     invocations = []
     def stream(**kwargs):
         invocations.append(kwargs)
@@ -30,7 +31,8 @@ def run(calls, *, cancel=None, events=None, enabled=True, supervisor=None):
     runner = NS(ai=NS(process_message_stream=stream))
     emitted, result = drain(tc.continue_task(runner, '자료 찾아줘', '첫 시도 실패', calls, [],
                                              collect=collected.append, cancel_check=cancel,
-                                             enabled=enabled, supervisor=supervisor))
+                                             enabled=enabled, supervisor=supervisor,
+                                             review_pending=review_pending))
     return result, invocations, collected, emitted
 
 
@@ -58,6 +60,73 @@ def test_successful_guide_does_not_erase_failed_work(turn):
     packet = __import__('json').loads(invocations[0]['message_content'].split('\n', 1)[1])
     assert packet['recovery']['incidents'][0]['origin']['name'] == 'play'
     assert not run(calls)[1]
+
+
+def test_scheduled_final_review_owns_semantic_recovery_without_erasing_failures(turn):
+    supervisor = NS(enabled=True, evaluation_enabled=True)
+    calls = [{'name': 'check', 'is_error': True, 'result': 'focus missing'},
+             {'name': 'check', 'result': 'focus restored; 30 checks passed'}]
+    before = tc.recovery_view(calls, supervisor, final=True)
+    assert before and tc.needs_followup(calls, supervisor=supervisor)
+    assert run(calls, supervisor=supervisor, review_pending=True)[1] == []
+    assert not turn.followup_reason
+    assert tc.recovery_view(calls, supervisor, final=True) == before
+    # 검수가 없는 다음 경계에는 여전히 미해소 사실을 넘겨야 한다.
+    supervisor.observe_native = lambda event: None
+    assert len(run(calls, supervisor=supervisor)[1]) == 1
+
+
+@pytest.mark.parametrize('mode', ['disabled', 'no_criteria', 'receipt_completion', 'not_scheduled'])
+def test_absent_semantic_review_keeps_existing_recovery(turn, monkeypatch, mode):
+    supervisor = NS(enabled=mode != 'disabled', evaluation_enabled=mode != 'no_criteria',
+                    observe_native=lambda event: None)
+    monkeypatch.setattr('repair_policy.receipt_completion', lambda c: mode == 'receipt_completion')
+    assert len(run([{'is_error': True}], supervisor=supervisor,
+                   review_pending=mode != 'not_scheduled')[1]) == 1
+
+
+def test_pipeline_reviews_recovered_task_without_second_execution(turn, supervisor, monkeypatch):
+    from agent_pipeline import CognitivePipelineMixin
+    from cognitive_consciousness import CognitiveConsciousnessMixin
+    from cognitive_eval import CognitiveEvalMixin
+    from test_reflex_execution import AI
+    from thread_context import get_goal_eval_outcome
+
+    class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin, CognitiveEvalMixin):
+        pass
+
+    runner = Runner()
+    runner.config = {'name': 'worker'}
+    runner.ai = AI([[{'type': 'tool_start', 'id': 'check1', 'name': 'check', 'input': {}},
+                     {'type': 'tool_result', 'id': 'check1', 'result': 'focus missing', 'is_error': True},
+                     {'type': 'tool_start', 'id': 'check2', 'name': 'check', 'input': {}},
+                     {'type': 'tool_result', 'id': 'check2', 'result': 'focus restored; 30 checks passed'},
+                     {'type': 'final', 'content': '초점 복구와 검사 완료'}]])
+    runner._associate = lambda *a, **kw: None
+    runner._decide_request_type = lambda *a, **kw: ('THINK', None)
+    runner._run_consciousness_or_reuse = lambda *a, **kw: {
+        'task_framing': '초점 복구', 'achievement_criteria': '초점 복구와 실제 검사'}
+    runner._apply_consciousness_to_history = lambda history, co: history
+    runner._refresh_execution_prompt = lambda message, *a, **kw: message
+    runner._after_response_async = lambda *a, **kw: None
+    supervisor.runner = runner
+    monkeypatch.setattr('supervision_bus.current', lambda: supervisor)
+    monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
+    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    evaluations = []
+
+    def evaluate(prompt, **kw):
+        evaluations.append(prompt)
+        assert 'recovery_incidents' in prompt and 'focus missing' in prompt
+        assert 'focus restored; 30 checks passed' in prompt
+        return 'ACHIEVED'
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    events = list(runner._cognitive_stream_body('초점을 복구하고 검사해줘', []))
+    assert len(runner.ai.calls) == len(evaluations) == 1
+    assert get_goal_eval_outcome()['status'] == 'ACHIEVED'
+    assert [e['content'] for e in events if e['type'] == 'final'] == ['초점 복구와 검사 완료']
+    assert supervisor.recovery.view() and not turn.followup_reason
 
 
 def test_missing_return_is_not_a_mid_call_failure_but_final_boundary_preserves_it(turn):

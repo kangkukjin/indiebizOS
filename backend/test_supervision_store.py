@@ -8,6 +8,33 @@ import model_result_view as view
 from supervision_store import TurnStore, _ledger_turns
 
 
+@pytest.mark.parametrize('text', ['앞\r\n🙂뒤\r끝\n', '앞\r\n뒤\r\n', '앞\r뒤', '앞\n뒤'])
+def test_evidence_preserves_exact_newlines_and_coordinates_across_readers(tmp_path, text):
+    from supervision_store import read_trace_document, EvidenceNotFound
+    store = TurnStore(tmp_path / ('a' * 32))
+    store.join_lineage('agent', 'project', 'owner', conversation='chat')
+    ref = store.evidence(text)
+    path = store.directory / (ref['id'] + '.txt')
+    assert path.read_bytes() == text.encode('utf-8')
+    assert ref['chars'] == len(text)
+    page = store.read_evidence(ref['id'], 1, len(text) - 1, mark=True)
+    assert page['integrity'] == 'verified' and page['text'] == text[1:]
+    assert page['chars'] == len(text) and store.masked_paths(ref['id']) == []
+    later = TurnStore(tmp_path / ('b' * 32))
+    later.join_lineage('agent', 'project', 'owner', conversation='chat')
+    inherited = later.read_evidence_across_turns(ref['id'], 0, None)
+    assert inherited['text'] == text and inherited['integrity'] == 'verified'
+    trace = read_trace_document(tmp_path, store.directory.name, path.name)
+    assert trace['status'] == 'ok' and trace['rows'][0]['text'] == text
+    # 줄바꿈만 바꾼 파일도 인증된 원문과 다르다. 정규화해서 통과시키지 않는다.
+    path.write_bytes((text.replace('\r', '') + '\n').encode('utf-8'))
+    assert store.read_evidence(ref['id'])['integrity'] == 'unknown'
+    assert store.masked_paths(ref['id']) == [[]]
+    with pytest.raises(EvidenceNotFound):
+        later.read_evidence_across_turns(ref['id'])
+    assert read_trace_document(tmp_path, store.directory.name, path.name)['status'] == 'malformed'
+
+
 def test_parallel_worker_sessions_do_not_evict_or_share_parent_evidence(tmp_path):
     from types import SimpleNamespace
     from conversation_sessions import Binding, scope

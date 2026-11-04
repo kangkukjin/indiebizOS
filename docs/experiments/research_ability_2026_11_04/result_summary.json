@@ -1,0 +1,206 @@
+{
+  "manifest": {
+    "provider": "CodexProvider",
+    "model": "gpt-6-astra:high",
+    "source": "synthetic, not factual advice",
+    "limit_chars": 1200,
+    "calls_max": 8,
+    "design": "explicit anchors are already selected by a researcher; this does not test autonomous selection",
+    "general_effect_established": false
+  },
+  "raw_result_path": "data/outputs/research_ability_2026_11_04_development/result.json",
+  "raw_sha256": "7e72a766ddbdd783dadfd33e368134b519274647dffb96f22f92add3378c39fe",
+  "baseline_commit": "ff507257ac967d7dd6e53097a4f51f46539a5ee9",
+  "cases": [
+    {
+      "case": "model",
+      "question": "이 값으로 전체 경제의 실제 성장 속도를 판단할 수 있는가?",
+      "source_sha256": "5725284ff14baa8c895bd241b698eb9e39c53a5f2a485404d6fa8d885a006831",
+      "variants": {
+        "baseline": {
+          "chars": 1200,
+          "contains_definition": false,
+          "contains_limitation": true,
+          "answer": "이 값만으로 전체 경제의 실제 성장 속도를 판단할 수 없습니다. 자료에서 확인되는 것은 전체 경제의 관측 배증 시간을 측정하지 않았다는 점입니다. 제시된 값의 정의와 전체 경제와의 관계도 제공되지 않아 실제 성장 속도는 알 수 없습니다.",
+          "elapsed_s": 16.073989374563098,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13065,
+            "output": 66,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        },
+        "candidate": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": true,
+          "answer": "이 값만으로 전체 경제의 실제 성장 속도를 판단할 수 없습니다. 확인된 것은 18개월이 모형 안의 성분 A만의 배증 시간이라는 점입니다. 전체 경제의 관측 배증 시간은 측정하지 않았으므로, 전체 경제의 실제 성장 속도는 이 자료로 알 수 없습니다.",
+          "elapsed_s": 13.121184041723609,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13083,
+            "output": 74,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        }
+      }
+    },
+    {
+      "case": "contract",
+      "question": "회사 공급 계약 목표 40%를 체결 실적으로 해석할 수 있는가?",
+      "source_sha256": "5975c436e958f274d1d67b38e7b77daed6746fa6cdf35046008c67b3072890ce",
+      "variants": {
+        "candidate": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": true,
+          "answer": "아니요. 자료에서 공급량 40%는 다음 연도에 달성하려는 계약 목표이며, 체결 계약서는 아직 없고 협상 중이라고 확인됩니다. 이 비율의 분모는 회사 내부 계획량이므로 체결 실적으로 해석할 수 없습니다. 실제 계약 체결 여부와 최종 달성 비율은 제공된 자료만으로 알 수 없습니다.",
+          "elapsed_s": 10.42135158367455,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13087,
+            "output": 87,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        },
+        "baseline": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": false,
+          "answer": "체결 실적으로 해석할 수 없습니다. 자료에서 확인되는 40%는 다음 연도에 달성하려는 공급 계약 목표입니다. 실제 계약 체결 여부와 체결 비율은 제공된 자료만으로는 알 수 없습니다.",
+          "elapsed_s": 10.044672125019133,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13071,
+            "output": 56,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        }
+      }
+    },
+    {
+      "case": "power",
+      "question": "정격 500W인 기기의 월 실사용 전력량을 확정할 수 있는가?",
+      "source_sha256": "5e2fe247fec2c44189751f9615e12e2f42b7c007cce2ff7542ed473f7db6b6d9",
+      "variants": {
+        "baseline": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": false,
+          "answer": "월 실사용 전력량은 확정할 수 없다. 자료에서 확인되는 것은 500W가 기기의 정격 상한이라는 점뿐이다. 실제 소비전력과 월 사용시간이 제시되지 않아 월 실사용 전력량은 알 수 없다.",
+          "elapsed_s": 10.557424291968346,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13073,
+            "output": 61,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        },
+        "candidate": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": true,
+          "answer": "월 실사용 전력량은 확정할 수 없다. 확인된 것은 500W가 기기의 정격 상한이라는 점이다. 월 사용 시간과 부하율은 측정되지 않았고 실제 사용량은 조건에 따라 달라지므로, 제공된 자료만으로 월 실사용 전력량을 알 수 없다.",
+          "elapsed_s": 7.1573725417256355,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13089,
+            "output": 75,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        }
+      }
+    },
+    {
+      "case": "sources",
+      "question": "세 기사가 동일 결과를 보도하면 독립된 세 연구의 재현인가?",
+      "source_sha256": "ab0597ad8b7794a471dba513ea477efc996cb3c11a096af86db8682f2df88750",
+      "variants": {
+        "candidate": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": true,
+          "answer": "아니다. 자료에 따르면 세 기사는 하나의 연구 발표를 인용하며, 두 번째와 세 번째 기사는 첫 기사의 전재이므로 독립된 세 연구의 재현으로 볼 수 없다. 독립 실험 자료가 없어 해당 결과가 다른 연구에서 재현되었는지는 확인할 수 없다.",
+          "elapsed_s": 12.79942408297211,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13083,
+            "output": 73,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        },
+        "baseline": {
+          "chars": 1200,
+          "contains_definition": true,
+          "contains_limitation": false,
+          "answer": "아니요. 자료에서 확인되는 것은 기사 세 건이 하나의 연구 발표를 인용한다는 사실이므로, 이를 독립된 세 연구의 재현으로 볼 수 없습니다. 별도의 독립 연구가 수행되어 같은 결과를 얻었는지는 제공된 자료로 알 수 없습니다.",
+          "elapsed_s": 8.409787208773196,
+          "usage": {
+            "requests": 1,
+            "measured_requests": 1,
+            "unmeasured_requests": 0,
+            "input": 13068,
+            "output": 67,
+            "cache_read": 8448,
+            "cache_create": 0,
+            "reasoning": null
+          }
+        }
+      }
+    }
+  ],
+  "interpretation": "Development only. Both variants avoided incorrect conclusions in these four synthetic tasks. Candidate retained both definition and limitation in 4/4; baseline in 0/4. Explicit researcher-selected anchors were given to selection, not independently discovered. No general quality, latency, token, or human-understanding improvement is established.",
+  "totals": {
+    "baseline": {
+      "elapsed_s": 45.08587300032377,
+      "input_plus_output": 52527,
+      "cache_read": 33792
+    },
+    "candidate": {
+      "elapsed_s": 43.499332250095904,
+      "input_plus_output": 52651,
+      "cache_read": 33792
+    }
+  },
+  "live_http": {
+    "success": true,
+    "executed": true,
+    "value": {
+      "passed": true,
+      "segments": 2,
+      "evidence_chars": 2400,
+      "question_revision": 1,
+      "semantic_status": "unreviewed",
+      "module": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/restart_control/generations/bf49480712436181cc583a78c87c2b44/backend/base/research_review.py"
+    },
+    "response_sha256": "fce37f25944a19d4adf20b8176e5782976ff06bf58f3391924712e29103fe2ca"
+  }
+}

@@ -260,7 +260,9 @@ def execution_block(framing):
             + json.dumps(receipt, ensure_ascii=False)
             + '\n' + start + progress
             + "중요한 목적·방법 변경은 reframe에 계획 경로와 근거를 전달한다. "
-              "보고 전에 질문별 답·근거·열람 범위·남은 불확실성을 대조한다. 후속 턴에는 파일을 다시 읽는다.")
+              "질문 ID별 답·근거·열람 범위·남은 불확실성을 원 요구와 대조한다. "
+              "다음 조사에는 남은 불확실성, 가를 설명과 필요한 자료, 결과에 따른 판단 변화를 남긴다. "
+              "중단 사유는 진행에 남기고 예산 종료를 질문 종결로 바꾸지 않는다. 후속 턴에는 파일을 다시 읽는다.")
 
 
 def evaluation_block(framing, project_path=None):

@@ -420,10 +420,10 @@ class ResearchLibrary:
                     result.append(dict(row))
         return result
 
-    def citation_review(self, text, run):
+    def citation_review(self, text, run, *, question_evidence=()):
         """최종 인용과 이번 실행에서 읽은 문장을 연결한다. 읽기 기록은 새로 만들지 않는다."""
         result = {'valid': [], 'invalid': [], 'evidence_chars': 0}
-        from research_review import claims, allocate, passage
+        from research_review import claims, allocate, passages
         occurrences = claims(text)
         originals = {}
         with self.store.connect() as db:
@@ -431,7 +431,7 @@ class ResearchLibrary:
             refs = dict.fromkeys(re.findall(r'\[자료:([^:\]]+):([^\]]+)\]', text))
             for version, loc in refs:
                 marker = f'[자료:{version}:{loc}]'
-                rows = db.execute('SELECT revision,quote FROM research_access '
+                rows = db.execute('SELECT rowid AS access_id,revision,quote FROM research_access '
                                   'WHERE run_id=? AND version_id=? AND locator=? ORDER BY rowid',
                                   (run, version, loc)).fetchall()
                 if not rows:
@@ -444,26 +444,57 @@ class ResearchLibrary:
                         'repair': 'self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.'})
                     continue
                 # 같은 위치를 여러 번 나눠 읽었어도 마지막 조각만 근거로 보이지 않게 한다.
-                quotes = list(dict.fromkeys(r['quote'] for r in rows))
-                full = '\n[…별도 열람 구간…]\n'.join(quotes)
-                originals[marker] = full
-                shown = full
-                result['valid'].append({'citation': marker, 'quote': shown,
-                    'extraction_revisions': sorted({r['revision'] for r in rows}),
-                    'truncated': len(shown) < len(full)})
-        quotas = allocate({key: len(value) for key, value in originals.items()})
+                originals[marker] = list({(r['revision'], r['quote']): dict(r) for r in rows}.values())
+                result['valid'].append({'citation': marker, 'version_ref': version, 'locator': loc,
+                    'extraction_revisions': sorted({r['revision'] for r in rows})})
+        quotas = allocate({key: sum(len(r['quote']) for r in value) for key, value in originals.items()})
         for row in result['valid']:
             marker = row['citation']
             related = [o for o in occurrences if o['citation'] == marker]
-            full = originals[marker]
-            shown, start = passage(full, quotas[marker], '\n'.join(o['claim_context'] for o in related))
-            row.update(quote=shown, truncated=len(shown) < len(full),
-                       quote_start=start, quote_end=start + len(shown), full_chars=len(full),
+            reads = originals[marker]
+            links = [e for e in question_evidence if e['version_ref'] == row['version_ref']
+                     and e['locator'] == row['locator']]
+            shares = allocate({str(i): len(r['quote']) for i, r in enumerate(reads)},
+                              budget=quotas[marker], cap=quotas[marker])
+            pieces, segments = [], []
+            display_offset = 0
+            for i, read in enumerate(reads):
+                anchors = [e['quote'] for e in links if e['extraction_revision'] == read['revision']]
+                ranges = passages(read['quote'], shares[str(i)],
+                                  [o['claim_context'] for o in related], anchors)
+                for start, end in ranges:
+                    piece = read['quote'][start:end]
+                    # 구간 경계는 segments로 표현한다. 연결 문자를 원문 quote로 만들지 않는다.
+                    pieces.append(piece)
+                    segments.append({'access_id': read['access_id'], 'extraction_revision': read['revision'],
+                                     'start': start, 'end': end, 'read_chars': len(read['quote']),
+                                     'display_start': display_offset, 'display_end': display_offset + len(piece)})
+                    display_offset += len(piece)
+            shown = ''.join(pieces)
+            full_chars = sum(len(r['quote']) for r in reads)
+            for segment, piece in zip(segments, pieces):
+                if len(segments) == 1:
+                    segment['quote_ref'] = 'quote'
+                else:
+                    segment['quote'] = piece
+            row.update(quote=shown if len(segments) <= 1 else None,
+                       segments=segments, quote_layout='segments_of_read_receipts',
+                       truncated=len(shown) < full_chars,
+                       quote_start=segments[0]['start'] if len(segments) == 1 else None,
+                       quote_end=segments[0]['end'] if len(segments) == 1 else None, full_chars=full_chars,
                        reading_verified=True, evidence_state='missing' if not shown else
-                       'complete' if len(shown) == len(full) else 'partial', semantic_status='unreviewed',
+                       'complete' if len(shown) == full_chars else 'partial', semantic_status='unreviewed',
                        occurrences=related)
+            row['question_links'] = [{k: e[k] for k in
+                ('question_id', 'revision', 'revision_digest', 'role', 'evidence_id', 'extraction_revision')}
+                | {'included': any(s['extraction_revision'] == e['extraction_revision']
+                                   and e['quote'] in shown[s['display_start']:s['display_end']] for s in segments)}
+                for e in links]
+            row['read_refs'] = [{'access_id': r['access_id'], 'extraction_revision': r['revision'],
+                                 'chars': len(r['quote'])} for r in reads]
             result['evidence_chars'] += len(shown)
-        result['unreviewed'] = [r['citation'] for r in result['valid'] if r['truncated'] or not r['quote']]
+        result['unreviewed'] = [r['citation'] for r in result['valid']
+                                if r['evidence_state'] != 'complete']
         # URL·일반 각주는 자료실의 읽기 영수증과 연결되지 않았다. 자동 유효 인용으로 승격하지 않는다.
         result['unresolved_references'] = list(dict.fromkeys(re.findall(
             r'https?://[^\s<>\)\]]+|\[(?:\^[\w-]+|[A-Z]?[0-9]+)\](?!\()', text)))

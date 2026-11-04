@@ -161,8 +161,41 @@ def _preserved_selection(lib, value):
     return not body or isinstance(body, str) and body in '\n\n'.join(originals)
 
 
-def review(context, text):
-    return library(context).citation_review(text, context['run_id'])
+def review(context, text, *, query='', question_ids=(), state_only=False):
+    from research_questions import ResearchQuestions
+    from research_questions import digest
+    lib = library(context)
+    def state():
+        with lib.store.connect() as db:
+            lib.store.check_epoch(db)
+            questions = [tuple(r) for r in db.execute(
+                'SELECT question_id,revision_digest FROM research_questions q WHERE thread_id=? '
+                'AND revision=(SELECT MAX(revision) FROM research_questions h WHERE h.question_id=q.question_id) '
+                'ORDER BY question_id', (context['thread_id'],))]
+            reads = [tuple(r) for r in db.execute(
+                'SELECT version_id,revision,locator,quote FROM research_access WHERE run_id=? ORDER BY rowid',
+                (context['run_id'],))]
+        return digest([context['project_uid'], context['thread_id'], context['run_id'], questions, reads])
+    initial = state()
+    if state_only:
+        return initial
+    questions = ResearchQuestions(lib.store, context['thread_id'])
+    projection = questions.context(query=query or text, question_ids=question_ids)
+    evidence = []
+    for item in projection['items']:
+        # 요약과 근거를 같은 불변 질문 판본에서 읽는다. 동시 수정된 head로 바꾸지 않는다.
+        question = questions.revision(item['question_id'], item['revision'])
+        for role in ('supporting', 'contradicting'):
+            for ref in question[role]:
+                evidence.append({**ref, **{k: question[k] for k in
+                    ('question_id', 'revision', 'revision_digest')}, 'role': role})
+    result = lib.citation_review(text, context['run_id'], question_evidence=evidence)
+    result['questions'] = projection
+    if state() != initial:
+        from research_store import ResearchConflict
+        raise ResearchConflict('검수 입력 조립 중 연구 질문·읽기 판본이 변경됐습니다')
+    result['state_revision'] = initial
+    return result
 
 
 def schedule_index(path):

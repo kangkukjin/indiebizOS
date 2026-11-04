@@ -38,6 +38,18 @@ def test_long_single_paragraph_relevant_window_is_exact_slice():
     assert full[start:start + len(quote)] == quote and len(quote) == 1600
 
 
+def test_disjoint_explicit_definition_and_limit_keep_exact_coordinates():
+    from research_review import passages
+    definition = '모형의 성분 값이며 전체 경제 관측치가 아니다.'
+    limitation = '해당 값은 다른 기간이나 집단에 적용할 수 없다.'
+    full = definition + ' 배경' * 4000 + limitation
+    ranges = passages(full, 1200, [], [definition, limitation])
+    assert len(ranges) == 2 and sum(end - start for start, end in ranges) <= 1200
+    assert any(definition in full[start:end] for start, end in ranges)
+    assert any(limitation in full[start:end] for start, end in ranges)
+    assert ranges == passages(full, 1200, [], [definition, definition, limitation])
+
+
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))

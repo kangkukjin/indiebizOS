@@ -459,3 +459,25 @@ def test_empty_read_receipt_does_not_imply_available_review_evidence(lib):
     assert review['valid'][0]['evidence_state'] == 'missing'
     assert review['unreviewed'] == [marker] and review['evidence_chars'] == 0
     assert review['unresolved_references'] == ['[1]', 'https://example.org/source']
+
+
+def test_disjoint_read_revisions_and_question_anchors_are_not_fused(lib):
+    vid = lib.capture('자료', title='자료')['version_ref']
+    definition = '정격전력은 상한이다.'
+    limit = '실사용량은 가동 조건에 따라 다르다.'
+    full = definition + '무관한 배경 ' * 2000 + limit
+    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
+        lib.access(vid, 1, 'p1', full)
+        lib.access(vid, 2, 'p1', '수정된 다른 추출 판본')
+    links = [{'version_ref': vid, 'extraction_revision': 1, 'locator': 'p1', 'quote': quote,
+              'question_id': 'q', 'revision': 3, 'revision_digest': 'digest', 'role': 'supporting',
+              'evidence_id': str(i)} for i, quote in enumerate([definition, limit])]
+    result = lib.citation_review(f'실사용량 [자료:{vid}:p1]', 'run', question_evidence=links)
+    row = result['valid'][0]
+    assert row['quote'] is None  # 여러 구간을 하나의 원문 인용으로 만들지 않는다.
+    assert row['extraction_revisions'] == [1, 2]
+    assert all(link['included'] for link in row['question_links'])
+    originals = {1: full, 2: '수정된 다른 추출 판본'}
+    assert all(s['quote'] == originals[s['extraction_revision']][s['start']:s['end']] for s in row['segments'])
+    assert result['evidence_chars'] <= 2400 and row['semantic_status'] == 'unreviewed'
+    assert lib.citation_review(f'[자료:{vid}:p1]', 'unread', question_evidence=links)['invalid']

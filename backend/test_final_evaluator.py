@@ -738,3 +738,38 @@ def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch
     assert context['research_claims'][0]['path'] == str(report)
     assert context['research_claims'][0]['hash'] == hashlib.sha256(report.read_bytes()).hexdigest()
     assert '효과가 입증' in context['research_claims'][0]['claim_context']
+
+
+def test_research_question_correction_invalidates_review_of_same_file(supervisor, tmp_path):
+    import research_capture  # noqa: F401
+    from research_context import scope
+    from research_store import ResearchStore
+    from research_questions import ResearchQuestions
+    from research_library import ResearchLibrary
+    from final_evaluator import prepare, snapshot_error
+    store = ResearchStore(tmp_path, 'question-review')
+    tid = store.create_thread('판본 검수')['id']
+    ctx = {'project_uid': store.uid, 'thread_id': tid, 'run_id': 'r', 'epoch': store.epoch, 'path': str(tmp_path)}
+    supervisor.project_path = str(tmp_path)
+    with scope(ctx):
+        lib = ResearchLibrary(store, tid)
+        rec = lib.capture('계약 목표이며 체결 실적은 아니다.', title='조건', paragraphs=[('p1', '계약 목표이며 체결 실적은 아니다.')])
+        lib.read(rec['version_ref'])
+        ref = {'version_ref': rec['version_ref'], 'extraction_revision': 1, 'locator': 'p1',
+               'quote': '계약 목표이며 체결 실적은 아니다.'}
+        questions = ResearchQuestions(store, tid)
+        q = questions.apply([{'expected_revision': 0, 'text': '목표와 실적을 구별',
+                              'supporting': [ref], 'gaps': ['체결 여부'], 'next_probes': ['체결 공시 확인']}])['items'][0]
+        supervisor.message = q['question_id'] + ' 현재 체결 실적을 설명해'
+        report = tmp_path / 'report.md'
+        report.write_text('체결 실적이다. [자료:' + rec['version_ref'] + ':p1]')
+        supervisor.store.put_response(f'[보고서]({report})')
+        packet = prepare(supervisor, [])
+        citations = packet['context']['research_citations']
+        assert citations['questions']['items'][0]['revision_digest'] == q['revision_digest']
+        assert citations['valid'][0]['question_links'][0]['included']
+        assert citations['valid'][0]['occurrence_refs'] == [0]
+        assert 'occurrences' not in citations['valid'][0]
+        questions.apply([{'question_id': q['question_id'], 'expected_revision': 1,
+                          'scope': '목표가 아닌 실제 체결만'}])
+        assert '연구 질문' in snapshot_error(supervisor)

@@ -22,14 +22,19 @@ def install_review(callback):
     _review = callback
 
 
-def citation_review(text):
+def citation_review(text, *, query='', question_ids=()):
     """현재 연구의 인용 검사를 평가에 공급한다. 일반 실행은 추가 작업이 없다."""
     context = current()
     if not context:
         return None
     if _review is None:
         raise RuntimeError('연구 인용 검사기가 준비되지 않았습니다')
-    return _review(context, text)
+    return _review(context, text, query=query, question_ids=question_ids)
+
+
+def review_state():
+    context = current()
+    return _review(context, '', state_only=True) if context and _review else None
 
 
 def current():
@@ -121,6 +126,8 @@ def adopt_execution(agent_id, task_id, project_path):
 def capture_stream(events, *, attached_only=False):
     """IBL 밖에서 반환된 일반 도구·CLI 도구 결과도 대화 자료로 보존한다."""
     calls = {}
+    observed = set()
+    generations = {}
     for event in events:
         if attached_only and not (current() or {}).get('attached'):
             yield event
@@ -128,11 +135,21 @@ def capture_stream(events, *, attached_only=False):
         kind = event.get('type')
         if kind == 'tool_start':
             calls[event.get('id')] = event
+            generations[event.get('id')] = generations.get(event.get('id'), 0) + 1
         elif kind == 'tool_result' and not event.get('is_error'):
-            start = calls.pop(event.get('id'), {})
+            start = calls.get(event.get('id'), {})
             name = event.get('name') or start.get('name') or ''
             # IBL은 서버에서 축약 전 원문을 이미 보존했다. MCP 관리 도구는 자료가 아니다.
             if name and name != 'execute_ibl' and not name.startswith('mcp__indiebizos__'):
+                import hashlib
+                import json
+                identity = (event.get('id'), generations.get(event.get('id'), 0), name, hashlib.sha256(json.dumps(
+                    event.get('result', ''), sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest())
+                if event.get('id') and identity in observed:
+                    yield event
+                    continue
+                if event.get('id'):
+                    observed.add(identity)
                 params = start.get('input') or {}
                 if isinstance(params, dict) and params.get('file_path') and not params.get('path'):
                     params = {**params, 'path': params['file_path']}
@@ -165,16 +182,27 @@ class TurnResearch:
         if current() or not (framing or {}).get('_research_plan'):
             return ''
         if runner.config.get('_is_system_ai') or runner.config.get('_member'):
-            return ''
+            return self._unsupported(framing, 'member' if runner.config.get('_member') else 'system_ai')
         if _session is None:
             raise RuntimeError('심층연구 자료 보존 어댑터가 준비되지 않았습니다')
         self.context = self.stack.enter_context(_session(runner, framing, message))
         if self.context is None:
-            return ''
+            return self._unsupported(framing, 'unregistered_or_dedicated_project')
+        framing['_research_coverage'] = {'surface': 'general_project', 'library_attached': True,
+                                        'native_capture': 'observed_returns_only'}
         self.stack.enter_context(scope(self.context))
         self.stack.enter_context(bind_execution(thread_context.get_current_agent_id(),
                                                thread_context.get_current_task_id()))
         return self.context.get('guidance', '')
+
+    @staticmethod
+    def _unsupported(framing, surface):
+        import json
+        status = {'surface': surface, 'library_attached': False,
+                  'reason': '이 실행 신원의 자동 연구 자료실 연결은 지원하지 않습니다',
+                  'evidence': '기존 파일·도구 실행 근거 사용; 자료실 읽기 검증으로 간주하지 않음'}
+        framing['_research_coverage'] = status
+        return '\n<research_workspace_status>\n' + json.dumps(status, ensure_ascii=False) + '\n</research_workspace_status>'
 
     def validate(self, response):
         """최종 전달 전에 파일 인용도 확인한다. 의미 승인은 기존 평가자가 담당한다."""

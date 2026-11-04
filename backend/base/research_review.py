@@ -76,3 +76,40 @@ def passage(full, limit, context):
     margin = min(150, max(0, limit - width))  # clamp-ok: 검색 창 앞 여백; 반환 범위와 누락은 별도 신고
     start = max(0, min(start - margin, len(full) - limit))
     return full[start:start + limit], start
+
+
+def passages(full, limit, contexts, anchors=()):
+    """읽은 한 원문 안의 명시 인용·주장별 창을 같은 예산으로 배분한다.
+
+    반환 좌표는 합성 문자열이 아닌 입력 원문의 Unicode 좌표다. 선택은 의미
+    판정이 아니다. 여러 주장의 같은 창은 공유하고 멀리 떨어진 창은 보존한다.
+    """
+    if limit <= 0 or not full:
+        return []
+    if len(full) <= limit:
+        return [(0, len(full))]
+    targets = []
+    for quote in dict.fromkeys(anchors):
+        start = full.find(quote) if quote else -1
+        if start >= 0:
+            targets.append((start, start + len(quote)))
+    for context in dict.fromkeys(contexts):
+        shown, start = passage(full, min(limit, 600), context)  # clamp-ok: 내부 탐색 창; 실제 발췌 누락은 호출자가 truncated로 신고
+        if not any(left <= start < right or start <= left < start + len(shown)
+                   for left, right in targets):
+            targets.append((start, start + len(shown)))
+    targets = targets or [(0, min(limit, len(full)))]
+    quotas = allocate({str(i): len(full) for i in range(len(targets))}, budget=limit, cap=limit)
+    ranges = []
+    for i, (left, right) in enumerate(targets):
+        size = quotas[str(i)]
+        if size:
+            start = max(0, min(left - max(0, size - (right - left)) // 2, len(full) - size))
+            ranges.append((start, start + size))
+    merged = []
+    for left, right in sorted(ranges):
+        if merged and left <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(right, merged[-1][1]))
+        else:
+            merged.append((left, right))
+    return merged

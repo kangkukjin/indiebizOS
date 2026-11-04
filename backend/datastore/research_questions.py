@@ -90,9 +90,21 @@ class ResearchQuestions:
                     'next_cursor': str(cursor + limit) if len(rows) > limit else None,
                     'questions_only': True, 'question_id': question_id, 'question_history': history}
 
+    def revision(self, question_id, revision):
+        """요약의 불변 판본을 회수한다. 최신 head로 조용히 대체하지 않는다."""
+        with self.store.connect() as db:
+            self.store.check_epoch(db)
+            row = db.execute('SELECT * FROM research_questions WHERE thread_id=? AND question_id=? AND revision=?',
+                             (self.tid, question_id, revision)).fetchone()
+            if row is None:
+                raise ResearchConflict('요청한 대화의 질문 판본이 없습니다')
+            return self._decode(row, db)
+
     def context(self, budget=7500, *, query="", question_ids=()):
         """작은 목록만 전달한다. 원문/이력은 같은 도구에서 회수하고 기존 인용을 새 읽기로 승격하지 않는다."""
-        items, used = [], 0
+        if type(budget) is not int or budget < 0:
+            raise ValueError('질문 문맥 예산은 0 이상의 정수입니다')
+        items, omitted_refs, used = [], [], 0
         with self.store.connect() as db:
             self.store.check_epoch(db)
             rows = db.execute('SELECT q.* FROM research_questions q WHERE thread_id=? '
@@ -105,24 +117,47 @@ class ResearchQuestions:
                 # 명시 ID·현재 질문의 어휘 관련성을 우선한다. 오래된 열린 질문도 한 자리를 확보한다.
                 oldest = next((q['question_id'] for q in reversed(decoded) if q['status'] == 'open'), None)
                 decoded.sort(key=lambda q: (q['question_id'] not in explicit,
-                    -lexical_evidence(query, q['text'] + ' ' + q['scope']),
-                    q['question_id'] != oldest, q['status'] != 'open'))
+                    q['question_id'] != oldest,
+                    -lexical_evidence(query, q['text'] + ' ' + q['scope']), q['status'] != 'open'))
+            omitted = []
+            # 내용과 별도로 빠진 질문의 판본 주소도 같은 예산 안에 남긴다.
+            content_budget = budget if len(decoded) <= 1 else budget * 3 // 4
             for q in decoded:
-                item = {k: q[k] for k in ('question_id', 'revision', 'text', 'scope', 'status')}
+                item = {k: q[k] for k in ('question_id', 'revision', 'revision_digest',
+                                         'origin', 'text', 'scope', 'status')}
                 item.update(provisional_answer=q['provisional_answer'][:600],
                             gaps=q['gaps'][:3], next_probes=q['next_probes'][:3],
                             gaps_total=len(q['gaps']), next_probes_total=len(q['next_probes']),
                             supporting_count=len(q['supporting']), contradicting_count=len(q['contradicting']),
-                            contradicting_refs=[{k: e[k] for k in ('evidence_id', 'version_ref', 'locator') if k in e}
-                                                for e in q['contradicting'][:3]],
+                            resolution=q['resolution']['disposition'] if q['resolution'] else None,
+                            omitted_fields={
+                                'provisional_answer_chars': max(0, len(q['provisional_answer']) - 600),
+                                **{key: max(0, len(q[key]) - 3) for key in
+                                   ('gaps', 'next_probes', 'supporting', 'contradicting')}},
                             detail_required=True)
+                for role in ('supporting', 'contradicting'):
+                    item[role + '_refs'] = [{k: e[k] for k in
+                        ('evidence_id', 'version_ref', 'extraction_revision', 'locator')}
+                        for e in q[role][:3]]
                 size = len(canonical(item))
-                if used + size > budget:
+                if used + size > content_budget:
+                    omitted.append(q)
                     continue
                 items.append(item)
                 used += size
+            for q in omitted:
+                ref = {k: q[k] for k in ('question_id', 'revision', 'revision_digest', 'status')}
+                size = len(canonical(ref))
+                if used + size <= budget:
+                    omitted_refs.append(ref)
+                    used += size
         return {'items': items, 'total': len(rows), 'omitted': len(rows) - len(items),
-                'hint': '잠정 연구 기록이며 사실 증명이 아닙니다. thread_messages+questions_only:true로 전체 질문·근거를 읽으세요.'}
+                'omitted_refs': omitted_refs, 'unlisted': len(omitted) - len(omitted_refs),
+                'project_ref': self.store.uid, 'thread_ref': self.tid,
+                'projection_chars': used, 'budget': budget,
+                'retrieval': {'op': 'thread_messages', 'questions_only': True, 'question_history': True},
+                'hint': '잠정 기록이며 사실 증명이 아닙니다. question_id의 이력을 읽고 revision·revision_digest가 같은 판본을 선택하세요. '
+                        'omitted_refs도 빠졌으면 questions_only 목록을 페이지별로 읽으세요. open은 이번 답변 실패나 전체 목표 미달과 같지 않습니다.'}
 
     def apply(self, changes, *, origin='user', run=None):
         if not isinstance(changes, list) or not 1 <= len(changes) <= 20:

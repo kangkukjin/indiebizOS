@@ -125,6 +125,67 @@ def test_existing_workspace_identity_survives_project_relocation(workspace):
         list(turn.events(iter([{'type': 'final', 'content': '완료'}])))
 
 
+@pytest.mark.parametrize('flag,surface', [('_member', 'member'), ('_is_system_ai', 'system_ai')])
+def test_unsupported_identity_reports_coverage_without_creating_library(workspace, flag, surface):
+    runner, path = workspace
+    runner.config[flag] = True
+    framing = {'_research_plan': {'path': 'plan.md'}}
+    with TurnResearch() as turn:
+        guidance = turn.activate(runner, framing, '연구')
+        assert surface in guidance and not current()
+        assert framing['_research_coverage']['library_attached'] is False
+    assert not (path / 'research').exists()
+
+
+def test_native_duplicate_return_is_captured_once_but_new_payload_is_preserved(workspace, monkeypatch):
+    from research_context import capture_stream
+    import research_context
+    captured = []
+    monkeypatch.setattr(research_context, '_capture', lambda ctx, cfg, args, result, call: captured.append(result) or result)
+    with research_context.scope({'attached': True}):
+        events = [{'type': 'tool_result', 'id': 'r', 'name': 'Read', 'result': value}
+                  for value in ['원문', '원문', '새 판본']]
+        events += [{'type': 'tool_start', 'id': 'r', 'name': 'Read', 'input': {}},
+                   {'type': 'tool_result', 'id': 'r', 'result': '원문'}]
+        assert list(capture_stream(iter(events))) == events
+    assert captured == ['원문', '새 판본', '원문']
+
+
+def test_supported_workspace_capture_read_question_submit_review_roundtrip(workspace, monkeypatch):
+    import research_capture
+    from research_context import citation_review
+    from research_questions import ResearchQuestions
+    runner, path = workspace
+    monkeypatch.setattr(research_capture, 'schedule_index', lambda path: None)
+    with TurnResearch() as turn:
+        turn.activate(runner, {'_research_plan': {'path': 'plan.md'}}, '정격과 실사용을 구별')
+        ctx = dict(current())
+        list(turn.events(iter([{'type': 'tool_result', 'id': 'read', 'name': 'Read',
+                               'result': '정격은 상한이고 실사용량은 조건에 따라 다르다.'}])))
+        store = ResearchStore(path)
+        lib = ResearchLibrary(store, ctx['thread_id'])
+        vid = lib.sources()['items'][0]['version_ref']
+        page = lib.read(vid)
+        refs = lib.citations(page['text'], ctx['run_id'])
+        assert refs
+        ref = refs[0]
+        questions = ResearchQuestions(store, ctx['thread_id'])
+        q = questions.apply([{'expected_revision': 0, 'text': '실사용량 판단', 'supporting': [
+            {'version_ref': ref['version_id'], 'extraction_revision': ref['extraction_revision'],
+             'locator': ref['locator'], 'quote': ref['quote']}], 'gaps': ['가동 조건']}],
+            origin='agent', run=ctx['run_id'])['items'][0]
+        (path / 'outputs').mkdir()
+        report = path / 'outputs/result.md'
+        report.write_text('실사용량은 아직 미확인이다. ' + f"[자료:{vid}:{ref['locator']}]")
+        response = '[보고서](outputs/result.md)'
+        assert turn.validate(response) == response
+        result = citation_review(report.read_text(), question_ids=[q['question_id']])
+        assert not result['invalid'] and result['questions']['items'][0]['status'] == 'open'
+        assert result['valid'][0]['semantic_status'] == 'unreviewed'
+        list(turn.events(iter([{'type': 'final', 'content': response}])))
+    assert current() is None
+
+
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))

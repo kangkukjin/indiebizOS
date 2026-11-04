@@ -218,3 +218,45 @@ def test_current_question_and_old_open_question_survive_recent_noise(world):
     assert context['omitted'] > 0
     explicit = questions.context(query='계속', question_ids=[old['question_id']])
     assert explicit['items'][0]['question_id'] == old['question_id']
+
+
+def test_projection_keeps_omitted_revision_and_origin_after_correction(world):
+    store, tid, questions = world
+    q = create(questions, text='원래 요구', scope='스타일 후보 비교',
+               provisional_answer='가' * 1000, gaps=['확인' + str(i) for i in range(6)])
+    projection = questions.context(question_ids=[q['question_id']])
+    item = projection['items'][0]
+    assert item['origin'] == 'user' and item['revision_digest'] == q['revision_digest']
+    assert item['omitted_fields']['provisional_answer_chars'] == 400
+    assert item['omitted_fields']['gaps'] == 3
+    corrected = update(questions, q, scope='기존 자료 진단이 아니라 외부 스타일 후보 비교')
+    old = questions.revision(item['question_id'], item['revision'])
+    assert old['scope'] == '스타일 후보 비교' and old['revision_digest'] == item['revision_digest']
+    assert questions.context()['items'][0]['revision_digest'] == corrected['revision_digest']
+    compact = questions.context(budget=300, question_ids=[q['question_id']])
+    assert not compact['items'] and compact['omitted_refs'][0]['revision'] == corrected['revision']
+    assert compact['projection_chars'] <= 300
+    assert questions.context(budget=1)['unlisted'] == 1
+    other = store.create_thread('다른 대화')['id']
+    with pytest.raises(ResearchConflict):
+        ResearchQuestions(store, other).revision(q['question_id'], 1)
+
+
+def test_explicit_then_old_open_precede_lexical_noise(world):
+    _, _, questions = world
+    old = create(questions, text='오래된 필수 판단', scope='핵심 요구')
+    for i in range(8):
+        create(questions, text=f'현재 키워드 {i}')
+    requested = create(questions, text='현재 사용자가 정정한 질문')
+    result = questions.context(query='현재 키워드', question_ids=[requested['question_id']])
+    assert [q['question_id'] for q in result['items'][:2]] == [requested['question_id'], old['question_id']]
+
+
+def test_budget_stop_does_not_close_unresolved_discriminating_question(world):
+    store, tid, questions = world
+    q = create(questions, supporting=[reference(store, tid)], provisional_answer='두 설명이 가능하다',
+               gaps=['독립 원천 확인 실패'], next_probes=['같은 발표의 재인용인지 원 발표와 비교'])
+    with pytest.raises(ValueError, match='남은 확인사항'):
+        update(questions, q, resolution={'disposition': 'answered', 'rationale': '시간 소진'})
+    saved = questions.read(question_id=q['question_id'])['items'][0]
+    assert saved['status'] == 'open' and saved['next_probes'] == q['next_probes']

@@ -57,6 +57,8 @@ RESEARCH_POLICY = """
 research_citations의 각 인용 표지 바로 앞의 주장을 연결된 quote와 대조한다.
 인용의 존재·읽기 기록은 의미적 지지의 증명이 아니다. 다른 주장에 같은 표지를 붙인 경우도 확인한다.
 research_claims의 파일·해시·위치별 주장을 각각 검사한다. 같은 인용도 다른 주장에 대한 승인을 공유하지 않는다.
+quote가 null이면 segments의 quote를 각각 읽는다. 구간은 서로 떨어져 있거나 추출 판본이 다를 수 있다.
+questions의 범위·잠정 답·gaps·next_probes와 제출 주장을 대조한다. 질문의 종결은 이번 요청 달성과 별개다.
 수치는 분모·기간·비교군, 인과는 통제·경쟁 설명, 권고는 반론·적용 조건을 원문 및 유효한 criteria와 대조한다.
 invalid는 실제 읽기 증거가 없는 인용이다. reading_verified는 의미 승인이 아니다.
 evidence_state=partial/missing과 unreviewed는 검토 입력의 미완전성이다. 핵심 조건이 빠졌으면
@@ -300,6 +302,8 @@ def prepare(controller, tool_calls=None):
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(),
                "jobs": list(controller.job_states.values())}
+    if controller.framing.get('_research_coverage'):
+        context['research_coverage'] = controller.framing['_research_coverage']
     from capability_guard import call_evidence, candidate_matches, user_evidence
     if candidate_matches(response):
         context['authority_evidence'] = [
@@ -308,12 +312,17 @@ def prepare(controller, tool_calls=None):
         ]
     context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
     from research_context import citation_review
-    research_citations = citation_review(review_text(response, research_documents))
+    research_citations = citation_review(review_text(response, research_documents), query=controller.message)
     if research_citations is not None:
         context['research_citations'] = research_citations
         context['research_submissions'] = [{k: a[k] for k in ('path', 'hash')} for a in research_documents]
         context['research_claims'] = claims(response) + [c for a in research_documents
             for c in claims(a['text'], path=a['path'], digest=a['hash'])]
+        # 위치는 research_claims 한 벌이 소유한다. 같은 문맥을 두 번 싣지 않는다.
+        for row in research_citations['valid']:
+            row['occurrence_refs'] = [i for i, claim in enumerate(context['research_claims'])
+                                      if claim['citation'] == row['citation']]
+            row.pop('occurrences', None)
     # 보완 실행자가 원문을 회수했는데 재검수 때 다시 같은 발췌에서 사라지는
     # 순환을 막는다. 작업대가 실제 반환한 증거 페이지만 별도 첨부한다.
     cursor = getattr(controller, "_repair_evidence_since", None)
@@ -358,6 +367,7 @@ def prepare(controller, tool_calls=None):
         "conversation_history": copy.deepcopy(getattr(controller, "history", [])),
     }
     controller._evaluation_snapshot = {"response": controller.store.manifest(), "files": snapshots,
+                                       "research_state": (research_citations or {}).get('state_revision'),
                                        "delivery": delivery, "criteria": copy.deepcopy(criteria),
                                        "assertion_sources": [r for e in context['assertion_evidence']
                                                              if e['sources_unchanged'] for r in e['source_snapshots']]}
@@ -366,6 +376,10 @@ def prepare(controller, tool_calls=None):
 
 def snapshot_error(controller):
     snapshot = controller._evaluation_snapshot
+    if snapshot.get('research_state'):
+        from research_context import review_state
+        if review_state() != snapshot['research_state']:
+            return '평가 중 연구 질문·근거 판본이 변경됐습니다'
     if snapshot["response"] != controller.store.manifest():
         return "평가 중 응답이 변경됐습니다"
     if snapshot["delivery"] != controller.delivery.manifest():

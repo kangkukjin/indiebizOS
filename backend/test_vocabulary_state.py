@@ -55,7 +55,7 @@ def test_broken_state_does_not_wake_everything(box):
 
 def test_cached_handler_is_also_blocked(box, monkeypatch):
     import tool_loader
-    monkeypatch.setitem(tool_loader._tool_handlers_cache, "asleep", object())
+    monkeypatch.setitem(tool_loader._package_handlers_cache, "asleep", object())
     with pytest.raises(ValueError, match="잠들어"):
         tool_loader.load_tool_handler("asleep")
 

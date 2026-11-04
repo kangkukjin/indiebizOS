@@ -274,18 +274,18 @@ def test_semantic_filters_inside_knn_candidate_set(memory, monkeypatch):
         assert [r['id'] for r in result] == [2]
 
 
-@pytest.mark.parametrize('cached_tool', [True, False])
-def test_handler_cache_clear_during_read_keeps_current_module(monkeypatch, cached_tool):
+@pytest.mark.parametrize('clear_mapping', [True, False])
+def test_handler_cache_clear_during_read_keeps_current_module(monkeypatch, clear_mapping):
     import tool_loader as loader
     module = SimpleNamespace(name='already loaded')
-    monkeypatch.setattr(loader, '_tool_handlers_cache', {'read_op': module} if cached_tool else {})
     monkeypatch.setattr(loader, '_package_handlers_cache', {'system_essentials': module})
     monkeypatch.setattr(loader, '_tool_to_package_map', {'read_op': 'system_essentials'})
     monkeypatch.setattr(loader, 'require_tool_active', lambda *a: None)
-    monkeypatch.setattr(loader, 'build_tool_package_map', lambda: None)
+    monkeypatch.setattr(loader, 'build_tool_package_map', lambda: dict(loader._tool_to_package_map))
 
     def concurrent_clear(package):
-        loader._tool_handlers_cache.clear()
+        if clear_mapping:
+            loader._tool_to_package_map.clear()
         loader._package_handlers_cache.clear()
         return False
 

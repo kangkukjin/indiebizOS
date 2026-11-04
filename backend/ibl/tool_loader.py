@@ -12,11 +12,10 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from result_read_contract import read_result_schema
-from vocabulary_state import active_paths, package_path, require_tool_active
+from vocabulary_state import (LOCK, active_paths, inventory, inventory_scope,
+                              package_path, read_state, require_tool_active)
 
 
-# 도구 핸들러 캐시 (도구 이름 -> 핸들러 모듈)
-_tool_handlers_cache: Dict[str, Any] = {}
 # 패키지 ID -> 핸들러 모듈 캐시 (같은 패키지의 도구들이 모듈 인스턴스를 공유)
 _package_handlers_cache: Dict[str, Any] = {}
 # 패키지 ID -> handler.py mtime (로드 시점) — handler.py 편집의 자동 무효화용.
@@ -28,10 +27,8 @@ _package_handlers_cache: Dict[str, Any] = {}
 _package_handler_mtimes: Dict[str, float] = {}
 # 도구 이름 -> 패키지 ID 매핑
 _tool_to_package_map: Dict[str, str] = {}
-# tool.json mtime 스냅샷 (자동 캐시 무효화용 — 2026-05-28 추가)
-# 패키지 ID -> tool.json의 mtime. _tool_to_package_map과 _all_tools_cache가
-# tool.json 변경에 즉시 반응하도록 한다.
-_tool_json_mtimes: Dict[str, float] = {}
+# 매핑 입력의 검증된 재고·활성 원장 스냅샷. 파일 stat은 inventory가 소유한다.
+_tool_map_source = None
 # 전체 도구 정의 캐시
 _all_tools_cache: List[Dict] = []
 _all_tools_cache_time: float = 0
@@ -77,67 +74,31 @@ def _scan_tool_json_mtimes() -> Dict[str, float]:
     return out
 
 
+@inventory_scope()
 def build_tool_package_map(force: bool = False) -> Dict[str, str]:
-    """
-    설치된 도구 패키지에서 도구 이름 -> 패키지 ID 매핑 구축
-
-    tool.json 변경 시 자동 무효화 (mtime 스냅샷 비교).
-
-    Args:
-        force: True면 캐시 무시하고 재구축
-
-    Returns:
-        도구 이름 -> 패키지 ID 매핑
-    """
-    global _tool_to_package_map, _tool_json_mtimes
-
-    if _tool_to_package_map and not force:
-        # 캐시가 있어도 tool.json 변경이 있으면 자동 무효화.
-        cur_mtimes = _scan_tool_json_mtimes()
-        if cur_mtimes == _tool_json_mtimes:
+    """재고·선택 판본이 바뀌었을 때만 활성 도구의 매핑을 원자적으로 교체한다."""
+    global _tool_to_package_map, _tool_map_source
+    with LOCK:
+        root = get_base_path()
+        source = (inventory(root), read_state(root))
+        if not force and _tool_map_source is not None and all(
+                left is right for left, right in zip(source, _tool_map_source)):
             return _tool_to_package_map
-        print(f"[도구 매핑] tool.json 변경 감지 — 캐시 재구축")
-
-    tools_path = get_tools_path()
-    if not tools_path.exists():
-        return _tool_to_package_map
-
-    _tool_to_package_map.clear()
-
-    for pkg_dir in active_paths(get_base_path()):
-        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
-            continue
-
-        tool_json = pkg_dir / "tool.json"
-        if not tool_json.exists():
-            continue
-
-        try:
-            tool_def = json.loads(tool_json.read_text(encoding='utf-8'))
-            _register_tools_from_definition(tool_def, pkg_dir.name)
-        except Exception as e:
-            print(f"[도구 매핑 실패] {pkg_dir.name}: {e}")
-
-    # mtime 스냅샷 갱신 (다음 호출에서 변화 감지용)
-    _tool_json_mtimes = _scan_tool_json_mtimes()
-    return _tool_to_package_map
-
-
-def _register_tools_from_definition(tool_def: Any, package_name: str):
-    """도구 정의에서 도구 이름 추출하여 매핑에 등록"""
-    global _tool_to_package_map
-
-    # {"tools": [...]} 형식
-    if isinstance(tool_def, dict) and "tools" in tool_def:
-        for t in tool_def["tools"]:
-            _tool_to_package_map[t["name"]] = package_name
-    # 배열 형식 (여러 도구가 한 패키지에)
-    elif isinstance(tool_def, list):
-        for t in tool_def:
-            _tool_to_package_map[t["name"]] = package_name
-    # 단일 도구
-    elif isinstance(tool_def, dict) and "name" in tool_def:
-        _tool_to_package_map[tool_def["name"]] = package_name
+        mapping = {}
+        if get_tools_path().exists():
+            for pkg_dir in active_paths(root):
+                tool_json = pkg_dir / "tool.json"
+                if not tool_json.exists():
+                    continue
+                try:
+                    definition = json.loads(tool_json.read_text(encoding='utf-8'))
+                    for tool in _extract_tools_from_definition(definition):
+                        mapping[tool["name"]] = pkg_dir.name
+                except Exception as e:
+                    print(f"[도구 매핑 실패] {pkg_dir.name}: {e}")
+        _tool_to_package_map = mapping
+        _tool_map_source = source
+        return mapping
 
 
 def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optional[dict]:
@@ -275,13 +236,13 @@ def load_tool_schema(tool_name: str) -> Optional[dict]:
 
 
 def _invalidate_stale_handler(package_id: str) -> bool:
-    """handler.py 가 로드 시점보다 새로우면 그 패키지의 핸들러 캐시를 비운다(True=비움).
-
-    비교 실패(파일 소실 등)는 무효화하지 않는다 — 로드된 모듈이 마지막 진실이다."""
+    """handler.py 변경·소실이면 다음 취득의 캐시를 비운다. 진행 호출은 보존한다."""
     try:
         mtime = (package_path(package_id) / "handler.py").stat().st_mtime
-    except OSError:
-        return False
+    except FileNotFoundError:
+        _package_handlers_cache.pop(package_id, None)
+        _package_handler_mtimes.pop(package_id, None)
+        return True
     if _package_handler_mtimes.get(package_id) == mtime:
         return False
     if package_id not in _package_handlers_cache:
@@ -289,13 +250,11 @@ def _invalidate_stale_handler(package_id: str) -> bool:
         return False
     _package_handlers_cache.pop(package_id, None)
     _package_handler_mtimes.pop(package_id, None)
-    for _t, _p in list(_tool_to_package_map.items()):
-        if _p == package_id:
-            _tool_handlers_cache.pop(_t, None)
     print(f"[도구 핸들러 무효화] {package_id}: handler.py 변경 감지 — 다음 호출이 재로드")
     return True
 
 
+@inventory_scope()
 def load_tool_handler(tool_name: str) -> Optional[Any]:
     """
     도구 핸들러를 동적으로 로드
@@ -309,31 +268,18 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
     Returns:
         핸들러 모듈 또는 None
     """
-    global _tool_handlers_cache, _package_handlers_cache
+    # 현재 매핑을 확인한 뒤 패키지 참조를 취득한다. 옛 도구 별칭으로 우회하지 않는다.
+    mapping = build_tool_package_map()
     require_tool_active(tool_name)
 
-    # 도구 이름 캐시에 있으면 반환 — 단 handler.py 가 디스크에서 바뀌었으면 낡은 모듈이다
-    # 로컬 참조를 잡는다. 병렬 호출의 무효화/clear_cache가 dict 항목을 지워도
-    # 이미 시작한 호출은 유효한 모듈 스냅샷으로 완료하고 다음 호출이 새 버전을 받는다.
-    cached = _tool_handlers_cache.get(tool_name)
-    if cached is not None:
-        _pkg = _tool_to_package_map.get(tool_name)
-        if not (_pkg and _invalidate_stale_handler(_pkg)):
-            return cached
-        # 낡음 — 캐시가 비워졌으니 아래 재로드 경로로 계속
-
-    # 매핑 구축
-    build_tool_package_map()
-
     # 패키지 ID 찾기
-    package_id = _tool_to_package_map.get(tool_name)
+    package_id = mapping.get(tool_name)
     if not package_id:
         return None
 
     # 같은 패키지의 다른 도구가 이미 로드했으면 그 모듈 인스턴스를 재사용
     module = _package_handlers_cache.get(package_id)
     if module is not None and not _invalidate_stale_handler(package_id):
-        _tool_handlers_cache[tool_name] = module
         print(f"[도구 핸들러 재사용] {tool_name} <- {package_id} (공유 모듈)")
         return module
 
@@ -360,10 +306,9 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         from runtime_utils import get_source_root
         module = wrap(package_id, handler_path.parent, get_source_root(), module)
 
-        # 패키지 캐시와 도구 캐시 모두에 저장
+        # 패키지별 참조 하나만 보관한다.
         _package_handlers_cache[package_id] = module
         _package_handler_mtimes[package_id] = _mtime
-        _tool_handlers_cache[tool_name] = module
         print(f"[도구 핸들러 로드] {tool_name} <- {package_id}")
 
         return module
@@ -448,10 +393,6 @@ def _extract_tools_from_definition(tool_def: Any) -> List[Dict]:
     return []
 
 
-# 가이드 파일 내용 캐시 (파일 경로 -> 내용)
-_guide_content_cache: Dict[str, str] = {}
-
-
 def _strip_guide_file_field(tools: List[Dict]) -> List[Dict]:
     """도구 정의에서 guide_file 필드를 제거 (AI에게 불필요한 필드)"""
     stripped = []
@@ -461,114 +402,6 @@ def _strip_guide_file_field(tools: List[Dict]) -> List[Dict]:
             tool.pop("guide_file", None)
         stripped.append(tool)
     return stripped
-
-
-# 도구 이름 -> guide_file 매핑 캐시
-_tool_guide_map: Dict[str, str] = {}
-_tool_guide_map_built: bool = False
-
-
-def _build_tool_guide_map():
-    """tool.json의 guide_file 필드에서 도구 이름 -> 가이드 파일 경로 매핑 구축"""
-    global _tool_guide_map, _tool_guide_map_built
-
-    if _tool_guide_map_built:
-        return
-
-    tools_path = get_tools_path()
-    if not tools_path.exists():
-        _tool_guide_map_built = True
-        return
-
-    for pkg_dir in active_paths(get_base_path()):
-        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
-            continue
-
-        tool_json = pkg_dir / "tool.json"
-        if not tool_json.exists():
-            continue
-
-        try:
-            tool_def = json.loads(tool_json.read_text(encoding='utf-8'))
-
-            # 패키지 레벨 guide_file
-            pkg_guide_file = None
-            if isinstance(tool_def, dict):
-                pkg_guide_file = tool_def.get("guide_file")
-
-            # 개별 도구에서 guide_file 매핑
-            tools = _extract_tools_from_definition(tool_def)
-            for t in tools:
-                guide_file = t.get("guide_file") or pkg_guide_file
-                if guide_file:
-                    guide_path = str(pkg_dir / guide_file)
-                    _tool_guide_map[t["name"]] = guide_path
-        except Exception:
-            pass
-
-    _tool_guide_map_built = True
-
-
-def get_tool_guide(tool_name: str) -> Optional[str]:
-    """도구의 가이드 파일 내용을 반환 (on-demand 로딩)
-
-    tool.json에 guide_file이 지정된 도구의 가이드 내용을 반환합니다.
-    가이드가 없으면 None을 반환합니다.
-
-    Args:
-        tool_name: 도구 이름
-
-    Returns:
-        가이드 파일 내용 또는 None
-    """
-    _build_tool_guide_map()
-
-    guide_path_str = _tool_guide_map.get(tool_name)
-    if not guide_path_str:
-        return None
-
-    guide_path = Path(guide_path_str)
-    return _load_guide_content(guide_path)
-
-
-def get_tool_guide_path(tool_name: str) -> Optional[str]:
-    """도구의 가이드 파일 경로를 반환 (중복 주입 방지용)
-
-    같은 guide_file을 공유하는 도구들은 동일한 경로를 반환하므로,
-    가이드 주입 시 패키지 레벨로 중복을 방지할 수 있습니다.
-
-    Args:
-        tool_name: 도구 이름
-
-    Returns:
-        가이드 파일 경로 문자열 또는 None
-    """
-    _build_tool_guide_map()
-    return _tool_guide_map.get(tool_name)
-
-
-def _load_guide_content(guide_path: Path) -> Optional[str]:
-    """가이드 파일 내용을 로드 (캐싱 지원)"""
-    global _guide_content_cache
-
-    path_str = str(guide_path)
-
-    if path_str in _guide_content_cache:
-        return _guide_content_cache[path_str]
-
-    if not guide_path.exists():
-        _guide_content_cache[path_str] = None
-        return None
-
-    try:
-        content = guide_path.read_text(encoding='utf-8')
-        _guide_content_cache[path_str] = content
-        print(f"[도구 가이드 로드] {guide_path.name}")
-        return content
-    except Exception as e:
-        print(f"[도구 가이드 로드 실패] {guide_path}: {e}")
-        _guide_content_cache[path_str] = None
-        return None
 
 
 def _get_allowed_tools(project_path: str, agent_id: str) -> List[str]:
@@ -634,24 +467,22 @@ def load_installed_tools(base_path: str = None) -> List[Dict]:
 
 def get_all_tool_names() -> List[str]:
     """설치된 모든 도구 이름 반환"""
-    build_tool_package_map()
-    return list(_tool_to_package_map.keys())
+    return list(build_tool_package_map())
 
 
 def clear_cache():
-    """캐시 초기화 (테스트/리로드용)"""
-    global _tool_handlers_cache, _package_handlers_cache, _tool_to_package_map, _tool_json_mtimes, _all_tools_cache, _all_tools_cache_time, _all_tools_cache_mtimes, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
-    _tool_handlers_cache.clear()
-    _package_handlers_cache.clear()
+    """캐시 초기화. 매핑과 입력 판본은 재생성과 같은 잠금에서 함께 비운다."""
+    global _tool_to_package_map, _tool_map_source
+    global _all_tools_cache, _all_tools_cache_time, _all_tools_cache_mtimes
+    with LOCK:
+        _package_handlers_cache.clear()
+        _package_handler_mtimes.clear()
+        _tool_to_package_map = {}
+        _tool_map_source = None
+        _all_tools_cache = []
+        _all_tools_cache_time = 0
+        _all_tools_cache_mtimes.clear()
+        _agents_yaml_cache.clear()
+    # Program의 수명 잠금을 어휘 잠금 안에서 새로 취득하지 않는다.
     from program_runtime import clear_idle
     clear_idle()
-    _package_handler_mtimes.clear()
-    _tool_to_package_map.clear()
-    _tool_json_mtimes.clear()
-    _all_tools_cache = []
-    _all_tools_cache_time = 0
-    _all_tools_cache_mtimes.clear()
-    _agents_yaml_cache.clear()
-    _guide_content_cache.clear()
-    _tool_guide_map.clear()
-    _tool_guide_map_built = False

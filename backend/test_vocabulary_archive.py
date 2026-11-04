@@ -64,7 +64,6 @@ def runtime(tmp_path, monkeypatch):
     def reset():
         ibl_registry._nodes = None
         ibl_registry._nodes_revision = None
-        tool_loader._tool_handlers_cache.clear()
         tool_loader._tool_map_cache = None
         return []
     monkeypatch.setattr(ibl_routing, 'invalidate_runtime_caches', reset)

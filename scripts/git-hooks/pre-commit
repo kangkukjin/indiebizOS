@@ -452,8 +452,7 @@ if echo "$staged" | grep -qE "$safety_trigger"; then
   echo "[pre-commit] 안전장치 기능 스모크 OK ✓"
 fi
 
-# 러너는 하나 (2026-08-30 승격) — 새 시험 파일이 pytest 위임 규약을 어긴 채 main 에
-# 들어오는 부류(08-30 실측: 손 러너 4 + __main__ 없음 1 이 커밋을 통과해 있었다).
+# 러너는 pytest 하나. 선택적으로 제공하는 직접 진입점의 위임과 순찰의 실행 계약을 검사한다.
 # test_single_runner.py 는 파일 정적 스캔이라 싸다 — 시험 파일이 스테이징될 때만.
 if echo "$staged" | grep -qE '^backend/test_.*\.py$'; then
   echo "[pre-commit] 단일 러너 규약 검사 실행..."
@@ -462,7 +461,7 @@ if echo "$staged" | grep -qE '^backend/test_.*\.py$'; then
   if ! "$_pyrunner" -m pytest "$repo_root/backend/test_single_runner.py" -q --no-header; then
     echo "" >&2
     echo "[pre-commit] 단일 러너 규약 위반 — 커밋 차단." >&2
-    echo "[pre-commit]   • __main__ 은 pytest.main([__file__]) 위임으로 (손 러너는 드리프트한다)" >&2
+    echo "[pre-commit]   • 일반 시험은 python -m pytest 로 실행. __main__ 을 제공한다면 pytest.main([__file__]) 으로 위임" >&2
     echo "[pre-commit]   • 직접 실행 전용이면 pytest.skip(..., allow_module_level=True) 로 말하고 빠질 것" >&2
     echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
     exit 1

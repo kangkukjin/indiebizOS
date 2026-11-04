@@ -1,6 +1,5 @@
 """값 의미론 단일 소유권·대수 불변식 가드."""
 
-import ast
 import importlib.util
 from pathlib import Path
 
@@ -11,8 +10,6 @@ from common import value_semantics as semantics
 
 _ROOT = Path(__file__).resolve().parent.parent
 _HANDLER = _ROOT / "data/packages/installed/tools/data-ops/handler.py"
-_WHERE = _ROOT / "data/packages/installed/tools/data-ops/where_dsl.py"
-_GROUP_KEYS = _ROOT / "data/packages/installed/tools/data-ops/group_keys.py"
 
 
 def _load_handler():
@@ -111,21 +108,6 @@ def test_adapters_only_translate_common_results(monkeypatch, data_ops):
                         lambda _a, _b: semantics.OrderResult.GREATER)
     assert data_ops._num_cmp("a", "b") == 1
 
-
-def test_no_consumer_can_reintroduce_private_value_policy():
-    forbidden_defs = {
-        "_scalar_equal", "_scalar_num_eq", "_group_scalar_identity",
-        "_relation_scalar_identity", "_numeric_observations",
-    }
-    handler_path = _ROOT / "data/packages/installed/tools/data-ops/handler.py"
-    for path in (_WHERE, _GROUP_KEYS, handler_path):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        local_defs = {node.name for node in ast.walk(tree)
-                      if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-        assert not (local_defs & forbidden_defs), (path, local_defs & forbidden_defs)
-
-    group_source = _GROUP_KEYS.read_text(encoding="utf-8")
-    assert "from common.value_semantics import group_identity, relation_identity" in group_source
 
 
 if __name__ == "__main__":

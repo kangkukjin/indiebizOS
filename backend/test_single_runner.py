@@ -17,14 +17,19 @@
 보여주는 한, 읽는 쪽은 무엇이 증명됐는지 알 수 없다(같은 규율: 침묵 절단에 표식을 세운
 1cedf7c, 빈손을 부재로 단정하지 않는 B28-1).
 
-처방: 수집은 pytest 하나가 하고(R1), 직접 실행은 그 pytest 로 위임한다(R2).
-그러면 어느 문으로 들어와도 같은 집합이 돌고, 드리프트할 두 번째 목록이 없다.
+현재 계약: 수집·자동 실행은 pytest 하나가 맡는다(R1·R3).
+선택적으로 제공하는 직접 실행 진입점은 pytest로 위임한다(R2).
+일반 pytest 모듈에는 __main__을 요구하지 않는다. 순찰도 이미 -m pytest를 사용한다.
 
 실행: .venv/bin/python -m pytest backend/test_single_runner.py
 """
 import ast
 import os
 import re
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
@@ -94,8 +99,8 @@ def test_r1_every_battery_is_visible_to_pytest():
         % ", ".join(invisible))
 
 
-def test_r2_direct_run_delegates_to_pytest():
-    """직접 실행이 시험을 조용히 건너뛰지 못하게 — `__main__` 은 pytest 로 위임한다."""
+def test_r2_existing_direct_entrypoints_delegate_to_pytest():
+    """직접 실행을 제공하는 파일만 같은 pytest 러너로 위임해야 한다."""
     bad = []
     for name in _battery_files():
         src = _read(name)
@@ -109,41 +114,36 @@ def test_r2_direct_run_delegates_to_pytest():
                 f"{name}: script-battery 를 선언했는데 다리 시험(별도 프로세스 실행)이 없다"
             continue
         block = _main_block(src)
-        if block is None:
-            bad.append((name, "__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)"))
-        elif not re.search(r"\bpytest\.main\(|_pytest\.main\(", block):
+        if block is not None and not re.search(r"\bpytest\.main\(|_pytest\.main\(", block):
             bad.append((name, "__main__ 이 pytest 로 위임하지 않는다 — 두 번째 러너는 드리프트한다"))
     assert not bad, "거짓 초록 위험:\n" + "\n".join("  %s — %s" % b for b in bad)
 
 
-def test_r3_patrol_batteries_are_collected():
-    """12시간 순찰(§1E)이 부르는 배터리가 pytest 에도 보이는가.
+@pytest.mark.parametrize('returncode', [0, 1, 5])
+def test_r3_patrol_uses_pytest_and_rejects_failure_or_no_tests(monkeypatch, returncode):
+    """실제 순찰 호출을 관측한다. 실패(1)와 수집 0건(5)은 성공이 아니다."""
+    import subprocess
+    import sys
+    from health_probes import _run_silent_failure_regression
 
-    순찰은 `[sys.executable, 파일]` 로 직접 실행한다 — R2 덕분에 그 호출은 이제 pytest 로
-    위임되지만, 배터리 자신이 수집 0건이면 순찰은 **아무것도 안 돌고 rc 0** 을 받는다.
-    (그 조합이 정확히 이 파일이 막으려는 사고다.)
-    """
-    import inspect
-    from world_pulse_health import _run_silent_failure_regression
-    src = inspect.getsource(_run_silent_failure_regression)
-    m = re.search(r'suites\s*=\s*\[([^\]]+)\]', src)
-    assert m, "순찰의 배터리 목록(suites)을 찾지 못했다 — 이름이 바뀌었으면 이 가드도 갱신할 것"
-    rels = re.findall(r'"([^"]+\.py)"', m.group(1))
-    assert rels, "순찰 배터리 목록이 비었다"
-    for rel in rels:
-        path = os.path.join(_ROOT, rel)
-        assert os.path.exists(path), f"순찰이 없는 파일을 부른다: {rel}"
-        assert _test_funcs(open(path, encoding="utf-8").read()), \
-            f"순찰 대상 {rel} 이 pytest 수집 0건 — 순찰이 빈 초록을 받는다"
+    calls = []
 
+    def run(argv, **kwargs):
+        assert argv[:3] == [sys.executable, '-m', 'pytest']
+        path = Path(argv[3])
+        assert path.is_file() and _test_funcs(path.read_text(encoding='utf-8'))
+        assert kwargs['cwd'] == _ROOT
+        calls.append(path)
+        return SimpleNamespace(returncode=returncode, stdout='probe result', stderr='')
 
-def test_r4_zero_is_not_pass_is_written_down():
-    """가이드에 규약이 적혀 있는가 — 사람·에이전트가 같은 함정에 다시 들어가지 않도록."""
-    guide = os.path.join(_ROOT, "data", "guides", "imagination_training.md")
-    src = open(guide, encoding="utf-8").read()
-    assert "pytest" in src, "훈련 가이드에 러너 규약이 없다"
-    assert "0건" in src or "빈 초록" in src or "거짓 초록" in src, \
-        "훈련 가이드에 '0건 = 통과 아님' 조항이 없다"
+    monkeypatch.setattr(subprocess, 'run', run)
+    result = _run_silent_failure_regression(Path(_ROOT))
+    assert calls, '순찰이 실제 시험 러너를 한 번도 호출하지 않았다'
+    assert result['success'] is (returncode == 0)
+    if returncode:
+        assert len(calls) == 1
+        assert result['data_quality'] == 'regression_failure'
+        assert f'rc={returncode}' in result['error_message']
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

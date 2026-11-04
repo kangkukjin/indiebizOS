@@ -62,9 +62,24 @@ def test_schema_params_reach_every_surface():
 
 
 def test_code_is_required_everywhere():
-    assert "code" in _schema_params()
-    assert "code" in _rest_fields()
-    assert "code" in _mcp_args()
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from api_ibl import IBLRequest
+    from mcp_server import execute_ibl
+    from mcp.server.fastmcp.utilities.func_metadata import func_metadata
+    from pydantic import ValidationError
+    from tool_loader import build_execute_ibl_tool
+
+    schema = build_execute_ibl_tool()['input_schema']
+    assert 'code' in schema['required']
+    mcp_args = func_metadata(execute_ibl, skip_names=['ctx']).arg_model
+    for model in (IBLRequest, mcp_args):
+        with pytest.raises(ValidationError) as error:
+            model.model_validate({})
+        assert any(e['loc'] == ('code',) and e['type'] == 'missing'
+                   for e in error.value.errors())
+        # 빈 코드는 회수·조회 요청에서 유효하다. 생략과 혼동하지 않는다.
+        assert model.model_validate({'code': ''}).code == ''
 
 
 def test_retired_verbose_is_hidden_but_saved_remote_arguments_are_accepted():

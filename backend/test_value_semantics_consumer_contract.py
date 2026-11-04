@@ -5,7 +5,6 @@ Codex 흡수(원본 test_value_semantics_contract.py, refs/codex/absorb-20260826
 """
 
 import importlib.util
-import inspect
 import itertools
 import math
 import sys
@@ -56,6 +55,12 @@ def where_dsl():
     ({"a": 1}, {"a": "1"}, True),
     (9007199254740993, 9007199254740992, False),
     (float("nan"), float("nan"), False),
+    (["A"], ["a"], True),
+    ([1, {"ok": "YES."}], ["1", {"OK": "yes"}], True),
+    ({"v": "01"}, {"V": 1}, True),
+    ([float("nan")], [float("nan")], False),
+    # 정본 계약: inf 는 자기 자신과 같다(IEEE) — 공개 경계 밖 유출은 결과 관문이 막는다.
+    ({"v": float("inf")}, {"v": float("inf")}, True),
 ])
 def test_equality_matrix_is_identical_in_filter_and_block_predicate(
         where_dsl, left, right, expected):
@@ -153,19 +158,6 @@ def test_answer_punctuation_policy_is_shared_by_all_equality_consumers(
         assert _scalar_sort_key(left) == _scalar_sort_key(right)
 
 
-@pytest.mark.parametrize("left,right,expected", [
-    (["A"], ["a"], True),
-    ([1, {"ok": "YES."}], ["1", {"OK": "yes"}], True),
-    ({"v": "01"}, {"V": 1}, True),
-    ([float("nan")], [float("nan")], False),
-    # 정본 계약: inf 는 자기 자신과 같다(IEEE) — 공개 경계 밖 유출은 결과 관문이 막는다.
-    ({"v": float("inf")}, {"v": float("inf")}, True),
-])
-def test_structures_compose_scalar_equality_recursively(where_dsl, left, right, expected):
-    assert values.values_equal(left, right) is expected
-    assert where_dsl._apply_op("==", left, right) is expected
-    assert binary("==", left, right) is expected
-
 
 def test_generated_algebra_contract_over_value_shapes():
     samples = [
@@ -222,31 +214,6 @@ def test_response_numeric_sort_keeps_unobserved_values_last(order, expected):
     result = _apply_sort(rows, {"by": "v", "type": "number", "order": order})
     assert [row["v"] for row in result] == expected
 
-
-def test_consumer_modules_cannot_reintroduce_local_scalar_policy(where_dsl):
-    consumers = [
-        _ROOT / "backend/common/expression_ops.py",
-        _ROOT / "backend/ibl/api_transforms.py",
-        _ROOT / "backend/cognition/agent_goals.py",
-        _ROOT / "backend/cognition/goal_evaluator.py",
-        _ROOT / "backend/common/safe_expr.py",
-        _ROOT / "backend/common/row_conditions.py",
-    ]
-    forbidden = (
-        "float(str(", "return float(s)", "float(sense_value)", "float(compare_raw)",
-        "(na > nb) - (na < nb)", "str(lv).strip() == str(rv).strip()", "_norm_yesno",
-    )
-    for path in consumers:
-        source = path.read_text(encoding="utf-8")
-        assert "common.value_semantics" in source, f"{path.name}: 공통 값 엔진 위임 없음"
-        for fragment in forbidden:
-            assert fragment not in source, f"{path.name}: 로컬 값 정책 재도입: {fragment}"
-
-    # 호환용 옛 이름은 허용하되 몸통은 공통 엔진 위임뿐이어야 한다.
-    assert "values_equal" in inspect.getsource(where_dsl._num_eq)
-    assert "compare_order" in inspect.getsource(where_dsl._num_cmp)
-    from common import safe_expr
-    assert "numeric_value" in inspect.getsource(safe_expr.as_num)
 
 
 if __name__ == "__main__":

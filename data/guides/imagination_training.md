@@ -217,8 +217,8 @@ run_command: cd "$INDIEBIZ_BASE_PATH" && .venv/bin/python -m pytest backend/test
 - ★**`python backend/test_X.py` 로 판단하지 말 것.** 27·28회차가 그렇게 했고, 그 배터리들엔
   `__main__` 이 없어 **시험을 한 건도 안 돌리고 종료코드 0** 을 냈다. 두 보고서의
   "전부 통과"는 빈 초록이었다(실측: 배터리 44개·시험 303건 중 **147건**이 직접 실행에서
-  한 번도 안 돌았다). 지금은 모든 배터리의 `__main__` 이 pytest 로 위임하므로 직접 실행도
-  같은 집합을 돌리지만, **판단의 근거는 pytest 출력이어야 한다.**
+  한 번도 안 돌았다). 일반 시험은 `python -m pytest`로 실행한다. `__main__`은 선택 사항이며,
+  제공하는 경우에만 pytest로 위임한다. **판단의 근거는 pytest 출력이어야 한다.**
 - ★**0건은 통과가 아니라 "아무것도 안 봤다"이다.** `no tests collected`(pytest rc 5)·빈 출력·
   0바이트 로그를 초록으로 읽지 말 것. 출력에 `N passed` 가 있어야 통과다.
 - ★**`&& echo OK` 로 판정하지 말 것.** 종료코드는 "안 돌았다"와 "다 통과했다"를 구별하지 못한다.
@@ -233,8 +233,8 @@ run_command: cd "$INDIEBIZ_BASE_PATH" && .venv/bin/python -m pytest backend/test
   uvicorn **부팅 때** 읽힌다 — 재기동 전의 몸은 옛 목록으로 감시하므로, 이름 규약을
   지키는 것이 언제나 먼저다. 원칙은 하나: **자기 죽음 이후에 실행돼야 하는 단계(rm·
   보고·apply)를 리로드 후보 행위 뒤에 두지 말 것.**
-- 이 규약 자체는 `backend/test_single_runner.py` 가 회귀로 지킨다 — 새 배터리가 pytest 에
-  0건으로 잡히거나 `__main__` 이 위임하지 않으면 그 가드가 실패한다.
+- 이 규약 자체는 `backend/test_single_runner.py`가 지킨다 — 시험 함수의 존재, 제공된
+  `__main__`의 위임, 실제 순찰의 pytest 호출과 실패·수집 0건 거절을 검사한다.
 
 ## 5. 회차 종료 체크리스트
 - [ ] 스크래치 산출물 전량 원상복구 (노트북·파일·원장 — 사용자 데이터 무손상 확인)

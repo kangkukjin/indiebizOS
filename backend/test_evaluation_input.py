@@ -15,6 +15,69 @@ def provider(**overrides):
                            system_prompt='정책', tools=[], **overrides)
 
 
+def test_receipts_frozen_masked_and_checkpoint_has_only_references(tmp_path):
+    from evaluation_evidence import freeze_receipts, receipt_sections
+    from supervision_store import TurnStore
+    store = TurnStore(tmp_path / 'evidence')
+    secret = 'sk-' + 'Ab3' * 12
+    citation = {'valid': [{'citation': '[자료:v:p]', 'version_ref': 'v', 'locator': 'p',
+                          'receipts': [{'access_id': 2, 'extraction_revision': 1,
+                                        'quote': '앞 조건\n' + secret + '\n반례: 효과 미확인'}]}]}
+    freeze_receipts(citation, store)
+    restored = json.loads(json.dumps(citation))
+    assert secret not in json.dumps(restored)
+    rows = receipt_sections(restored, store)
+    assert secret not in rows[0]['text'] and '반례: 효과 미확인' in rows[0]['text']
+    assert rows[0]['receipt']['access_id'] == 2
+    path = store.directory / (rows[0]['source_ref'] + '.txt')
+    path.write_text('changed')
+    with pytest.raises(ValueError):
+        receipt_sections(restored, store)
+
+
+def test_claim_context_elision_requires_exact_delivered_document_span():
+    from evaluation_input import context_sections
+    from research_review import claims
+    text = '조건부 반례: 효과 미확인 [자료:v:p] 끝'
+    _, sections = context_sections(json.dumps({'research_claims': claims(text, path='report', digest='v1')}))
+    from evaluation_evidence import structure_display
+    artifact = record(text, subject='report', role='submission')
+    assert 'claim_context' not in structure_display(sections[0], [artifact])['claims'][0]
+    assert 'claim_context' in structure_display(sections[0], [{**artifact, 'text': text[:5]}])['claims'][0]
+    assert 'claim_context' in structure_display(sections[0], [{**artifact, 'text': text.replace('미확인', '확인됨')}])['claims'][0]
+
+
+def test_structured_display_uses_masked_store_copy(tmp_path, monkeypatch):
+    from final_evaluator import Evaluator
+    from supervision_store import TurnStore
+    evaluator = Evaluator()
+    evaluator.evaluation_store = TurnStore(tmp_path / 'masked-evaluation')
+    secret = 'sk-' + 'Ab3' * 12
+    captured = []
+    def evaluate(prompt, **kwargs):
+        captured.append(prompt.prepare_request(provider()))
+        return 'ACHIEVED'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    evaluator._evaluate_achievement('inspect', '{"criteria":[{"id":"C1","text":"check"}]}', 'done', '',
+        evaluation_context=json.dumps({'evidence_index': [{'warning': secret + ' 부분 실패'}]}))
+    assert captured and secret not in captured[0] and '부분 실패' in captured[0]
+
+
+def test_structured_evidence_is_whole_or_omitted_and_citation_roles_remain_distinct():
+    from evaluation_input import context_sections
+    _, records = context_sections(json.dumps({'evidence_index': [{'x': 'a' * 50000}]}))
+    prompt = EvaluationPrompt('C1', records + [record('조건 말미의 반례', subject='p', role='citation')])
+    shown = prompt.prepare_request(provider(request_limits={'chars': 16000}))
+    assert '조건 말미의 반례' in shown
+    assert prompt.metrics['sections'][0]['shown_chars'] == 0
+    rows = [record('same', subject='p', role='citation', source_ref='x') for _ in range(2)]
+    rows[0]['receipt'] = {'access_id': 1, 'extraction_revision': 1}
+    rows[1]['receipt'] = {'access_id': 2, 'extraction_revision': 2}
+    distinct = EvaluationPrompt('C1', rows)
+    distinct.prepare_request(provider())
+    assert len(distinct.metrics['sections']) == 2
+
+
 def test_many_files_share_one_budget_and_keep_small_failure():
     p = provider(request_limits={'chars': 100000, 'source': 'fixture'})
     rows = [record(('자료 한글\\\"\n' * 9000), subject=f'file-{i}', source_ref=str(i)) for i in range(20)]
@@ -37,6 +100,7 @@ def test_middle_counterexample_and_different_revisions_are_not_merged():
     prompt = EvaluationPrompt('C1 매출 감소 반례', rows, '매출 감소 반례')
     shown = prompt.prepare_request(p)
     assert '반례 매출 감소 99' in shown
+    assert '"revision":"v1"' in shown and '"revision":"v2"' in shown
     assert len(prompt.metrics['sections']) == 2
     assert all(r['range']['start'] > 0 for r in prompt.metrics['sections'])
 

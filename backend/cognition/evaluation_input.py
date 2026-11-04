@@ -9,7 +9,7 @@ from research_review import allocate
 
 
 def dumps(value):
-    return json.dumps(value, ensure_ascii=False, default=str)
+    return json.dumps(value, ensure_ascii=False, default=str, separators=(',', ':'))
 
 
 def record(text, *, subject, role='support', source_ref=None, revision=None,
@@ -22,10 +22,11 @@ def record(text, *, subject, role='support', source_ref=None, revision=None,
 
 class EvaluationPrompt(str):
     """String-compatible until the actual oneshot provider has been selected."""
-    def __new__(cls, required, sections, context=''):
+    def __new__(cls, required, sections, context='', references=None):
         obj = super().__new__(cls, required + '\n\n' + '\n\n'.join(
             f"## {r['subject']}\n{r['text']}" for r in sections))
         obj.required, obj.sections, obj.context = required, sections, context
+        obj.references = references or evidence_references({'selection_sources': sections})
         obj.metrics = None
         return obj
 
@@ -34,9 +35,9 @@ class EvaluationPrompt(str):
         # Distinct source revisions/roles are not merged just because text/path matches.
         rows, seen = [], set()
         for row in self.sections:
-            key = (row['source_ref'], row['revision'], row['role'], row['start'], row['text'])
+            key = (row['source_ref'], row['revision'], row['role'], row['start'], row['text'], dumps(row.get('receipt')))
             if key in seen:
-                previous = next(r for r in rows if (r['source_ref'], r['revision'], r['role'], r['start'], r['text']) == key)
+                previous = next(r for r in rows if (r['source_ref'], r['revision'], r['role'], r['start'], r['text'], dumps(r.get('receipt'))) == key)
                 previous['criterion_ids'] = sorted(set(previous['criterion_ids']) | set(row['criterion_ids']))
                 if row['subject'] not in previous['subjects']:
                     previous['subjects'].append(row['subject'])
@@ -45,45 +46,89 @@ class EvaluationPrompt(str):
             rows.append({**row, 'subjects': [row['subject']]})
         lengths = {str(i): len(r['text']) for i, r in enumerate(rows)}
 
+        from evaluation_evidence import structure_display
+        from research_review import range_windows
         anchors = {}
-        from recall_relevance import terms
-        wanted = terms(self.context)
+        references = self.references
+        ref_indices = {r['evidence_id']: i for i, r in enumerate(references)}
+        reference_text = dumps(references)
 
         def render(budget):
-            # Requested passages, then explicit submissions, then other evidence.
-            # A collected source must not displace the artifact being evaluated.
-            recovered = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == 'recovered'}
-            sizes = allocate(recovered, budget, cap=budget) if recovered else {}
-            preferred = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == 'submission'}
-            sizes.update(allocate(preferred, budget - sum(sizes.values()), cap=budget) if preferred else {})
-            left = budget - sum(sizes.values())
-            rest = allocate({k: n - sizes.get(k, 0) for k, n in lengths.items()}, left, cap=budget)
+            sizes = {}
+            for role in ('recovered', 'submission', 'citation'):
+                group = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == role}
+                left = max(0, budget - sum(sizes.values()))
+                sizes.update(allocate(group, left, cap=left) if group else {})
+            left = max(0, budget - sum(sizes.values()))
+            rest = allocate({k: n - sizes.get(k, 0) for k, n in lengths.items()}, left, cap=left)
             sizes = {k: sizes.get(k, 0) + rest.get(k, 0) for k in lengths}
-            shown, manifest = [], []
+            selected = []
             for i, row in enumerate(rows):
                 size = sizes[str(i)]
-                if not size or size >= len(row['text']):
-                    text, offset = row['text'][:size], 0
+                if 'structured' in row:
+                    ranges = [(0, len(row['text']))] if size >= len(row['text']) else []
                 else:
-                    key = row['revision']
-                    if key not in anchors:
-                        # Score fixed source windows once, not a Korean tokenizer
-                        # per overlapping newline on every budget-search attempt.
-                        width = min(600, size)
-                        positions = range(0, len(row['text']), max(1, width // 2))
-                        best = max(positions, key=lambda pos: sum(
-                            term in row['text'][pos:pos + width] for term in wanted)) if wanted else 0
-                        anchors[key] = best
-                    offset = max(0, min(anchors[key] - max(0, (size - 600) // 2), len(row['text']) - size))
-                    text = row['text'][offset:offset + size]
-                begin = row['start'] + offset
-                full = begin == 0 and len(text) == row['total']
+                    if size >= len(row['text']):
+                        ranges = [(0, len(row['text']))]
+                    elif not size:
+                        ranges = []
+                    else:
+                        if i not in anchors:
+                            from recall_relevance import terms
+                            targets = []
+                            for anchor in row.get('anchors', ()):
+                                start = row['text'].find(anchor)
+                                if start >= 0:
+                                    targets.append((start, start + len(anchor)))
+                            for context in row.get('contexts') or [self.context]:
+                                wanted = terms(context)
+                                positions = range(0, len(row['text']), 300)
+                                start = max(positions, key=lambda pos: sum(
+                                    term in row['text'][pos:pos+600] for term in wanted)) if wanted else 0
+                                targets.append((start, min(start+600, len(row['text']))))
+                            anchors[i] = sorted(set(targets))
+                        ranges = range_windows(len(row['text']), size, anchors[i])
+                selected.append(ranges)
+            delivered = [{**row, 'start': row['start'] + a, 'text': row['text'][a:b]}
+                         for row, ranges in zip(rows, selected) for a, b in ranges]
+            shown, manifest = [], []
+            for row, ranges in zip(rows, selected):
+                count = sum(b-a for a, b in ranges)
+                begin = row['start'] + (ranges[0][0] if ranges else 0)
+                full = count == row['total'] and begin == 0
                 meta = {k: row[k] for k in ('subject', 'subjects', 'role', 'source_ref', 'revision', 'criterion_ids')}
-                meta.update(range={'unit': 'unicode_chars', 'start': begin, 'end': begin + len(text),
-                                   'total': row['total']}, completeness='complete' if full else 'partial' if text else 'omitted')
-                manifest.append({**meta, 'original_chars': len(row['text']), 'shown_chars': len(text)})
-                shown.append(dumps(meta) + '\n' + text)
-            prompt = self.required + ('\n\n## 선택된 증거 (manifest는 열람 증명이 아님)\n' + '\n\n'.join(shown) if rows else '')
+                meta.update(range={'unit': 'unicode_chars', 'start': begin,
+                                   'end': row['start'] + ranges[-1][1] if ranges else begin,
+                                   'total': row['total']},
+                            ranges=[[row['start']+a, row['start']+b] for a, b in ranges],
+                            completeness='complete' if full else 'partial' if count else 'omitted')
+                manifest.append({**meta, 'original_chars': len(row['text']), 'shown_chars': count})
+                display = {k: meta[k] for k in ('subjects', 'role', 'ranges', 'completeness')}
+                if row['source_ref'] in ref_indices:
+                    index = ref_indices[row['source_ref']]
+                    display['reference_index'] = index
+                    if references[index]['ambiguous']:
+                        display.update(revision=row['revision'], total=row['total'])
+                else:
+                    display.update({k: row[k] for k in ('source_ref', 'revision', 'total')})
+                if row['criterion_ids']:
+                    display['criterion_ids'] = row['criterion_ids']
+                if row.get('receipt'):
+                    display['receipt'] = row['receipt']
+                if count and 'structured' in row:
+                    body = dumps(structure_display(row, delivered))
+                    display['representation'] = 'structured_projection; ranges address original record'
+                else:
+                    body = '\n'.join(dumps({'range': [row['start']+a, row['start']+b]}) + '\n' + row['text'][a:b]
+                                     for a, b in ranges)
+                shown.append(dumps(display) + '\n' + body)
+            prompt = self.required
+            if references:
+                prompt += ('\n## 회수 가능한 원문 주소 (reference_index는 아래 배열의 0부터 시작하는 위치; '
+                           'EVIDENCE_REQUESTS에는 실제 evidence_id·revision을 사용; 참조는 열람 증명이 아님)\n'
+                           + reference_text)
+            if rows:
+                prompt += '\n\n## 선택된 증거 (표시 범위와 의미 검토는 별개)\n' + '\n\n'.join(shown)
             return prompt, manifest
 
         # Required contracts and even omission metadata must fit, or do not call.
@@ -132,9 +177,12 @@ def context_sections(context):
         if key not in optional:
             required[key] = data
             continue
-        for i, item in enumerate(data if isinstance(data, list) else [data]):
-            sections.append(record(dumps(item), subject=f'{key}[{i}]',
-                                   role='recovered' if key == 'recovered_evidence' else 'support'))
+        if key == 'recovered_evidence':
+            for i, item in enumerate(data if isinstance(data, list) else [data]):
+                sections.append(record(dumps(item), subject=f'{key}[{i}]', role='recovered'))
+        else:
+            from evaluation_evidence import structured_sections
+            sections.extend(structured_sections(key, data))
     return dumps(required), sections
 
 

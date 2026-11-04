@@ -1,0 +1,128 @@
+{
+  "model": "gpt-6-astra:high",
+  "suite": "execution",
+  "cases": [
+    {
+      "incorrect": false,
+      "repeat": 0,
+      "arm": "old",
+      "expected": "ACHIEVED",
+      "input_chars": 13833,
+      "status": "ACHIEVED",
+      "elapsed_s": 20.28,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 48099,
+        "total_output_tokens": 170,
+        "total_cache_read_tokens": 20480
+      },
+      "failures": [],
+      "response_hashes": [
+        "9782bc408b6d870fc3e202598859f99b69e874237bbc8d17b6a2df9933756611",
+        "9db2728f127cb48a8b4935678fda9cd0d49cf283f7683cf2031a2db0bac64049"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 0,
+      "arm": "new",
+      "expected": "ACHIEVED",
+      "input_chars": 9213,
+      "status": "ACHIEVED",
+      "elapsed_s": 22.439,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 41957,
+        "total_output_tokens": 247,
+        "total_cache_read_tokens": 24064
+      },
+      "failures": [],
+      "response_hashes": [
+        "5a2c01fc17c362d4b46cfd22303fbf688a2be856cc8b726b0dc086334ffef4bf",
+        "9db2728f127cb48a8b4935678fda9cd0d49cf283f7683cf2031a2db0bac64049"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 1,
+      "arm": "new",
+      "expected": "ACHIEVED",
+      "input_chars": 9213,
+      "status": "ACHIEVED",
+      "elapsed_s": 8.768,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 17987,
+        "total_output_tokens": 84,
+        "total_cache_read_tokens": 0
+      },
+      "failures": [],
+      "response_hashes": [
+        "9db2728f127cb48a8b4935678fda9cd0d49cf283f7683cf2031a2db0bac64049"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 1,
+      "arm": "old",
+      "expected": "ACHIEVED",
+      "input_chars": 13833,
+      "status": "ACHIEVED",
+      "elapsed_s": 18.124,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 47746,
+        "total_output_tokens": 117,
+        "total_cache_read_tokens": 20480
+      },
+      "failures": [],
+      "response_hashes": [
+        "3e1bee88c2345862be989391c198878768f8463662afcdd184dbdf78142cf97a",
+        "9db2728f127cb48a8b4935678fda9cd0d49cf283f7683cf2031a2db0bac64049"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 2,
+      "arm": "old",
+      "expected": "ACHIEVED",
+      "input_chars": 13833,
+      "status": "ACHIEVED",
+      "elapsed_s": 12.808,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 47746,
+        "total_output_tokens": 130,
+        "total_cache_read_tokens": 16384
+      },
+      "failures": [],
+      "response_hashes": [
+        "3e1bee88c2345862be989391c198878768f8463662afcdd184dbdf78142cf97a",
+        "9db2728f127cb48a8b4935678fda9cd0d49cf283f7683cf2031a2db0bac64049"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 2,
+      "arm": "new",
+      "expected": "ACHIEVED",
+      "input_chars": 9213,
+      "status": "ACHIEVED",
+      "elapsed_s": 7.41,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 17987,
+        "total_output_tokens": 85,
+        "total_cache_read_tokens": 8448
+      },
+      "failures": [],
+      "response_hashes": [
+        "9db2728f127cb48a8b4935678fda9cd0d49cf283f7683cf2031a2db0bac64049"
+      ]
+    }
+  ],
+  "limits": [
+    "Fictional fixed evidence; does not repeat open-ended research.",
+    "Execution uses model-selected read_result only; no external effects allowed."
+  ]
+}

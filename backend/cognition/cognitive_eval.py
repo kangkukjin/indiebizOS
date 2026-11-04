@@ -529,6 +529,16 @@ class CognitiveEvalMixin:
                     ref = store.evidence(section['text'])
                     section.update(text=store.read_evidence(ref['id'], 0, None)['text'],
                                    source_ref=ref['id'], revision=ref['id'], total=ref['chars'])
+                    if 'structured' in section:
+                        section['structured'] = json.loads(section['text'])
+        if store is not None and evaluation_context:
+            from evaluation_evidence import receipt_sections
+            context_value = json.loads(evaluation_context)
+            receipts = receipt_sections(context_value.get('research_citations') or {}, store)
+            for receipt in receipts:
+                receipt['contexts'] = [c['claim_context'] for c in context_value.get('research_claims', [])
+                                       if c['citation'] == receipt['subject']]
+            sections.extend(receipts)
         self.evaluation_sources = [{k: r[k] for k in ('source_ref', 'revision', 'total', 'subject', 'criterion_ids')} for r in sections]
         from evaluation_input import evidence_references
         try:
@@ -537,10 +547,7 @@ class CognitiveEvalMixin:
             reference_context = {}
         self.evaluation_references = evidence_references({'context': reference_context,
                                                           'selection_sources': self.evaluation_sources})
-        if self.evaluation_references:
-            prompt += ('\n## 회수 가능한 원문 주소 (표시 구획과 그 안의 원문은 별개; 참조는 열람 증명이 아님)\n'
-                       + json.dumps(self.evaluation_references, ensure_ascii=False))
-        prompt = EvaluationPrompt(prompt, sections, criteria)
+        prompt = EvaluationPrompt(prompt, sections, criteria, references=self.evaluation_references)
 
         # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.
         # 어제 208번 같은 오판(도구 결과가 평가자에 부족하게 전달되어 "상상 보고" 판정) 검출용.

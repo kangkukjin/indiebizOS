@@ -54,10 +54,13 @@ AUTHORITY_EVIDENCE: {"id":"authority_evidence의 id", "quote":"조건을 증명�
 
 
 RESEARCH_POLICY = """
-research_citations의 각 인용 표지 바로 앞의 주장을 연결된 quote와 대조한다.
+research_citations의 각 인용 표지 앞의 주장을 연결된 원문과 대조한다.
+receipts는 고정된 읽기 영수증 주소이며 본문은 role=citation 구획의 실제 ranges로 전달된다.
+candidate_state와 candidate_included는 후보 보존 상태이지 표시·의미 검토의 증명이 아니다.
+claim_context가 생략된 주장은 실제로 표시된 제출 문서의 context_start/end 범위에서 읽는다.
 인용의 존재·읽기 기록은 의미적 지지의 증명이 아니다. 다른 주장에 같은 표지를 붙인 경우도 확인한다.
 research_claims의 파일·해시·위치별 주장을 각각 검사한다. 같은 인용도 다른 주장에 대한 승인을 공유하지 않는다.
-quote가 null이면 segments의 quote를 각각 읽는다. 구간은 서로 떨어져 있거나 추출 판본이 다를 수 있다.
+옛 packet의 quote가 null이면 segments의 quote를 각각 읽는다. 떨어진 구간·다른 추출 판본을 이어 새 원문으로 만들지 않는다.
 questions의 범위·잠정 답·gaps·next_probes와 제출 주장을 대조한다. 질문의 종결은 이번 요청 달성과 별개다.
 수치는 분모·기간·비교군, 인과는 통제·경쟁 설명, 권고는 반론·적용 조건을 원문 및 유효한 criteria와 대조한다.
 invalid는 실제 읽기 증거가 없는 인용이다. reading_verified는 의미 승인이 아니다.
@@ -312,8 +315,10 @@ def prepare(controller, tool_calls=None):
         ]
     context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
     from research_context import citation_review
-    research_citations = citation_review(review_text(response, research_documents), query=controller.message)
+    research_citations = citation_review(review_text(response, research_documents), query=controller.message, full_receipts=True)
     if research_citations is not None:
+        from evaluation_evidence import freeze_receipts
+        freeze_receipts(research_citations, controller.store, controller.cancelled)
         context['research_citations'] = research_citations
         context['research_submissions'] = [{k: a[k] for k in ('path', 'hash')} for a in research_documents]
         context['research_claims'] = claims(response) + [c for a in research_documents
@@ -360,6 +365,7 @@ def prepare(controller, tool_calls=None):
     if other_files:
         files.append(other_files)
     controller._evaluation_packet = {
+        "format_version": 2,
         "response": "\n".join(f'<block id="{b["id"]}">{b["text"]}</block>' for b in controller.store.blocks),
         "files": "\n\n".join(files), "attachments": attachments,
         "images": images, "calls": calls, "context": context,

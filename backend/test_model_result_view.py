@@ -19,6 +19,26 @@ def envelope(value, *, complete=True):
             "evidence": [{"kind": "ref", "parents": [i]} for i in range(300)]}
 
 
+def test_mirrored_blocks_fit_once_and_both_original_paths_remain_readable(tmp_path, monkeypatch):
+    store = TurnStore(tmp_path / 'mirror-evidence')
+    monkeypatch.setattr(view, 'evidence_store', lambda: store)
+    body = '원문 조건과 반례. ' * 797 + '끝 조건'
+    value = {'text': body, 'blocks': [{'type': 'paragraph', 'page': 3, 'text': body}],
+             '_display': {'mirror_fields': [{'field': 'text', 'collection': 'blocks',
+                                             'text_field': 'text', 'separator': ''}]}}
+    original = envelope(value)
+    shown = view.project_result(original)
+    assert shown['value']['text'] == {'$model_mirror_of': 'blocks'}
+    assert shown['value']['blocks'][0]['text'] == body
+    assert shown['value']['blocks'][0]['page'] == 3
+    assert original['value']['text'] == body
+    for path in (['value', 'text'], ['value', 'blocks', 0, 'text']):
+        page = view.read_result({'id': shown['result_ref']['id'], 'path': path, 'limit': 12000})
+        assert body in page['text']
+        resolved, _ = view.resolve_input_refs({'x': {'$ref': shown['result_ref']['id'], 'path': path}}, store=store)
+        assert resolved['x'] == body
+
+
 def test_masked_sibling_keeps_exact_selected_wire_value(tmp_path, monkeypatch):
     store = TurnStore(tmp_path / "evidence")
     monkeypatch.setattr(view, "evidence_store", lambda: store)

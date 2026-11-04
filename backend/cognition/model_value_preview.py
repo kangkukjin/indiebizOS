@@ -125,5 +125,5 @@ def preview_value(value, budget, ref_id, *, path=None):
             "changes": notices, "changes_total": changes,
             "changes_omitted": changes - len(notices),
             "read_args": {"id": ref_id, "path": root, "offset": 0, "limit": DEFAULT_LIMIT},
-            "note": "표시용 사본입니다. 생략된 후보·필드는 미검토입니다. 조건 적용은 원문 inputs 참조로, 추가 읽기는 각 read_args로 수행하세요."}
+            "note": "생략된 후보·필드는 미검토입니다."}
     return shown, meta if changes else None

@@ -22,14 +22,15 @@ def install_review(callback):
     _review = callback
 
 
-def citation_review(text, *, query='', question_ids=()):
+def citation_review(text, *, query='', question_ids=(), full_receipts=False):
     """현재 연구의 인용 검사를 평가에 공급한다. 일반 실행은 추가 작업이 없다."""
     context = current()
     if not context:
         return None
     if _review is None:
         raise RuntimeError('연구 인용 검사기가 준비되지 않았습니다')
-    return _review(context, text, query=query, question_ids=question_ids)
+    return _review(context, text, query=query, question_ids=question_ids,
+                   **({'full_receipts': True} if full_receipts else {}))
 
 
 def review_state():

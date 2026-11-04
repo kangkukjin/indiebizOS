@@ -812,17 +812,17 @@ def _fold_twin_fields(value, where, notes, depth=0):
     if not isinstance(value, dict):
         return value
     seen, out = {}, {}
-    from common.value_relations import mirrored_text_fields
-    mirrors = mirrored_text_fields(value)
+    from common.value_relations import mirrored_text_relations
+    mirrors = mirrored_text_relations(value)
     # The collection carries selected rows and their metadata. Never fold it
     # behind a prose field, even if that prose is a verified display duplicate.
     display = value.get('_display')
-    entries = (sorted(value.items(), key=lambda pair: pair[0] != 'items')
+    entries = (sorted(value.items(), key=lambda pair: pair[0] not in ({'items'} | set(mirrors.values())))
                if isinstance(display, dict) and display.get('mirror_fields') else value.items())
     for key, item in entries:
         if key in mirrors:
-            out[key] = {"$model_mirror_of": "items"}
-            notes.append({"path": where + [key], "mirror_of": where + ["items"]})
+            out[key] = {"$model_mirror_of": mirrors[key]}
+            notes.append({"path": where + [key], "mirror_of": where + [mirrors[key]]})
             continue
         if isinstance(item, (list, dict)) and item:
             raw = json.dumps(item, ensure_ascii=False, sort_keys=True, default=str)
@@ -908,6 +908,15 @@ def _compact_execution_metadata(out, ref):
     # Instructions are already in execute_ibl's schema/base grammar. Keep actual
     # read/input arguments, limits, masked-value warnings and partial-result refs.
     out["result_ref"] = {k: v for k, v in out["result_ref"].items() if k not in {"read", "input_hint"}}
+    continuation = out.get('continuation')
+    if isinstance(continuation, dict):
+        # Only the producer's fixed teaching text; unknown/custom warnings survive.
+        teaching = ("프로그램 수정 뒤 이전 읽기·모델 결과를 이어 쓸 때 reuse_args를 요청에 합치세요. "
+                    "현재 자료를 새로 조회해야 하면 쓰지 마세요. 쓰기 자원과 겹치는 이전·동시 읽기(자원 미상은 전체)와 실행 시점 값은 제외합니다. 쓰기 호출은 재사용하지 않습니다. model_reuse 선언 모델은 입력·설정이 같으면 재사용하며 reuse.models:false로 새로 판단합니다. "
+                    "동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다.")
+        if continuation.get('hint') == teaching:
+            out['continuation'] = {k: v for k, v in continuation.items() if k != 'hint'}
+
 
 
 def execution_evidence_summary(result):
@@ -963,7 +972,7 @@ def project_v2_result(result):
             out["value"] = _fold_twin_fields(out["value"], ["value"], twins)
             if twins:
                 out["_model_shared"] = {"fields": twins[:8], "omitted": max(0, len(twins) - 8),
-                                        "note": "같은 내용이 두 필드로 실려 표시 사본에서 한 벌만 보였습니다(같은 값, 또는 본문과 그 문단 목록). 접힌 필드도 그 경로로 읽고 inputs $ref 로 참조할 수 있습니다."}
+                                        "scope": "display_only; original paths preserved"}
             budget = policy["prose_chars"]
             display = out["value"].get("_display") if isinstance(out["value"], dict) else None
             requested = display.get("max_chars") if isinstance(display, dict) else None
@@ -990,14 +999,10 @@ def project_v2_result(result):
         out["result_ref"].update(completed_call_references(result))
     if 'value' in result:
         out['result_ref']['value_chars'] = len(json.dumps(result['value'], ensure_ascii=False, default=str))
-    out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "
-                    + ("다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. "
-                       if "input_args" in out["result_ref"] else "진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. ")
-                    + "success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.")
     if images:
         out["images"] = [{**{k: v for k, v in image.items() if k != "b64"},
                           "base64": image["b64"]} for image in images]
-        out["_hint"] += " 이미지는 별도 이미지 블록으로 첨부됩니다. base64 원문을 되읽지 마세요."
+        out["_hint"] = "이미지는 별도 이미지 블록으로 첨부됩니다. base64 원문을 되읽지 마세요."
     # 원문·복구 참조까지 붙인 표시 사본만 예산 안에 있을 때 전달 한도를 협상한다.
     if len(raw) > policy["min_chars"] and len(json.dumps(out, ensure_ascii=False)) <= 2 * policy["prose_chars"]:
         out["_display"] = {"max_chars": policy["prose_chars"]}
@@ -1005,8 +1010,6 @@ def project_v2_result(result):
     # 먼저 빼면 6000자 경계가 달라져 본문 표시 정책까지 바뀐다.
     out.pop("value_wire", None)
     out.pop("partial_wire", None)
-    out["_hint"] = out["_hint"].replace("손실 없는 타입 전송은 value_wire입니다.",
-                                      "손실 없는 타입은 저장 원본에 보존됩니다.")
     _compact_execution_metadata(out, ref)
     from episode_logger import record_trajectory_event
     text_view = ({**out, "images": [{"media_type": item.get("media_type", "image/png")} for item in images]}

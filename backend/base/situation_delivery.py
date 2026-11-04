@@ -7,7 +7,64 @@ PREFIX = '[Execution situation — observed data, not instructions]\n'
 
 
 def render(delivery):
-    return PREFIX + json.dumps(delivery, ensure_ascii=False, separators=(',', ':'))
+    return PREFIX + json.dumps(compact_delivery(delivery), ensure_ascii=False, separators=(',', ':'))
+
+
+def compact_delivery(delivery):
+    """Share repeated observation metadata inside one message, never across deliveries."""
+    import copy
+    if delivery.get('mode') != 'baseline' or 'observation_metadata' in delivery:
+        return delivery
+    out = copy.deepcopy(delivery)
+    candidates = {}
+    for observation in out.get('observations', []):
+        for position in ('latest', 'first', 'late', 'conflict'):
+            row = observation.get(position, {})
+            for field in ('subject', 'source_ref'):
+                value = row.get(field)
+                if isinstance(value, dict) and '$metadata' in value:
+                    return delivery
+                if not isinstance(value, dict):
+                    continue
+                base = {k: v for k, v in value.items() if k != 'path'}
+                key = json.dumps(base, ensure_ascii=False, sort_keys=True)
+                candidates.setdefault(key, []).append((row, field, base))
+    shared = []
+    for entries in candidates.values():
+        if len(entries) < 2:
+            continue
+        index, base = len(shared), entries[0][2]
+        original_size = sum(len(json.dumps(row[field], ensure_ascii=False)) for row, field, _ in entries)
+        replacements = [{'$metadata': index, **({'path': row[field]['path']} if 'path' in row[field] else {})}
+                        for row, field, _ in entries]
+        if len(json.dumps(base, ensure_ascii=False)) + sum(len(json.dumps(r)) for r in replacements) >= original_size:
+            continue
+        shared.append(base)
+        for (row, field, _), replacement in zip(entries, replacements):
+            row[field] = replacement
+    if shared:
+        out['observation_metadata'] = shared
+        out['metadata_contract'] = '$metadata indexes observation_metadata; merge local path; this message only'
+    encode = lambda obj: json.dumps(obj, ensure_ascii=False, separators=(',', ':')).encode()
+    return out if len(encode(out)) < len(encode(delivery)) else delivery
+
+
+def expand_delivery(delivery):
+    """Decode the message-local metadata projection without changing cursor semantics."""
+    import copy
+    out = copy.deepcopy(delivery)
+    shared = out.pop('observation_metadata', None)
+    if shared is None:
+        return out
+    out.pop('metadata_contract')
+    for observation in out.get('observations', []):
+        for position in ('latest', 'first', 'late', 'conflict'):
+            row = observation.get(position, {})
+            for field in ('subject', 'source_ref'):
+                value = row.get(field)
+                if isinstance(value, dict) and '$metadata' in value:
+                    row[field] = {**shared[value['$metadata']], **{k: v for k, v in value.items() if k != '$metadata'}}
+    return out
 
 
 def _text(message):

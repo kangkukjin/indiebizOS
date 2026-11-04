@@ -734,7 +734,9 @@ def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch
         packet = prepare(supervisor, [])
     import hashlib
     context = packet['context']
-    assert context['research_citations']['valid'][0]['quote'] == '효과는 미확인이다.'
+    receipt = context['research_citations']['valid'][0]['receipts'][0]
+    assert 'quote' not in receipt
+    assert supervisor.store.read_evidence(receipt['evidence_ref']['id'], 0, None)['text'] == '효과는 미확인이다.'
     assert context['research_claims'][0]['path'] == str(report)
     assert context['research_claims'][0]['hash'] == hashlib.sha256(report.read_bytes()).hexdigest()
     assert '효과가 입증' in context['research_claims'][0]['claim_context']
@@ -767,7 +769,8 @@ def test_research_question_correction_invalidates_review_of_same_file(supervisor
         packet = prepare(supervisor, [])
         citations = packet['context']['research_citations']
         assert citations['questions']['items'][0]['revision_digest'] == q['revision_digest']
-        assert citations['valid'][0]['question_links'][0]['included']
+        assert citations['valid'][0]['question_links'][0]['candidate_included']
+        assert supervisor.store.read_evidence(citations['valid'][0]['question_links'][0]['anchor_ref'], 0, None)['text'] == ref['quote']
         assert citations['valid'][0]['occurrence_refs'] == [0]
         assert 'occurrences' not in citations['valid'][0]
         questions.apply([{'question_id': q['question_id'], 'expected_revision': 1,

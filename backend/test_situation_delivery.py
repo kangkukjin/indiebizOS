@@ -14,6 +14,27 @@ def fact():
     emit({'kind': 'service', 'device': 'test'}, 'health', 'unavailable', source='probe')
 
 
+def test_baseline_metadata_roundtrip_preserves_conflicts_and_does_not_grow():
+    from situation_delivery import compact_delivery, expand_delivery
+    rows = [{'latest': {'subject': {'kind': 'call', 'id': 'c' * 64, 'path': [i],
+                                    'context': {'task': 't' * 64}},
+                        'source_ref': {'id': 'e' * 64, 'chars': 1000, 'path': [i]},
+                        'value': {'unknown_effect': True, 'row': i}},
+             'availability': 'needs_recheck', 'conflict': {'value': 'failed', 'observed_at': None}}
+            for i in range(8)]
+    delivery = {'mode': 'baseline', 'observations': rows, 'omitted': {'count': 17},
+                'read_result': {'id': 'snapshot'}, 'delivery_id': 'unacknowledged'}
+    compact = compact_delivery(delivery)
+    assert len(json.dumps(compact)) < len(json.dumps(delivery))
+    assert expand_delivery(compact) == delivery
+    assert compact['observations'][0]['availability'] == 'needs_recheck'
+    assert compact_delivery({**delivery, 'mode': 'delta'}) == {**delivery, 'mode': 'delta'}
+    small = {'mode': 'baseline', 'observations': rows[:1]}
+    assert compact_delivery(small) == small
+    rows[0]['latest']['subject']['$metadata'] = 'user value'
+    assert compact_delivery(delivery) == delivery
+
+
 @pytest.mark.parametrize('name', ['openai', 'anthropic', 'ollama'])
 def test_sdk_final_turn_receives_same_observations(active, name):
     from providers import get_provider

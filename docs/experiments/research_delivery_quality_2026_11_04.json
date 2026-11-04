@@ -1,0 +1,244 @@
+{
+  "model": "gpt-6-astra:high",
+  "suite": "quality",
+  "cases": [
+    {
+      "incorrect": false,
+      "repeat": 0,
+      "arm": "old",
+      "expected": "ACHIEVED",
+      "input_chars": 58174,
+      "status": "ACHIEVED",
+      "elapsed_s": 31.614,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 84296,
+        "total_output_tokens": 1011,
+        "total_cache_read_tokens": 16896
+      },
+      "failures": [],
+      "response_hashes": [
+        "d2b069e2e6e302d2b20be28be788d1513fc3a9b2217e5153aa851d97be8a677f",
+        "314b689228e7110b394a8dc6e3cd57bfc56310778ad494c9006877d9bf92a71c"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 0,
+      "arm": "new",
+      "expected": "ACHIEVED",
+      "input_chars": 40181,
+      "status": "ACHIEVED",
+      "elapsed_s": 10.004,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 33049,
+        "total_output_tokens": 172,
+        "total_cache_read_tokens": 8448
+      },
+      "failures": [],
+      "response_hashes": [
+        "d6560e79e784e47580210537e406a6d3a905000c5e109c7a88001339a0ccd4f2"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 1,
+      "arm": "new",
+      "expected": "ACHIEVED",
+      "input_chars": 40181,
+      "status": "ACHIEVED",
+      "elapsed_s": 11.764,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 33049,
+        "total_output_tokens": 173,
+        "total_cache_read_tokens": 8448
+      },
+      "failures": [],
+      "response_hashes": [
+        "11f05a7bf802891965cd3ac11721d2b6a10f4b02d316b626cb97e9b224ec731b"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 1,
+      "arm": "old",
+      "expected": "ACHIEVED",
+      "input_chars": 58174,
+      "status": "ACHIEVED",
+      "elapsed_s": 35.351,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 84296,
+        "total_output_tokens": 953,
+        "total_cache_read_tokens": 12800
+      },
+      "failures": [],
+      "response_hashes": [
+        "ebd31036aa31f46250c6eaed48289797cfeb52b2fe44739a0dea7b9f2ab0ee57",
+        "982f7c648a36d83b100475786a8666ebe5d1afdfdf1b078a64b330c1f14f4b0d"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 2,
+      "arm": "old",
+      "expected": "ACHIEVED",
+      "input_chars": 58174,
+      "status": "ACHIEVED",
+      "elapsed_s": 35.759,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 84296,
+        "total_output_tokens": 884,
+        "total_cache_read_tokens": 16896
+      },
+      "failures": [],
+      "response_hashes": [
+        "e25d861f5714aa3c81cbdbb58cc6bd7ddb8246a9f7613c70cd25cccba9aa3fe8",
+        "7149e4be36513239c73d07f14d51de83a350223c754a8f12b8e3f4240140f390"
+      ]
+    },
+    {
+      "incorrect": false,
+      "repeat": 2,
+      "arm": "new",
+      "expected": "ACHIEVED",
+      "input_chars": 40181,
+      "status": "ACHIEVED",
+      "elapsed_s": 10.568,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 33049,
+        "total_output_tokens": 176,
+        "total_cache_read_tokens": 8448
+      },
+      "failures": [],
+      "response_hashes": [
+        "c1161d5d8b60ed7f26fcee4b9912358f094754b430be3c0e9a784efac3564061"
+      ]
+    },
+    {
+      "incorrect": true,
+      "repeat": 0,
+      "arm": "old",
+      "expected": "NOT_ACHIEVED",
+      "input_chars": 57835,
+      "status": "NOT_ACHIEVED",
+      "elapsed_s": 35.378,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 84352,
+        "total_output_tokens": 1169,
+        "total_cache_read_tokens": 16896
+      },
+      "failures": [],
+      "response_hashes": [
+        "b16bcac21619c2bae34f7aea457e5d8b1fc9f91aeb33af9b360730e45b42e047",
+        "993e1a85dcd4ea0bfd7e54fcafd5f38d4fbee99e6314145bcd092d49b8fa85f4"
+      ]
+    },
+    {
+      "incorrect": true,
+      "repeat": 0,
+      "arm": "new",
+      "expected": "NOT_ACHIEVED",
+      "input_chars": 39995,
+      "status": "NOT_ACHIEVED",
+      "elapsed_s": 21.982,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 32964,
+        "total_output_tokens": 632,
+        "total_cache_read_tokens": 12032
+      },
+      "failures": [],
+      "response_hashes": [
+        "93cb8da39be7c9247dab42ab85b9929e8ed61c5087d1516f5fa22dabcb5e2ac5"
+      ]
+    },
+    {
+      "incorrect": true,
+      "repeat": 1,
+      "arm": "new",
+      "expected": "NOT_ACHIEVED",
+      "input_chars": 39995,
+      "status": "NOT_ACHIEVED",
+      "elapsed_s": 18.563,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 32964,
+        "total_output_tokens": 589,
+        "total_cache_read_tokens": 12032
+      },
+      "failures": [],
+      "response_hashes": [
+        "840ce51b7c597a6e103ece608bba5a295bc4fd0ffeb415b392e9ab6fca1cd886"
+      ]
+    },
+    {
+      "incorrect": true,
+      "repeat": 1,
+      "arm": "old",
+      "expected": "NOT_ACHIEVED",
+      "input_chars": 57835,
+      "status": "NOT_ACHIEVED",
+      "elapsed_s": 43.617,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 84352,
+        "total_output_tokens": 1386,
+        "total_cache_read_tokens": 12032
+      },
+      "failures": [],
+      "response_hashes": [
+        "05344cc6e264f84ee815a7bd6282a1fc17f936c94682831d99cf9fe49965d970",
+        "065b033ae2ffc7cfc989416a392c7f92eace9e64e12a5f0e7cac6ff028f2c718"
+      ]
+    },
+    {
+      "incorrect": true,
+      "repeat": 2,
+      "arm": "old",
+      "expected": "NOT_ACHIEVED",
+      "input_chars": 57835,
+      "status": "NOT_ACHIEVED",
+      "elapsed_s": 41.385,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 84352,
+        "total_output_tokens": 1254,
+        "total_cache_read_tokens": 20480
+      },
+      "failures": [],
+      "response_hashes": [
+        "a285f25d17dff9acb3a2fa6d2b9ca42f733d1d83c342b22abbcef5210bedd6cc",
+        "d202b9fc95a0f5519dbfff6b26bce84f62a421f4b26efceba5fda4f9eace08df"
+      ]
+    },
+    {
+      "incorrect": true,
+      "repeat": 2,
+      "arm": "new",
+      "expected": "NOT_ACHIEVED",
+      "input_chars": 39995,
+      "status": "NOT_ACHIEVED",
+      "elapsed_s": 19.515,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 32964,
+        "total_output_tokens": 617,
+        "total_cache_read_tokens": 12032
+      },
+      "failures": [],
+      "response_hashes": [
+        "736d2c8db8d4bfe01a9b52a1a64f54aee5a3bdd43eddb4e9aa750765ef3d21ed"
+      ]
+    }
+  ],
+  "limits": [
+    "Fictional fixed evidence; does not repeat open-ended research.",
+    "Execution uses model-selected read_result only; no external effects allowed."
+  ]
+}

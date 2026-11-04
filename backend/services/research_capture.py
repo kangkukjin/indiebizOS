@@ -161,7 +161,7 @@ def _preserved_selection(lib, value):
     return not body or isinstance(body, str) and body in '\n\n'.join(originals)
 
 
-def review(context, text, *, query='', question_ids=(), state_only=False):
+def review(context, text, *, query='', question_ids=(), state_only=False, full_receipts=False):
     from research_questions import ResearchQuestions
     from research_questions import digest
     lib = library(context)
@@ -189,7 +189,8 @@ def review(context, text, *, query='', question_ids=(), state_only=False):
             for ref in question[role]:
                 evidence.append({**ref, **{k: question[k] for k in
                     ('question_id', 'revision', 'revision_digest')}, 'role': role})
-    result = lib.citation_review(text, context['run_id'], question_evidence=evidence)
+    result = lib.citation_review(text, context['run_id'], question_evidence=evidence, full_receipts=full_receipts)
+    result['research_identity'] = {k: context[k] for k in ('project_uid', 'thread_id', 'run_id')}
     result['questions'] = projection
     if state() != initial:
         from research_store import ResearchConflict

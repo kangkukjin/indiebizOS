@@ -39,6 +39,7 @@ def review_text(response, artifacts):
 def claims(text, *, path='response', digest=None):
     """같은 표지가 여러 주장에 쓰인 경우도 별도 위치로 보존한다. 중요도는 추정하지 않는다."""
     return [{'citation': m[0], 'path': path, 'hash': digest, 'offset': m.start(),
+             'context_start': max(0, m.start() - 350), 'context_end': min(len(text), m.end() + 100),
              'claim_context': text[max(0, m.start() - 350):m.end() + 100]}
             for m in MARKER.finditer(text)]
 
@@ -99,12 +100,17 @@ def passages(full, limit, contexts, anchors=()):
                    for left, right in targets):
             targets.append((start, start + len(shown)))
     targets = targets or [(0, min(limit, len(full)))]
-    quotas = allocate({str(i): len(full) for i in range(len(targets))}, budget=limit, cap=limit)
+    return range_windows(len(full), limit, targets)
+
+
+def range_windows(total, limit, targets):
+    """Allocate exact ordered ranges around previously selected source anchors."""
+    quotas = allocate({str(i): total for i in range(len(targets))}, budget=limit, cap=limit)
     ranges = []
     for i, (left, right) in enumerate(targets):
         size = quotas[str(i)]
         if size:
-            start = max(0, min(left - max(0, size - (right - left)) // 2, len(full) - size))
+            start = max(0, min(left - max(0, size - (right - left)) // 2, total - size))
             ranges.append((start, start + size))
     merged = []
     for left, right in sorted(ranges):

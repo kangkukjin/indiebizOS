@@ -357,7 +357,9 @@ class ResearchLibrary:
                 'total_chars': len(text), 'offset': offset, 'max_chars': limit,
                 'controls': [{**self._receipt(v), 'title': '자료 관리'}],
                 'pages': [{'title': '다음 부분 읽기', 'version_ref': version, 'cursor': str(offset + limit), 'extraction_revision': revision, 'max_chars': limit}] if len(text) > offset + limit else [],
-                'blocks': [{'type': 'paragraph', 'text': visible}]}
+                'blocks': [{'type': 'paragraph', 'text': visible}],
+                '_display': {'mirror_fields': [{'field': 'text', 'collection': 'blocks',
+                                                'text_field': 'text', 'separator': ''}]}}
 
     def search(self, query, limit=12):
         """검색 한 행은 정확한 한 원문 위치다. 반환된 구간만 현재 실행의 읽기로 남긴다."""
@@ -420,7 +422,7 @@ class ResearchLibrary:
                     result.append(dict(row))
         return result
 
-    def citation_review(self, text, run, *, question_evidence=()):
+    def citation_review(self, text, run, *, question_evidence=(), full_receipts=False):
         """최종 인용과 이번 실행에서 읽은 문장을 연결한다. 읽기 기록은 새로 만들지 않는다."""
         result = {'valid': [], 'invalid': [], 'evidence_chars': 0}
         from research_review import claims, allocate, passages
@@ -447,13 +449,23 @@ class ResearchLibrary:
                 originals[marker] = list({(r['revision'], r['quote']): dict(r) for r in rows}.values())
                 result['valid'].append({'citation': marker, 'version_ref': version, 'locator': loc,
                     'extraction_revisions': sorted({r['revision'] for r in rows})})
-        quotas = allocate({key: sum(len(r['quote']) for r in value) for key, value in originals.items()})
+        quotas = ({} if full_receipts else allocate(
+            {key: sum(len(r['quote']) for r in value) for key, value in originals.items()}))
         for row in result['valid']:
             marker = row['citation']
             related = [o for o in occurrences if o['citation'] == marker]
             reads = originals[marker]
             links = [e for e in question_evidence if e['version_ref'] == row['version_ref']
                      and e['locator'] == row['locator']]
+            if full_receipts:
+                row.update(receipts=[{**r, 'extraction_revision': r['revision']} for r in reads],
+                           question_links=[{**e, 'candidate_included': any(
+                               e['extraction_revision'] == r['revision'] and e['quote'] in r['quote']
+                               for r in reads)} for e in links], occurrences=related, reading_verified=True,
+                           semantic_status='unreviewed', candidate_state='complete',
+                           full_chars=sum(len(r['quote']) for r in reads))
+                result['evidence_chars'] += row['full_chars']
+                continue
             shares = allocate({str(i): len(r['quote']) for i, r in enumerate(reads)},
                               budget=quotas[marker], cap=quotas[marker])
             pieces, segments = [], []
@@ -494,7 +506,7 @@ class ResearchLibrary:
                                  'chars': len(r['quote'])} for r in reads]
             result['evidence_chars'] += len(shown)
         result['unreviewed'] = [r['citation'] for r in result['valid']
-                                if r['evidence_state'] != 'complete']
+                                if r.get('evidence_state', r.get('candidate_state')) != 'complete']
         # URL·일반 각주는 자료실의 읽기 영수증과 연결되지 않았다. 자동 유효 인용으로 승격하지 않는다.
         result['unresolved_references'] = list(dict.fromkeys(re.findall(
             r'https?://[^\s<>\)\]]+|\[(?:\^[\w-]+|[A-Z]?[0-9]+)\](?!\()', text)))

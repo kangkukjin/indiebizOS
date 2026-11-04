@@ -135,6 +135,7 @@
     "cognition/distill_memory_adapters",
     "cognition/distill_queue",
     "cognition/doc_drift",
+    "cognition/evaluation_evidence",
     "cognition/evaluation_input",
     "cognition/final_evaluator",
     "cognition/fixture_sweeps",
@@ -615,8 +616,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 604,
-    "engine": 572,
+    "total": 605,
+    "engine": 573,
     "blocklist": 32
   }
 }

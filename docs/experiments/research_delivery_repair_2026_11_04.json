@@ -1,0 +1,359 @@
+{
+  "manifest": {
+    "episode": 5811,
+    "baseline_chars": 298385,
+    "citation_count": 52,
+    "receipt_chars": 24472,
+    "hashes": {
+      "old_text": "08c8a3f84e9f1bf893abe1f11078e3dcac50da3f8357d3f1285e464ac38b36ec",
+      "required": "21e97b8d3c2980f032bdd27b144c41266dc2d42d5f0da8252fc84d82018a9f12",
+      "old_required": "4b3597f210c36bcb28510603d91d1437ee14b0dc94833dd2d6c3c6483939a67e",
+      "old_rows": "2562b1997234311fb72fe39e92a1f05c3d80fb198f0663975a895559066424ba",
+      "new_rows": "cde2034046014ff5da77bd0259c34537eb7618c33c441591dc920b8ad2c9a997",
+      "criteria": "9f16a11266b808ad8fc67f462f568360a5d95fbc687de4088f78b370b5762bc6",
+      "references_context": "c9eb7ed0267d4c32329c774c1d4a79bdec692a0768a7baf5b5a39e1785f597ba"
+    },
+    "baseline_modules": {
+      "cognitive_eval.py": "1bf7daa9ea22b917abe10ec54f3239440b79cab70ac9520c8fcd733999714a04",
+      "evaluation_input.py": "80df7499e3eb306d2d16f696dd68f7043d689212336d92c225341ce883b86f3d",
+      "research_library.py": "38f4501ca77b4cfa5e397d7ae364c56ab26652225a6a72d1f2aaa41f291edba0",
+      "situation_delivery.py": "475eea4f5fa1c4e57a0554816e02fb59a5e0f0126736a13dc632956ba5a422b2",
+      "final_evaluator.py": "75830c25beb7faa90f555c72f56d68ed511cd48f8c376ffc93a6a10fb4e62b4f",
+      "model_result_view.py": "abc32e4621b37373483310884a1fff17ece963304d5c4384257833fc4c4081f4"
+    }
+  },
+  "model": "gpt-6-astra:high",
+  "provider": "CodexProvider",
+  "structural": {
+    "old_chars": 298385,
+    "new_chars": 266636,
+    "new_request_sha256": "401afef660301c662ef48c5d4510185c79d00c7dbdbb80bfe7ab6107913f169d",
+    "citation_chars_delivered": 24472,
+    "submission_chars_delivered": 23251
+  },
+  "situation_replay": [
+    {
+      "old_bytes": 874,
+      "new_bytes": 874,
+      "observations": 1,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3735,
+      "new_bytes": 3098,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3735,
+      "new_bytes": 3098,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3239,
+      "new_bytes": 2864,
+      "observations": 4,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3753,
+      "new_bytes": 3378,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3218,
+      "new_bytes": 2843,
+      "observations": 4,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3715,
+      "new_bytes": 3605,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3696,
+      "new_bytes": 3696,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3675,
+      "new_bytes": 3675,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3675,
+      "new_bytes": 3675,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3755,
+      "new_bytes": 3380,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3359,
+      "new_bytes": 2722,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3497,
+      "new_bytes": 3124,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3644,
+      "new_bytes": 3535,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3645,
+      "new_bytes": 3536,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3662,
+      "new_bytes": 3662,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3661,
+      "new_bytes": 3661,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3661,
+      "new_bytes": 3661,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3725,
+      "new_bytes": 3350,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3677,
+      "new_bytes": 3302,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3679,
+      "new_bytes": 3569,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3765,
+      "new_bytes": 3655,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3763,
+      "new_bytes": 3653,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3758,
+      "new_bytes": 3758,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3758,
+      "new_bytes": 3758,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3602,
+      "new_bytes": 3492,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3646,
+      "new_bytes": 3536,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3741,
+      "new_bytes": 3104,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3741,
+      "new_bytes": 3104,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    },
+    {
+      "old_bytes": 3514,
+      "new_bytes": 3405,
+      "observations": 5,
+      "mode": "baseline",
+      "roundtrip_verified": true
+    }
+  ],
+  "cases": [
+    {
+      "case": "episode5811",
+      "repeat": 0,
+      "arm": "old",
+      "status": "ACHIEVED",
+      "elapsed_s": 58.918,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 291269,
+        "total_output_tokens": 1131,
+        "total_cache_read_tokens": 16896
+      },
+      "failures": [],
+      "response_hashes": [
+        "f31a007f81300acf93cf3df496b60f06d797dfc74b1513c7f62a98e6a0ec13d4",
+        "7cc9bb88e051432cce6135b0b5d53c145e7fa5c26eb35301448c3257faf4bf76"
+      ]
+    },
+    {
+      "case": "episode5811",
+      "repeat": 1,
+      "arm": "old",
+      "status": "ACHIEVED",
+      "elapsed_s": 51.445,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 291269,
+        "total_output_tokens": 1105,
+        "total_cache_read_tokens": 16896
+      },
+      "failures": [],
+      "response_hashes": [
+        "dd28a564cf31afd2b31587036311350af0d7ae0487a8b8347ce408a52cbbc92e",
+        "9b194a9894604b6be55c679ab2faa88f8936ab26a74ed0886c89bdc171002286"
+      ]
+    },
+    {
+      "case": "episode5811",
+      "repeat": 2,
+      "arm": "old",
+      "status": "ACHIEVED",
+      "elapsed_s": 44.923,
+      "rounds": 2,
+      "tokens": {
+        "total_input_tokens": 291269,
+        "total_output_tokens": 1029,
+        "total_cache_read_tokens": 157568
+      },
+      "failures": [],
+      "response_hashes": [
+        "0b36caa44c26e634b125d0001a6366734f71659cad98657594caa8ad2fac7026",
+        "713bead8e207e120e36d3c81907fffc3eedb91b9ebb49d390b667c8edca8f0ac"
+      ]
+    },
+    {
+      "case": "episode5811",
+      "repeat": 0,
+      "arm": "new",
+      "status": "ACHIEVED",
+      "elapsed_s": 14.645,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 116322,
+        "total_output_tokens": 240,
+        "total_cache_read_tokens": 8448
+      },
+      "failures": [],
+      "response_hashes": [
+        "e14c025b25f423efcc15003eb4ef644f9c72297b5a6f1fedbc1c44cf90fa5d8a"
+      ]
+    },
+    {
+      "case": "episode5811",
+      "repeat": 1,
+      "arm": "new",
+      "status": "ACHIEVED",
+      "elapsed_s": 12.124,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 116322,
+        "total_output_tokens": 204,
+        "total_cache_read_tokens": 12032
+      },
+      "failures": [],
+      "response_hashes": [
+        "b979df4105349c1076f8d6609ec29a94d5311109767c6651d5bb710dab6516c0"
+      ]
+    },
+    {
+      "case": "episode5811",
+      "repeat": 2,
+      "arm": "new",
+      "status": "ACHIEVED",
+      "elapsed_s": 18.421,
+      "rounds": 1,
+      "tokens": {
+        "total_input_tokens": 116322,
+        "total_output_tokens": 296,
+        "total_cache_read_tokens": 12032
+      },
+      "failures": [],
+      "response_hashes": [
+        "955cb8ae8861e48a1bc1b114f0aa410071c23bbc2122a7f6add6688e121a7f1b"
+      ]
+    }
+  ],
+  "limits": [
+    "Fixed-input replay; not a new live research task.",
+    "Three repetitions are exploratory, not statistical proof.",
+    "Cache/load/order affect wall time; cache counted within input, never added again.",
+    "Old arm retained from alternating run; new arm remeasured after format-policy clarification."
+  ]
+}

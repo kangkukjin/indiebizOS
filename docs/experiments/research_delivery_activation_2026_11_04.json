@@ -1,0 +1,29 @@
+{
+  "generation": "7579c0f2d8a5acaacd0244edf8ca4cdd",
+  "generation_matches_worktree": {
+    "backend/cognition/evaluation_input.py": true,
+    "backend/cognition/evaluation_evidence.py": true,
+    "backend/cognition/final_evaluator.py": true,
+    "backend/cognition/cognitive_eval.py": true,
+    "backend/cognition/model_result_view.py": true,
+    "backend/common/value_relations.py": true,
+    "backend/base/situation_delivery.py": true,
+    "backend/services/research_library.py": true
+  },
+  "rest_structured_body_and_wire_preserved": true,
+  "fresh_mcp_mirror": true,
+  "full_body_chars": 7978,
+  "original_paths_read": [
+    [
+      "value",
+      "text"
+    ],
+    [
+      "value",
+      "blocks",
+      0,
+      "text"
+    ]
+  ],
+  "external_business_actions": 0
+}

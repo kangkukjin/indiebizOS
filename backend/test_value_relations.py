@@ -15,6 +15,31 @@ def page():
             '_display': {'mirror_fields': ['text']}, 'source': 'A'}
 
 
+@pytest.mark.parametrize('change', ['none', 'reverse', 'space', 'separator', 'missing', 'empty'])
+def test_declared_blocks_require_exact_order_and_separator(change):
+    value = {'text': 'α\n\nβ', 'blocks': [{'text': 'α', 'page': 1}, {'text': 'β', 'page': 2}],
+             '_display': {'mirror_fields': [{'field': 'text', 'collection': 'blocks',
+                                             'text_field': 'text', 'separator': '\n\n'}]}}
+    if change == 'reverse':
+        value['blocks'].reverse()
+    elif change == 'space':
+        value['text'] += ' '
+    elif change == 'separator':
+        value['_display']['mirror_fields'][0]['separator'] = '\n'
+    elif change == 'missing':
+        del value['blocks'][1]['text']
+    elif change == 'empty':
+        value['text'], value['blocks'] = '', []
+    shown = _fold_twin_fields(value, [], [])
+    assert shown['blocks'] == value['blocks']
+    if change == 'none':
+        assert shown['text'] == {'$model_mirror_of': 'blocks'}
+        assert invalidate_display_relations(value) == value
+    else:
+        assert shown['text'] == value['text']
+        assert invalidate_display_relations(value)['_display']['mirror_fields'] == []
+
+
 @pytest.mark.parametrize('change', ['empty', 'subset', 'reverse', 'edit', 'wrong_mirror', 'oversize'])
 def test_relations_are_rechecked_after_value_changes(change):
     value = page()

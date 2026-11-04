@@ -66,6 +66,27 @@ def test_citation_requires_actual_read_and_retains_extraction_revision(lib):
     assert not lib.citations(marker, 'run2')
 
 
+def test_full_receipts_bypass_preview_budget_without_new_read_or_invalid_change(lib):
+    markers, quotes = [], []
+    for i in range(10):
+        text = ('2026년 수량은 10 kg. ' * 200) + f'단, 반례 {i}: 효과는 미확인이다.'
+        receipt = lib.capture(text, title=f'source-{i}', paragraphs=[('p1', text)])
+        with scope({'project_uid': lib.store.uid, 'run_id': 'run-full'}):
+            lib.read(receipt['version_ref'])
+        markers.append(f"[자료:{receipt['version_ref']}:p1]")
+        quotes.append(text)
+    text = ' '.join(markers) + ' [자료:unread:p9]'
+    with lib.store.connect() as db:
+        before = db.execute('SELECT COUNT(*) FROM research_access').fetchone()[0]
+    compact = lib.citation_review(text, 'run-full')
+    full = lib.citation_review(text, 'run-full', full_receipts=True)
+    assert full['invalid'] == compact['invalid']
+    assert compact['evidence_chars'] <= 16000 < full['evidence_chars']
+    assert [c['receipts'][0]['quote'] for c in full['valid']] == quotes
+    with lib.store.connect() as db:
+        assert db.execute('SELECT COUNT(*) FROM research_access').fetchone()[0] == before
+
+
 def test_project_scoped_search_and_references(lib, tmp_path):
     other = tmp_path / 'other'; other.mkdir()
     foreign = ResearchLibrary(ResearchStore(other, 'library-two'))

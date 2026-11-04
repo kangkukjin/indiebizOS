@@ -227,6 +227,12 @@ def revision(root: Path = None) -> int:
 MEMBER_PROFILE = "member"
 
 
+def profile_selection(state: dict, package_id: str, profile: str) -> bool:
+    """저장 선택의 의미. 주인 활성과 결합하기 전의 프로파일 선택이다."""
+    prof = (state.get("profiles") or {}).get(profile) or {}
+    return bool((prof.get("active") or {}).get(package_id, profile == MEMBER_PROFILE))
+
+
 def profile_active_map(profile: str, root: Path = None) -> dict:
     """회원은 기본 사용 가능. 명시적으로 끈 묶음과 주인이 잠재운 묶음만 제외한다.
 
@@ -234,10 +240,8 @@ def profile_active_map(profile: str, root: Path = None) -> dict:
     알 수 없는 프로파일은 계속 기본 비활성이다.
     """
     state = read_state(root)
-    prof = (state.get("profiles") or {}).get(profile) or {}
-    allow = prof.get("active") or {}
-    default = profile == MEMBER_PROFILE
-    return {pid: bool(state["active"].get(pid, False) and allow.get(pid, default)) for pid in state["active"]}
+    return {pid: bool(state["active"].get(pid, False) and profile_selection(state, pid, profile))
+            for pid in state["active"]}
 
 
 def is_active(package_id: str, root: Path = None, profile: str = None) -> bool:

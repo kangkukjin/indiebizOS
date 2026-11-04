@@ -7,7 +7,8 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 from vocabulary_policy import require_optional
-from vocabulary_state import LOCK, inventory, is_active, package_path, read_state, write_state
+from vocabulary_state import (LOCK, inventory, is_active, package_path,
+                              profile_selection, read_state, write_state)
 
 # IBL 파라미터로 위조할 수 없는 프로세스 내부 권한. surface의 사용자 요청 검사만 전달한다.
 HUMAN_AUTHORITY = object()
@@ -61,18 +62,13 @@ def set_package_active(package_id: str, active: bool, *, authority=None, profile
             if active and not is_active(package_id):
                 raise ValueError(f"'{package_id}' 은(는) 주인 선택에서 잠들어 있어 {profile} 프로파일에 열 수 없습니다")
             before = read_state()
-            after = copy.deepcopy(before)
-            prof = after.setdefault("profiles", {}).setdefault(profile, {}).setdefault("active", {})
-            if prof.get(package_id, False) == active:
+            if profile_selection(before, package_id, profile) == active:
                 return {"success": True, "status": "active" if active else "sleeping", "package_id": package_id,
                         "profile": profile, "active": active, "changed": False}
+            after = copy.deepcopy(before)
+            prof = after.setdefault("profiles", {}).setdefault(profile, {}).setdefault("active", {})
             prof[package_id] = active
-            after["revision"] += 1
-            write_state(after)
-            from ibl_routing import invalidate_runtime_caches
-            failures = invalidate_runtime_caches()
-            if failures:
-                raise RuntimeError("캐시 갱신 실패: " + ", ".join(failures))
+            _commit_selection(before, after)
             return {"success": True, "status": "active" if active else "sleeping", "package_id": package_id,
                     "profile": profile, "active": active, "changed": True, "revision": after["revision"]}
     with LOCK:
@@ -92,25 +88,45 @@ def set_package_active(package_id: str, active: bool, *, authority=None, profile
                           and package_id in cfg["manifest"].get("dependencies", {})]
             if dependents:
                 raise ValueError("먼저 잠재울 의존 묶음: " + ", ".join(dependents))
-        from ibl_routing import invalidate_runtime_caches
         before = read_state()
         after = copy.deepcopy(before)
         after["active"][package_id] = active
-        after["revision"] += 1
-        write_state(after)
-        try:
-            failures = invalidate_runtime_caches()
-            if failures:
-                raise RuntimeError("캐시 갱신 실패: " + ", ".join(failures))
-        except Exception:
-            # 새 revision을 유지해 이미 만들어진 회상 캐시도 재사용하지 않는다.
-            restored = copy.deepcopy(before)
-            restored["revision"] = after["revision"] + 1
-            write_state(restored)
-            failures = invalidate_runtime_caches()
-            if failures:
-                raise RuntimeError("원장은 복구했으나 캐시 복구 실패: " + ", ".join(failures))
-            raise
+        _commit_selection(before, after)
         return {"success": True, "status": "active" if active else "sleeping",
                 "package_id": package_id, "active": active, "changed": True,
                 "revision": after["revision"], "message": "깨웠습니다" if active else "잠재웠습니다"}
+
+
+def _refresh_selection():
+    from ibl_routing import invalidate_runtime_caches
+    failures = invalidate_runtime_caches()
+    if failures:
+        raise RuntimeError("캐시 갱신 실패: " + ", ".join(failures))
+
+
+def _commit_selection(before: dict, after: dict):
+    """호출자가 LOCK을 소유한다. 자기 판본만 복구하며 최초 실패도 보존한다."""
+    after["revision"] = before["revision"] + 1
+    try:
+        write_state(after)
+        _refresh_selection()
+    except Exception as original:
+        try:
+            current = read_state()
+        except Exception as recovery:
+            raise RuntimeError(f"선택 변경 실패({original}); 저장 상태 확인 실패: {recovery}") from original
+        if current == before:
+            raise  # 원자 교체 전 실패: 갱신·복구 쓰기를 만들지 않는다.
+        if current != after:
+            raise RuntimeError(f"선택 변경 실패({original}); 원장 판본 충돌로 복구 중단") from original
+        restored = copy.deepcopy(before)
+        restored["revision"] = after["revision"] + 1
+        try:
+            write_state(restored)
+        except Exception as recovery:
+            raise RuntimeError(f"선택 변경 실패({original}); 원장 복구 실패: {recovery}") from original
+        try:
+            _refresh_selection()
+        except Exception as recovery:
+            raise RuntimeError(f"선택 변경 실패({original}); 원장은 복구했으나 캐시 복구 실패: {recovery}") from original
+        raise

@@ -81,6 +81,8 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 
 검수 원문의 선절단과 실행 응답의 중복은 [자료 전달 수리계획](../../docs/RESEARCH_EVIDENCE_DELIVERY_REPAIR_PLAN_2026_11_04.md)에서 다룬다. 읽은 근거의 판본을 고정해 최종 입력에서 한 번 배분하고, 본문 관계를 확인해 모델 표시를 공유한다. R0–R5 구현·검증을 마쳤으며 원문 회수·부분 실패·MCP 수신 확인 계약을 보존한다. [구현·비교 결과](../../docs/RESEARCH_EVIDENCE_DELIVERY_REPAIR_RESULTS_2026_11_04.md)가 검증 범위와 비용 측정의 한계를 기록한다.
 
+검수·인용의 반복 실패를 줄이기 위한 [구조 단순화 수리 설계](../../docs/VERIFICATION_CITATION_REPAIR_DESIGN_2026_11_05.md)는 제출 판본, 과거 근거의 유효한 연결, 최종화 결과를 공통 계약으로 모은다. 저장 단계의 재검사·본문 변형을 제거하고 텍스트·이미지의 관측 전달과 상태 표시를 맞추는 설계이며, 구현 전이다. 수정 문서의 의미 검토와 권한·판본·취소·예산 보호를 유지한다.
+
 일반 프로젝트의 심층연구도 계획 저장 뒤 현재 대화/과제에 기존 자료실을 연결한다. 최종 텍스트
 제출 파일의 인용·판본을 응답과 함께 검수하며, 근거 예산의 누락과 의미 미검토를 구분한다.
 [근거 연결·계승 구현](../../docs/RESEARCH_EVIDENCE_CONTINUITY_2026_11_02.md)을 따른다.

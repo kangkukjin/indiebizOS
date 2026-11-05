@@ -27,7 +27,6 @@ import uuid
 TOOL_FILES = (
     'scripts/remote_install.py', 'scripts/remote_update_runtime.py',
     'scripts/remote_boot.py', 'scripts/remote_steps.py', 'scripts/remote_observe.py',
-    'scripts/remote_dependencies.py',
     'backend/boot_paths.py', 'backend/datastore/function_store.py',
     'backend/base/restart_process.py', 'backend/base/restart_protocol.py',
     'backend/base/update_maintenance.py', 'backend/common/completion_contract.py',
@@ -184,7 +183,7 @@ def reconcile_packages(root):
     print(json.dumps({"backup": str(backup), "preserved": [str(p) for p in moves]}))
 
 
-def make_plan(root, run_id, python, npm, refresh_dependencies=False):
+def make_plan(root, run_id, python, npm):
     root = root.resolve()
     # The updater must survive replacement of its own source checkout. Keep the
     # driver used by this plan for resumed steps and later runtime restoration.
@@ -215,12 +214,7 @@ def make_plan(root, run_id, python, npm, refresh_dependencies=False):
     step("packages", [python, script, "packages", "--root", str(root)])
     step("venv", [python, script, "venv", "--root", str(root)],
          [vpy, "-c", "import sys; assert (3,10) <= sys.version_info[:2] < (3,14)"])
-    dependencies = str(driver / 'scripts/remote_dependencies.py')
-    refresh = ['--refresh'] if refresh_dependencies else []
-    step('python-deps', [python, dependencies, 'python', '--root', str(root), *refresh], timeout=7200)
-    step("browser", [vpy, str(root / "scripts/check_playwright_browsers.py"), "--install"],
-         [vpy, str(root / "scripts/check_playwright_browsers.py")])
-    step('node-deps', [python, dependencies, 'node', '--root', str(root), '--npm', npm, *refresh])
+    step("browser", [vpy, str(root / "scripts/check_playwright_browsers.py")])
     step('frontend-build', [npm, 'run', 'build'], cwd=root / 'frontend',
          verify=[*lifecycle, 'record-build', '--root', str(root), '--run-id', run_id])
     step("imports", [vpy, str(root / "scripts/check_import_coverage.py")])
@@ -240,8 +234,6 @@ def main():
     parser.add_argument("--npm", default=shutil.which("npm") or "")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--path", type=Path, action="append", default=[])
-    parser.add_argument('--refresh-dependencies', action='store_true',
-                        help='Reinstall dependencies even when the previous successful environment is unchanged')
     args = parser.parse_args()
     root = args.root.resolve()
     try:
@@ -255,7 +247,7 @@ def main():
         elif args.op == "plan":
             if not args.output or not args.run_id or not Path(args.npm).is_absolute():
                 raise ValueError("--output, --run-id and absolute --npm required")
-            plan = make_plan(root, args.run_id, sys.executable, args.npm, args.refresh_dependencies)
+            plan = make_plan(root, args.run_id, sys.executable, args.npm)
             from remote_steps import validate
             validate(plan)
             with args.output.open("x", encoding="utf-8") as stream:

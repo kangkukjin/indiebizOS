@@ -121,17 +121,17 @@ def test_plan_keeps_driver_when_target_script_is_replaced(repos, monkeypatch):
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_recipe_reuses_dependency_receipts_and_launches_built_renderer(tmp_path):
+def test_recipe_uses_existing_environment_and_launches_built_renderer(tmp_path):
     import sys
     plan = installer.make_plan(tmp_path, 'reuse', sys.executable, '/runtime/npm')
     steps = {row['id']: row for row in plan['steps']}
     assert '--prebuilt' in steps['resume-runtime']['argv']
     assert list(steps).index('frontend-build') < list(steps).index('resume-runtime')
-    for name in ('python-deps', 'node-deps'):
-        assert any(arg.endswith('remote_dependencies.py') for arg in steps[name]['argv'])
-        assert '--refresh' not in steps[name]['argv']
-    refreshed = installer.make_plan(tmp_path, 'refresh', sys.executable, '/runtime/npm', True)
-    assert all('--refresh' in row['argv'] for row in refreshed['steps'] if row['id'].endswith('-deps'))
+    assert list(steps) == ['preflight', 'quiesce', 'update', 'packages', 'venv',
+                           'browser', 'frontend-build', 'imports', 'pip-check',
+                           'head-check', 'resume-runtime']
+    assert steps['browser']['argv'][-1].endswith('check_playwright_browsers.py')
+    assert steps['frontend-build']['argv'][-3:] == ['/runtime/npm', 'run', 'build']
 
 
 def test_staged_recipe_runs_without_hub_or_target_code_and_does_not_change_inventory(tmp_path):
@@ -166,7 +166,7 @@ def test_staged_recipe_runs_without_hub_or_target_code_and_does_not_change_inven
     target = tmp_path / 'target'
     target.mkdir()
     env = {k: v for k, v in os.environ.items() if not k.startswith('INDIEBIZ') and k != 'PYTHONPATH'}
-    for name in ('remote_install', 'remote_steps', 'remote_boot', 'remote_dependencies'):
+    for name in ('remote_install', 'remote_steps', 'remote_boot'):
         result = subprocess.run([sys.executable, str(remote / f'scripts/{name}.py'), '--help'],
                                 cwd=target, env=env, text=True, capture_output=True)
         assert result.returncode == 0, result.stdout + result.stderr

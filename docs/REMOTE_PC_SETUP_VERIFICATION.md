@@ -45,8 +45,8 @@ Git·지원 Python·Node/npm을 사용한다. 없는 런타임은 OS·아키텍�
 ```
 
 조리법은 사용자 소스·번역 메모리 변경, staged 변경·분기 이탈을 거절하고 fetch→fast-forward, 충돌하는 비추적/무시 파일 보존,
-Git 추적 위치가 유일한 중복 패키지의 잔재 보존, venv·core/tools/ml·브라우저·npm·native rebuild·빌드,
-import coverage·pip check·HEAD 일치를 확인한다. 백업은 `data/_backups/YYYY-MM-DD_이름/`다.
+Git 추적 위치가 유일한 중복 패키지의 잔재 보존, 기존 환경에서 브라우저·빌드·import coverage·pip check·HEAD 일치를 확인한다.
+의존성을 자동 설치하지 않으며, 실패 원문을 받은 AI가 필요한 조치를 판단한다. 백업은 `data/_backups/YYYY-MM-DD_이름/`다.
 `remote_install.GENERATED_FILES`에 명시된 전체 파일 생성물(배포 매니페스트·어휘 파생물·UI 번들)은
 사전 검사에서 보존 가능 목록으로 보고한다. 업데이트 단계는 원본 바이트를 백업한 뒤 현재 HEAD로
 복원하고 갱신한다. 생성물의 삭제·심볼릭 링크·staged 변경도 거절한다. 번역 교정이 들어갈 수 있는
@@ -58,7 +58,7 @@ Git 파일명은 UTF-8로 해석하며 계획의 Python 자식에도 UTF-8 환�
 스크립트로 남은 단계·재개·복원을 수행한다. 새 driver는 `scripts/`와 필요한 `backend/` 모듈을
 함께 보존해 대상 소스 교체에도 도구 의존성이 바뀌지 않는다. 최초 설치의 인증 설정·훈련용 선택 의존성은 포함하지 않는다.
 
-**실행 중인 앱 갱신**: preflight → quiesce → 갱신/설치/빌드/검사 → resume-runtime 순서다.
+**실행 중인 앱 갱신**: preflight → quiesce → 갱신/빌드/검사 → resume-runtime 순서다.
 quiesce는 제어자의 작업 접수를 닫고 기존 작업·자식·마무리가 끝날 때까지 기다린다. 불명·대기 한도는
 강제 종료로 바꾸지 않는다. 백엔드 종료가 확인되면 Electron의 해당 실행 nonce에 창 닫기를 요청한다.
 미저장 편집의 닫기 취소는 그대로 존중하며, 창·렌더러가 남으면 소스·의존성을 바꾸지 않는다.

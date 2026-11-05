@@ -65,13 +65,9 @@ return [fn:외부PC작업실행]{PC:$준비.limb,명령:"echo HELPER_OK",작업�
 준비의 device_id·workspace를 다음 호출에 보존한다. 다른 PC와 조합하면 target_mismatch, 재관측에 명령·폴더·제한·요청ID를 바꾸면 resume_mismatch다. 환경·입력 변경은 기존 작업에 전달되지 않는다.
 설치·빌드 계획과 remote_steps는 [원격 설치 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다.
 
-소스 업데이트의 새 계획은 `python-deps`·`node-deps`에서 이전 **성공한 설치 영수증**을 확인한다.
-요구사항·Node 설정/빌드 스크립트·런타임과 설치 파일 목록/크기/수정 시각이 같을 때만 설치를
-재사용한다. 최초 실행·파일 누락/변경·실패 뒤에는 다시 설치한다. Python 바이트코드와 Vite·TypeScript 캐시는
-비교에서 제외한다. 외부 editable 디렉터리·추적하지 못하는 requirements 참조는 재사용하지 않는다.
-이것은 설치 재사용 관측이며 파일 무결성 보안 검사가 아니다. 강제 갱신은 **새 계획 생성 시**
-`remote_install.py plan ... --refresh-dependencies`를 준다. 진행 중인 계획의 변경은 지문 불일치로 거절된다.
-기존 venv·사용자 설정은 유지하고 `pip check`·import 검사·HEAD 검증은 계속 실행한다.
+소스 업데이트의 새 계획은 기존 환경으로 빌드·import·`pip check`·브라우저·기동을 확인한다.
+의존성 자동 설치와 재사용 영수증 판정은 없다. 실패 원문으로 AI가 필요한 조치를 판단한다.
+이미 생성된 계획은 당시 명령을 보존한다.
 
 화면 빌드 뒤 새 계획의 `resume-runtime --prebuilt`는 preview 화면을 다시 빌드하지 않고 Electron을
 직접 실행한다. 빌드된 dist의 지문과 HEAD를 기동 영수증에 저장하고 재시작 재시도에서도 대조한다.

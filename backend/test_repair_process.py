@@ -183,7 +183,7 @@ def test_original_apply_failures_inside_readonly_parent_pytest():
     root = Path(__file__).resolve().parents[1]
     cases = ['backend/test_repair_training_harness.py::test_fixed_scope_contract_gates_real_apply[correct]',
              'backend/test_repair_receipt_flow.py::test_real_test_apply_and_completion_without_ai',
-             'backend/test_episode4296_4306_repairs.py::test_semantic_mixed_check_and_visual_evidence_apply[check-1]']
+             'backend/test_repair_policy.py::test_apply_preserves_unfinished_goal_without_criterion_gate_or_second_review[legacy]']
     result = run([sys.executable, '-m', 'pytest', *cases, '-p', 'no:cacheprovider', '--tb=short'],
                  root, readonly=True, timeout=180)
     assert result.returncode == 0, (result.stdout, result.stderr)

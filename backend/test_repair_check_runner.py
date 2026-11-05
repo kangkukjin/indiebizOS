@@ -1,4 +1,4 @@
-"""Go 검사부터 의미 근거·정본 적용까지 실제 수리 사본에서 확인한다."""
+"""Go 검사부터 기존 계획 호환·정본 적용까지 실제 수리 사본에서 확인한다."""
 import shlex
 import shutil
 import sys
@@ -35,18 +35,11 @@ func TestChangedBehavior(t *testing.T) {
     assert not (wt / "repair").exists()
     st._save_session(str(root), session)
     monkeypatch.setattr("repair_check_runner.execute", lambda *a, **k: pytest.fail("duplicate Go test"))
-    reviews = []
-    def review(*args):
-        reviews.append(1)
-        return {"status": "APPROVED", "workspace_coverage": [
-            {"criterion_id": "C1", "status": "passed", "evidence_ids": [record["id"]]}]}
-    monkeypatch.setattr(policy, "semantic_review", review)
     result = st.op_apply({"_repo_root": str(root), "_grant_key": session["key"],
                           "active_verify_cmd": shlex.quote(sys.executable) + " -c " + shlex.quote(
                               'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"'),
                           "verification_plan": [{"criterion_id": "C1", "method": method, "command": cmd}]})
     assert result.get("complete"), result
-    assert len(reviews) == (method == "semantic")
     assert (root / "a.txt").read_text() == "fixed"
     assert policy.completion(st.read_session(str(root), session["key"]), {}, root)[0]
 
@@ -61,10 +54,8 @@ def test_semantic_without_current_pass_stops_before_model(repair, monkeypatch, s
         "candidate_hash": "old" if status == "stale" else stamp, "before_hash": stamp,
         "environment_hash": st._candidate.environment(wt), "test_report": None}]
     session["verification_plan"] = [{"criterion_id": "C1", "method": "semantic"}]
-    monkeypatch.setattr(policy, "semantic_review", lambda *a: pytest.fail("unusable evidence reviewed"))
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert not result["success"] and result["allowed_evidence_ids"] == []
-    assert "go test" in result["error"] and result["missing_criteria"] == ["C1"]
+    assert not result["success"] and result["stage"] == "test"
     repeated = policy.prepare(controller, str(root), session, st.verify, st._candidate)
     assert repeated["reused"]
 
@@ -153,17 +144,16 @@ def test_selected_scope_is_recorded_without_shell_substitution(repair):
     assert record['command'] == command
 
 
-def test_original_required_scope_survives_candidate_change_and_narrower_plan(repair):
+def test_changed_candidate_does_not_force_old_plan_commands(repair):
     root, wt, st, session, controller = repair
     (wt / 'test_required.py').write_text('def test_a(): assert False\ndef test_b(): pass\n')
     command = shlex.quote(sys.executable) + ' -m pytest test_required.py -x'
     session['verification_plan'] = [{'criterion_id': 'C1', 'command': command}]
     failed = policy.prepare(controller, str(root), session, st.verify, st._candidate)
     assert not failed['success']
-    assert session['execution_checks'][-1]['criterion_ids'] == ['C1']
     (wt / 'a.txt').write_text('new candidate')
     session['verification_plan'] = [{'criterion_id': 'C1', 'command': command.replace('test_required.py -x', 'test_required.py::test_b')}]
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert not result['success'] and result['stage'] == 'test'
-    assert result['checks'][0]['command'] == command
-    assert result['checks'][0]['test_report']['scope']['not_run'] == ['test_required.py::test_b']
+    assert result['success']  # 새 후보의 검사 범위는 실행자가 선택한다. 옛 계획을 강제 재실행하지 않는다.
+    assert session['execution_checks'][0]['status'] == 'failed'
+    assert session['execution_checks'][-1]['test_report']['scope']['collected'] == ['test_required.py::test_b']

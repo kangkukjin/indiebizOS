@@ -413,6 +413,8 @@ def _receipt_completion(row, base):
     from repair_policy import completion
     session = read_json(Path(base) / "data/system_ai_state/repair_sessions" /
                         (key(row.get("staging_task_id") or row["task_id"]) + ".json")) or {}
+    if not session.get("task_scope"):
+        return None  # 일반 업무는 적용 후 기존 실행자로 돌아가 남은 일을 마친다.
     passed, reason = completion(session, row, base)
     _record_receipt_verdict(row, session, base, passed, reason)
     if not passed:

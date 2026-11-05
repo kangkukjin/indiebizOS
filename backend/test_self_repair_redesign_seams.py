@@ -1,4 +1,4 @@
-"""자기수리 재설계(2026-10-27)의 이음새: 시험 약화 관문(G4)·재현 근거·원 증상 재검사(G5)·전달 분리·예약 뒤 턴 닫기(G3)."""
+"""자기수리의 검사 변경·재현 근거·전달 분리·예약 뒤 턴 닫기."""
 import json
 import shlex
 import sys
@@ -21,7 +21,7 @@ def _test_file(wt, body):
     return shlex.quote(sys.executable) + ' -m pytest test_change.py'
 
 
-def test_weakened_test_cannot_be_approved_by_tests_alone(repair):
+def test_test_refactor_does_not_require_separate_semantic_approval(repair):
     root, wt, st, session, controller = repair
     (root / 'test_change.py').write_text('def test_a():\n    assert 1 == 1\n\ndef test_b():\n    assert 2 == 2\n')
     import subprocess
@@ -33,22 +33,8 @@ def test_weakened_test_cannot_be_approved_by_tests_alone(repair):
     controller._final_criteria_contract = criteria_contract('고쳐줘', {'criteria': [{'text': 'a 는 fixed'}]})
     _plan(session, command)
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert result['stage'] == 'test_weakening', result
-    assert result['weakened'][0]['removed_tests'] == ['test_b'] and 'removed_tests' in result['weakened'][0]['signals']
-    assert not session.get('sealed')
-
-
-def test_weakening_detector_signals(setup):
-    root, wt, st, sess = setup
-    (root / 'test_x.py').write_text('import pytest\ndef test_one():\n    assert 1\n    assert 2\n')
-    (wt / 'test_x.py').write_text('import pytest\n@pytest.mark.skip\ndef test_one():\n    assert 1\n')
-    (root / 'test_y.py').write_text('def test_y():\n    assert 1\n')
-    st._candidate.collect(str(root), sess)
-    rels = {r['path']: r for r in st._candidate.test_weakening(str(root), sess)}
-    assert set(rels['test_x.py']['signals']) == {'fewer_asserts', 'more_skips'}
-    (wt / 'test_y.py').write_text('def test_y():\n    assert 1\n    assert 2\n')  # 강화는 신호가 아니다
-    st._candidate.collect(str(root), sess)
-    assert 'test_y.py' not in {r['path'] for r in st._candidate.test_weakening(str(root), sess)}
+    assert result['success'], result
+    assert 'test_change.py' in session['sealed']
 
 
 def test_regression_evidence_links_before_failure_to_after_pass(repair):
@@ -65,7 +51,7 @@ def test_regression_evidence_links_before_failure_to_after_pass(repair):
     evidence = session['readiness']['regression_evidence'][0]
     assert evidence['status'] == 'reproduced' and evidence['before_failed_check'] == 'before'
     verdict, note = policy.symptom_recheck(session, {}, root)
-    assert verdict == 'verified' and 'C1' in note
+    assert verdict == 'verified' and '수정 전 실패' in note
 
 
 def test_symptom_recheck_is_unverified_without_reproduction_or_active_check(repair):
@@ -116,7 +102,7 @@ def test_completion_delivery_failure_is_retried_without_rerunning_completion(tmp
     task = 'task-deliver'
     job = tmp_path / 'data/system_ai_state/repair_sessions' / (task + '.apply.json')
     atomic_json(job, {'key': task, 'task_id': task, 'repo': str(tmp_path), 'scheduled_at': 'now', 'restart_request_id': 'red-x'})
-    atomic_json(job.with_name(task + '.json'), {'status': 'applied', 'repair_policy': 2})
+    atomic_json(job.with_name(task + '.json'), {'status': 'applied', 'repair_policy': 2, 'task_scope': {'parent': 'parent'}})
     row = journal.save({'task_id': task, 'root_task_id': task, 'attempt': 1, 'failures': [], 'job_path': str(job),
                         'scheduled_at': 'now', 'status': 'waiting_apply', 'authorized_origin': 'user', 'goal': 'g',
                         'project_id': 'p', 'agent_id': 'a', 'system_ai': True, 'repair_policy': 2,

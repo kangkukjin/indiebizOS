@@ -187,50 +187,6 @@ c = socket.socket(); c.connect(s.getsockname()); p, _ = s.accept(); print("PASS"
         outside.wait(timeout=5)
 
 
-def test_readiness_reuses_existing_evaluator_and_returns_in_same_execution(setup, supervisor, monkeypatch):
-    import final_evaluator
-    from repair_readiness import prepare
-    root, wt, st, sess = setup
-    (wt / "a.txt").write_text("A done")
-    supervisor.repair_granted = True
-    from red_report import current_owner
-    sess["owner"] = current_owner()
-    supervisor.framing = {"criteria": [{"text": "A"}, {"text": "B"}]}
-    supervisor._final_criteria_contract = None
-    supervisor.store.put_response("사본 A와 B를 검사했습니다")
-    candidate = st._candidate
-    h = candidate.digest(candidate.collect(str(root), sess))
-    sess["execution_checks"] = [{"id": "test-run", "status": "passed", "candidate_hash": h,
-                                 "environment_hash": candidate.environment(wt),
-                                 "output": "A passes; B fails"}]
-    sess["execution_checks"].append({**sess["execution_checks"][0], "id": "failed-run", "status": "failed", "output": "B fails"})
-    def reject(*a, **kw):
-        assert any(r["status"] == "failed" for r in supervisor._evaluation_packet["context"]["workspace_evidence"])
-        return json.dumps({"status": "REWORK", "workspace_coverage": [{"criterion_id": "C1", "status": "passed", "evidence_ids": ["test-run"]}]})
-    monkeypatch.setattr(final_evaluator, "invoke", reject)
-    verify = lambda *a: (True, [{"gate": "compile", "passed": True}])
-    result = prepare(supervisor, str(root), sess, verify, candidate)
-    assert not result["success"] and result["missing_criteria"] == ["C2"]
-    assert "readiness" not in sess and (root / "a.txt").read_text() == "before"
-    (wt / "b.txt").write_text("B done")
-    sess["execution_checks"] = [{"id": "test-run", "status": "passed", "candidate_hash": candidate.digest(candidate.collect(str(root), sess)),
-                                 "environment_hash": candidate.environment(wt), "output": "A passes; B passes"}]
-    monkeypatch.setattr(final_evaluator, "invoke", lambda *a, **kw: json.dumps({
-        "status": "APPROVED", "workspace_coverage": [{"criterion_id": c, "status": "passed", "evidence_ids": ["test-run"]} for c in ("C1", "C2")]}))
-    assert prepare(supervisor, str(root), sess, verify, candidate)["success"]
-    assert (root / "a.txt").read_text() == "before"
-    st._save_session(str(root), sess)
-    writes = []
-    for _ in range(2):
-        assert st._perform_apply(str(root), sess, [], lambda path, content=None: writes.append(path), None)["applied"]
-    assert len(writes) == 2  # 한 묶음의 두 파일, 재호출에서는 적용하지 않음
-    assert len(list((root / ".worktrees").iterdir())) == 1
-    before = int(subprocess.check_output(["git", "rev-list", "--count", "HEAD"], cwd=root))
-    for _ in range(2):
-        assert st.commit_applied(str(root), sess["key"])["success"]
-    assert int(subprocess.check_output(["git", "rev-list", "--count", "HEAD"], cwd=root)) == before + 1
-
-
 @pytest.mark.parametrize("attack", ["direct", "child", "symlink", "git", "ledger", "hardlink"])
 def test_os_boundary_rejects_live_writes_and_allows_workspace(setup, attack):
     from repair_process import run

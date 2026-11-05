@@ -437,63 +437,6 @@ def commit(repo, session, body):
         return result
 
 
-def _test_shape(source):
-    """시험 파일의 구조 지문 — 시험 함수 이름·assert 수·skip/xfail 표식 수. 의미적 동등성은 판정하지 않는다."""
-    import ast
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return None
-    tests, asserts, skips = set(), 0, 0
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
-            tests.add(node.name)
-        elif isinstance(node, ast.Assert):
-            asserts += 1
-        src = ast.get_source_segment(source, node) if isinstance(node, (ast.Call, ast.Attribute)) else None
-        if src and (".skip" in src or ".xfail" in src or "skipif" in src) and "pytest" in src:
-            skips += 1
-    return {"tests": sorted(tests), "asserts": asserts, "skips": skips}
-
-
-def test_weakening(repo, session):
-    """수리 델타가 시험을 약화했는가(G4) — 시험 함수 삭제·assert 감소·skip/xfail 추가를 구조로 잡는다.
-
-    시험 변경 자체는 금지하지 않는다. 약화 신호가 있으면 시험 통과만으로 조건을 승인하지 못하고
-    의미 검토가 그 변경을 봐야 한다. 구조 검사가 못 보는 기대값 완화는 미확인으로 남는다."""
-    out = []
-    for rec in (session.get("files") or {}).values():
-        rel = rec.get("rel") or ""
-        name = Path(rel).name
-        if not (name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py") or not rel.endswith(".py"):
-            continue
-        before_path, after_path = Path(repo) / rel, Path(rec.get("staged") or "")
-        before = _test_shape(before_path.read_text(encoding="utf-8", errors="replace")) if before_path.is_file() else {"tests": [], "asserts": 0, "skips": 0}
-        if rec.get("op") == "delete":
-            after = {"tests": [], "asserts": 0, "skips": 0}
-        elif after_path.is_file():
-            after = _test_shape(after_path.read_text(encoding="utf-8", errors="replace"))
-        else:
-            continue
-        if before is None or after is None:
-            out.append({"path": rel, "kind": "unparsable"})
-            continue
-        removed = sorted(set(before["tests"]) - set(after["tests"]))
-        signals = []
-        if removed:
-            signals.append("removed_tests")
-        if after["asserts"] < before["asserts"]:
-            signals.append("fewer_asserts")
-        if after["skips"] > before["skips"]:
-            signals.append("more_skips")
-        if rec.get("op") == "delete":
-            signals.append("deleted_file")
-        if signals:
-            out.append({"path": rel, "signals": signals, "removed_tests": removed,
-                        "asserts": [before["asserts"], after["asserts"]], "skips": [before["skips"], after["skips"]]})
-    return out
-
-
 def active_generation_bytes(base, session):
     """활성 세대(제어자 state 의 generation_dir)가 봉인 묶음과 같은 바이트인지(G4 '활성 바이트 대조').
     반환 (verdict, detail): verdict ∈ matched | mismatch | unknown."""

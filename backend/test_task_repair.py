@@ -481,8 +481,9 @@ def test_scoped_candidate_real_check_and_component_apply(env, monkeypatch, diagn
     candidate_path = env.repo / session['worktree'] / 'backend/services/document_parser.py'
     candidate_path.write_text('VALUE = 1\n')
     from repair_check_runner import execute
-    failed = execute(str(env.repo), session, st._candidate, command, controller)
-    assert failed['status'] == 'failed', failed
+    if not diagnostic:
+        failed = execute(str(env.repo), session, st._candidate, command, controller)
+        assert failed['status'] == 'failed', failed
     st._save_session(str(env.repo), session)
     candidate_path.write_text('VALUE = 2\n')
     if diagnostic:
@@ -490,7 +491,7 @@ def test_scoped_candidate_real_check_and_component_apply(env, monkeypatch, diagn
     with journal.resuming(child), actor_context(agent_id='system_ai', task_id=child['resume_task_id'], origin='user'):
         red_grant.issue_grant('system_ai', child['resume_task_id'])
         result = st.op_apply({'_repo_root': str(env.repo), '_grant_key': child['resume_task_id'],
-                             'verification_plan': [{'criterion_id': 'C1', 'command': command}]})
+                             'verification_plan': [{'command': command}]})
     assert result.get('applied') and result.get('activated') and not result.get('restart_required'), result
     Handoff().finish(True, repair.NOTICE)
     env.store.finish(env.turn.conversation)
@@ -508,6 +509,18 @@ def test_scoped_candidate_real_check_and_component_apply(env, monkeypatch, diagn
     resumed = repair.advance_parent(journal.read(parent['task_id']), env.repo, repair_policy.completion)
     assert resumed['goal'] == env.turn.request and resumed['repair_result']['success']
     assert resumed['framing'] == parent['framing']
+    import api_component_continuation
+    calls = []
+    def resume_work(row):
+        assert row['goal'] == env.turn.request and row['repair_result']['success']
+        assert sessions.current().session_id == env.turn.conversation.session_id
+        (env.repo / 'report.txt').write_text('원래 업무 완료')
+        calls.append(row['goal'])
+        return {'response': '보고서 저장 완료'}
+    api_component_continuation.consume(resumed, env.repo, 'after-apply', resume_work)
+    assert calls == [parent['goal']]
+    assert journal.read(parent['task_id'])['status'] == 'completed'
+    assert (env.repo / 'report.txt').read_text() == '원래 업무 완료'
 
 
 if __name__ == '__main__':

@@ -75,14 +75,6 @@ unverified(미확인)이다. source는 valid의 제공된 원문에 연결돼야
 """
 
 
-APPLY_POLICY = """이번 호출은 코드 적용 전 검사다. 최종 사용자 답변은 아직 생성 전이며 평가 대상이 아니다.
-빈 final_response/응답이나 아직 보내지 않은 완료 보고만으로 미달 판정하지 않는다.
-설치·승인 절차 등의 안내 내용은 현재 사본의 문서·산출물과 실행 증거로 검사한다.
-필수 안내 자체가 없거나 틀리면 해당 기준의 결함이다. 빈 응답을 근거로 문서 검증을 면제하지 않는다.
-적용 준비 승인과 실제 배포·권한 승인·최종 전달 완료를 구별한다. 관측되지 않은 성공을 추정하지 않는다.
-"""
-
-
 class Evaluator(CognitiveEvalMixin):
     def _log(self, message):
         print(message)
@@ -498,8 +490,7 @@ def invoke(controller, prompt="", *, phase="final"):
                                               head_keep=12, tail_keep=12, per_result_chars=3000),
         action_ledger=build_action_ledger(packet["calls"]), visual_artifacts=packet["images"],
         evaluation_context=json.dumps(packet["context"], ensure_ascii=False),
-        evaluation_policy=POLICY + (APPLY_POLICY + WORKSPACE_POLICY if phase == "workspace" else
-                                    APPLY_POLICY + SEMANTIC_POLICY if phase == "semantic" else FINAL_POLICY)
+        evaluation_policy=POLICY + FINAL_POLICY
                           + (RESEARCH_POLICY if packet['context'].get('research_citations') else ''),
         full_response=True, evaluation_attachments=packet.get('attachments'),
     )
@@ -529,12 +520,6 @@ def invoke(controller, prompt="", *, phase="final"):
         controller.log('evaluation.finished', role='evaluate', elapsed_s=round(time.monotonic() - started, 3),
                        decision=result)
         return json.dumps(result, ensure_ascii=False)
-    if phase in {"workspace", "semantic"}:
-        match = re.search(r"(?m)^WORKSPACE_COVERAGE:\s*(\[.*\])\s*$", feedback)
-        try:
-            result["workspace_coverage"] = json.loads(match[1]) if match else []
-        except ValueError:
-            result["workspace_coverage"] = []
     if getattr(evaluator, "evaluation_retryable", False):
         result["retryable"] = True
     if controller.cancelled():
@@ -611,27 +596,3 @@ def unsupported_authority_block(feedback, packet):
             for row in packet['context'].get('authority_evidence', [])))
     except (ValueError, TypeError, AttributeError):
         return True
-
-
-WORKSPACE_POLICY = """
-이번 판정 대상은 수리 사본의 적용 준비다. 정본 반영·재기동·커밋 완료를 승인하는 호출이 아니다.
-원래 요청 전체에서 사본 확인 가능한 필수 기준을 모두 확인한다. 부분 기능의 성공은 전체 준비가 아니다.
-실행자의 완료 주장이나 기계 관문만으로 기능 검증을 대신하지 않는다. workspace_evidence의 실행 결과와
-검사 범위가 각 기준을 입증하는지 판정한다. 부족하거나 실패한 증거는 NOT_ACHIEVED/UNKNOWN이다.
-activation 구분은 기준 정본의 verification_phase와 activation_plan이 있는 항목에만 허용한다.
-사본에서 확인 가능한 기능을 활성 확인으로 옮기지 않는다. 잘못 분류된 기준은 UNKNOWN이다.
-ACHIEVED여도 다음 한 줄을 추가한다:
-WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["workspace_evidence의 실제 id"]}]
-모든 기준을 포함한다. 반영 후에만 확인 가능한 기준은 status="activation_pending", evidence_ids=[]로 적는다.
-"""
-
-
-SEMANTIC_POLICY = """
-이번 호출은 criteria_contract에 명시한 의미 조건만 판정한다. 다른 기준·정본 반영·커밋은 호출 범위 밖이다.
-workspace_evidence의 관측과 결과로 해당 조건을 판정한다. 실행자의 완료 주장만으로 승인하지 않는다.
-부족한 원문이면 UNKNOWN_REASON: evidence와 필요한 evidence_ref.id를 정확하게 적는다.
-ACHIEVED일 때 evidence_ids에는 workspace_evidence의 현재 사본 검사 id를 하나 이상 넣는다.
-이미지 판독 등 evidence_index의 보충 관측 result.id는 supporting_evidence_ids에 구분한다.
-보충 관측만으로 현재 사본의 검사 근거를 대체하지 않는다:
-WORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["현재 검사 id"],"supporting_evidence_ids":["보충 관측 result.id"]}]
-"""

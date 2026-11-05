@@ -123,14 +123,21 @@ def test_project_reentry_passes_own_repair_gate_but_rejects_other_owner(tmp_path
     controller = SimpleNamespace(cancelled=lambda: False,
                                  _final_criteria_contract={'criteria': [{'id': 'C1'}]})
 
+    inspected = []
+    def refresh(repo, session):
+        inspected.append(session['owner'])
+        raise ValueError('소유권 통과 뒤 사본 검사 도달')
+    candidate = SimpleNamespace(refresh=refresh)
+
     def execute(*args, **kwargs):
-        # 빈 검사 계획에서 멈추므로 실제 파일 쓰기 없이 소유자 관문을 확인한다.
+        # 조건별 계획 관문 없이 실제 사본 준비로 넘어가는 소유자와 거절 대상을 구분한다.
         own = prepare(controller, str(tmp_path),
-                      {'owner': '하드웨어:agent_001', 'repair_policy': VERSION}, None, None)
+                      {'owner': '하드웨어:agent_001', 'repair_policy': VERSION, 'worktree': '.'}, None, candidate)
         other = prepare(controller, str(tmp_path),
-                        {'owner': '다른프로젝트:agent_001', 'repair_policy': VERSION}, None, None)
-        assert own['stage'] == 'plan'
+                        {'owner': '다른프로젝트:agent_001', 'repair_policy': VERSION}, None, candidate)
+        assert own['stage'] == 'conflict' and '사본 검사 도달' in own['error']
         assert other['stage'] == 'ownership'
+        assert inspected == ['하드웨어:agent_001']
         return {'success': True}
 
     monkeypatch.setattr('system_tools._execute_ibl_unified', execute)

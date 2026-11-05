@@ -116,15 +116,6 @@ def command(wt, source='assert __import__("pathlib").Path("a.txt").read_text() =
     return shlex.quote(sys.executable) + ' -m pytest test_change.py'
 
 
-def semantic_anchor(repair):
-    """의미 평가 서비스 시험의 전제인 현재 사본 검사 영수증."""
-    root, wt, st, session, _ = repair
-    stamp = st._candidate.digest(st._candidate.collect(str(root), session))
-    session['execution_checks'] = [{'id': 'current-check', 'status': 'passed',
-        'candidate_hash': stamp, 'before_hash': stamp,
-        'environment_hash': st._candidate.environment(wt), 'output': 'verified fixture'}]
-
-
 def test_real_test_apply_and_completion_without_ai(repair, monkeypatch):
     root, wt, st, session, controller = repair
     cmd = command(wt)
@@ -143,10 +134,7 @@ def test_real_test_apply_and_completion_without_ai(repair, monkeypatch):
     assert (root / 'a.txt').read_text() == 'fixed'
     saved = st.read_session(str(root), session['key'])
     assert policy.completion(saved, {}, root)[0]
-    events = list(controller.finalize('검사 후 반영했습니다', [], lambda ev: None))
-    assert '미완료' not in events[-1]['content']
-    from thread_context import get_goal_eval_outcome
-    assert get_goal_eval_outcome()['method'] == 'repair_receipts'
+    assert not policy.receipt_completion(controller)  # 실제 업무 완료는 기존 최종평가에서 판단.
     (root / 'a.txt').write_text('later mutation')
     assert not policy.completion(saved, {}, root)[0]
 
@@ -207,16 +195,6 @@ def test_failure_details_survive_adapter():
     assert exc.value.details['stage'] == 'semantic'
 
 
-def test_semantic_approval_without_coverage_is_not_enough(repair, monkeypatch):
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    semantic_anchor(repair)
-    session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
-    monkeypatch.setattr(policy, 'semantic_review', lambda *a: {'status': 'APPROVED'})
-    result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert not result['success'] and result['stage'] == 'semantic'
-
-
 def test_direct_repair_does_not_call_planning_model(monkeypatch):
     from cognitive_consciousness import CognitiveConsciousnessMixin
     import thread_context
@@ -225,34 +203,6 @@ def test_direct_repair_does_not_call_planning_model(monkeypatch):
     result = CognitiveConsciousnessMixin()._run_consciousness_or_reuse('#repair 영어 상태 표시 수정', [], repair=True)
     assert result['_repair_policy'] == 2
     assert result['criteria'][0]['text'] == '#repair 영어 상태 표시 수정'
-
-
-def test_semantic_only_checks_selected_condition_and_retrieves_original(repair, monkeypatch):
-    root, wt, st, session, controller = repair
-    controller.store.put_response('수정 결과')
-    record = {'id': 'observation', 'output': 'x' * 35000 + 'tail proof'}
-    ref = controller.store.evidence(record)
-    record['evidence_ref'] = ref
-    seen = []
-    def invoke(c, **kw):
-        assert kw['phase'] == 'semantic'
-        packet = c._evaluation_packet
-        assert [r['id'] for r in packet['context']['criteria_contract']['criteria']] == ['C2']
-        seen.append(packet)
-        if len(seen) == 1:
-            return json.dumps({'status': 'UNKNOWN', 'recoverable': True, 'reason': ref['id'],
-                'evidence_requests': [{'criterion_id': 'C2', 'evidence_id': ref['id'],
-                                       'revision': ref['id'], 'start': 0, 'end': ref['chars']}]})
-        recovered = [r for r in packet['attachments'] if r['role'] == 'recovered']
-        assert len(recovered) == 1 and 'tail proof' in recovered[0]['text']
-        assert recovered[0]['revision'] == ref['id'] and recovered[0]['total'] == ref['chars']
-        return json.dumps({'status': 'APPROVED', 'workspace_coverage': [
-            {'criterion_id': 'C2', 'status': 'passed', 'evidence_ids': ['observation']}]})
-    monkeypatch.setattr('final_evaluator.invoke', invoke)
-    contract = {'user_goal': controller.message, 'criteria': [{'id': 'C1', 'text': 'machine'}, {'id': 'C2', 'text': 'meaning'}]}
-    result = policy.semantic_review(controller, contract, [contract['criteria'][1]], session, [record])
-    assert result['status'] == 'APPROVED', result
-    assert len(seen) == 2
 
 
 def test_deferred_success_closes_without_new_executor(consumer, tmp_path, monkeypatch):
@@ -264,7 +214,7 @@ def test_deferred_success_closes_without_new_executor(consumer, tmp_path, monkey
     monkeypatch.setattr(module, '_commit_ready', lambda *a: None)
     monkeypatch.setattr(policy, 'completion', lambda *a: (True, 'verified'))
     from restart_protocol import atomic_json
-    atomic_json(tmp_path / 'data/system_ai_state/repair_sessions/task-repair.json', {'commit': {'commit': 'a' * 40}})
+    atomic_json(tmp_path / 'data/system_ai_state/repair_sessions/task-repair.json', {'commit': {'commit': 'a' * 40}, 'task_scope': {'parent': 'parent'}})
     module.process_pending(tmp_path, 'new-generation', lambda *a: pytest.fail('unnecessary executor'))
     assert settled == ['completed']
     assert journal.read(row['task_id'], tmp_path)['evaluation']['method'] == 'repair_receipts'
@@ -298,38 +248,6 @@ def test_v2_build_gate_checks_without_generating(repair, monkeypatch):
     monkeypatch.setattr(st, '_sandbox_check', run)
     assert st.verify(str(root), session)[0]
     assert next(c for c in commands if 'scripts/build_ibl_nodes.py' in c)[-1] == '--check'
-
-
-def test_same_semantic_service_failure_has_bounded_retries(repair, monkeypatch):
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    semantic_anchor(repair)
-    session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
-    calls = []
-    def unavailable(*args):
-        calls.append(1)
-        return {'status': 'UNKNOWN', 'reason': 'service unavailable', 'retryable': True}
-    monkeypatch.setattr(policy, 'semantic_review', unavailable)
-    for _ in range(4):
-        result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-        assert not result['success'] and result['stage'] == 'semantic'
-    assert len(calls) == 2
-    assert result['reused']
-    st._save_session(str(root), session)
-    events = list(controller.finalize('진행 상태', [], lambda ev: None))
-    assert 'service unavailable' in events[-1]['content']
-    assert '정본 반영·활성 확인·커밋이 완료되지' not in events[-1]['content']
-
-
-def test_new_policy_does_not_reinterpret_legacy_session(repair, monkeypatch):
-    root, wt, st, session, controller = repair
-    session['repair_policy'] = 1
-    (wt / 'a.txt').write_text('fixed')
-    monkeypatch.setattr(policy, 'prepare', lambda *a: pytest.fail('legacy policy changed'))
-    monkeypatch.setattr('final_evaluator.invoke', lambda *a, **kw: json.dumps({'status': 'UNKNOWN', 'reason': 'legacy review'}))
-    result = controller.prepare_repair(str(root), session, st.verify, st._candidate)
-    assert not result['success']
-    assert controller._repair_completion_policy == 1
 
 
 def test_status_details_survive_items_projection(repair):

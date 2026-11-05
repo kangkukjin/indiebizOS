@@ -850,7 +850,7 @@ def test_plan_and_reframe_use_planning_contract_without_review_fields(supervisor
     assert calls[0]["phase"] == ("reframe" if revision else "plan")
 
 
-@pytest.mark.parametrize("stop_kind", ["budget", "review_limit", "empty_response"])
+@pytest.mark.parametrize("stop_kind", ["budget", "empty_response"])
 def test_reframe_call_skip_survives_consciousness_pipeline(supervisor, monkeypatch, capsys, stop_kind):
     """실제 재규정→인지 믹스인→의식→호출 관문 왕복에서 생략과 빈 응답을 구분한다."""
     import consciousness_agent as consciousness
@@ -875,9 +875,7 @@ def test_reframe_call_skip_survives_consciousness_pipeline(supervisor, monkeypat
     runner._run_consciousness = CognitiveConsciousnessMixin._run_consciousness.__get__(runner)
     framing = dict(supervisor.framing)
     context = tc.snapshot()
-    if stop_kind == "review_limit":
-        supervisor.reviews = supervisor.config["max_reviews"]
-    elif stop_kind == "budget":
+    if stop_kind == "budget":
         supervisor.phase_usage["plan"] = {"input": supervisor.config["max_input_tokens"], "output": 0}
     else:
         monkeypatch.setattr(supervisor_runtime, "invoke", lambda *a, **kw: "")
@@ -905,3 +903,11 @@ def test_reframe_call_skip_survives_consciousness_pipeline(supervisor, monkeypat
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_requested_reframe_is_not_blocked_by_automatic_review_count(supervisor, monkeypatch):
+    supervisor.reviews = supervisor.config['max_reviews']
+    calls = []
+    monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw: calls.append(kw['phase']) or '{}')
+    assert supervisor.plan('관측에 맞춰 수정', '계획', revision='new evidence') == '{}'
+    assert calls == ['reframe']

@@ -15,69 +15,6 @@ from test_conscious_supervisor import supervisor  # noqa: F401
 from test_repair_capability_parity import repair_handler  # noqa: F401
 
 
-def observation(st, root, wt, session):
-    stamp = st._candidate.digest(st._candidate.collect(str(root), session))
-    return {'id': 'check-1', 'status': 'passed', 'candidate_hash': stamp,
-            'before_hash': stamp, 'environment_hash': st._candidate.environment(wt),
-            'output': 'rendered current candidate', 'evidence_ref': {'id': 'check-ref'}}
-
-
-@pytest.mark.parametrize('anchor', ['check-1', 'check-ref'])
-def test_semantic_mixed_check_and_visual_evidence_apply(repair, monkeypatch, anchor):
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    session['execution_checks'] = [observation(st, root, wt, session)]
-    visual = controller.store.evidence({'observation': 'actual image comparison'})['id']
-    monkeypatch.setattr(controller.store, 'tool_index', lambda **kw: [
-        {'is_error': False, 'result': {'id': visual}}])
-    monkeypatch.setattr(policy, 'semantic_review', lambda *a: {'status': 'APPROVED', 'reason': 'ACHIEVED',
-        'workspace_coverage': [{'criterion_id': 'C1', 'status': 'passed', 'evidence_ids': [anchor, visual]}]})
-    st._save_session(str(root), session)
-    result = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
-                         'active_verify_cmd': shlex.quote(sys.executable) + ' -c ' + shlex.quote(
-                             'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"'),
-                         'verification_plan': [{'criterion_id': 'C1', 'method': 'semantic'}]})
-    assert result['complete'], result
-    saved = st.read_session(str(root), session['key'])
-    coverage = saved['readiness']['decision']['workspace_coverage'][0]
-    assert coverage['evidence_ids'] == ['check-1']
-    assert coverage['supporting_evidence_ids'] == [visual]
-    assert policy.completion(saved, {}, root)[0]
-
-
-@pytest.mark.parametrize('case', ['forged', 'stale', 'no_check'])
-def test_semantic_invalid_evidence_never_looks_achieved(repair, monkeypatch, case):
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    record = observation(st, root, wt, session)
-    if case == 'stale':
-        record['candidate_hash'] = record['before_hash'] = 'old'
-    session['execution_checks'] = [record]
-    monkeypatch.setattr(policy, 'semantic_review', lambda *a: {'status': 'APPROVED', 'reason': 'ACHIEVED',
-        'workspace_coverage': [{'criterion_id': 'C1', 'status': 'passed',
-                               'evidence_ids': ['forged'] if case == 'no_check' else ['check-1', 'forged']}]})
-    session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
-    result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert not result['success'] and result['error'] != 'ACHIEVED'
-    assert result['missing_criteria'] == ['C1'] and result['invalid_evidence']
-    assert (root / 'a.txt').read_text() == 'before'
-
-
-def test_new_supporting_evidence_invalidates_cached_semantic_failure(repair, monkeypatch):
-    root, wt, st, session, controller = repair
-    session['execution_checks'] = [observation(st, root, wt, session)]
-    session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'semantic'}]
-    rows, calls = [], []
-    monkeypatch.setattr(controller.store, 'tool_index', lambda **kw: rows)
-    monkeypatch.setattr(policy, 'semantic_review', lambda *a: calls.append(1) or {'status': 'UNKNOWN'})
-    for _ in range(2):
-        policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert len(calls) == 1
-    rows.append({'result': {'id': 'new-image'}})
-    policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert len(calls) == 2
-
-
 def test_final_repair_marker_overrides_intermediate_semantic_verdict():
     from episode_logger import _final_evaluation_result
     assert _final_evaluation_result('[GoalEval] 최종 판정: ACHIEVED\n[RepairCheck] 최종 판정: UNKNOWN') == 'UNKNOWN'

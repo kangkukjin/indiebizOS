@@ -5994,8 +5994,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-11-05'
-          impl: 32630f6e5e4bdee5
+          at: '2026-11-06'
+          impl: a12d77f29ca5ac0c
         target_key: path
         aliases:
           offset:
@@ -6012,8 +6012,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-11-05'
-          impl: 32630f6e5e4bdee5
+          at: '2026-11-06'
+          impl: a12d77f29ca5ac0c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6091,8 +6091,8 @@ nodes:
           content: $content
         member_transform: member_documents:write
         path_audited:
-          at: '2026-11-05'
-          impl: 32630f6e5e4bdee5
+          at: '2026-11-06'
+          impl: a12d77f29ca5ac0c
         target_key: path
       list:
         callable_contract:
@@ -6497,7 +6497,7 @@ nodes:
         target_key: path
       patch:
         returns: effect
-        description: 자기수리 사본·검사·정본 반영. 새 수리는 verification_plan으로 조건별 실검사를 연결하고 의미 판단이 필요한 조건만 평가한다. 이전 수리는 기존 정책 유지.
+        description: 자기수리 사본·관련 검사·정본 반영. 같은 후보의 통과 검사를 재사용하며 적용 후 원래 업무를 이어간다.
         group: file
         ops:
           default: propose
@@ -6512,7 +6512,7 @@ nodes:
             apply: 조건별 검사 뒤 고정 묶음 정본 반영과 소유자 활성화. scheduled이면 턴 종료
             status: path 지정 시 공통 소유권·보호 사유 조회. 그 밖에는 사본·적용·활성·커밋·재개 상태를 key로 조회
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): path + reason으로 관측 결함의 진단·수리를 맡긴다(content 또는 old_string/new_string 수정안은 선택). paths는 path를 포함하는 같은 업무에 필요한 일반 프로그램의 기존 상대 경로 1~64개. 대상 권한은 program_boundary의 공통 판정이며 일반 모듈·패키지·스크립트·개인 사전을 포함하고 보호 코어·기존 검사 계약은 제외한다. 등록 순수 부품의 수정안은 무재기동 사본에 우선 적재한다. pending_repair 뒤 턴을 닫으면 수리 후 같은 목표·예산으로 업무가 복귀한다. 그 밖의 RED 변경은 승인용 제안만 저장(apply{proposal_id}) / apply: verification_plan의 실제 검사·선택한 의미 조건 검토 후 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — 세대 교체가 필요하면 이 턴이 닫힌 뒤 분리 수행자가 활성화하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: path 지정 시 공통 판정기의 정적 소유권 조회(사본 생성 없음), 그 밖에는 스테이징 세션 + 적용 대기 제안 목록(verified 는 candidate_hash 판본의 기계 검증, key 조회는 현재 사본 해시를 다시 세어 verified_current·현재 files 로 답함) / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
+        target_description: 'op — propose(기본): path + reason으로 관측 결함의 진단·수리를 맡긴다(content 또는 old_string/new_string 수정안은 선택). paths는 path를 포함하는 같은 업무에 필요한 일반 프로그램의 기존 상대 경로 1~64개. 대상 권한은 program_boundary의 공통 판정이며 일반 모듈·패키지·스크립트·개인 사전을 포함하고 보호 코어·기존 검사 계약은 제외한다. 등록 순수 부품의 수정안은 무재기동 사본에 우선 적재한다. pending_repair 뒤 턴을 닫으면 수리 후 같은 목표·예산으로 업무가 복귀한다. 그 밖의 RED 변경은 승인용 제안만 저장(apply{proposal_id}) / apply: 실제 검사 결과로 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — 세대 교체가 필요하면 이 턴이 닫힌 뒤 분리 수행자가 활성화하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: path 지정 시 공통 판정기의 정적 소유권 조회(사본 생성 없음), 그 밖에는 스테이징 세션 + 적용 대기 제안 목록(verified 는 candidate_hash 판본의 기계 검증, key 조회는 현재 사본 해시를 다시 세어 verified_current·현재 files 로 답함) / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           old_string:
           - old
@@ -6970,8 +6970,8 @@ nodes:
             '
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-11-05'
-          impl: 32630f6e5e4bdee5
+          at: '2026-11-06'
+          impl: a12d77f29ca5ac0c
         pipe_in: true
         lands_on: body
         limb_op:

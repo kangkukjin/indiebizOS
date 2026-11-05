@@ -920,7 +920,7 @@ def op_apply(ti):
                                     for x in pend[:3]))
         return {"success": False, "error":
                 "적용할 수리 델타가 없습니다. [self:write]/[self:edit]와 격리 셸로 "
-                "같은 사본을 수정하고 원래 요청 전체를 검증한 뒤 apply 하세요." + hint,
+                "같은 사본을 수정하고 관련 검사를 실행한 뒤 apply 하세요." + hint,
                 "pending_proposals": pend}
 
     from supervision_bus import current

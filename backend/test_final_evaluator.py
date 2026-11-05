@@ -688,9 +688,8 @@ def test_masked_secret_in_artifact_is_not_a_change_during_evaluation(supervisor,
     assert snapshot_error(supervisor)
 
 
-@pytest.mark.parametrize('phase', ['final', 'workspace', 'semantic'])
-def test_apply_evaluation_uses_stage_policy_without_demanding_final_response(supervisor, monkeypatch, phase):
-    from final_evaluator import invoke, prepare, APPLY_POLICY, FINAL_POLICY
+def test_final_evaluation_uses_goal_policy(supervisor, monkeypatch):
+    from final_evaluator import invoke, prepare, FINAL_POLICY
     prepare(supervisor)
     assert supervisor._evaluation_packet['response'] == ''
     contract = supervisor._evaluation_packet['criteria']
@@ -700,29 +699,24 @@ def test_apply_evaluation_uses_stage_policy_without_demanding_final_response(sup
         calls.append((prompt, kwargs))
         assert contract in prompt
         policy = kwargs['system_prompt']
-        if phase == 'final':
-            assert FINAL_POLICY in policy and APPLY_POLICY not in policy
-        else:
-            assert APPLY_POLICY in policy and FINAL_POLICY not in policy
+        assert FINAL_POLICY in policy
         return 'ACHIEVED\nWORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["test-1"]}]'
 
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    decision = json.loads(invoke(supervisor, phase=phase))
+    decision = json.loads(invoke(supervisor))
     assert decision['status'] == 'APPROVED'
     assert len(calls) == 1  # 단계 구분에 새 감독/평가 호출이 필요하지 않다.
-    if phase != 'final':
-        assert decision['workspace_coverage'][0]['evidence_ids'] == ['test-1']
     assert supervisor._evaluation_packet['criteria'] == contract
 
 
-def test_apply_evaluation_still_rejects_missing_documentation(supervisor, monkeypatch):
+def test_final_evaluation_rejects_missing_documentation(supervisor, monkeypatch):
     from final_evaluator import invoke, prepare
     prepare(supervisor)
     feedback = ('NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\n'
                 'DEFECTS: [{"criterion_id":"C1","evidence":"사본 문서에 필수 설치 안내 누락",'
                 '"repair":"설치 안내를 문서에 추가"}]')
     monkeypatch.setattr('consciousness_agent.system_ai_call', lambda *a, **kw: feedback)
-    decision = json.loads(invoke(supervisor, phase='semantic'))
+    decision = json.loads(invoke(supervisor))
     assert decision['status'] == 'REWORK'
     assert decision['defects'][0]['evidence'] == '사본 문서에 필수 설치 안내 누락'
 

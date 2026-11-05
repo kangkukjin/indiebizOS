@@ -36,18 +36,14 @@ def test_main_prompt_has_no_repair_tail_or_history():
     assert t.count("수단(능력)은 가두지 않는다") == 1
 
 
-def test_repair_fragment_holds_the_doctrine():
-    f = _read("fragments/14_consciousness_repair.md")
-    for keep in ("뿌리에서 고치", "원인 사슬", "되묻기는 두 종류뿐", "apply", "재기동을 손으로 강제하지 마라"):
-        assert keep in f
-
-
 def test_doctrine_block_only_when_repair():
     a = _agent()
+    doctrine = a._load_repair_doctrine()
+    assert doctrine and doctrine == _read("fragments/14_consciousness_repair.md").strip()
     base = a._build_input("고쳐줘", [], "", "", "sys", "", "", None)
-    assert "<repair_doctrine" not in base
-    rep = a._build_input("고쳐줘", [], "", "", "sys", "", "", None, repair_doctrine="교리 본문")
-    assert "<repair_doctrine" in rep and "교리 본문" in rep
+    assert "<repair_doctrine" not in base and doctrine not in base
+    rep = a._build_input("고쳐줘", [], "", "", "sys", "", "", None, repair_doctrine=doctrine)
+    assert "<repair_doctrine" in rep and doctrine in rep
     assert rep.index("<repair_doctrine") < rep.index("<user_message>")   # 사용자 메시지가 마지막
 
 

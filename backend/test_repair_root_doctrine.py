@@ -1,21 +1,4 @@
-"""수리 교리: 뿌리에서 끝내라 — 범위 축소 임시처방·과잉 되묻기 방지 배터리 (2026-09-01).
-
-사용자 관찰: 자기수정을 시키면 "시킨 일을 벗어나지 않기 위해" 발견한 원인을 안 고치고
-보고만 하며, 심각하지 않은 결함마다 "고칠까요?"를 되물었다. 근본은 한 문장이었다 —
-의식 프롬프트 §시스템 수리 안전수칙의 옛 조항이 *스코프 크리프 방지*와 *원인 사슬 추적*을
-같은 문장에 묶어, 사슬 위의 뿌리까지 '명령 밖'으로 분류시켰다.
-
-  D1 의식 교리 — 뿌리에서 고치라는 지시가 있고, 옛 '보고만' 조항은 은퇴했다
-  D2 의식 교리 — '명령 밖'을 사슬 밖으로 정의하고, 되묻기를 두 종류로 한정한다
-  D3 기준 소유권 — 의식이 수리 기준을 정하고 평가자는 그 기준을 판정한다
-  D4 프롬프트 mtime — 교리를 고치면 재기동 없이 다음 턴부터 새 본문이 주입된다
-  D5 소비처 주입 — 그랜트가 살아 있는 턴에만 fragments/13_repair.md 가 실행자 turn_context 에 실린다
-  D6 실행자 base 프롬프트 — 옛 "요청하지 않은 개선 금지"가 사슬 경계 판본으로 바뀌었다
-
-★D5 가 이 배터리의 핵심이다(2026-09-02 재수리). 09-01 판은 교리를 의식 프롬프트(생산처)에만
-두어, 1-2문장 task_framing 병목 뒤의 실행자에게는 반대 압력(base 의 '요청 밖 개선 금지')만
-온전히 닿았다 — 뿌리를 알고도 소비처가 아닌 자리를 고친, 사용자가 지적한 바로 그 패턴.
-"""
+"""수리 지침의 갱신·그랜트별 전달을 실제 프롬프트 조립으로 확인한다."""
 import os
 import sys
 
@@ -30,32 +13,6 @@ PROMPTS = get_base_path() / "data" / "common_prompts"
 
 def _read(name: str) -> str:
     return (PROMPTS / name).read_text(encoding="utf-8")
-
-
-def test_d1_consciousness_orders_root_fix():
-    """D1 — 뿌리 지시가 있고 옛 '보고만' 조항은 사라졌다 (수리 교리는 수리 턴 전용 조각에 산다)."""
-    t = _read("fragments/14_consciousness_repair.md")
-    assert "뿌리에서 고치" in t
-    assert "원인 사슬" in t
-    # 은퇴 문구 — 사슬 위의 원인까지 보고만 하게 만들던 자리
-    assert "수리 중 발견한 다른 문제는 고치지 말고 보고만" not in t
-
-
-def test_d2_scope_is_the_chain_and_asking_is_bounded():
-    """D2 — '명령 밖'=사슬 밖, 되묻기는 요구사항 변경·파괴적 변경 둘뿐."""
-    t = _read("fragments/14_consciousness_repair.md")
-    assert "사슬 밖" in t
-    assert "같은 사슬 안이면 묻지 말고 고쳐라" in t
-    assert "되묻기는 두 종류뿐" in t
-
-
-def test_d3_consciousness_owns_repair_criteria():
-    """D3 — 수리 기준은 의식에서 생성하며 평가자의 독립 심사 항목이 아니다."""
-    framing = _read("fragments/14_consciousness_repair.md")
-    assert "achievement_criteria" in framing and "뿌리에서 고치" in framing
-    evaluator = _read("evaluator_prompt.md")
-    assert "의식이 정한 달성 기준" in evaluator
-    assert "기준을 만들거나 강화하거나 면제하지 않는다" in evaluator
 
 
 def test_d4_prompt_reloads_on_mtime_change(tmp_path):
@@ -100,6 +57,8 @@ def test_d5_repair_fragment_reaches_executor_only_with_grant(monkeypatch):
     monkeypatch.setattr(prompt_builder, "_prompt_builder_instance",
                         prompt_builder.PromptBuilder(PROMPTS))
 
+    doctrine = _read("fragments/13_repair.md").strip()
+    assert doctrine
     task_id = "task_doctrine_probe_d5"
     snap = thread_context.snapshot()
     try:
@@ -109,18 +68,16 @@ def test_d5_repair_fragment_reaches_executor_only_with_grant(monkeypatch):
         # 그랜트 없음 — 교리 없음
         revoke_grant(task_id=task_id)
         ctx = prompt_builder._build_dynamic_context(consciousness_output=None, model_name="m")
-        assert "수리 턴" not in ctx
+        assert doctrine not in ctx
 
         # 그랜트 발급 — 교리가 실행자 앞에 실린다
         issue_grant(agent_id="system_ai", task_id=task_id, reason="d5")
         ctx = prompt_builder._build_dynamic_context(consciousness_output=None, model_name="m")
-        assert "원인 사슬을 끝까지 따라가" in ctx
+        assert doctrine in ctx
         for other_task in ("task_other", ""):
             thread_context.set_current_task_id(other_task)
             other_ctx = prompt_builder._build_dynamic_context(consciousness_output=None, model_name="m")
-            assert "원인 사슬을 끝까지 따라가" not in other_ctx
-        assert "되묻기는 두 종류뿐" in ctx
-        assert "최종 보고 형식" in ctx
+            assert doctrine not in other_ctx
         assert ctx.startswith("<turn_context")   # dynamic — stable prefix 캐시를 안 깬다
     finally:
         revoke_grant(task_id=task_id)

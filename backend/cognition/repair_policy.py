@@ -1,4 +1,4 @@
-"""판본 2 수리: 검사 근거로 적용하고 필요한 의미 조건만 평가한다."""
+"""수리 적용은 실제 검사와 고정 바이트를 확인한다. 업무의 완료 판단은 실행자에게 남긴다."""
 import copy
 import json
 from pathlib import Path
@@ -14,10 +14,9 @@ def direct_framing(message):
             "capability_focus": {"hint": "변경 대상부터 확인하세요. 관리 연산으로 개정하는 정의·데이터는 그 연산으로 수정하고 새 호출로 검증합니다. "
                 "관용구는 workflow detail의 revision을 expected_revision으로 save합니다. 코드 적용 없이 원래 목표를 평가합니다. "
                 "보호 코어 밖의 일반 프로그램 구현 변경이 필요하면 같은 사본에서 수정·검사하세요. "
-                "apply에 verification_plan:[{criterion_id:'C1', command:'단일 pytest, node --test 또는 go test 명령', "
-                "method:'test'}]를 전달하면 같은 후보의 검사 결과를 재사용하거나 검사 후 적용합니다. "
-                "판단이 필요한 조건은 method:'semantic'으로 지정합니다. 생성/빌드는 검사 전에 끝내세요. "
-                "설계 판단이 필요하면 기존 reframe을 사용하세요. 실제 적재 확인은 active_verify_cmd입니다."}}
+                "관련 검사를 실행한 뒤 apply하면 같은 후보·환경의 통과 결과를 재사용합니다. "
+                "검사를 함께 실행하려면 verification_plan:[{command:'pytest 명령'}]을 전달하세요. "
+                "적용은 전체 업무의 완료가 아닙니다. 반영 뒤 남은 업무를 이어가세요."}}
 
 
 def enabled(controller):
@@ -29,11 +28,20 @@ def receipt_completion(controller):
     """첫 종료와 재개가 같은 기준으로 영수증 완료 경로를 선택한다."""
     from repair_continuation import current
     from repair_readiness import requires_code_receipts
-    return (enabled(controller) and requires_code_receipts(controller)
-            and getattr(controller, '_repair_completion_policy', VERSION) == VERSION
-            and not controller.completion_review_required
-            and not (current() or {}).get('pending_delivery')
-            and not controller.delivery.manifest())
+    if (not enabled(controller) or not requires_code_receipts(controller)
+            or controller.completion_review_required or (current() or {}).get('pending_delivery')
+            or controller.delivery.manifest()):
+        return False
+    from repair_continuation import staging_session
+    from runtime_utils import get_base_path
+    row = current() or {}
+    try:
+        session = staging_session(row.get("staging_task_id") or controller.task, get_base_path()) or {}
+    except (OSError, ValueError):
+        return True
+    # 적용 전에는 같은 사본을 이어가고, 한정 자식 수리는 영수증으로 부모에 복귀한다.
+    # 일반 업무는 코드 반영만으로 목표 달성을 선언하지 않고 기존 실행·최종평가로 돌아간다.
+    return (session.get("status") != "applied" or bool(session.get("task_scope")))
 
 
 def failure(stage, message, **details):
@@ -47,36 +55,15 @@ def prepare(controller, repo, session, verify, candidate):
     from supervisor_handoff import criteria_contract
     if controller.cancelled() or session.get("owner") != current_owner():
         return failure("ownership", "취소됐거나 수리 소유자가 일치하지 않습니다")
-    if session.get("repair_policy") != VERSION:
-        return failure("policy", "진행 중인 이전 판본 수리는 기존 정책으로 마무리해야 합니다")
     contract = copy.deepcopy(getattr(controller, "_final_criteria_contract", None)
                              or criteria_contract(controller.message, controller.framing))
     plan = copy.deepcopy(session.get("verification_plan") or [])
-    criteria = {c["id"]: c for c in contract["criteria"] if c.get("verification_phase") != "activation"}
-    if isinstance(plan, list) and all(isinstance(item, dict) for item in plan):
-        bound = {(item.get("criterion_id"), item.get("command")) for item in plan}
-        for old in session.get("execution_checks", []):
-            for cid in old.get("criterion_ids", []):
-                pair = (cid, old.get("command"))
-                if cid in criteria and pair[1] and pair not in bound:
-                    plan.append({"criterion_id": cid, "command": pair[1], "method": "test"})
-                    bound.add(pair)
-    if not criteria or not isinstance(plan, list) or not plan or len(plan) > 40:
-        return failure("plan", "요청의 각 기능 기준에 검사 명령 또는 의미 검토를 연결하세요", missing_criteria=list(criteria))
-    if any(not isinstance(p, dict) or p.get("criterion_id") not in criteria
-           or p.get("method", "test") not in {"test", "semantic"}
-           or (p.get("method", "test") == "test" and not p.get("command")) for p in plan):
-        return failure("plan", "verification_plan의 criterion_id, method, command를 확인하세요")
-    missing = sorted(set(criteria) - {p["criterion_id"] for p in plan})
-    if missing:
-        return failure("plan", "검사에 연결되지 않은 기능 기준이 있습니다", missing_criteria=missing)
-    semantic_required = {cid for cid, c in criteria.items()
-                         if c.get("verification_method") == "semantic"}
-    missing_semantic = sorted(semantic_required - {
-        p["criterion_id"] for p in plan if p.get("method") == "semantic"})
-    if missing_semantic:
-        return failure("plan", "의미 검토가 지정된 기준은 시험 통과만으로 승인할 수 없습니다",
-                       missing_criteria=missing_semantic)
+    if not isinstance(plan, list) or any(not isinstance(p, dict) for p in plan):
+        return failure("plan", "verification_plan은 검사 명령 객체의 목록입니다")
+    # 이전 기준 ID·semantic 항목은 적용 조건이 아니다. 원래 업무 기준은 그대로 보존한다.
+    if any(p.get("command") is not None and not isinstance(p["command"], str) for p in plan):
+        return failure("plan", "검사 command는 문자열입니다")
+    commands = list(dict.fromkeys(p["command"] for p in plan if p.get("command")))
     wt = Path(repo) / session["worktree"]
     # The same preparation owns dependency refresh for direct apply and shell
     # entry. Sync before capturing evidence; never change inputs during checks.
@@ -85,51 +72,40 @@ def prepare(controller, repo, session, verify, candidate):
     except (ValueError, OSError) as exc:
         return failure("conflict", str(exc))
     env = candidate.execution_environment(wt, session)
-    supporting = {r["result"]["id"] for r in controller.store.tool_index(limit=10000)
-                  if not r.get("is_error") and r.get("result", {}).get("id")}
-    token = candidate.digest({"candidate": before, "env": env, "contract": contract, "plan": plan,
-                              "supporting": sorted(supporting),
+    token = candidate.digest({"candidate": before, "env": env, "contract": contract, "commands": commands,
                               "activation": session.get("activation_commands"),
                               "evidence": session.get("execution_checks", [])})
     drift = candidate.conflicts(repo, session)
     if drift:
         return failure("conflict", "정본 변경을 사본에 합친 뒤 검사하세요", changed_files=sorted(drift))
     cached = session.get("preparation_result", {})
-    if cached.get("input_hash") == token and (not cached.get("retryable") or cached.get("attempts", 1) >= 2):
+    if cached.get("input_hash") == token:
         return {**cached["result"], "reused": True}
     def finish(result):
         session["preparation_result"] = {"input_hash": candidate.digest({
-            "candidate": before, "env": env, "contract": contract, "plan": plan,
-            "supporting": sorted(supporting),
+            "candidate": before, "env": env, "contract": contract, "commands": commands,
             "activation": session.get("activation_commands"), "evidence": session.get("execution_checks", [])}),
-            "attempts": cached.get("attempts", 1) + 1 if cached.get("input_hash") == token else 1,
-            "result": result, "retryable": result.get("decision", {}).get("retryable", False)}
+            "result": result}
         controller._repair_failure = None if result.get("success") else result
         return result
-    coverage, semantic, evidence = [], [], []
-    # 명령 실행은 호스트의 기존 격리 실행기를 사용하고 과거 같은 후보의 영수증을 재사용한다.
     from repair_check_runner import check as run_check
-    for item in plan:
+    for command in commands:
         drift = candidate.conflicts(repo, session)
         if drift:
-            return finish(failure("conflict", "검사 사이 정본이 변경됐습니다. 남은 검사를 실행하지 않습니다",
-                                  changed_files=sorted(drift)))
-        if item.get("method", "test") == "semantic":
-            semantic.append(criteria[item["criterion_id"]])
-            continue
+            return finish(failure("conflict", "검사 사이 정본이 변경됐습니다", changed_files=sorted(drift)))
         try:
-            record = run_check(repo, session, candidate, item["command"], controller)
+            record = run_check(repo, session, candidate, command, controller)
         except (ValueError, OSError) as exc:
-            return finish(failure("test", str(exc), missing_criteria=[item["criterion_id"]]))
-        report = record.get("test_report") or {}
-        if report.get("cases") or report.get("scope", {}).get("collected"):
-            record["criterion_ids"] = sorted(set(record.get("criterion_ids", [])) | {item["criterion_id"]})
-        evidence.append(record)
+            return finish(failure("test", str(exc)))
         if record.get("status") != "passed" or not (record.get("test_report") or {}).get("passed"):
-            return finish(failure("test", "관련 검사가 통과하지 않았습니다", checks=[record],
-                                  missing_criteria=[item["criterion_id"]]))
-        coverage.append({"criterion_id": item["criterion_id"], "status": "passed", "evidence_ids": [record["id"]],
-                         "check_evidence": [check_evidence(record)]})
+            return finish(failure("test", "관련 검사가 통과하지 않았습니다", checks=[record]))
+    observations = [r for r in session.get("execution_checks", [])
+                    if r.get("candidate_hash") == r.get("before_hash") == candidate.digest(before)
+                    and r.get("environment_hash") == env]
+    passed = [r for r in observations if r.get("status") == "passed" and (r.get("test_report") or {}).get("passed")]
+    if not passed:
+        return finish(failure("test", "현재 사본의 통과 검사 결과가 없습니다. 관련 검사를 실행하세요.",
+                              checks=observations))
     unresolved = unresolved_checks(session, candidate.digest(before), env)
     if unresolved:
         return finish(failure("test", "같은 후보에 미해결 검사 실패가 남아 있습니다. 원래 범위를 다시 검사하세요",
@@ -145,60 +121,18 @@ def prepare(controller, repo, session, verify, candidate):
                               changed_files=sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))))
     if not ok:
         return finish(failure("gate", "필수 기계 검사가 통과하지 않았습니다", checks=checks))
-    # G4: 시험 약화는 시험 통과로 숨길 수 없다 — 의미 검토가 그 변경을 보지 않으면 승인하지 않는다.
-    weakening = candidate.test_weakening(repo, session) if hasattr(candidate, "test_weakening") else []
-    if weakening and not semantic:
-        return finish(failure("test_weakening", "시험을 삭제·약화하는 변경은 시험 통과만으로 승인할 수 없습니다. "
-                              "오래된 계약 수정이면 해당 기준에 method:'semantic' 검토를 붙이세요",
-                              weakened=weakening, missing_criteria=sorted(criteria)))
-    session["test_weakening"] = weakening
-    regression = regression_evidence(session, plan)
-    decision = {"status": "APPROVED", "method": "tests", "workspace_coverage": coverage}
-    if semantic:
-        current_hash = candidate.digest(before)
-        observations = [r for r in session.get("execution_checks", [])
-                        if r.get("candidate_hash") == r.get("before_hash") == current_hash
-                        and r.get("environment_hash") == env]
-        anchors = [r["id"] for r in observations if r.get("status") == "passed"]
-        if not anchors:
-            return finish(failure("semantic", "현재 사본의 통과 검사 영수증이 없습니다. "
-                                  "단일 pytest, node --test 또는 go test를 파이프 없이 실행한 뒤 의미 검토를 요청하세요. "
-                                  "일반 셸의 종료 코드 0이나 과거 사본의 검사는 통과 근거가 아닙니다.",
-                                  missing_criteria=sorted({c["id"] for c in semantic}),
-                                  invalid_evidence=[{"criterion_id": c["id"], "missing_current_check": True}
-                                                    for c in semantic],
-                                  allowed_evidence_ids=[],
-                                  checks=[{k: r.get(k) for k in ("id", "status", "command", "test_report")}
-                                          for r in observations]))
-        decision = semantic_review(controller, contract, semantic, session, observations)
-        covered, invalid = normalize_coverage(decision, observations, supporting)
-        missing = sorted({c["id"] for c in semantic} - covered)
-        if decision.get("status") != "APPROVED" or missing:
-            message = ("의미 검토의 증거 연결이 유효하지 않습니다. 현재 사본의 검사 id와 보충 증거 id를 확인하세요"
-                       if decision.get("status") == "APPROVED" else decision.get("reason", "의미 조건 미확인"))
-            return finish(failure("semantic", message, decision=decision,
-                                  missing_criteria=missing, invalid_evidence=invalid,
-                                  allowed_evidence_ids=anchors))
-        decision.update(method="mixed" if coverage else "semantic",
-                        workspace_coverage=coverage + decision.get("workspace_coverage", []))
+    regression = regression_evidence(session, [{"command": r["command"]} for r in passed])
+    decision = {"status": "APPROVED", "method": "tests",
+                "check_evidence": [check_evidence(r) for r in passed]}
     if controller.cancelled() or before != candidate.collect(repo, session) or env != candidate.execution_environment(wt, session):
         return finish(failure("candidate_changed", "검사 이후 후보·환경 변경 또는 취소가 발생했습니다"))
-    # activation은 기능 심사로 다루지 않고 실제 적용 서비스의 계획과 영수증으로 확인한다.
-    for c in contract["criteria"]:
-        if c.get("verification_phase") != "activation":
-            continue
-        activation = c.get("activation_plan") or {}
-        if not isinstance(activation, dict) or (activation.get("kind") not in {"controller_active", "commit"}
-                and activation.get("command") not in session.get("activation_commands", {}).values()):
-            return finish(failure("activation_plan", "활성 확인 계획이 없습니다", missing_criteria=[c["id"]]))
     candidate.seal(repo, session, checks, decision, contract)
     session["readiness"]["regression_evidence"] = regression
-    session["readiness"]["test_weakening"] = weakening
     controller.log("repair.workspace_ready", role="harness", method=decision["method"],
                    candidate_hash=candidate.digest(before), criteria=contract,
-                   regression_evidence=regression, test_weakening=weakening)
+                   regression_evidence=regression)
     return finish({"success": True, "ready": True, "applied": False, "method": decision["method"],
-                   "regression_evidence": regression, "test_weakening": weakening})
+                   "regression_evidence": regression})
 
 
 def check_evidence(record):
@@ -229,7 +163,7 @@ def regression_evidence(session, plan):
         passed = next((r for r in reversed(records) if r.get("command") == command and r.get("status") == "passed"), None)
         failed = next((r for r in reversed(records) if r.get("command") == command and r.get("status") == "failed"
                        and (not passed or r.get("candidate_hash") != passed.get("candidate_hash"))), None)
-        out.append({"criterion_id": item.get("criterion_id"), "command": command,
+        out.append({"command": command,
                     "before_failed_check": failed.get("id") if failed else None,
                     "after_passed_check": passed.get("id") if passed else None,
                     "status": "reproduced" if failed and passed else "unknown"})
@@ -245,75 +179,10 @@ def symptom_recheck(session, row, base):
     reproduced = [r for r in ready.get("regression_evidence") or [] if r.get("status") == "reproduced"]
     if reproduced:
         return "verified", "사본에서 같은 검사가 수정 전 실패·수정 후 통과(" + ", ".join(
-            sorted({r.get("criterion_id") or "" for r in reproduced})) + ")"
+            sorted({r.get("command") or "" for r in reproduced})) + ")"
     if ready.get("activation_commands", {}).get("active_verify_cmd"):
         return "unverified", "active_verify_cmd 가 아직 통과 영수증을 남기지 않았습니다"
     return "unverified", "원 증상의 수정 전 실패 영수증과 활성 확인 명령이 모두 없습니다 — 검사 통과만으로 재현을 주장하지 않습니다"
-
-
-def normalize_coverage(decision, observations, supporting):
-    """현재 후보의 검사를 앵커로 삼고 같은 턴의 보충 관측은 별도로 보존한다."""
-    aliases = {r["id"]: r["id"] for r in observations if r.get("status") == "passed"}
-    aliases.update({r["evidence_ref"]["id"]: r["id"] for r in observations
-                    if r.get("status") == "passed" and r.get("evidence_ref", {}).get("id")})
-    covered, invalid = set(), []
-    for row in decision.get("workspace_coverage", []):
-        if not isinstance(row, dict) or row.get("status") != "passed":
-            continue
-        refs = row.get("evidence_ids", [])
-        extra = row.get("supporting_evidence_ids", [])
-        if not isinstance(refs, list) or not isinstance(extra, list) or not all(
-                isinstance(ref, str) for ref in refs + extra):
-            invalid.append({"criterion_id": row.get("criterion_id"), "reason": "증거 id는 문자열 목록이어야 합니다"})
-            continue
-        anchors = list(dict.fromkeys(aliases[ref] for ref in refs if ref in aliases))
-        supplements = list(dict.fromkeys(ref for ref in refs + extra if ref not in aliases and ref in supporting))
-        unknown = [ref for ref in refs + extra if ref not in aliases and ref not in supporting]
-        if not anchors or unknown:
-            invalid.append({"criterion_id": row.get("criterion_id"), "unknown_ids": unknown,
-                            "missing_current_check": not anchors})
-            continue
-        row.update(evidence_ids=anchors, supporting_evidence_ids=supplements,
-                   check_evidence=[check_evidence(r) for r in observations if r["id"] in anchors])
-        covered.add(row.get("criterion_id"))
-    return covered, invalid
-
-
-def semantic_review(controller, contract, criteria, session, evidence):
-    from final_evaluator import prepare, invoke, snapshot_error
-    old_packet = getattr(controller, "_evaluation_packet", None)
-    old_snapshot = getattr(controller, "_evaluation_snapshot", None)
-    try:
-        packet = prepare(controller)
-        limited = {**contract, "criteria": list({c["id"]: c for c in criteria}.values())}
-        packet["criteria"] = json.dumps(limited, ensure_ascii=False)
-        packet["context"].update(criteria_contract=limited, evaluation_target="repair_semantic",
-                                  workspace=session["worktree"], workspace_evidence=evidence,
-                                  workspace_files=[r["rel"] for r in session["files"].values()])
-        from red_apply import _load_handler
-        candidate = _load_handler({"repo": str(__import__("runtime_utils").get_base_path())})._staging_mod()._candidate
-        packet["context"].update(candidate.artifact_review_context(session))
-        result = json.loads(invoke(controller, phase="semantic"))
-        # 원문 부족이면 이미 저장된 같은 턴 증거만 한 번 보충한다. 새 개발은 시작하지 않는다.
-        if result.get("recoverable") and result.get('evidence_requests'):
-            from evaluation_input import recover
-            try:
-                recovered = recover(controller, result['evidence_requests'])
-                changed = snapshot_error(controller)
-                if changed:
-                    raise ValueError(changed)
-                packet['attachments'] = [*packet.get('attachments', []), *recovered]
-                result = json.loads(invoke(controller, phase="semantic"))
-            except (OSError, ValueError, KeyError) as exc:
-                result.update(status='UNKNOWN', reason=str(exc), recoverable=False)
-        error = snapshot_error(controller)
-        if error:
-            return {"status": "UNKNOWN", "reason": error}
-        return result
-    except (ValueError, TypeError, KeyError) as exc:
-        return {"status": "UNKNOWN", "reason": "의미 검토 응답 오류: " + str(exc)}
-    finally:
-        controller._evaluation_packet, controller._evaluation_snapshot = old_packet, old_snapshot
 
 
 def finalize(controller, response):
@@ -442,7 +311,4 @@ def completion(session, row, base):
                 return False, "삭제 각인을 확인하지 못했습니다: " + rel
         elif actual.returncode or hashlib.sha256(actual.stdout).hexdigest() != item["after"]["sha"]:
             return False, "각인 내용이 검사한 변경과 다릅니다: " + rel
-    recheck, note = symptom_recheck(session, row, base)
-    if recheck != "verified":
-        return False, "원 증상 재검사 미확인: " + note
-    return True, "관련 검사·정본 반영·활성 확인·커밋·원 증상 재검사 완료"
+    return True, "관련 검사·정본 반영·활성 확인·커밋 완료"

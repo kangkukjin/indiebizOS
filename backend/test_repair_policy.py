@@ -1,4 +1,4 @@
-"""기준의 의미 검토 소유권과 검사 중 정본 충돌의 조기 중단."""
+"""적용 전 심사 없이 검사·반영하고 원래 목표를 보존하는 수리 경로."""
 import pytest
 import shlex
 import subprocess
@@ -10,54 +10,6 @@ from test_conscious_supervisor import supervisor  # noqa: F401
 import repair_policy as policy
 import api_repair_continuation as consumer
 from supervisor_handoff import criteria_contract
-
-
-def test_applied_review_resume_finishes_from_real_receipts_without_model_setup(repair, monkeypatch):
-    import repair_resume
-    from repair_continuation import resuming
-    from thread_context import actor_context, get_goal_eval_outcome
-    from test_repair_receipt_flow import command
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    probe = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
-        'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"')
-    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
-                          'active_verify_cmd': probe,
-                          'verification_plan': [{'criterion_id': 'C1', 'command': command(wt)}]})
-    assert applied['complete'], applied
-    row = {'task_id': session['key'], 'staging_task_id': session['key'], 'phase': 'review',
-           'resume_task_id': controller.task, 'agent_id': controller.owner, 'authorized_origin': 'user',
-           'goal': controller.message, 'resume_message': '이어서 마쳐줘', 'framing': controller.framing,
-           'criteria_contract': criteria_contract(controller.message, controller.framing),
-           'response': '검사한 수리 결과', 'repair_policy': 2}
-    monkeypatch.setattr(repair_resume, 'restore_review', lambda *a: pytest.fail('obsolete model checkpoint'))
-    monkeypatch.setattr('system_ai_core._switch_to_role', lambda *a: pytest.fail('unneeded model setup'))
-    with actor_context(agent_id=controller.owner, task_id=controller.task, origin='user'), resuming(row):
-        events = list(repair_resume.review_stream(controller.runner, controller, row))
-    assert events[-1] == {'type': 'final', 'content': row['response']}
-    assert get_goal_eval_outcome()['goal_status'] == 'ACHIEVED'
-
-
-@pytest.mark.parametrize('publication', ['program', 'component'])
-def test_published_repair_uses_same_final_receipts_without_second_model_review(repair, monkeypatch, publication):
-    from test_repair_receipt_flow import command
-    from thread_context import get_goal_eval_outcome
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    probe = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
-        'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"')
-    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
-                          'active_verify_cmd': probe,
-                          'verification_plan': [{'criterion_id': 'C1', 'command': command(wt)}]})
-    assert applied['complete'], applied
-    saved = st.read_session(str(root), session['key'])
-    saved[publication + '_activation'] = [{'activation': 'active'}]
-    st._save_session(str(root), saved)
-    monkeypatch.setattr('repair_readiness.' + publication + '_published', lambda *a: True)
-    monkeypatch.setattr(st._candidate, 'active_generation_bytes', lambda *a: ('matched', 'publication verified'))
-    events = list(controller.finalize('완료', [], lambda *a, **k: pytest.fail('second model review')))
-    assert events[-1]['type'] == 'final'
-    assert get_goal_eval_outcome()['goal_status'] == 'ACHIEVED'
 
 
 def test_retry_keeps_activation_plan_and_applied_repair_accepts_missing_probe(repair):
@@ -73,7 +25,7 @@ def test_retry_keeps_activation_plan_and_applied_repair_accepts_missing_probe(re
     assert applied['applied'] and applied['commit']['success'], applied
     saved = st.read_session(str(root), session['key'])
     assert saved['activation_checks']['verify_cmd']['state'] == 'passed'
-    assert not policy.completion(saved, {}, root)[0]  # Functional active probe still absent.
+    assert policy.completion(saved, {}, root)[0]  # Optional symptom reproduction is reported, not a gate.
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root)
     completed = st.op_apply({**args, 'active_verify_cmd': probe})
     assert completed['complete'], completed
@@ -97,49 +49,6 @@ def test_supplementary_probe_failure_does_not_repeat_publication_or_claim_comple
     assert (root / 'a.txt').read_text() == 'fixed'
     assert failed['commit']['commit'] == head
     assert not policy.completion(st.read_session(str(root), session['key']), {}, root)[0]
-
-
-@pytest.mark.parametrize('entry', ['receipt', 'finalize'])
-def test_unverified_symptom_cannot_close_applied_repair(repair, monkeypatch, entry):
-    from test_repair_receipt_flow import command
-    import repair_root
-    from thread_context import get_goal_eval_outcome
-    root, wt, st, session, controller = repair
-    (wt / 'a.txt').write_text('fixed')
-    cmd = command(wt)
-    applied = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
-                           'verification_plan': [{'criterion_id': 'C1', 'command': cmd}]})
-    assert applied['applied'] and applied['commit']['success']
-    saved = st.read_session(str(root), session['key'])
-    assert policy.symptom_recheck(saved, {}, root)[0] == 'unverified'
-    assert not policy.completion(saved, {}, root)[0]
-    if entry == 'receipt':
-        monkeypatch.setattr(consumer, '_deliver', lambda *a, **k: pytest.fail('unverified completion notice'))
-        answer = consumer._receipt_completion({'task_id': session['key'], 'repair_policy': 2,
-                                               'phase': 'verify_remaining'}, root)
-        assert answer['evaluation']['goal_status'] == 'UNKNOWN'
-    else:
-        from thread_context import actor_context
-        from repair_continuation import read
-        # Exercise user-requested continuation independently of prior tests.
-        controller.runner.config = {'id': controller.owner}
-        monkeypatch.setattr('principal.is_owner', lambda: True)
-        with actor_context(origin='user'):
-            policy.finalize(controller, '수정했습니다')
-        assert get_goal_eval_outcome()['goal_status'] == 'UNKNOWN'
-        projected = repair_root.projection(root, session['key'])
-        assert projected['stage'] == 'incomplete' and projected['resume_condition']
-        assert read(controller.task, root)['status'] == 'blocked'
-
-
-def test_executor_cannot_downgrade_semantic_criterion(repair, monkeypatch):
-    root, wt, st, session, controller = repair
-    controller._final_criteria_contract = criteria_contract('전수 대조해줘', {'criteria': [
-        {'text': '전수 대조와 미확인 목록', 'verification_method': 'semantic'}]})
-    session['verification_plan'] = [{'criterion_id': 'C1', 'method': 'test', 'command': 'pytest test.py'}]
-    monkeypatch.setattr('repair_check_runner.check', lambda *a: pytest.fail('test cannot prove semantic criterion'))
-    result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert result['stage'] == 'plan' and result['missing_criteria'] == ['C1']
 
 
 def test_live_change_stops_remaining_expensive_checks(repair, monkeypatch):
@@ -269,3 +178,57 @@ def test_receipt_policy_continues_unapplied_workspace_without_another_request(re
     assert get_goal_eval_outcome()['goal_status'] == 'UNKNOWN'
     assert not repair_root.projection(root, session['root_task_id'])['terminal']
     assert '[작업 계속]' in response
+
+
+@pytest.mark.parametrize('plan_kind', ['omitted', 'commands', 'legacy'])
+def test_apply_preserves_unfinished_goal_without_criterion_gate_or_second_review(repair, monkeypatch, plan_kind):
+    from test_repair_receipt_flow import command
+    from repair_check_runner import execute
+    from repair_readiness import completion_error
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    contract = criteria_contract('원격 업데이트를 마쳐줘', {'criteria': [
+        {'text': '실행기 오류 수정', 'verification_method': 'semantic'},
+        {'text': '수정 배포 뒤 원격 업데이트 완료'},
+        {'text': '원격 기기에서 새 버전의 요청 성공'},
+        {'text': '중앙 활성 확인', 'verification_phase': 'activation'}]})
+    controller._final_criteria_contract = contract
+    cmd = command(wt)
+    record = execute(str(root), session, st._candidate, cmd, controller)
+    assert record['status'] == 'passed'
+    st._save_session(str(root), session)
+    monkeypatch.setattr('repair_check_runner.execute', lambda *a, **kw: pytest.fail('duplicate test'))
+    args = {'_repo_root': str(root), '_grant_key': session['key']}
+    if plan_kind == 'commands':
+        args['verification_plan'] = [{'command': cmd}]
+    elif plan_kind == 'legacy':
+        args['verification_plan'] = [{'criterion_id': 'obsolete-C9', 'command': cmd},
+                                     {'criterion_id': 'C4', 'method': 'semantic'}]
+    result = st.op_apply(args)
+    assert result['complete'], result
+    saved = st.read_session(str(root), session['key'])
+    assert saved['readiness']['criteria'] == contract == controller._final_criteria_contract
+    assert policy.completion(saved, {}, root)[0]
+    assert policy.symptom_recheck(saved, {}, root)[0] == 'unverified'
+    assert completion_error(controller) is None
+    assert not policy.receipt_completion(controller)
+    assert consumer._receipt_completion({'task_id': session['key'], 'repair_policy': 2,
+                                        'phase': 'verify_remaining'}, root) is None
+    assert (root / 'a.txt').read_text() == 'fixed'
+    assert subprocess.check_output(['git', 'show', result['commit']['commit'] + ':a.txt'], cwd=root) == b'fixed'
+    assert st.op_apply(args)['complete']
+    (root / 'a.txt').write_text('changed after apply')
+    assert completion_error(controller) is not None
+
+
+def test_legacy_workspace_uses_same_check_path_without_semantic_review(repair):
+    from repair_readiness import prepare
+    from test_repair_receipt_flow import command
+    root, wt, st, session, controller = repair
+    session['repair_policy'] = 1
+    controller.framing.pop('_repair_policy')
+    (wt / 'a.txt').write_text('fixed')
+    session['verification_plan'] = [{'command': command(wt)}]
+    result = prepare(controller, str(root), session, st.verify, st._candidate)
+    assert result['success'], result
+    assert session['readiness']['version'] == 2

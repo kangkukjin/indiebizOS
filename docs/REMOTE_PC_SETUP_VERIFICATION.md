@@ -159,6 +159,8 @@ Windows `cmd /C`의 인용은 일반 argv 인용과 다르다. 헬퍼는 실행 
 
 - 2026-10-30 실측: 허브에만 있고 GitHub에 올리지 않은 커밋(8a12fa24)이 있으면, 갱신 도구는 그 커밋 기준 사본을 만들어 원격 PC로 보내 실행한다. 원격 클론의 git 작업본은 원래 커밋(063bb583)에 그대로 남으므로, 갱신 계획이 모두 성공해도 클론 실행 코드에는 고친 내용이 반영되지 않는다.
 
+- 2026-10-31 사용자 지시: TV1의 빌드 출력(`--config.directories.output`)과 빌드용 TEMP/TMP는 내부 SATA SSD인 `C:\indiebiz-build` 아래에 둔다. E:는 USB SDXC 카드로 느려 쓰지 않는다. TV1의 영구 TEMP·`package.json` 출력 설정은 원래 C:이므로, 실행마다 넘기는 경로만 C:로 지정한다. 기존 `E:\indiebiz-build` 산출물은 `C:\indiebiz-build`로 옮겼다.
+
 
 ## 2026-10-31 일반 권한 실행·무인 관리 검증
 

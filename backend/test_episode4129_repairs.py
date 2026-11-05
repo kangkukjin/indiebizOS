@@ -1,6 +1,5 @@
 """Research publication counts and crawl barriers, without external/model calls."""
 import json
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,6 +11,15 @@ from ibl_v2_runtime import Runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / 'data/packages/installed/tools/web/handler.py'
+# Executable composition fixture: guide prose/layout is not a program source.
+# Exercise real filter/each/dedup adapters and retain the publication contract.
+NEW_EVENT_GATE = '''
+$선별=$사건들 >> [table:filter]{where:($r)=>$r.verified == true and $r.label=="NEW" and $r.date >= $하한 and $r.date <= $오늘};
+$확정=$선별 >> [table:each]{parallel:1}{assert len($it.event_id)>0,"사건 ID가 비었습니다"; return $it};
+$묶음=$확정 >> [table:dedup]{by:"event_id"};
+$행=$묶음.items;
+return {events:$행,new_count:len($행),publish:len($행)>0}
+'''
 BARRIER = ('Prove your humanity\n\nWe’re committed to safety and security. But not for bots. '
            'Complete the challenge below and let us know you’re a real person.\n\n'
            'Reddit, Inc. © "2026". All rights reserved.\n\n'
@@ -38,11 +46,9 @@ def row(id='one', **changes):
     ([{**row('lower'), 'date': '2026-09-14'}, {**row('upper'), 'date': '2026-09-28'}], 2),
     ([row(str(i)) for i in range(5)] + [row('0')], 5),
 ])
-def test_actual_guide_gate_counts_rows_and_date_window(registry, rows, expected):
-    text = (ROOT / 'data/guides/ai_trend_report.md').read_text()
-    code = next(code for code in re.findall(r'```ibl\n(.*?)```', text, re.S) if '$선별=' in code)
+def test_publication_gate_counts_rows_and_date_window(registry, rows, expected):
     inputs = {'사건들': rows, '하한': '2026-09-14', '오늘': '2026-09-28'}
-    plan = compile_program(code, registry, inputs=inputs)
+    plan = compile_program(NEW_EVENT_GATE, registry, inputs=inputs)
     out = Runtime(plan, inputs=inputs).run()
     assert out['success'], out
     assert out['value']['new_count'] == len(out['value']['events']) == expected
@@ -51,24 +57,20 @@ def test_actual_guide_gate_counts_rows_and_date_window(registry, rows, expected)
 
 
 def test_missing_date_is_failure_not_a_valid_empty_scan(registry):
-    text = (ROOT / 'data/guides/ai_trend_report.md').read_text()
-    code = next(code for code in re.findall(r'```ibl\n(.*?)```', text, re.S) if '$선별=' in code)
     item = row()
     item.pop('date')
     inputs = {'사건들': [item], '하한': '2026-09-14', '오늘': '2026-09-28'}
-    out = Runtime(compile_program(code, registry, inputs=inputs), inputs=inputs).run()
+    out = Runtime(compile_program(NEW_EVENT_GATE, registry, inputs=inputs), inputs=inputs).run()
     assert not out['success']
 
 
 @pytest.mark.parametrize('bad', [{}, {'event_id': ''}])
 def test_missing_or_empty_event_id_cannot_be_counted(registry, bad):
-    text = (ROOT / 'data/guides/ai_trend_report.md').read_text()
-    code = next(code for code in re.findall(r'```ibl\n(.*?)```', text, re.S) if '$선별=' in code)
     item = row()
     item.pop('event_id')
     item.update(bad)
     inputs = {'사건들': [row(), item], '하한': '2026-09-14', '오늘': '2026-09-28'}
-    out = Runtime(compile_program(code, registry, inputs=inputs), inputs=inputs).run()
+    out = Runtime(compile_program(NEW_EVENT_GATE, registry, inputs=inputs), inputs=inputs).run()
     assert not out['success']
 
 

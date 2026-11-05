@@ -1,5 +1,4 @@
-"""검색 관용구를 가이드 예제대로 조합할 때 날짜 원형과 누락을 보존한다."""
-import re
+"""실제 검색 관용구의 결과를 투영해도 날짜 충돌과 누락을 보존한다."""
 from pathlib import Path
 
 import boot_paths  # noqa: F401
@@ -11,10 +10,13 @@ from ibl_v2_runtime import Runtime
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_guide_search_projection_preserves_conflicting_and_missing_dates():
-    guide = (ROOT / "data/guides/ai_trend_report.md").read_text()
-    code = next(block for block in re.findall(r"```ibl\n(.*?)```", guide, re.S)
-                if "검색묶음추리기" in block)
+def test_search_projection_preserves_conflicting_and_missing_dates():
+    # Keep the consumer composition here; load the real idiom definition below.
+    code = '''
+$검색=[fn:검색묶음추리기]{질의들:[{section:"투자",source:"gnews",query:"AI funding investment"},{section:"기술",source:"naver",type:"news",query:"AI 에이전트 연구"}],기간:7,개수:6}
+$후보=$검색.items >> [table:select]{columns:["section","title","dates","url"]}
+return {ok:$검색.ok,items:$후보,queries:$검색.queries,failed:$검색.failed}
+'''
     definition = (ROOT / "data/idioms/search_batch_view.ibl").read_text()
     articles = [
         {"title": "conflict", "url": "https://example.com/a",

@@ -37,9 +37,8 @@ def protected(path, root):
     from runtime_utils import get_code_root
     if rel in {s['source'] for s in runtime.registry(get_code_root()).values()}:
         return 'Error: 등록 부품은 활성 소유자 업무의 한정 사본 수정→self:patch apply로 반영합니다.'
-    if (rel.startswith(('data/common_prompts/', 'data/restart_control/', 'data/system_ai_state/',
-                        'data/packages/installed/tools/system_essentials/'))
-            or rel in {'AGENTS.md', 'CLAUDE.md'} or rel.endswith('/runtime_components.json')):
+    from program_boundary import direct_write_reason
+    if direct_write_reason(rel):
         return 'Error: 지침·권한·검사 계약·적용 원장은 업무 중 부품 수리의 수정 대상이 아닙니다.'
     return None
 

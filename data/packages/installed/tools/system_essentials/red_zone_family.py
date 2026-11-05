@@ -29,12 +29,8 @@ def repair_artifact(path, root):
     if not root:
         return False
     rel = os.path.relpath(os.path.realpath(path), os.path.realpath(root)).replace(os.sep, "/")
-    if rel.startswith("data/ibl_nodes_src/"):
-        return rel.endswith((".yaml", ".yml"))
-    if not rel.startswith("data/packages/installed/"):
-        return False
-    return (rel.endswith((".py", ".js", ".ts", ".tsx", ".jsx", ".css", ".html"))
-            or rel.rsplit("/", 1)[-1] in {"ibl_actions.yaml", "tool.json", "package.json"})
+    from program_boundary import source_artifact
+    return source_artifact(rel)
 
 
 def principal_root(root: str) -> str:

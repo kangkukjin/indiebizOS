@@ -486,6 +486,9 @@ def _repair_is_live_path(path):
     from pathlib import Path
     root, target = Path(_REPO_ROOT).resolve(), Path(path).resolve()
     if _red_grant_active() and target.is_relative_to(root):
+        from program_boundary import describe
+        if (describe(target.relative_to(root).as_posix()) or {}).get('route') == 'file':
+            return False
         # 이미 사본을 가리키는 경로를 또 사본 안에 중첩하지 않는다.
         return not target.is_relative_to(root / ".worktrees")
     return _red_is_live_path(path)
@@ -697,8 +700,7 @@ def execute(tool_input: dict, context) -> str:
         if _red_grant_active() and context.tool_name != "patch_op":
             with _staging_mod()._candidate.locked(str(_REPO_ROOT), "application"):
                 result = _load_sibling('repair_tool_scope').execute(
-                    _staging_mod(), str(_REPO_ROOT), _staging_key(), context.tool_name,
-                    tool_input, lambda: _execute(tool_input, context))
+                    SimpleNamespace(**globals()), tool_input, context, _execute)
         else:
             result = _execute(tool_input, context)
     except (PermissionError, ValueError, RuntimeError) as exc:
@@ -708,12 +710,12 @@ def execute(tool_input: dict, context) -> str:
     return result
 
 
-def _execute(tool_input: dict, context) -> str:
+def _execute(tool_input: dict, context, *, prepared=False) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
     project_path = context.project_path
     agent_id = context.agent_id
-    if _red_grant_active():
+    if _red_grant_active() and not prepared:
         from copy import copy
         from types import SimpleNamespace
         scope = _load_sibling("repair_tool_scope")

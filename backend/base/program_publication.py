@@ -41,7 +41,7 @@ def snapshot(repo, code, session):
             raise ValueError('Noncanonical program path')
         owner = change(relative, item.get('before'), item.get('after'),
                        managed=session.get('managed_files'), derived=session.get('derived_files'))
-        if not owner or not owner['mutable']:
+        if not owner or owner['route'] != 'workspace':
             raise PermissionError('Protected program path: ' + relative)
         files[relative] = (item.get('after') or {}).get('sha')
         before.setdefault(relative, file_hash(Path(code) / relative))

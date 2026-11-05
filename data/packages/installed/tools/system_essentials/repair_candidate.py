@@ -86,7 +86,8 @@ def register_artifacts(repo, session, paths):
     wt = Path(repo) / session["worktree"]
     additions = {}
     for rel in paths:
-        if not rel.startswith("outputs/") or Path(rel).as_posix() != rel:
+        from program_boundary import artifact_path
+        if not artifact_path(rel):
             raise ValueError("산출물은 outputs/ 아래 정규 상대 경로만 지원합니다: " + rel)
         live, staged = target(repo, rel), target(wt, rel)
         if not staged.is_file() or staged.stat().st_nlink != 1:

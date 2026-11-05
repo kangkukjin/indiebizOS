@@ -26,6 +26,12 @@ def repair(tmp_path, monkeypatch, supervisor):
     functions = repo / 'data/workflows'
     functions.mkdir()
     (repo / 'backend/test_existing.py').write_text('def test_existing(): assert True\n')
+    for relative, content in {'data/guides/report.md': 'OLD GUIDE',
+                              'outputs/reports/rules.md': 'OLD RULES',
+                              'outputs/reports/ledger.json': '[]'}.items():
+        path = repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
     (repo / '.gitignore').write_text('.worktrees/\ndata/system_ai_state/\ndata/restart_control/\ndata/workflows/\ndata/scripts/registry.yaml.lock\n')
     for args in (['config', 'user.name', 'Test'], ['config', 'user.email', 'test@example.test'],
                  ['add', '.'], ['commit', '-qm', 'script fixture']):
@@ -42,7 +48,7 @@ def repair(tmp_path, monkeypatch, supervisor):
     monkeypatch.setenv('INDIEBIZ_FUNCTION_STORE_ROOT', str(functions))
     monkeypatch.setattr('repair_context.active', lambda: True)
     monkeypatch.setattr('red_report.current_owner', lambda: 'owner')
-    monkeypatch.setattr('supervision_bus.current', lambda: supervisor)
+    monkeypatch.setattr('supervision_bus.current', lambda *args: supervisor)
     monkeypatch.setattr('red_apply._load_handler', lambda job: handler)
     from red_apply import _run_post_verify
     monkeypatch.setattr('red_apply._run_post_verify',
@@ -62,9 +68,166 @@ def repair(tmp_path, monkeypatch, supervisor):
     from tool_context import ToolContext
     def call(name, args):
         result = handler.execute(args, ToolContext(str(repo), name, agent_id='system_ai'))
-        return result if name == 'read_file' else json.loads(result)
+        return result if name in {'read_file', 'edit_file'} else json.loads(result)
+    call.handler = handler
     with repair_workspace_scope(str(wt)):
         yield repo, wt, st, supervisor, call
+
+
+def test_document_and_ledger_edits_reach_live_owner_without_code_completion(repair, monkeypatch):
+    from repair_readiness import requires_code_receipts
+    from thread_context import get_repair_workspace
+    repo, wt, st, controller, call = repair
+    # A code workspace already exists, as in a resumed REPAIR turn. Its tracked
+    # guide must not hide the newly edited live guide from subsequent reads.
+    monkeypatch.setattr(st, 'ensure_session', lambda *a: pytest.fail('document needs no code workspace'))
+    for path in ('data/guides/report.md', str(repo / 'outputs/reports/rules.md')):
+        result = call('write_file', {'path': path, 'content': 'NEW CONTENT'})
+        assert result['success'] and not result.get('staged'), result
+        assert call('read_file', {'path': path}) == 'NEW CONTENT'
+    result = call('edit_file', {'path': '~workspace/data/guides/report.md',
+                                'old_string': 'NEW CONTENT', 'new_string': 'FINAL GUIDE'})
+    assert 'Successfully edited' in result, result
+    assert (repo / 'data/guides/report.md').read_text() == 'FINAL GUIDE'
+    assert (wt / 'data/guides/report.md').read_text() == 'OLD GUIDE'
+    result = call('ledger_op', {'op': 'append', 'path': '~workspace/outputs/reports/ledger.json',
+                                'item': {'id': 'new', 'decision': 'keep'}})
+    assert result['success'], result
+    rows = call('ledger_op', {'op': 'select', 'path': 'outputs/reports/ledger.json'})
+    assert rows['items'][0]['id'] == 'new'
+    assert (wt / 'outputs/reports/ledger.json').read_text() == '[]'
+    assert get_repair_workspace() == str(wt)  # restore caller's code scope
+    assert not requires_code_receipts(controller)
+
+
+def test_single_boundary_change_controls_query_write_and_restoration(repair, monkeypatch):
+    import program_boundary as policy
+    from thread_context import get_repair_workspace
+    repo, wt, st, controller, call = repair
+    path = 'data/guides/report.md'
+    assert call('patch_op', {'op': 'status', 'path': path})['items'][0]['route'] == 'file'
+    with monkeypatch.context() as patch:
+        patch.setitem(policy.CORE_PREFIXES, path, 'new protected contract')
+        assert call('patch_op', {'op': 'status', 'path': path})['items'][0]['route'] == 'deny'
+        result = call('write_file', {'path': path, 'content': 'FORBIDDEN'})
+        assert not result['success'], result
+        assert (repo / path).read_text() == (wt / path).read_text() == 'OLD GUIDE'
+    assert get_repair_workspace() == str(wt)
+    result = call('write_file', {'path': path, 'content': 'ALLOWED'})
+    assert result['success'], result
+    result = call('write_file', {'path': 'data/scripts/later.py', 'content': 'VALUE = 1'})
+    assert result['success'] and result['staged'], result
+    assert not (repo / 'data/scripts/later.py').exists()
+
+
+@pytest.mark.parametrize('path', ['docs/AGENTS.md', 'outputs/.env',
+                                'data/scripts/registry.yaml',
+                                'data/system_ai_state/install_approvals.json'])
+def test_file_owner_route_never_opens_protected_or_managed_ledger(repair, path):
+    repo, wt, st, controller, call = repair
+    result = call('ledger_op', {'op': 'append', 'path': path, 'item': {'id': 'forged'}})
+    assert not result['success'], result
+    assert not (repo / path).exists() or (repo / path).read_text() == '{}\n'
+
+
+def test_document_route_checks_scope_links_and_mixed_moves_before_writing(repair, monkeypatch):
+    repo, wt, st, controller, call = repair
+    path = 'data/guides/report.md'
+    session = st.read_session(str(repo), 'script-repair')
+    session['task_scope'] = {'paths': ['data/scripts/calculator.py']}
+    st._save_session(str(repo), session)
+    result = call('write_file', {'path': path, 'content': 'OUTSIDE SCOPE'})
+    assert not result['success'] and '범위 밖' in result['error'], result
+    session.pop('task_scope')
+    st._save_session(str(repo), session)
+    (repo / 'outputs/link.md').symlink_to(repo / 'backend/test_existing.py')
+    result = call('write_file', {'path': 'outputs/link.md', 'content': 'BROKEN'})
+    assert not result['success'], result
+    result = call('move_path', {'src': path, 'dest': 'backend/moved.py'})
+    assert not result['success'], result
+    assert (repo / path).read_text() == 'OLD GUIDE'
+    assert not (repo / 'backend/moved.py').exists()
+
+
+def test_explicit_candidate_artifact_stays_staged(repair):
+    repo, wt, st, controller, call = repair
+    # Only ignored candidate artifacts can be registered for code delivery.
+    with (repo / '.git/info/exclude').open('a') as stream:
+        stream.write('outputs/delivery/\n')
+    path = 'outputs/delivery/readme.txt'
+    result = call('write_file', {'path': str(wt / path), 'content': 'WITH CODE'})
+    assert result['success'] and result['staged'], result
+    assert not (repo / path).exists()
+    session = st.read_session(str(repo), 'script-repair')
+    st._candidate.register_artifacts(str(repo), session, [path])
+    st._candidate.collect(str(repo), session)
+    assert path in session['artifact_paths']
+
+
+def test_resumed_document_work_preserves_criteria_without_repeating_code_apply(repair):
+    import copy
+    import repair_continuation as journal
+    from repair_readiness import completion_error
+    repo, wt, st, controller, call = repair
+    row = {'task_id': 'script-repair', 'root_task_id': 'script-repair',
+           'staging_task_id': 'script-repair', 'phase': 'execution',
+           'worktree': str(wt), 'authorized_origin': 'user',
+           'criteria_contract': {'criteria': [{'id': 'C1', 'text': '개정 가이드의 운영 조회'}]},
+           'next_instruction': '기존 조사와 기준을 보존해 문서 개정을 완료한다'}
+    before = copy.deepcopy(row)
+    with journal.resuming(row):
+        result = call('write_file', {'path': 'data/guides/report.md', 'content': 'RESUMED GUIDE'})
+        assert result['success'] and not result.get('staged'), result
+        assert call('read_file', {'path': 'data/guides/report.md'}) == 'RESUMED GUIDE'
+        assert completion_error(controller) is None
+    assert row == before
+
+
+def test_document_only_turn_does_not_create_repair_session(repair, monkeypatch):
+    import system_tools
+    from thread_context import repair_workspace_scope
+    repo, wt, st, controller, call = repair
+    record = repo / 'data/system_ai_state/repair_sessions/script-repair.json'
+    record.unlink()
+    monkeypatch.setattr(st, 'ensure_session', lambda *a: pytest.fail('unexpected code session'))
+    result = call('write_file', {'path': 'data/guides/report.md', 'content': 'NO CODE SESSION'})
+    assert result['success'], result
+    assert call('read_file', {'path': 'data/guides/report.md'}) == 'NO CODE SESSION'
+    assert not record.exists()
+    # Exercise the real outer dispatcher, whose lazy scope used to create a
+    # candidate before the file owner had seen any target path.
+    monkeypatch.setattr(system_tools, 'load_tool_handler', lambda name: call.handler)
+    monkeypatch.setattr('tool_loader.load_tool_handler', lambda name: call.handler)
+    monkeypatch.setattr('repair_execution_scope.active', lambda: True)
+    with repair_workspace_scope(None):
+        result = system_tools.execute_tool('write_file',
+            {'path': 'data/guides/report.md', 'content': 'DISPATCHED CONTENT'},
+            str(repo), agent_id='worker')
+    assert json.loads(result)['success'], result
+    assert (repo / 'data/guides/report.md').read_text() == 'DISPATCHED CONTENT'
+    assert not record.exists()
+
+
+@pytest.mark.parametrize('restriction', ['cancelled', 'activation'])
+def test_document_route_preserves_turn_lifetime_restrictions(repair, monkeypatch, restriction):
+    repo, wt, st, controller, call = repair
+    if restriction == 'cancelled':
+        monkeypatch.setattr('repair_continuation.current', lambda: {'root_task_id': 'cancelled-task'})
+        monkeypatch.setattr('repair_continuation.cancelled', lambda *a: True)
+    else:
+        monkeypatch.setattr('repair_context.activation_only', lambda: True)
+    result = call('write_file', {'path': 'data/guides/report.md', 'content': 'MUST NOT WRITE'})
+    assert not result['success'], result
+    assert (repo / 'data/guides/report.md').read_text() == 'OLD GUIDE'
+
+
+def test_document_folder_operation_cannot_remove_nested_protected_contract(repair):
+    repo, wt, st, controller, call = repair
+    protected = repo / 'outputs/reports/AGENTS.md'
+    protected.write_text('KEEP CONTRACT')
+    result = call('delete_path', {'path': 'outputs/reports', 'recursive': True})
+    assert not result['success'], result
+    assert protected.read_text() == 'KEEP CONTRACT'
 
 
 def script_candidate(repair):

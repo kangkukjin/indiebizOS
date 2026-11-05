@@ -467,8 +467,9 @@ class CodexProvider(CliSubprocessProvider):
             if repair_active():
                 # 네이티브 쓰기는 계속 read-only. 승인된 수리의 파일/셸/적용은
                 # IBL 서버의 그랜트·사본·준비 판정 경계를 통과해야 한다.
-                args += ["-c", f'{ns}.enabled_tools=["execute_ibl","read_guide","run_command"]']
-                for tool in ("execute_ibl", "read_guide", "run_command"):
+                repair_tools = ("execute_ibl", "read_guide", "run_command", "reframe")
+                args += ["-c", f'{ns}.enabled_tools=' + json.dumps(repair_tools, separators=(',', ':'))]
+                for tool in repair_tools:
                     args += ["-c", f'{ns}.tools.{tool}.approval_mode="approve"']
             else:
                 args += ["-c", f'{ns}.disabled_tools=["run_command"]']

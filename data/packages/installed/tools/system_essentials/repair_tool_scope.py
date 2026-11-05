@@ -74,7 +74,7 @@ def source_path(st, root, wt, path):
     from program_boundary import describe
     # Runtime reports are absent from git worktrees. Do not fall back for deleted
     # program source: that would disguise the candidate actually being tested.
-    if not candidate.exists() and describe(rel) is None:
+    if not candidate.exists() and (describe(rel) or {}).get('route') in {None, 'file'}:
         live = st._candidate.target(root, rel)
         if live.exists():
             return live
@@ -148,9 +148,9 @@ def prepare(self_module, name, payload, project):
             writes_path = name in WRITE_TOOLS and not (
                 name == 'copy_path' and field in {'src', 'source'})
             if writes_path and sess.get('program_policy'):
-                from program_boundary import change
+                from program_boundary import change, artifact_path
                 owner = change(rel, sess['baseline'].get(rel), {'pending': True})
-                if not owner or not owner['mutable']:
+                if (not owner or owner['route'] != 'workspace') and not artifact_path(rel):
                     raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' + rel)
         from script_workspace import current_scope, workspace, prepare_path
         candidate = (wt / rel).resolve()
@@ -247,11 +247,96 @@ def record_write(st, repo, key, result):
     return result
 
 
-def execute(st, repo, key, name, payload, operation):
+def file_call(handler, payload, context):
+    """Resolve file ownership before creating a code workspace; never revoke grants.
+
+    The boundary owns classification. This adapter only binds tool path fields
+    and checks the existing task, candidate, cancellation and path constraints.
+    Explicit candidate paths remain candidate operations (including artifacts).
+    """
+    name = context.tool_name
+    if name not in FILE_TOOLS - {'run_command', 'patch_op'} and name != 'ledger_op':
+        return None
+    fields = {'path', 'items_file'} if name == 'ledger_op' else PATHS
+    root = Path(handler._REPO_ROOT).resolve()
+    st, key = handler._staging_mod(), handler._staging_key()
+    session = st.read_session(str(root), key) or {}
+    from thread_context import repair_workspace_scope
+    from runtime_utils import expand_body_path
+    from program_boundary import describe
+    paths, routes = {}, set()
+    with repair_workspace_scope(None):
+        for field in fields & payload.keys():
+            raw = payload[field]
+            if not isinstance(raw, str):
+                raise ValueError('파일 경로는 문자열이어야 합니다')
+            path = Path(expand_body_path(raw))
+            path = path if path.is_absolute() else root / path
+            try:
+                relative = path.relative_to(root).as_posix()
+            except ValueError:
+                return None  # existing repair path validator owns external paths
+            # Do not silently turn an explicitly selected candidate into live data.
+            if session.get('worktree') and path.is_relative_to(root / session['worktree']):
+                routes.add('workspace')
+                continue
+            item = describe(relative) or {}
+            routes.add(item.get('route'))
+            paths[field] = (relative, path)
+    if 'file' not in routes:
+        if name == 'ledger_op' and payload.get('op', 'select') != 'select':
+            raise PermissionError('원장 파일의 소유 경로로 변경해야 합니다. self:patch status로 경계를 확인하세요')
+        return None
+    if routes != {'file'}:
+        raise PermissionError('서로 다른 소유 경로의 파일 연산은 분리하세요. 코드 사본과 정본 문서를 함께 이동하지 않습니다')
+    from repair_continuation import current, cancelled
+    from task_repair import check_delta
+    from repair_context import activation_only
+    from red_grant import active_grant
+    from thread_context import get_current_task_id
+    grant = active_grant(task_id=get_current_task_id()) or {}
+    if grant.get('task_scope'):
+        from task_repair import parent_of
+        parent_of(grant, str(root))
+        check_delta({**session, 'task_scope': grant['task_scope']}, [r for r, _ in paths.values()])
+    check_delta(session, [r for r, _ in paths.values()])
+    row = current() or session
+    if row.get('root_task_id') and cancelled(row, str(root)):
+        raise PermissionError('취소된 수리입니다')
+    writing = name in WRITE_TOOLS or (name == 'ledger_op' and payload.get('op', 'select') != 'select')
+    if writing and activation_only():
+        raise PermissionError('적용 이후에는 활성 확인만 합니다. 문서 변경도 실행 단계에서 이어가세요')
+    mapped = dict(payload)
+    for field, (relative, path) in paths.items():
+        # The existing candidate validator also rejects symlinked parents.
+        path = st._candidate.target(root, relative)
+        if writing and path.is_file() and path.stat().st_nlink != 1:
+            raise PermissionError('하드 링크를 통한 문서 변경은 지원하지 않습니다')
+        if writing and path.is_dir():
+            for child in path.rglob('*'):
+                rel = child.relative_to(root).as_posix()
+                st._candidate.target(root, rel)
+                if (describe(rel) or {}).get('route') != 'file' or (child.is_file() and child.stat().st_nlink != 1):
+                    raise PermissionError('폴더 안에 다른 소유자의 대상이 있습니다: ' + rel)
+        mapped[field] = str(path)
+    from copy import copy
+    routed_context = copy(context)
+    routed_context.project_path = str(root)
+    return mapped, routed_context
+
+
+def execute(handler, payload, context, operation):
     """Run under the caller's application lock and record only owned effects."""
+    st, repo, key = handler._staging_mod(), str(handler._REPO_ROOT), handler._staging_key()
+    name = context.tool_name
+    routed = file_call(handler, payload, context)
+    if routed:
+        from thread_context import repair_workspace_scope
+        with repair_workspace_scope(None):
+            return operation(*routed, prepared=True)
     if name == 'script_op' and payload.get('op') in {'register', 'remove'}:
-        return managed_write(st, repo, key, operation)
-    result = operation()
+        return managed_write(st, repo, key, lambda: operation(payload, context))
+    result = operation(payload, context)
     return record_write(st, repo, key, result) if name in WRITE_TOOLS else result
 
 

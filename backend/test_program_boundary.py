@@ -103,6 +103,37 @@ def test_managed_definitions_keep_their_publication_owner(kind, owner):
         assert result['restart_required'] is False
 
 
+@pytest.mark.parametrize('path', [
+    'data/guides/ai_trend_report.md', 'outputs/reports/_methodology_rules.md',
+    'outputs/reports/candidates.json', 'data/outputs/research/draft.md',
+    'docs/design.md', 'data/system_docs/technical.md'])
+def test_document_route_is_not_program_admission_or_publication(path):
+    from program_boundary import path_status, candidate_plan
+    import task_repair
+    item = path_status(path, '/repo')['items'][0]
+    assert item['mutable'] and item['route'] == 'file'
+    assert item['completion'] == 'readback'
+    assert not eligible(path) and task_repair.implementation_unit(path) is None
+    assert candidate_plan({'baseline': {}}, {path: {'sha': 'new'}})['unmanaged'] == [path]
+
+
+@pytest.mark.parametrize('path', ['docs/AGENTS.md', 'docs/generated_templates/anatomy.md',
+                                'outputs/.env', 'outputs/tests/contract.py',
+                                'data/common_prompts/fragments/13_repair.md',
+                                'data/system_ai_state/repair_sessions/a.json'])
+def test_content_route_cannot_shadow_protected_ownership(path):
+    from program_boundary import artifact_path
+    assert describe(path)['route'] == 'deny'
+    assert not artifact_path(path)
+
+
+def test_repository_root_has_no_single_mutable_owner():
+    from program_boundary import path_status
+    assert describe('.') is None and not eligible('.')
+    status = path_status('.', '/repo')
+    assert status['success'] and status['items'][0]['route'] == 'unmanaged'
+
+
 def test_dynamic_change_keeps_old_tests_protected_and_binds_owner_output():
     from program_boundary import change
     stamp = {'sha': 'exact', 'mode': 420}

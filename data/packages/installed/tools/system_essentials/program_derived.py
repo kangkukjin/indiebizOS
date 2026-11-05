@@ -20,14 +20,14 @@ def contract():
 
 
 def accept(candidate, repo, session, current, changes):
-    from program_boundary import candidate_plan
+    from program_boundary import candidate_plan, may_have_derived_content
     scope = candidate_plan(session, current)
     candidates = [*scope['protected'], *scope['unmanaged']]
     candidates = [p for p in candidates if p not in session.get('derived_files', {})
                   and p not in session.get('artifact_paths', [])]
     if not candidates:
         return
-    if any(not (p.startswith(('data/', 'README')) or p.endswith('.md')) for p in candidates):
+    if any(not may_have_derived_content(p) for p in candidates):
         raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' + ', '.join(candidates))
     schema = contract()
     documents = {}

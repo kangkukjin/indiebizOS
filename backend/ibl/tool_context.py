@@ -169,7 +169,9 @@ class ToolContext:
         from thread_context import get_repair_workspace
         from runtime_utils import get_base_path
         # 수리 상태/적용 도구는 정본 원장만 읽는다. 작업 사본을 요구하지 않는다.
-        workspace = get_repair_workspace() if tool_name != "patch_op" else None
+        # Bind an existing candidate only. The target's owner selects/creates a
+        # workspace when needed; constructing a file call is not code repair.
+        workspace = get_repair_workspace(create=False) if tool_name != "patch_op" else None
         if workspace and project_path and os.path.realpath(project_path) == os.path.realpath(get_base_path()):
             project_path = workspace
         return cls(

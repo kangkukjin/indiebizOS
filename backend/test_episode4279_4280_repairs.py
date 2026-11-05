@@ -21,8 +21,8 @@ def test_repair_cli_allows_only_guarded_bridge_and_keeps_native_readonly(monkeyp
     assert '--dangerously-bypass-approvals-and-sandbox' not in cmd
     assert cmd[cmd.index('--sandbox') + 1] == 'read-only'
     assert 'approval_policy="never"' in cmd
-    assert 'mcp_servers.indiebizos.enabled_tools=["execute_ibl","read_guide","run_command"]' in cmd
-    for name in ['execute_ibl', 'read_guide', 'run_command']:
+    assert 'mcp_servers.indiebizos.enabled_tools=["execute_ibl","read_guide","run_command","reframe"]' in cmd
+    for name in ['execute_ibl', 'read_guide', 'run_command', 'reframe']:
         assert f'mcp_servers.indiebizos.tools.{name}.approval_mode="approve"' in cmd
     assert 'mcp__indiebizos__run_command' in provider._build_prompt_with_history('repair', [])
     monkeypatch.setattr('repair_context.active', lambda: False)
@@ -160,6 +160,8 @@ def test_repair_command_route_reaches_same_workspace_and_records_real_check(tmp_
     st = h._staging_mod()
     monkeypatch.setattr(st, '_repair_owner', lambda: 'worker')
     monkeypatch.setattr(system_tools, 'load_tool_handler', lambda name: h)
+    monkeypatch.setattr('tool_loader.load_tool_handler', lambda name: h)
+    monkeypatch.setattr('repair_execution_scope.active', lambda: True)
     session = st.ensure_session(str(root), supervisor.task)
     wt = root / session['worktree']
     (wt / 'a.txt').write_text('candidate')

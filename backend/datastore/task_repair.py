@@ -14,7 +14,7 @@ NOTICE = '필요한 구현 수리를 같은 업무의 사본에서 진행합니�
 
 def implementation_unit(relative):
     item = describe(relative)
-    return item['owner'] if item and item['mutable'] else None
+    return item['owner'] if item and item['route'] == 'workspace' else None
 
 
 def valid_paths(paths):

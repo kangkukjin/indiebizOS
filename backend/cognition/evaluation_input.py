@@ -7,6 +7,10 @@ import time
 from model_request_budget import InputTooLarge, check, serialized
 from research_review import allocate
 
+# First-pass supporting evidence is a preview, not a request to fill the model's
+# context window. Full immutable ranges remain available through recovery.
+SUPPORT_PREVIEW_CHARS = 60000
+
 
 def dumps(value):
     return json.dumps(value, ensure_ascii=False, default=str, separators=(',', ':'))
@@ -45,6 +49,10 @@ class EvaluationPrompt(str):
             seen.add(key)
             rows.append({**row, 'subjects': [row['subject']]})
         lengths = {str(i): len(r['text']) for i, r in enumerate(rows)}
+        previews = {str(i): len(r['text']) for i, r in enumerate(rows)
+                    if r['role'] not in {'recovered', 'submission', 'citation'}}
+        demands = {**lengths, **allocate(previews, budget=SUPPORT_PREVIEW_CHARS,
+                                        cap=SUPPORT_PREVIEW_CHARS)}
 
         from evaluation_evidence import structure_display
         from research_review import range_windows
@@ -55,12 +63,14 @@ class EvaluationPrompt(str):
 
         def render(budget):
             sizes = {}
-            for role in ('recovered', 'criterion', 'submission', 'citation'):
-                group = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == role}
+            # Lexical criterion candidates share space with submissions. A large
+            # matching source cannot consume the budget before the deliverable.
+            for roles in ({'recovered'}, {'criterion', 'submission'}, {'citation'}):
+                group = {str(i): demands[str(i)] for i, r in enumerate(rows) if r['role'] in roles}
                 left = max(0, budget - sum(sizes.values()))
                 sizes.update(allocate(group, left, cap=left) if group else {})
             left = max(0, budget - sum(sizes.values()))
-            rest = allocate({k: n - sizes.get(k, 0) for k, n in lengths.items()}, left, cap=left)
+            rest = allocate({k: n - sizes.get(k, 0) for k, n in demands.items()}, left, cap=left)
             sizes = {k: sizes.get(k, 0) + rest.get(k, 0) for k in lengths}
             selected = []
             for i, row in enumerate(rows):
@@ -134,7 +144,7 @@ class EvaluationPrompt(str):
         # Required contracts and even omission metadata must fit, or do not call.
         minimal, _ = render(0)
         check(provider, serialized(provider, minimal, images), images=images, reserve=8192)
-        low, high = 0, sum(lengths.values())
+        low, high = 0, sum(demands.values())
         prompt, manifest = render(high)
         try:
             metrics = check(provider, serialized(provider, prompt, images), images=images, reserve=8192)

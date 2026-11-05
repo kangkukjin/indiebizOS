@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 from supervision_store import digest
 
+SUBMISSION_ROLES = ("submission", "supporting_evidence")
+
+
 def _result_value(value):
     """실행 결과의 JSON만 해석한다. 명령문·로그 속 경로는 추측하지 않는다."""
     if isinstance(value, str):
@@ -13,7 +16,7 @@ def _result_value(value):
     return value
 
 
-def _receipt_paths(value):
+def _receipt_paths(value, *, submissions=None):
     """실행 반환 봉투의 파일 영수증. 원문/source/input/임의 데이터는 순회하지 않는다.
 
     영수증은 파일 후보의 출처일 뿐 완료 증명이 아니다. 실제 바이트·지문은
@@ -22,7 +25,7 @@ def _receipt_paths(value):
     value = _result_value(value)
     if isinstance(value, list):
         for item in value:
-            yield from _receipt_paths(item)
+            yield from _receipt_paths(item, submissions=submissions)
     elif isinstance(value, dict):
         if (value.get("success") is False or value.get("executed") is False
                 or value.get("not_executed") is True
@@ -30,18 +33,20 @@ def _receipt_paths(value):
             return
         # path만 있는 목록/검색 행과 구분한다. src/source는 입력 자료다.
         if (any(key in value for key in ("bytes", "size", "chars", "sha256"))
-                or value.get("role") == "submission"):
+                or value.get("role") in SUBMISSION_ROLES):
             if isinstance(value.get("path"), str):
+                if submissions is not None and value.get("role") in SUBMISSION_ROLES:
+                    submissions.add(value["path"])
                 yield value["path"]
         for key in ("output_path", "output_file"):
             if isinstance(value.get(key), str):
                 yield value[key]
         for key in ("value", "result", "items", "artifact", "artifacts", "stdout", "output"):
             if key in value:
-                yield from _receipt_paths(value[key])
+                yield from _receipt_paths(value[key], submissions=submissions)
 
 
-def result_paths(controller, call):
+def result_paths(controller, call, *, submissions=None):
     """셸·스크립트의 실행 반환 파일을 같은 턴 원문에서 회수한다."""
     from seam_metrics import is_shell_tool
 
@@ -55,7 +60,9 @@ def result_paths(controller, call):
                     for row in runtime if isinstance(row, dict))
     if not producer:
         shown = _result_value(call.get("result"))
-        return list(_receipt_paths(shown)) if isinstance(shown, dict) and shown.get("role") == "submission" else []
+        if isinstance(shown, dict) and shown.get("role") in SUBMISSION_ROLES:
+            return list(_receipt_paths(shown, submissions=submissions))
+        return []
     shown = _result_value(call.get("result"))
     if isinstance(shown, dict):
         if (shown.get("success") is False or shown.get("executed") is False
@@ -66,20 +73,22 @@ def result_paths(controller, call):
         if shown.get("edition") == 2 and isinstance(ref, dict) and ref.get("id"):
             try:
                 raw = controller.store.read_evidence(ref["id"], 0, None)["text"]
-                return list(_receipt_paths(raw))
+                return list(_receipt_paths(raw, submissions=submissions))
             except (OSError, ValueError, KeyError):
                 pass
-    return list(_receipt_paths(shown))
+    return list(_receipt_paths(shown, submissions=submissions))
 
 
 def discover(controller, response, tool_calls, *, submitted=()):
     # Links are references; only actual write/return receipts and declared submissions
-    # establish output candidates. Consumers share this collection.
+    # establish output candidates. Consumers share this collection. Explicit
+    # submissions select priority; all candidates keep their immutable snapshots.
     paths = set(submitted)
+    declared = set(submitted)
     for call in tool_calls or []:
         if not isinstance(call, dict):
             continue
-        paths.update(result_paths(controller, call))
+        paths.update(result_paths(controller, call, submissions=declared))
         # 계산된 경로는 코드 문자열이 아니라 실행 증거에 있다. 부분 실패 전
         # 저장된 파일도 검사하되, 읽기 대상이나 실행하지 않은 코드는 산출물로 보지 않는다.
         for invocation in call.get("runtime_calls") or []:
@@ -96,12 +105,19 @@ def discover(controller, response, tool_calls, *, submitted=()):
         from cognitive_trace import _FILE_WRITE_TOOL_NAMES, _FILE_PATH_INPUT_KEYS
         if name.rsplit("__", 1)[-1].rsplit('/', 1)[-1] in _FILE_WRITE_TOOL_NAMES:
             paths.update(inp[k] for k in _FILE_PATH_INPUT_KEYS if isinstance(inp.get(k), str))
+
+    def resolve(name):
+        path = Path(name)
+        return (Path(controller.project_path) / path).resolve() if not path.is_absolute() else path.resolve()
+
+    from research_review import submission_paths
+    candidates = {resolve(name) for name in paths}
+    # A response link selects among observed outputs; it never imports an input file.
+    declared = ({resolve(name) for name in declared}
+                | {Path(name) for name in submission_paths(response, controller.project_path)}) & candidates
     artifacts, seen = [], set()
     for name in sorted(paths):
-        path = Path(name)
-        if not path.is_absolute():
-            path = Path(controller.project_path) / path
-        path = path.resolve()
+        path = resolve(name)
         if path in seen:
             continue
         seen.add(path)
@@ -115,5 +131,6 @@ def discover(controller, response, tool_calls, *, submitted=()):
             continue
         ref = controller.store.evidence(content)
         artifacts.append({"path": str(path.resolve()), "hash": digest(content),
-                          "evidence_id": ref["id"], "chars": len(content)})
+                          "evidence_id": ref["id"], "chars": len(content),
+                          "role": "submission" if not declared or path in declared else "support"})
     return artifacts

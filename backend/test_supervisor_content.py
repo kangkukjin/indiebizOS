@@ -127,5 +127,91 @@ def test_staged_publication_keeps_current_draft_and_excludes_old_public_file(sup
     assert any(a['subject'] == row['staged'] for a in packet['attachments'])
 
 
+@pytest.mark.parametrize('selection', ['receipt', 'response'])
+def test_explicit_submission_separates_collected_outputs_without_losing_snapshots(
+        supervisor, tmp_path, selection):
+    report = tmp_path / 'report.md'
+    ledger = tmp_path / 'evidence.md'
+    source = tmp_path / 'source.json'
+    untouched = tmp_path / 'read-only.md'
+    for path in (report, ledger, source, untouched):
+        path.write_text('실제 파일 ' + path.name)
+    outputs = [receipt(path) for path in (source, report, ledger)]
+    if selection == 'receipt':
+        outputs[1]['role'] = 'submission'
+    response = f'[근거]({ledger}) [읽은 자료]({untouched})'
+    if selection == 'response':
+        response += f' [결과]({report})'
+    supervisor.store.put_response(response)
+    packet = prepare(supervisor, [{'name': 'shell', 'result': {'artifacts': outputs}}])
+    roles = {a['subject']: a['role'] for a in packet['attachments']}
+    assert roles[str(report)] == roles[str(ledger)] == 'submission'
+    assert roles[str(source)] == 'support'
+    assert str(untouched) not in roles
+    assert set(supervisor._evaluation_snapshot['files']) == {str(report), str(ledger), str(source)}
+    source.write_text('검수 중 바뀐 수집 자료')
+    assert snapshot_error(supervisor)  # selection never weakens mutation detection
+
+
+def test_first_review_keeps_report_and_ledger_with_large_matching_sources(supervisor, tmp_path, monkeypatch):
+    from evaluation_input import SUPPORT_PREVIEW_CHARS
+    from test_evaluation_input import provider
+    report = tmp_path / 'final.md'
+    ledger = tmp_path / 'evidence.md'
+    report.write_text('보고서 본문\n' * 4000 + '결론 끝')
+    ledger.write_text('근거 원장\n' * 1000 + '미확인 끝')
+    calls = []
+    for i in range(12):
+        source = tmp_path / f'source-{i}.json'
+        source.write_text(json.dumps({'text': '검증 성공 주장과 반례\n' * 10000}))
+        calls.append({'name': 'shell', 'result': receipt(source)})
+        supervisor.run_tool('read', {}, lambda: '검증 성공 주장과 반례\n' * 10000)
+    calls.append({'name': 'shell', 'result': {'artifacts': [
+        {**receipt(report), 'role': 'submission'}, {**receipt(ledger), 'role': 'supporting_evidence'}]}})
+    supervisor.store.put_response(f'[보고서]({report})')
+    packet = prepare(supervisor, calls)
+    observed = []
+
+    def evaluate(prompt, **kwargs):
+        text = prompt.prepare_request(provider(request_limits={'chars': 250000}))
+        observed.append(prompt.metrics)
+        assert report.read_text() in text and ledger.read_text() in text
+        supporting = [r for r in prompt.metrics['sections'] if r['role'] not in {'submission', 'recovered', 'citation'}]
+        assert sum(r['shown_chars'] for r in supporting) <= SUPPORT_PREVIEW_CHARS
+        assert any(r['completeness'] != 'complete' for r in supporting)
+        assert len(text) < 200000
+        return 'ACHIEVED'
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    assert json.loads(invoke(supervisor))['status'] == 'APPROVED'
+    assert len(observed) == 1
+    assert len(packet['context']['evidence_index']) == 12
+
+
+def test_unsupervised_collection_uses_same_submission_roles(supervisor, tmp_path):
+    from final_evaluator import Evaluator
+    report, source = tmp_path / 'result.md', tmp_path / 'collected.txt'
+    report.write_text('제출 본문')
+    source.write_text('수집 원문')
+    evaluator = Evaluator()
+    evaluator.project_path = str(tmp_path)
+    attachments, snapshots = [], {}
+    evaluator._collect_created_files('', [{'name': 'shell', 'result': {'artifacts': [
+        {**receipt(report), 'role': 'submission'}, receipt(source)]}}],
+        attachments=attachments, snapshots=snapshots, evidence_store=supervisor.store)
+    assert {r['subject']: r['role'] for r in attachments} == {
+        str(report): 'submission', str(source): 'support'}
+    assert set(snapshots) == {str(report), str(source)}
+
+
+@pytest.mark.parametrize('role', [None, [], {}])
+def test_unknown_receipt_role_does_not_break_output_collection(supervisor, tmp_path, role):
+    path = tmp_path / 'result.txt'
+    path.write_text('관측된 출력')
+    found = discover(supervisor, '', [{'name': 'shell', 'result': {**receipt(path), 'role': role}}])
+    assert found[0]['path'] == str(path)
+    assert found[0]['role'] == 'submission'  # no explicit selection: retain existing fallback
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

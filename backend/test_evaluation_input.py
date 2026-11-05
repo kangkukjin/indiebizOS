@@ -505,3 +505,40 @@ def test_identical_tool_body_preserves_each_call_receipt(supervisor):
     prompt = EvaluationPrompt('검수', rows)
     prompt.prepare_request(provider())
     assert len(prompt.metrics['sections']) == 2
+
+
+def test_large_lexical_candidates_do_not_displace_submissions_or_fill_context():
+    from evaluation_input import SUPPORT_PREVIEW_CHARS
+    report = '비교 보고서\n' * 4000 + '최종 판단'
+    ledger = '근거 원장\n' * 1000 + '남은 확인'
+    rows = [record('기준과 겹치는 수집 결과\n' * 20000, subject=f'candidate-{i}',
+                   role='criterion', criterion_ids=['C1'], source_ref=str(i)) for i in range(20)]
+    rows += [record(report, subject='report', role='submission'),
+             record(ledger, subject='ledger', role='submission')]
+    prompt = EvaluationPrompt('C1 비교', rows)
+    shown = prompt.prepare_request(provider(request_limits={'chars': 250000}))
+    assert report in shown and ledger in shown
+    assert sum(r['shown_chars'] for r in prompt.metrics['sections'] if r['role'] == 'criterion') <= SUPPORT_PREVIEW_CHARS
+    assert len(shown) < 150000
+    assert len(prompt.metrics['criterion_coverage']['C1']) == 20
+
+
+def test_preview_limit_does_not_limit_explicit_recovery(supervisor):
+    from evaluation_input import SUPPORT_PREVIEW_CHARS, evidence_references
+    text = '원문 앞\n' + '내용\n' * SUPPORT_PREVIEW_CHARS + '원문 끝'
+    ref = supervisor.store.evidence(text)
+    source = record(text, subject='source', source_ref=ref['id'], revision=ref['id'],
+                    role='criterion', criterion_ids=['C1'])
+    initial = EvaluationPrompt('C1', [source])
+    initial.prepare_request(provider())
+    assert initial.metrics['sections'][0]['completeness'] == 'partial'
+    packet = {'attachments': [source], 'context': {'criteria_contract': {'criteria': [{'id': 'C1'}]}}}
+    assert evidence_references(packet)[0]['recoverable']
+    requests = evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([
+        {'criterion_id': 'C1', 'evidence_id': ref['id'], 'start': 0, 'end': len(text)}]), packet)
+    recovered = recover(supervisor, requests['requests'])
+    p = provider()
+    p.context_window_tokens = 1000000
+    review = EvaluationPrompt('C1', recovered)
+    assert text in review.prepare_request(p)
+    assert review.metrics['sections'][0]['completeness'] == 'complete'

@@ -184,7 +184,7 @@ class CognitiveEvalMixin:
                 snapshots[path] = artifact['hash']
             if attachments is not None:
                 attachments.append(record(content, subject=path, source_ref=artifact['evidence_id'],
-                                          revision=artifact['evidence_id'], role='submission'))
+                                          revision=artifact['evidence_id'], role=artifact.get('role', 'submission')))
             files.append(f"### {path}\n{bounded_attachment(path, content)}")
         return '\n\n'.join(files)
 

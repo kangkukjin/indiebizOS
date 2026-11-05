@@ -1,5 +1,6 @@
 """주제 대화의 현재 계획과 판본 연결. 계획 본문 작성·저장은 기존 인지 경로가 맡는다."""
 import json
+import hashlib
 from pathlib import Path
 
 from research_store import ResearchConflict, json_text, now
@@ -36,7 +37,24 @@ class ResearchPlans:
         return {**receipt, 'project_uid': self.store.uid, 'thread_id': tid,
                 'revision': row['revision']}
 
-    def bind(self, tid, run, receipt, expected_revision):
+    def check_source(self, tid, run, revision, path, sha256):
+        with self.store.connect(True) as db:
+            self._check_source(db, tid, run, revision, path, sha256)
+
+    def _check_source(self, db, tid, run, revision, path, sha256):
+        self.store.check_epoch(db)
+        thread = self.store.thread(tid, db)
+        row = db.execute('SELECT revision,receipt FROM research_plans WHERE thread_id=? '
+                         'ORDER BY revision DESC LIMIT 1', (tid,)).fetchone()
+        if (thread['active_run'] != run or thread['archived'] or thread['trashed'] or not row
+                or row['revision'] != revision):
+            raise ResearchConflict('연구계획의 활성 실행·판본이 변경됐습니다')
+        source = (self.root / json.loads(row['receipt'])['path']).resolve()
+        if (not source.is_relative_to(self.root) or source != Path(path).resolve()
+                or hashlib.sha256(source.read_bytes()).hexdigest() != sha256):
+            raise ResearchConflict('연구계획 본문이 변경됐습니다. 최신 판본으로 다시 판단하세요')
+
+    def bind(self, tid, run, receipt, expected_revision, *, expected_source=None):
         stored = dict(receipt)
         for key in ('path', 'previous_path'):
             if stored.get(key):
@@ -49,6 +67,8 @@ class ResearchPlans:
             stored.pop(key, None)
         with self.store.connect(True) as db:
             self.store.check_epoch(db)
+            if expected_source:
+                self._check_source(db, tid, run, expected_revision, *expected_source)
             thread = self.store.thread(tid, db)
             if thread['active_run'] != run or thread['archived'] or thread['trashed']:
                 raise ResearchConflict('종료되었거나 변경된 연구 대화에는 계획을 연결할 수 없습니다')

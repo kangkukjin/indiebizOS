@@ -55,7 +55,7 @@ class EvaluationPrompt(str):
 
         def render(budget):
             sizes = {}
-            for role in ('recovered', 'submission', 'citation'):
+            for role in ('recovered', 'criterion', 'submission', 'citation'):
                 group = {str(i): len(r['text']) for i, r in enumerate(rows) if r['role'] == role}
                 left = max(0, budget - sum(sizes.values()))
                 sizes.update(allocate(group, left, cap=left) if group else {})
@@ -150,7 +150,13 @@ class EvaluationPrompt(str):
                     high = mid - 1
             prompt, manifest = render(low)
             metrics = check(provider, serialized(provider, prompt, images), images=images, reserve=8192)
-        self.metrics = {**metrics, 'sections': manifest, 'selected': sum(r['shown_chars'] > 0 for r in manifest),
+        criterion_coverage = {}
+        for row in manifest:
+            for cid in row['criterion_ids']:
+                criterion_coverage.setdefault(cid, []).append({k: row[k] for k in
+                    ('source_ref', 'revision', 'ranges', 'completeness')})
+        self.metrics = {**metrics, 'sections': manifest, 'criterion_coverage': criterion_coverage,
+                        'selected': sum(r['shown_chars'] > 0 for r in manifest),
                         'omitted': sum(r['completeness'] != 'complete' for r in manifest),
                         'prepare_s': round(time.monotonic() - started, 6)}
         from episode_logger import record_trajectory_event

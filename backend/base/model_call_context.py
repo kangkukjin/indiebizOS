@@ -5,6 +5,9 @@ import json
 import time
 import threading
 import uuid
+import hashlib
+import marshal
+from functools import lru_cache
 from contextlib import contextmanager
 from functools import wraps
 
@@ -13,6 +16,14 @@ _registry = {}
 _lock = threading.RLock()
 _purpose = contextvars.ContextVar("model_call_purpose", default="")
 _usage_captures = contextvars.ContextVar("model_usage_captures", default=())
+
+
+@lru_cache(maxsize=128)
+def loaded_code_hash(method):
+    """Identify the loaded provider entry code, never claim the disk HEAD is active."""
+    method = inspect.unwrap(method)
+    code = getattr(method, '__code__', None)
+    return hashlib.sha256(marshal.dumps(code)).hexdigest() if code else None
 
 
 @contextmanager
@@ -149,6 +160,8 @@ def call_scope(provider):
              "provider": type(provider).__name__.removesuffix("Provider"),
              "model": getattr(provider, "model", ""), "round_index": 0,
              "_provider": id(provider), "_native_tools": getattr(provider, "native_tool_scheduling", False)}
+    value['loaded_entry_sha256'] = loaded_code_hash(getattr(type(provider), 'process_message', None))
+    value['loaded_entry_scope'] = 'provider.process_message_code_only'
     descriptor = getattr(provider, 'distill_descriptor', {}) or {}
     value.update({key: descriptor[key] for key in ('tier', 'source') if key in descriptor})
     from thread_context import execution_key
@@ -158,6 +171,7 @@ def call_scope(provider):
             _registry.setdefault(key, []).append(value)
     token = _call.set(value)
     started = time.monotonic()
+    value['_started_monotonic'] = started
     value["_token_estimate"] = max(1, int((getattr(provider, "_last_prompt_usage", {}) or {}).get("input", 0)) + int(getattr(provider, "max_tokens", 4096) or 4096))
     requests_before = provider.metrics.total_requests
     record_trajectory_event("model.call_started", fields())
@@ -217,7 +231,17 @@ def trace_provider_method(method):
                 args, kwargs = bound.args[1:], bound.kwargs
             with call_scope(self):
                 observe_input(self, inspect.signature(method).bind_partial(self, *args, **kwargs).arguments)
-                yield from method(self, *args, **kwargs)
+                for event in method(self, *args, **kwargs):
+                    value = _call.get()
+                    if isinstance(event, dict) and value and event.get('type') == 'text' and event.get('content') and not value.get('_first_text'):
+                        value['_first_text'] = True
+                        try:
+                            from episode_logger import record_trajectory_event
+                            record_trajectory_event('model.first_text', {**fields(), 'elapsed_ms': round(
+                                (time.monotonic() - value['_started_monotonic']) * 1000)})
+                        except Exception:
+                            pass
+                    yield event
         return stream
     @wraps(method)
     def call(self, *args, **kwargs):

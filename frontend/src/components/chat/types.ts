@@ -47,6 +47,11 @@ export interface ToolActivity {
   isError?: boolean;
   /** 실행 중 진행 좌표 — 끝나면 비운다 */
   progress?: ToolProgress;
+  partialResult?: {
+    id: string; state: 'observed' | 'withdrawn'; title: string; source: string;
+    version: string; extraction_revision: number; locator: string; content: string;
+    truncated: boolean; run_id: string;
+  };
 }
 
 export interface TodoItem {

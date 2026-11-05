@@ -6,6 +6,7 @@
     "base/ai_candidates",
     "base/approval_tokens",
     "base/audit_lifecycle",
+    "base/cli_lifecycle",
     "base/codex_rollout",
     "base/coding_process",
     "base/completion_lease",
@@ -47,6 +48,7 @@
     "base/mime_compat",
     "base/model_call_context",
     "base/model_context",
+    "base/model_deadline",
     "base/model_request_budget",
     "base/model_resolver",
     "base/output_publish",
@@ -172,6 +174,7 @@
     "cognition/repair_policy",
     "cognition/repair_readiness",
     "cognition/repair_resume",
+    "cognition/research_plan_patch",
     "cognition/research_planning",
     "cognition/research_runner",
     "cognition/routing_system",
@@ -462,6 +465,7 @@
     "services/report_html",
     "services/research_capture",
     "services/research_library",
+    "services/research_partial_results",
     "services/research_task_session",
     "services/research_threads",
     "services/research_view",
@@ -616,8 +620,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 605,
-    "engine": 573,
+    "total": 609,
+    "engine": 577,
     "blocklist": 32
   }
 }

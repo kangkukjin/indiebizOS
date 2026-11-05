@@ -614,6 +614,10 @@ class GeminiProvider(BaseProvider):
         """스트림 생성 (500 에러 재시도, 캐시 만료 시 자동 복구)"""
         last_error = None
         from model_request_budget import check_payload
+        if getattr(self, '_request_deadline', None):
+            from model_deadline import gemini_stream
+            check_payload(self, {'model': self.model, 'contents': contents, 'config': config})
+            return gemini_stream(self, contents, config)
         for attempt in range(max_retries):
             check_payload(self, {'model': self.model, 'contents': contents, 'config': config})
             try:
@@ -674,6 +678,9 @@ class GeminiProvider(BaseProvider):
 
     def _iterate_stream_with_retry(self, stream, contents: List, config, max_retries: int = 3):
         """스트림 반복 (500 에러 재시도, 캐시 만료 시 자동 복구)"""
+        if getattr(self, '_request_deadline', None):
+            yield from stream
+            return
         retry_count = 0
 
         while True:

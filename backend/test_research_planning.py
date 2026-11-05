@@ -646,3 +646,66 @@ def test_research_completion_uses_current_focus_contract(workspace, monkeypatch,
     assert result['capability_focus'] == {'hint': '기준일 확인'}
     assert len(calls) == expected_calls
     assert Path(result['_research_plan']['path']).is_file()
+
+
+def patch_topic(workspace):
+    store, tid, run = research_topic(workspace)
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    rp.prepare(agent(), {'research_plan_action': 'revise'}, '최초 요청',
+               topic=topic, project_path=store.path,
+               supervisor=SimpleNamespace(plan=lambda *a, **kw: json.dumps(draft())))
+    topic = rp.topic_context(store.path, store.uid, tid, run)
+    framing = {'task_framing': '미확인 지표만 정정', 'research_plan_action': 'patch',
+               'deep_research': False, 'research_plan_patch': {
+                   'base_sha256': topic['current_plan']['sha256'], 'reason': '사용자 정정',
+                   'edits': [{'old': '미확인: 시청 지표.', 'new': '미확인: 이해도 지표.'}]}}
+    return store, tid, run, topic, framing
+
+
+def test_topic_patch_preserves_bytes_without_model_and_is_idempotent(workspace):
+    import copy
+    store, tid, run, topic, framing = patch_topic(workspace)
+    retry = copy.deepcopy(framing)
+    rp.validate_topic_choice(framing, topic)
+    out = rp.prepare(agent(), framing, '지표 정정', topic=topic, project_path=store.path,
+                     supervisor=SimpleNamespace(plan=lambda *a, **kw: pytest.fail('추가 모델 호출')))
+    receipt = out['_research_plan']
+    assert receipt['body'] == topic['current_plan']['body'].replace('미확인: 시청 지표.', '미확인: 이해도 지표.')
+    assert Path(topic['receipt']['path']).read_text() == topic['current_plan']['body']
+    assert receipt['revision'] == 2 and out['deep_research'] is False
+    assert 'research_plan_patch' not in out
+    repeated = rp.prepare(agent(), retry, '지표 정정', topic=topic, project_path=store.path)
+    assert repeated['_research_plan']['revision'] == 2
+    assert repeated['_research_plan']['path'] == receipt['path']
+
+
+@pytest.mark.parametrize('failure', ['hash', 'source', 'overlap', 'ambiguous', 'inactive'])
+def test_topic_patch_rejects_invalid_or_stale_change(workspace, failure):
+    store, tid, run, topic, framing = patch_topic(workspace)
+    patch = framing['research_plan_patch']
+    if failure == 'hash':
+        patch['base_sha256'] = '0' * 64
+    elif failure == 'source':
+        Path(topic['receipt']['path']).write_text(topic['current_plan']['body'] + '\n새 근거')
+    elif failure == 'overlap':
+        patch['edits'] *= 2
+    elif failure == 'ambiguous':
+        patch['edits'] = [{'old': ':', 'new': '='}]
+    else:
+        store.write_response(tid, run, '완료', 'completed')
+    with pytest.raises(FramingContractError):
+        rp.prepare(agent(), framing, '정정', topic=topic, project_path=store.path)
+    assert rp.topic_context(store.path, store.uid, tid, run)['revision'] == 1
+
+
+def test_topic_patch_rechecks_body_after_candidate_write(workspace, monkeypatch):
+    store, tid, run, topic, framing = patch_topic(workspace)
+    persist = rp.persist
+    def raced(*args, **kwargs):
+        result = persist(*args, **kwargs)
+        Path(topic['receipt']['path']).write_text(topic['current_plan']['body'] + '\n경쟁 갱신')
+        return result
+    monkeypatch.setattr(rp, 'persist', raced)
+    with pytest.raises(FramingContractError, match='본문이 변경'):
+        rp.prepare(agent(), framing, '정정', topic=topic, project_path=store.path)
+    assert rp.topic_context(store.path, store.uid, tid, run)['revision'] == 1

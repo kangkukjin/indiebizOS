@@ -167,3 +167,41 @@ def test_replaced_history_starts_fresh_but_ordinary_followup_resumes(monkeypatch
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_total_role_deadline_stops_even_a_talking_child():
+    p = _make(_TalkingCli, _request_deadline=time.monotonic() + .25)
+    events = list(p.process_message_stream('classify', history=[]))
+    assert p.last_failure_kind == 'deadline'
+    assert events[-1]['type'] == 'error'
+    assert p.last_failure_details['phase'] == 'role_deadline'
+
+
+def test_oneshot_cancellation_reaps_cli_before_role_deadline():
+    p = _make(_TalkingCli, _request_deadline=time.monotonic() + 15,
+              _decision_cancel_check=lambda: True)
+    started = time.monotonic()
+    events = list(p.process_message_stream('classify', history=[]))
+    assert time.monotonic() - started < 2
+    assert events[-1]['type'] == 'error' and '취소' in events[-1]['content']
+
+
+def test_terminal_cleanup_deadline_is_failure_not_success():
+    class TerminalCli(_FakeCli):
+        CHILD_CODE = "import json,time; print(json.dumps({'type':'final','content':'candidate'}),flush=True); time.sleep(60)"
+        def _translate_stream_event(self, event, accumulated_text, start_time):
+            return [(event, None)]
+    p = _make(TerminalCli, CLEANUP_TIMEOUT_SEC=.2)
+    events = list(p.process_message_stream('query', history=[]))
+    assert events[-1]['type'] == 'error' and p.last_failure_kind == 'deadline'
+    assert p.last_failure_details['phase'] == 'cleanup_deadline'
+
+
+def test_stderr_pipe_is_drained_and_exit_failure_is_not_hidden_by_text():
+    class NoisyCli(_FakeCli):
+        CHILD_CODE = "import sys,json; sys.stderr.write('x'*200000); print(json.dumps({'type':'text','content':'candidate'})); sys.exit(7)"
+    p = _make(NoisyCli)
+    events = list(p.process_message_stream('query', history=[]))
+    assert any(e['type'] == 'text' for e in events)
+    assert events[-1]['type'] == 'error' and p.last_failure_kind == 'process_exit'
+    assert 'xxxx' in events[-1]['content']

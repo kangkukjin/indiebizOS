@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ChatSession } from '../chat/ChatSession';
 import type { ChatMessage, ToolActivity } from '../chat/types';
 import { imageUrl } from '../generic/manifest';
@@ -12,6 +12,16 @@ export function useResearchSession(project: string, thread: string, visible: boo
   const pending = useRef<{ signature: string; id: string } | null>(null);
   const running = useRef(false);
   const sequence = useRef(0);
+  useLayoutEffect(() => {
+    for (const item of data?.items || []) {
+      if (item.role !== 'assistant' || item.status !== 'completed' || !item.content || !item.run_id) continue;
+      const start = `indiebiz:request:${item.run_id}`, end = `indiebiz:final:${item.run_id}:${item.id}`;
+      if (performance.getEntriesByName(start).length && !performance.getEntriesByName(end).length) {
+        performance.mark(end);
+        performance.measure(`${end}:elapsed`, start, end);
+      }
+    }
+  }, [data]);
   const load = useCallback(async () => {
     const ticket = ++sequence.current;
     const result = await researchCall(project, 'thread_messages', { thread_ref: thread, limit: 100 }) as unknown as ConversationData;
@@ -35,12 +45,17 @@ export function useResearchSession(project: string, thread: string, visible: boo
   const send: ChatSession['send'] = async (text, files, actionHint) => {
     if (!visible || busy) return false;
     setBusy(true); setError('');
+    const requestedAt = performance.now();
     try {
       const attachments = await Promise.all(files.map(uploadAttachment));
       const message = actionHint ? `${text}\n\n[선택한 IBL 액션: ${actionHint}]` : text;
       const signature = JSON.stringify([message, attachments]);
       if (pending.current?.signature !== signature) pending.current = { signature, id: crypto.randomUUID() };
-      await researchCall(project, 'thread_send', { thread_ref: thread, message, attachments, request_id: pending.current.id });
+      const receipt = await researchCall(project, 'thread_send', { thread_ref: thread, message, attachments, request_id: pending.current.id }) as { task_ref?: { task_id?: string } };
+      if (receipt.task_ref?.task_id) {
+        const start = `indiebiz:request:${receipt.task_ref.task_id}`;
+        if (!performance.getEntriesByName(start).length) performance.mark(start, { startTime: requestedAt });
+      }
       pending.current = null;
       // 접수 후 조회 실패는 전송 실패가 아니다. 입력을 비워 중복 전송을 피한다.
       try { await load(); } catch (e) { setError(String(e)); }

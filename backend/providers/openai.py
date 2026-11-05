@@ -511,6 +511,10 @@ class OpenAIProvider(BaseProvider):
             # DeepSeek의 thinking+tools 이력 규약이 다시 바뀌거나 옛 이력에 추론 필드가
             # 없어도 긴 작업을 통째로 버리지 않는다. 정식 수리는 위의 원문 보존이고,
             # 이것은 정확히 그 400에만 발동해 남은 도구 루프를 non-thinking으로 마친다.
+            if getattr(e, 'kind', None) in {'deadline', 'cancelled'}:
+                self.last_failure_kind = e.kind
+                yield {'type': 'error', 'content': str(e), 'failure_kind': e.kind}
+                return
             if (self.preserve_reasoning_content and not force_thinking_off
                     and "reasoning_content" in str(e)
                     and "passed back" in str(e)):
@@ -539,6 +543,9 @@ class OpenAIProvider(BaseProvider):
         delivery = prepare(create_params['messages'], self)
         from model_request_budget import check_payload
         check_payload(self, create_params)
+        if getattr(self, '_request_deadline', None):
+            from model_deadline import openai_stream
+            return observed_stream(openai_stream(self, create_params), delivery)
         for attempt in range(self.retry_config.max_retries + 1):
             try:
                 return observed_stream(self._client.chat.completions.create(**create_params), delivery)

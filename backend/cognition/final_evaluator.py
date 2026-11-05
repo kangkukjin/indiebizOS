@@ -307,7 +307,7 @@ def prepare(controller, tool_calls=None):
     context = {"criteria_contract": criteria,
                "pending_delivery": delivery, "previous_evaluation": controller.last_decision,
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
-               "evidence_index": controller.store.tool_index(),
+               "evidence_index": controller.store.tool_index(limit=10000),
                "jobs": list(controller.job_states.values())}
     from recovery_observation import view as recovery_view
     context['recovery_incidents'] = recovery_view(calls, controller, final=True)
@@ -320,6 +320,9 @@ def prepare(controller, tool_calls=None):
             *call_evidence(calls, response, 6000),
         ]
     context['assertion_evidence'] = assertion_evidence(controller.store, calls, criteria)
+    from evaluation_evidence import result_sections
+    attachments.extend(result_sections(context['evidence_index'], controller.store, criteria,
+                                       controller.cancelled))
     from research_context import citation_review
     research_citations = citation_review(review_text(response, research_documents), query=controller.message, full_receipts=True)
     if research_citations is not None:

@@ -456,6 +456,9 @@ class AnthropicProvider(BaseProvider):
         delivery = prepare(create_params['messages'], self)
         from model_request_budget import check_payload
         check_payload(self, create_params)
+        if getattr(self, '_request_deadline', None):
+            from model_deadline import AnthropicStream
+            return observed_stream(AnthropicStream(self, create_params), delivery)
         for attempt in range(self.retry_config.max_retries + 1):
             try:
                 return observed_stream(self._client.messages.stream(**create_params), delivery)

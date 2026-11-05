@@ -1,4 +1,51 @@
 """Immutable receipt candidates and structured evaluation displays; no library access."""
+def result_sections(index, store, criteria, cancelled=lambda: False):
+    """Supply actual tool bytes before review, including current-turn result references.
+
+    Lexical matches only allocate input; they never certify a criterion. Unknown
+    or changed evidence remains in the index for the existing recovery protocol.
+    """
+    import json
+    from evaluation_input import record
+    from recall_relevance import lexical_evidence
+    rows = []
+    for call in index:
+        # Same bytes from a different call still have a distinct receipt.
+        seen = set()
+        queue = [(call.get('result') or {}).get('id')]
+        while queue:
+            if cancelled():
+                raise ValueError('검수 근거 준비 중 사용자 취소')
+            key = queue.pop(0)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            try:
+                page = store.read_evidence(key, 0, None)
+            except (OSError, ValueError):
+                continue
+            if page.get('integrity') != 'verified':
+                continue
+            text = page['text']
+            matches = [c for c in criteria.get('criteria', [])
+                       if lexical_evidence(c.get('text', ''), text)]
+            row = record(text, subject=f"tool_result:{call.get('seq')}:{call.get('name')}",
+                         role='criterion' if matches else 'support', source_ref=key, revision=key,
+                         criterion_ids=[c['id'] for c in matches])
+            row['contexts'] = [c['text'] for c in matches]
+            row['receipt'] = {'tool_seq': call.get('seq'), 'is_error': call.get('is_error'),
+                              'selection_basis': 'lexical_candidate_only; not criterion satisfaction'}
+            rows.append(row)
+            try:
+                value = json.loads(text)
+            except ValueError:
+                continue
+            # Follow only the public result envelope, never arbitrary source text.
+            if isinstance(value, dict) and isinstance(value.get('result_ref'), dict):
+                queue.append(value['result_ref'].get('id'))
+    return rows
+
+
 def freeze_receipts(citations, store, cancelled=lambda: False):
     """Replace bodies by authenticated masked TurnStore references before checkpointing."""
     for citation in citations.get('valid', []):

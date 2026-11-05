@@ -6,6 +6,7 @@ import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import type { ToolActivity, ToolProgress } from './types';
 import { parseImagePaths } from '../../lib/message-images';
+import { PartialResultCard } from './PartialResultCard';
 
 /** 마지막 움직임 경과를 사람 말로 — 멈춤과 느림을 가르는 유일한 증거라 초 단위로 흐른다 */
 function formatAge(seconds: number): string {
@@ -101,7 +102,10 @@ export function ToolHistoryPanel({ toolHistory, variant = 'warm' }: ToolHistoryP
 
   return (
     <div className="mb-3 space-y-2">
-      {toolHistory.map((tool, idx) => (
+      {toolHistory.filter(tool => tool.partialResult).map(tool => (
+        <PartialResultCard key={tool.id} result={tool.partialResult!} />
+      ))}
+      {toolHistory.filter(tool => !tool.partialResult).map((tool, idx) => (
         <div key={idx} className={`text-xs border ${styles.border} rounded-lg overflow-hidden ${styles.bg}`}>
           {/* 도구 헤더 */}
           <div className={`flex items-center gap-2 px-3 py-2 ${styles.headerBg} border-b ${styles.headerBorder}`}>

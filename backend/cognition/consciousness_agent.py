@@ -314,7 +314,7 @@ class ConsciousnessAgent:
                 validate_contract(value)
                 if research_topic is not None:
                     from research_planning import validate_topic_choice
-                    validate_topic_choice(value)
+                    validate_topic_choice(value, research_topic)
 
             if result:
                 from episode_logger import record_trajectory_event
@@ -662,7 +662,7 @@ class _PriorityLock:
         self._bg_waiting = 0
         self.bg_yields = 0   # 전경이 대기 중인 배경을 앞질러 잡은 횟수(관찰용 — 게이트 아님)
 
-    def acquire(self, background: bool = False) -> None:
+    def acquire(self, background: bool = False, deadline=None, cancel_check=None) -> None:
         with self._cond:
             if background:
                 self._bg_waiting += 1
@@ -670,7 +670,15 @@ class _PriorityLock:
                 self._fg_waiting += 1
             try:
                 while self._held >= self._capacity or (background and self._fg_waiting > 0):
-                    self._cond.wait()
+                    import time
+                    if cancel_check and cancel_check():
+                        from model_deadline import DecisionCancelled
+                        raise DecisionCancelled('판단 호출 슬롯 대기 중 취소했습니다')
+                    left = None if deadline is None else deadline - time.monotonic()
+                    if left is not None and left <= 0:
+                        from model_deadline import DecisionDeadline
+                        raise DecisionDeadline('판단 호출 슬롯 대기 한도에 도달했습니다')
+                    self._cond.wait(timeout=min(left or .05, .05) if cancel_check else left)
                 self._held += 1
                 if not background and self._bg_waiting > 0:
                     self.bg_yields += 1
@@ -686,8 +694,8 @@ class _PriorityLock:
             self._cond.notify_all()
 
     @_contextmanager
-    def held(self, background: bool = False):
-        self.acquire(background=background)
+    def held(self, background: bool = False, deadline=None, cancel_check=None):
+        self.acquire(background=background, deadline=deadline, cancel_check=cancel_check)
         try:
             yield
         finally:
@@ -931,6 +939,25 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
 def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, role="execution", step_role=None,
                           usage_sink=None):
     """선택된 모델을 유지하며 원샷 계약·동시성·계측을 한 경로에서 적용한다."""
+    import time
+    from model_deadline import DecisionDeadline, DecisionCancelled
+    deadline = None
+    if role == 'classify' and not images:
+        deadline = time.monotonic() + float(getattr(provider, 'classification_timeout_s', 15))
+        from providers.base import _turn_token_ledger
+        turn_deadline = (_turn_token_ledger.get() or {}).get('deadline')
+        if turn_deadline:
+            deadline = min(deadline, turn_deadline)
+    try:
+        return _call_oneshot(provider, prompt, system_prompt=system_prompt, images=images, role=role,
+                             step_role=step_role, usage_sink=usage_sink, deadline=deadline)
+    except (DecisionDeadline, DecisionCancelled) as exc:
+        clear_oneshot_failure()
+        _oneshot_failure.kind = exc.kind
+        return None
+
+
+def _call_oneshot(provider, prompt, *, system_prompt, images, role, step_role, usage_sink, deadline):
     from member_runtime import is_member
     from providers.cli_provider import CliSubprocessProvider
     if is_member() and isinstance(provider, CliSubprocessProvider):
@@ -939,13 +966,17 @@ def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, 
             raise PermissionError("회원 턴에는 주인용 네이티브 CLI 모델을 쓸 수 없습니다")
     from episode_logger import _current_role
     from model_call_context import set_purpose, reset_purpose
-    with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
+    from execution_turn import current as current_execution
+    cancel_check = getattr(current_execution(), 'cancel_check', None) if deadline else None
+    with _oneshot_lock_for(provider).held(background=is_oneshot_background(), deadline=deadline, cancel_check=cancel_check):
         if callable(getattr(provider, "oneshot_view", None)):
             provider = provider.oneshot_view()
         else:
             import copy
             provider = copy.copy(provider)
         provider.no_tools = True
+        provider._request_deadline = deadline
+        provider._decision_cancel_check = cancel_check
         provider.agent_role = f"oneshot:{role}"
         provider.disable_session_persistence = True
         provider.tools = []
@@ -962,7 +993,11 @@ def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, 
                 prompt = prepare(provider, images)
                 provider._evaluation_budget = True
                 provider._evaluation_images = images
-            return provider.process_message(message=prompt, history=[], images=images, execute_tool=None)
+            from model_deadline import remaining
+            remaining(provider)
+            response = provider.process_message(message=prompt, history=[], images=images, execute_tool=None)
+            remaining(provider)
+            return None if provider.last_failure_kind else response
         except Exception as exc:
             from model_request_budget import failure_kind
             kind = getattr(exc, 'kind', None) or failure_kind(exc)

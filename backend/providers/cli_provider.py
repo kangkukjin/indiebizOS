@@ -406,6 +406,7 @@ class CliSubprocessProvider(BaseProvider):
     STATE_PREFIX = "cli"         # data/<prefix>_sessions.json
     SESSION_STORE: Optional[CliSessionStore] = None   # 서브클래스가 생성해 붙인다
 
+    CLEANUP_TIMEOUT_SEC = 15  # 종결 뒤 미완료 티켓이 없을 때 정리 한도
     DEFAULT_TIMEOUT_SEC = 600  # 10분 — 스트림이 EOF 로 끝난 뒤 종료를 기다리는 한도
 
     # 출력도 신뢰할 수 있는 도구 대기 lease도 없을 때만 CLI를 무응답으로 판정한다.
@@ -965,39 +966,11 @@ class CliSubprocessProvider(BaseProvider):
                                "content": f"{self.CLI_DISPLAY} 바이너리 실행 실패: {e}"}
                         return
 
-                # ── 무출력 감시 (STREAM_IDLE_TIMEOUT_SEC 참조) ──────────────────
-                # stdin 쓰기 **전에** 건다: 큰 프롬프트(자막 전문 등)는 파이프 버퍼를
-                # 넘겨 자식이 읽어 주기를 기다리며 블로킹하므로, 그 자리도 자식이
-                # 침묵하면 무한 대기다. 감시는 프로세스를 죽여 두 블로킹을 함께 푼다.
-                _idle = {"last": time.monotonic(), "fired": 0.0, "cancelled": False}
-                _idle_stop = threading.Event()
-
-                def _idle_watch(_p=None):
-                    while not _idle_stop.wait(self.STREAM_IDLE_POLL_SEC):
-                        if proc.poll() is not None:
-                            return
-                        if cancel_check and cancel_check():
-                            _idle["cancelled"] = True
-                            cancel_channel(self._completion_channel)
-                            self._terminate_cli(proc)
-                            return
-                        if is_waiting(self._completion_channel):
-                            _idle["last"] = time.monotonic()
-                            continue
-                        silent = time.monotonic() - _idle["last"]
-                        if silent > self.STREAM_IDLE_TIMEOUT_SEC:
-                            _idle["fired"] = silent
-                            self._log(f"무출력 {int(silent)}초 — 프로세스 종료(마감)")
-                            try:
-                                self._terminate_cli(proc)
-                            except Exception:
-                                pass
-                            return
-
-                _idle_thread = threading.Thread(
-                    target=_idle_watch, daemon=True,
-                    name=f"{self.STATE_PREFIX}-idle-watchdog")
-                _idle_thread.start()
+                from cli_lifecycle import CliWatch, StderrDrain, boundary
+                boundary('spawned', session_mode=_resumed)
+                watch = CliWatch(self, proc, cancel_check)
+                _idle = watch.state
+                stderr_drain = StderrDrain(proc.stderr)
 
                 # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → CLI 가 응답 시작)
                 try:
@@ -1045,6 +1018,8 @@ class CliSubprocessProvider(BaseProvider):
                             if new_acc is not None:
                                 accumulated_text = new_acc
                             t2 = out_event.get("type")
+                            if t2 == "final":
+                                watch.terminal()
                             if t2 in ("text", "tool_start", "tool_result", "thinking"):
                                 committed = True
                                 if situation_delivery:
@@ -1059,24 +1034,28 @@ class CliSubprocessProvider(BaseProvider):
                                     final_seen = True
                                 yield out_event
 
+                    boundary('stdout_eof')
                     proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
+                    boundary('process_exited', returncode=proc.returncode)
 
                     if _idle["cancelled"]:
                         yield {"type": "error", "content": "사용자 취소"}
                         return
-                    if _idle["fired"]:
+                    if _idle["reason"]:
                         # 감시가 죽인 것이므로 EOF 는 "끝"이 아니라 "끊김"이다 —
                         # 조용히 빈 응답·재시도 루프로 흘려보내지 않는다(무한 대기의
                         # 자리를 무한 재시도로 옮기는 꼴). 실패는 여기서 끝난다.
                         self.metrics.record_error()
                         self.last_failure_kind = "deadline"
+                        self.last_failure_details = {"phase": _idle["reason"]}
                         _got = len(accumulated_text)
                         tickets = pending_tickets(self._completion_channel)
                         recovery = (f" 회수 티켓: {', '.join(tickets)}." if tickets else "")
+                        limit = {'idle_deadline': '무응답 마감', 'role_deadline': '전체 판단 마감',
+                                 'cleanup_deadline': '종료 정리 마감'}[_idle['reason']]
                         yield {"type": "error",
-                               "content": (f"{self.CLI_DISPLAY} 무응답 마감 — "
-                                           f"{int(_idle['fired'])}초 동안 출력이 한 줄도 오지 않아 "
-                                           f"프로세스를 종료했습니다"
+                               "content": (f"{self.CLI_DISPLAY} {limit} ({_idle['reason']}) — "
+                                           f"응답 또는 정리가 기한 안에 끝나지 않아 프로세스를 종료했습니다"
                                            f"(총 {int(time.time() - start)}초 경과, 수신 {_got}자). "
                                            f"실행 연결의 응답을 확인하지 못했습니다 — "
                                            f"진행 중인 도구가 있었다면 기존 작업을 회수하고 다시 제출하지 마세요.{recovery}")}
@@ -1093,15 +1072,18 @@ class CliSubprocessProvider(BaseProvider):
                     yield {"type": "error", "content": f"{self.CLI_DISPLAY} 스트림 오류: {e}"}
                     return
                 finally:
-                    _idle_stop.set()          # 감시 해제 (프로세스보다 먼저 — 오살 방지)
+                    watch.close()
                     if proc.poll() is None:
                         cancel_channel(self._completion_channel)
                         self._terminate_cli(proc)
+                    proc.wait(timeout=5)
+                    stderr_drain.close()
+                    boundary('process_reaped', returncode=proc.returncode, stop_reason=_idle['reason'])
 
                 # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
                 stderr_text = ""
-                if proc.returncode is not None and proc.returncode != 0 and not accumulated_text:
-                    stderr_text = (proc.stderr.read() if proc.stderr else "").strip()
+                if proc.returncode is not None and proc.returncode != 0:
+                    stderr_text = stderr_drain.text.strip()
 
                 # --- resume 실패 판정 (stdout 에러 텍스트 + stderr 종합) ---
                 combined = (resume_err_text + " " + stderr_text)
@@ -1143,7 +1125,8 @@ class CliSubprocessProvider(BaseProvider):
                         f"[{self.CLI_LABEL}] {self.agent_name}: 서버 과부하(529) → "
                         f"{delay:.0f}초 후 재시도 {overloaded_retries}/{self.OVERLOADED_MAX_RETRIES}"
                     )
-                    time.sleep(delay)
+                    from model_deadline import retry_wait
+                    retry_wait(self, delay)
                     continue
 
                 # --- 최종 attempt: 결과 확정 ---
@@ -1165,7 +1148,8 @@ class CliSubprocessProvider(BaseProvider):
                     self._log(
                         f"종결 이벤트 없이 종료 — 누적 본문 {len(accumulated_text)}자를 최종으로 승격")
                     yield {"type": "final", "content": accumulated_text.strip()}
-                if proc.returncode not in (0, None) and not accumulated_text and not deferred:
+                if proc.returncode not in (0, None):
+                    self.last_failure_kind = "process_exit"
                     yield {
                         "type": "error",
                         "content": f"{self.CLI_DISPLAY} 종료 코드 {proc.returncode}: {stderr_text[:500]}",
@@ -1186,7 +1170,10 @@ class CliSubprocessProvider(BaseProvider):
                 break
         finally:
             cancel_channel(self._completion_channel)
+            from cli_lifecycle import boundary
+            boundary('channel_closed')
             self._mcp_bridge_release(mcp_config_path)
+            boundary('bridge_released')
 
     # ================= 공통 헬퍼 =================
 

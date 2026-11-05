@@ -458,3 +458,49 @@ def test_review_restore_preserves_evaluation_budget(supervisor, monkeypatch, tmp
     assert supervisor.usage == supervisor.final_usage == {'input': 1000, 'output': 20}
     assert supervisor.phase_usage['final']['last_input'] == 1000
     assert supervisor._final_repair_counts == [0, 2]
+
+
+def test_first_review_supplies_stored_result_body_and_linked_revision(supervisor):
+    from evaluation_evidence import result_sections
+    body = '사용자 관점과 연구 질문: ' + '기존 논의 ' * 600 + '정정된 목적을 저장했다.'
+    source = supervisor.store.evidence(body)
+    envelope = supervisor.store.evidence({'result_ref': {'id': source['id']}, 'status': 'complete'})
+    rows = result_sections([{'seq': 7, 'name': 'execute_ibl', 'result': envelope}], supervisor.store,
+                            {'criteria': [{'id': 'C4', 'text': '사용자 관점과 연구 질문을 보존한다'}]})
+    match = next(r for r in rows if r['source_ref'] == source['id'])
+    assert match['criterion_ids'] == ['C4'] and match['text'] == body
+    assert match['receipt']['tool_seq'] == 7
+    prompt = EvaluationPrompt('기준 C4', rows)
+    shown = prompt.prepare_request(provider())
+    assert body in shown and source['id'] in shown
+    assert prompt.metrics['criterion_coverage']['C4'][0]['completeness'] == 'complete'
+
+
+def test_first_review_preserves_required_body_before_long_submission():
+    rows = [record('제출물' * 30000, subject='report', role='submission'),
+            record('사용자 정정 저장 본문', subject='result', role='criterion', criterion_ids=['C4'])]
+    prompt = EvaluationPrompt('C4', rows)
+    shown = prompt.prepare_request(provider(request_limits={'chars': 16000}))
+    assert '사용자 정정 저장 본문' in shown
+    assert prompt.metrics['sections'][1]['completeness'] == 'complete'
+    assert prompt.metrics['sections'][0]['completeness'] != 'complete'
+
+
+def test_first_review_does_not_import_foreign_or_changed_evidence(supervisor):
+    from evaluation_evidence import result_sections
+    ref = supervisor.store.evidence('기준 원문')
+    (supervisor.store.directory / (ref['id'] + '.txt')).write_text('다른 원문')
+    rows = result_sections([{'result': ref}, {'result': {'id': 'a' * 64}}],
+                            supervisor.store, {'criteria': [{'id': 'C1', 'text': '기준 원문'}]})
+    assert rows == []
+
+
+def test_identical_tool_body_preserves_each_call_receipt(supervisor):
+    from evaluation_evidence import result_sections
+    ref = supervisor.store.evidence('동일한 결과 원문')
+    rows = result_sections([{'seq': n, 'result': ref} for n in (1, 2)],
+                           supervisor.store, {'criteria': []})
+    assert [r['receipt']['tool_seq'] for r in rows] == [1, 2]
+    prompt = EvaluationPrompt('검수', rows)
+    prompt.prepare_request(provider())
+    assert len(prompt.metrics['sections']) == 2

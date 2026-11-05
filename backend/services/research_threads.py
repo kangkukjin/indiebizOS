@@ -96,6 +96,7 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
     context = {'project_uid': store.uid, 'thread_id': tid, 'run_id': run,
                'path': str(store.path), 'epoch': store.epoch, 'mode': store.thread(tid)['mode']}
     text, final, failure = '', None, None
+    partials = {}
     try:
         with lease.activate(), scope(context):
             for event in _run_stream(store, tid, run, message, cancel):
@@ -112,6 +113,15 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
                     with store.connect(True) as db:
                         store.check_epoch(db)
                         store.event(db, kind, sanitize(event), tid, run)
+                    if kind == 'tool_result' and not cancel.is_set():
+                        from research_partial_results import collect
+                        for partial in collect(store, tid, run, cancel.is_set):
+                            if partials.get(partial['id']) != partial:
+                                with store.connect(True) as db:
+                                    store.check_epoch(db)
+                                    if not cancel.is_set():
+                                        store.event(db, 'partial_result', partial, tid, run)
+                                        partials[partial['id']] = partial
             text = final if final is not None else text
             if context.get('capture_failed'):
                 failure = '자료를 보존하지 못해 추가 조사를 멈췄습니다. 저장 공간과 권한을 확인하세요.'
@@ -351,10 +361,14 @@ def chat_activity(store, tid, run):
     tools, out = [], {}
     with store.connect() as db:
         events = db.execute("SELECT kind,payload FROM research_events WHERE thread_id=? AND run_id=? "
-                            "AND kind IN ('tool_start','tool_result','cognition','thinking') ORDER BY sequence", (tid, run))
+                            "AND kind IN ('tool_start','tool_result','cognition','thinking','partial_result') ORDER BY sequence", (tid, run))
         for row in events:
             event = json.loads(row['payload'])
-            if row['kind'] == 'tool_start':
+            if row['kind'] == 'partial_result':
+                tools[:] = [t for t in tools if t.get('id') != event['id']]
+                tools.append({'id': event['id'], 'name': '확인된 부분 결과', 'status': 'done',
+                              'partialResult': event})
+            elif row['kind'] == 'tool_start':
                 tools.append({'id': event.get('id'), 'name': event.get('name', ''),
                               'input': event.get('input'), 'status': 'running'})
             elif row['kind'] == 'tool_result':

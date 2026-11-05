@@ -32,7 +32,12 @@ def topic_prompt(topic):
 현재 계획의 전체 목적·기존 발견·미해결 질문 안에서 새 발언의 역할을 먼저 판단한다.
 전체 연구 목적과 이번 응답/조사의 범위·멈춤 조건을 구분한다. 단순 설명·인사·관점 토론에는
 추가 조사를 강제하지 않는다. 모호한 주제는 질문을 구체화하기 위한 잠정 탐색 계획으로 시작한다.
-반드시 research_plan_action을 반환한다: keep=현재 계획 유지, revise=목적·범위·방법 변경/최초 작성.
+반드시 research_plan_action을 반환한다: keep=유지, patch=좁은 정정, revise=전체 개정/최초 작성.
+관점·질문 기록 갱신만으로 계획을 개정하지 않는다. 목적·방법이 같으면 keep이다.
+patch는 이번 판단에서 research_plan_patch={base_sha256:current_plan.sha256, reason:변경 이유,
+edits:[{old:바꿀 정확한 원문, new:대체 본문}]}도 함께 반환한다. old는 원문에서 유일해야 하며
+반복되는 원문이면 start에 Unicode 문자 좌표를 지정한다. 지문·원문이 다르면 적용하지 않는다.
+기존 질문 ID·근거·진행을 보존하고 큰 목적·방법 변경은 revise로 판단한다.
 계획이 없으면 revise다. 목적·방법이 유효한 추가 조사는 keep으로 실행하고 진행만 갱신한다.
 명시적인 방향 변경은 기존 목적을 수정하되 이유·기존 근거를 보존한다. 잠깐 든 가능성은 확정하지 않는다.
 deep_research는 이번에 깊은 조사가 필요한지 판단한다. keep도 저장된 계획을 실행자에게 전달한다.
@@ -46,12 +51,15 @@ needs_clarification은 실제로 사용자 답 없이는 진행할 수 없을 �
 <research_topic>\n""" + json.dumps(topic, ensure_ascii=False) + '\n</research_topic>\n'
 
 
-def validate_topic_choice(framing):
+def validate_topic_choice(framing, topic=None):
     if not isinstance(framing, dict):
         raise ValueError('연구계획 판단은 JSON 객체여야 합니다')
     if not framing.get('needs_clarification') and not framing.get('needs_repair'):
-        if framing.get('research_plan_action') not in {'keep', 'revise'}:
-            raise ValueError('research_plan_action에 keep(유지) 또는 revise(최초 작성·수정)를 반환하세요')
+        if framing.get('research_plan_action') not in {'keep', 'patch', 'revise'}:
+            raise ValueError('research_plan_action에 keep, patch 또는 revise를 반환하세요')
+        if framing.get('research_plan_action') == 'patch':
+            from research_plan_patch import apply_patch
+            apply_patch(framing.get('research_plan_patch'), (topic or {}).get('current_plan'))
 
 
 def requested(framing):
@@ -83,7 +91,7 @@ def read_current(receipt, project_path=None):
             "initial_sha256": receipt.get("sha256")}
 
 
-def persist(body, guide, project_path=None, previous=None):
+def persist(body, guide, project_path=None, previous=None, *, exact=False, metadata=None):
     """새 판본에 쓰고 다시 읽는다. 시각·지문·경로는 모델이 아니라 하네스가 만든다."""
     from thread_context import get_current_task_id
     from episode_logger import record_trajectory_event
@@ -92,7 +100,7 @@ def persist(body, guide, project_path=None, previous=None):
     directory = _root(project_path) / uuid.uuid4().hex
     directory.mkdir(parents=True, exist_ok=False)
     path = directory / "research_plan.md"
-    document = (f"<!-- author: consciousness; saved_at: {created} -->\n" + body.rstrip() + "\n")
+    document = body if exact else (f"<!-- author: consciousness; saved_at: {created} -->\n" + body.rstrip() + "\n")
     with path.open("x", encoding="utf-8") as stream:
         stream.write(document)
     saved = path.read_text(encoding="utf-8")
@@ -102,7 +110,7 @@ def persist(body, guide, project_path=None, previous=None):
                "sha256": hashlib.sha256(saved.encode()).hexdigest(),
                "guide_sha256": hashlib.sha256(guide.encode()).hexdigest(),
                "task_id": get_current_task_id(), "author": "consciousness",
-               "previous_path": previous.get("path") if previous else None}
+               "previous_path": previous.get("path") if previous else None, **(metadata or {})}
     atomic_json(directory / "receipt.json", receipt)
     record_trajectory_event("research.plan_saved", {k: v for k, v in receipt.items() if k != "body"})
     return receipt
@@ -122,15 +130,28 @@ def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
     from consciousness_agent import FramingContractError, ConsciousnessCallSkipped, call_oneshot_provider
     if topic is not None:
         action = framing.get('research_plan_action')
-        if action not in {'keep', 'revise'}:
+        if action not in {'keep', 'patch', 'revise'}:
             raise FramingContractError('의식이 연구계획의 유지·수정 여부를 반환하지 않았습니다')
         previous_plan = topic['receipt']
+        if action == 'patch':
+            from research_plan_patch import prepare_patch
+            try:
+                framing['_research_plan'] = prepare_patch(framing, topic, project_path,
+                    cancelled=getattr(supervisor, 'cancelled', lambda: False))
+            except (ValueError, OSError) as exc:
+                raise FramingContractError('연구계획 부분 수정을 적용하지 못했습니다: ' + str(exc)) from exc
+            framing.pop('research_plan_patch', None)
+            framing['_research_topic'] = {'mode': topic['mode']}
+            return framing
         if action == 'keep' and previous_plan:
             # 현재 파일을 다시 읽어 진행을 전달한다. 교재 재독·계획 작성 호출·새 판본은 없다.
             current = read_current(previous_plan, project_path)
             framing['_research_plan'] = {**previous_plan, 'body': current['body'],
                                         'current_sha256': current['sha256']}
             framing['_research_topic'] = {'mode': topic['mode']}
+            from episode_logger import record_trajectory_event
+            record_trajectory_event('research.plan_kept', {
+                'revision': previous_plan.get('revision'), 'sha256': current['sha256'], 'model_called': False})
             return framing
     elif not requested(framing):
         return framing

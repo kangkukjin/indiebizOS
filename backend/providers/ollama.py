@@ -255,6 +255,12 @@ class OllamaProvider(BaseProvider):
         from ibl_result_transport import provider_tool_result
         return provider_tool_result(result, max_length)
 
+    def _decision_stream(self, **params):
+        if getattr(self, '_request_deadline', None):
+            from model_deadline import openai_stream
+            return openai_stream(self, params)
+        return self._client.chat.completions.create(**params)
+
     def _simple_stream(
         self,
         messages: List[Dict]
@@ -274,7 +280,7 @@ class OllamaProvider(BaseProvider):
             stream = None
             for attempt in range(self.retry_config.max_retries + 1):
                 try:
-                    stream = self._client.chat.completions.create(
+                    stream = self._decision_stream(
                         model=self.model,
                         messages=messages,
                         stream=True,
@@ -384,7 +390,7 @@ class OllamaProvider(BaseProvider):
             delivery = prepare(messages, self)
             for attempt in range(self.retry_config.max_retries + 1):
                 try:
-                    stream = self._client.chat.completions.create(**create_params)
+                    stream = self._decision_stream(**create_params)
                     stream = observed_stream(stream, delivery)
                     break
                 except Exception as e:

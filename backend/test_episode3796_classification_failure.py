@@ -100,7 +100,29 @@ def test_episode_path_stream_error_to_oneshot_to_classifier(partial, monkeypatch
     import consciousness_agent as ca
     provider = _provider()
     stream = _InterruptedStream(partial)
-    provider._client = NS(chat=NS(completions=stream))
+    # classify now owns an async transport so its total deadline can close IO.
+    provider._client = NS(api_key='fixture', base_url='http://localhost',
+                          organization=None, project=None)
+    class AsyncStream:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args):
+            pass
+        def __aiter__(self):
+            self.chunks = stream.create()
+            return self
+        async def __anext__(self):
+            return next(self.chunks)
+    class AsyncClient:
+        def __init__(self, **kwargs):
+            self.chat = NS(completions=self)
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args):
+            pass
+        async def create(self, **kwargs):
+            return AsyncStream()
+    monkeypatch.setattr('openai.AsyncOpenAI', AsyncClient)
     monkeypatch.setattr(ca, "_resolve_oneshot_provider", lambda role: provider)
     monkeypatch.setattr(ca, "get_unconscious_prompt", lambda: "classify")
     runner = CognitiveConsciousnessMixin()

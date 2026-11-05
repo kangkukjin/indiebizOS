@@ -8,7 +8,7 @@ export interface ResearchThread {
 }
 export interface SavedAttachment { name: string; version_ref: string; mime: string; path: string }
 export interface ResearchMessage {
-  id: number; display_order?: number; content: string; role: 'user' | 'assistant'; message_time: string;
+  id: number; run_id?: string; display_order?: number; content: string; role: 'user' | 'assistant'; message_time: string;
   status: string; tool_activities?: ToolActivity[]; cognition?: CognitionInfo; thinking?: string; todos?: TodoItem[]; questions?: QuestionItem[]; plan_mode?: PlanModeState;
   status_label: string; attachments: SavedAttachment[];
 }

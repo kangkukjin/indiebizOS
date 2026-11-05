@@ -38,6 +38,9 @@ _DATA_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(_PAC
 # health_sync._db_path()/_images_dir() 와 동일 로직(반드시 같은 경로를 가리켜야 함).
 _USERDATA = (os.environ.get("INDIEBIZ_USERDATA") or "").strip()
 DATA_DIR = os.path.join(_USERDATA, 'health') if _USERDATA else os.path.join(_DATA_DIR, 'health')
+# 봉인 세대의 health 디렉토리는 영속 데이터로 연결된다. 세대 정리 뒤에도
+# 문서의 이미지 주소가 유효하도록 DB·이미지 위치는 실제 저장소로 해소한다.
+DATA_DIR = os.path.realpath(DATA_DIR)
 DB_PATH = os.path.join(DATA_DIR, 'health_records.db')
 IMAGES_DIR = os.path.join(DATA_DIR, 'images')
 
@@ -360,6 +363,8 @@ def save_document(doc_type: str, image_path: str = None, extracted_data: dict = 
         recorded_at = datetime.now().strftime('%Y-%m-%d')
 
     extracted_json = json.dumps(extracted_data, ensure_ascii=False) if extracted_data else None
+    # 호출자가 세대/별칭 경로를 넘겨도 영속 기록에는 실제 파일 주소를 남긴다.
+    image_path = os.path.realpath(image_path) if image_path else None
 
     prow = conn.execute("SELECT uuid FROM persons WHERE id=?", (person_id,)).fetchone()
     puuid = prow["uuid"] if prow else None

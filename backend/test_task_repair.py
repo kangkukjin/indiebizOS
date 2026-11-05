@@ -95,6 +95,67 @@ def test_propose_preserves_parent_and_stages_without_grant(env):
     assert journal.read(parent['task_id'])['status'] == 'waiting_repair'
 
 
+@pytest.mark.parametrize('case', ['valid', 'missing_agent', 'unknown_task', 'nonuser', 'cancelled'])
+def test_http_reentry_can_stage_repair_for_registered_user_execution(env, monkeypatch, case):
+    """HTTP worker → real patch handler → durable parent/child; no model or live writes."""
+    from concurrent.futures import ThreadPoolExecutor
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import api_ibl
+
+    token = execution_turn.enter(env.turn.runner, component_repair=True, request=env.turn.request)
+    turn = execution_turn.current()
+    if case == 'cancelled':
+        turn.cancel_check = lambda: True
+    env.controller.run_tool = lambda name, payload, call: call()
+    env.controller.cancelled = lambda: False
+    env.controller.enabled = False
+    payload = {'op': 'propose', 'path': str(env.path),
+               'reason': '관측한 파서 결함', 'content': 'VALUE = 2\n'}
+
+    def execute(*args, **kwargs):
+        assert execution_turn.current() is (None if case in {'missing_agent', 'unknown_task'} else turn)
+        return invoke(env.handler, env.repo, 'patch_op', payload)
+
+    monkeypatch.setattr('system_tools._execute_ibl_unified', execute)
+    app = FastAPI()
+    app.include_router(api_ibl.router)
+
+    def request():
+        assert execution_turn.current() is None
+        with TestClient(app) as client:
+            response = client.post('/ibl/execute', json={
+                'code': 'return 1', 'agent_id': None if case == 'missing_agent' else 'system_ai',
+                'task_id': 'unknown' if case == 'unknown_task' else 'original',
+                'project_path': str(env.repo), 'origin': 'scheduler' if case == 'nonuser' else 'user'})
+        assert response.status_code == 200, response.text
+        assert execution_turn.current() is None
+        return response.json()
+
+    try:
+        with ThreadPoolExecutor(1) as pool:
+            result = pool.submit(request).result()
+        if case != 'valid':
+            assert not result.get('success'), result
+            assert not turn.continuation_key
+            assert env.controller.apply_scheduled is None
+            assert env.path.read_text() == 'VALUE = 1\n'
+            return
+        assert result.get('pending_repair'), result
+        parent = journal.read(turn.continuation_key)
+        child = journal.read(parent['repair_child'])
+        assert parent['goal'] == turn.request
+        assert parent['conversation']['turn_id'] == turn.conversation.turn_id
+        assert parent['budget']['input'] + parent['budget']['output'] == 120
+        assert parent['status'] == 'waiting_repair'
+        assert child['task_scope']['paths'] == ['backend/services/document_parser.py']
+        assert env.path.read_text() == 'VALUE = 1\n'
+        assert (env.repo / child['worktree'] / 'backend/services/document_parser.py').read_text() == 'VALUE = 2\n'
+        assert not env.controller.repair_granted
+    finally:
+        execution_turn.leave(token)
+
+
 def test_ordinary_task_can_request_script_repair_without_core_grant(env):
     path = env.repo / 'data/scripts/reader.py'
     path.parent.mkdir(parents=True)

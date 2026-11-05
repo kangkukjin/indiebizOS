@@ -286,6 +286,7 @@ async def execute_ibl_code(req: IBLRequest):
             from contextlib import nullcontext
             from providers.base import adopt_turn_token_ledger
             from research_context import adopt_execution
+            from execution_turn import adopt_session
             _adopt = nullcontext()
             if req.episode_id is not None or req.parent_run_id:
                 from episode_logger import trajectory_scope
@@ -294,7 +295,8 @@ async def execute_ibl_code(req: IBLRequest):
                                           episode_id=req.episode_id)
             # 누락된 실행 ID는 풀 스레드에 남은 다른 수리 신원을 상속하지 않는다.
             with _adopt, actor_context(agent_id=agent_id, task_id=req.task_id or "",
-                                       origin=_origin), adopt_turn_token_ledger(agent_id, req.task_id):
+                                       origin=_origin), adopt_turn_token_ledger(agent_id, req.task_id), \
+                    adopt_session(req.agent_id, req.task_id):
                 try:
                     from system_tools import _execute_ibl_unified
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서

@@ -626,3 +626,35 @@ IBL 파생/교재 예산·층 가드와 여러 파일의 진단 요청 IBL 컴�
 운영 제어자 ACTIVE·health=healthy, 변경한 운영 Python 7개 파일의 정본/활성 세대 바이트
 일치를 확인했다. 이전 사용자 제약의 실제 classify 탐침도 limited(user_history:0)로
 보존됐다(`outputs/task-repair-authority-2026-10-31/1793422829/`).
+
+## 13. MCP 재진입의 업무 수리 문맥 연결 (2026-11-06)
+
+에피소드 5855에서 원격 업데이트 중 발견한 구현 결함을 `self:patch propose`로 맡겼으나
+직접 사용자 업무 문맥이 없다는 오류로 거절됐다. HTTP 작업 스레드는 작업 ID로 감독자를
+찾았지만, 별도 ContextVar인 `execution_turn`을 복원하지 않았다. 같은 프로세스의 직접
+호출 검사는 이 경계를 통과하지 않아 결함을 발견하지 못했다.
+
+`execution_turn.adopt_session`은 등록된 에이전트(프로바이더 별칭 포함)·작업 ID·호출
+주체가 일치하는 현재 실행만 연결한다. `api_ibl`은 이 범위를 도구 실행 전체에 적용하고
+반환·예외 뒤 이전 문맥을 복원한다. 직접 표면·알 수 없는 신원·종료된 실행은 현재 턴
+없이 실행하여 복사된 과거 ContextVar를 빌리지 않는다. 요청에서 새 턴이나 권한을
+생성하지 않으며 `task_repair`의 대상·직접 사용자·취소·대화·예산 검사는 유지한다.
+
+회귀는 `test_execution_turn.py`에서 별칭·잘못된 신원·종료·다른 주체·예외 뒤 복원을,
+`test_task_repair.py::test_http_reentry_can_stage_repair_for_registered_user_execution`에서
+문맥 없는 별도 스레드의 HTTP 요청→실제 patch 핸들러→격리 Git 사본·부모/자식 원장을
+검사한다. 원래 목표·대화·관측 예산 보존과 신원 누락·다른 작업·사용자 외 출처·취소의
+거절을 확인한다. 이 시험의 IBL 실행기와 감독 실행 래퍼는 대역이며 실제 모델·TV1
+업데이트·Windows 기동 결함 수정의 완료를 뜻하지 않는다.
+
+직접 관련 검사 75개 통과(34.76초). 선택기는 변경 4파일의 전이 소비자 818/873개(94%)와
+허브 `execution_turn`을 지목하여 종합 회귀는 system 포함 전수로 수행한다.
+
+최종 system 포함 전수: **12,676 통과·24 건너뜀·실패 0**, 442.32초, 종료 코드 0.
+명령은 `.venv/bin/python3 -m pytest backend/ -n auto --dist loadfile`이며 JUnit은
+`/tmp/episode5855-reentry-full-unsandboxed.xml`에 남겼다. 첫 실행은 샌드박스의
+프로세스 조회·브라우저 기동·중첩 sandbox-exec 차단으로 실패·정체되어 중단했고,
+승인된 환경에서 동일 범위를 다시 실행했다. 첫 실행을 통과 근거로 사용하지 않는다.
+IBL 정합성·층 검사와 Android 몸 번들 재생성도 완료했다. 운영 제어자 ACTIVE·
+health=healthy 및 두 변경 모듈의 활성 세대/정본 바이트 일치를 확인했다.
+실제 모델의 수리 제안과 TV1 업데이트 재실행은 이번 검증 범위에 포함하지 않았다.

@@ -1,6 +1,7 @@
 """현재 실행의 신원과 MCP 재진입 문맥. 종료되면 폐기하며 작업 내용은 저장하지 않는다."""
 import contextvars
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 _current = contextvars.ContextVar("execution_turn", default=None)
@@ -32,6 +33,7 @@ class Binding:
     on_change: object = None
     situation: object = None
     recovery_checkpoint: object = None
+    principal: object = field(default_factory=lambda: __import__("principal").current())
 
 
 def current():
@@ -92,3 +94,27 @@ def resolve_session(agent, task=None):
     if len(hits) != 1:
         raise ValueError("활성 실행 신원이 없거나 모호합니다. agent_id/task_id를 확인하세요")
     return hits[0]
+
+
+@contextmanager
+def adopt_session(agent, task):
+    """HTTP 재진입의 정확한 활성 실행만 연결하고, 호출 종료 시 이전 문맥을 복원한다.
+
+    직접 표면·종료된 실행은 현재 턴 없이 실행한다. 요청에 실린 신원만으로 새 턴이나
+    권한을 만들지 않으며, 복사된 ContextVar도 활성 등록과 호출 주체가 맞아야 채택한다.
+    """
+    import principal
+    binding = None
+    if agent and task:
+        try:
+            candidate = resolve_session(agent, task)
+        except ValueError:
+            pass
+        else:
+            if candidate.principal == principal.current():
+                binding = candidate
+    token = _current.set(binding)
+    try:
+        yield binding
+    finally:
+        _current.reset(token)

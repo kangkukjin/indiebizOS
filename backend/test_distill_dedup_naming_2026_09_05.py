@@ -85,11 +85,11 @@ def test_n1_name_shape_rule_is_now_a_gate_not_prose():
 
 def test_r1_repair_fragment_preserves_capabilities_and_check_receipts():
     frag = open(os.path.join(os.path.dirname(BACKEND), "data", "common_prompts", "fragments", "13_repair.md"), encoding="utf-8").read()
-    assert "수리 사본은 작업 대상" in frag and "격리 셸" in frag
-    assert "verification_plan" in frag and "pytest" in frag and "node --test" in frag
-    assert 'method:"semantic"' in frag
-    assert "등록/임시 스크립트" in frag and "평소 권한" in frag
-    assert "정본 반영·활성 확인·커밋은 기존 적용 서비스" in frag
+    assert "같은 사본" in frag and "스크립트" in frag
+    assert "verification_plan" in frag and "선택 기능" in frag
+    assert "검사 수·명령 형식·과거 실패 이력은 적용 허가 조건이 아니다" in frag
+    assert "모델·인증·네트워크·일반 도구는 기존 권한" in frag
+    assert "적용 서비스" in frag and "빌드·활성화·커밋을 맡는다" in frag
 
 
 if __name__ == "__main__":

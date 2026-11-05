@@ -8,7 +8,6 @@ import hashlib
 import threading
 import time
 from pathlib import Path
-from uuid import uuid4
 
 from repair_continuation import (TERMINAL, cancelled, claim, directory, outcome, read, resuming,
                                  resume_context, save)
@@ -20,23 +19,17 @@ _last_scan = 0.0
 
 
 def retry_environment(task_id, base):
-    """환경을 고친 운영자가 실패한 검사만 한 번 재예약한다. 원문 영수증은 보존한다."""
+    """명시적 요청으로 실패한 읽기 확인만 재예약한다. 기존 결과는 보존한다."""
     from repair_continuation import key
     from red_apply import _load_handler
-    from repair_live_probe import failure_kind
     lock = OwnerLock(directory(base) / (key(task_id) + ".lock"))
     if not lock.acquire():
         raise ValueError("수리 검사가 실행 중입니다")
     try:
         row = read(task_id, base) or {}
         active = row.get("active_verify") or {}
-        receipt = active.get("receipt") or {}
-        if (row.get("status") != "blocked" or active.get("state") != "failed"
-                or row.get("environment_retries", 0) >= 1
-                or receipt.get("effect_unknown") or receipt.get("timed_out")
-                or (receipt.get("failure_kind") or failure_kind(receipt.get("output", ""),
-                                                               receipt.get("exit_code"))) != "environment"):
-            raise ValueError("확정된 환경 실패만 한 번 재검사할 수 있습니다")
+        if row.get("status") != "blocked" or active.get("state") != "failed":
+            raise ValueError("종료된 실패 검사만 재실행할 수 있습니다")
         st = _load_handler({"repo": str(base)})._staging_mod()
         session = st.read_session(str(base), key(row.get("staging_task_id") or task_id)) or {}
         sealed = session.get("sealed") or {}
@@ -45,7 +38,7 @@ def retry_environment(task_id, base):
             raise ValueError("정본이 변경됐습니다. 새 변경 묶음을 검증해야 합니다")
         row.setdefault("active_verify_history", []).append(active)
         row.update(active_verify=None, status="waiting_apply", phase="active_verify",
-                   environment_retries=1, reason="환경 복구 후 기존 활성 검사만 재예약")
+                   reason="명시적 요청으로 기존 활성 검사 재예약")
         return save(row, base)
     finally:
         lock.close()
@@ -60,28 +53,13 @@ def active_check(row, base=None):
     if result.get("outcome") != "healthy" or not command:
         row["phase"] = "verify_remaining" if result.get("outcome") == "healthy" else "repair_apply"
         return save(row, base)
-    if not row.get("active_verify"):
-        receipt_path = (Path(base or get_base_path()) / "data/system_ai_state/repair_check_outputs"
-                        / (uuid4().hex + ".json"))
-        row.update(phase="active_verify", active_verify={"state": "running", "command": command,
-                   "output_path": str(receipt_path),
-                   "command_sha256": hashlib.sha256(command.encode()).hexdigest()})
-        save(row, base)  # 실행 뒤 영수증 전에 죽었으면 재실행하지 않고 실행자가 확인한다.
-        from red_apply import _run_post_verify, ACTIVE_VERIFY_TIMEOUT_S
-        checked = _run_post_verify(str(base or get_base_path()), command,
-                                   timeout=ACTIVE_VERIFY_TIMEOUT_S, receipt_path=receipt_path)
-        row["active_verify"].update(state="passed" if checked.get("exit_code") == 0 else "failed",
-                                    receipt=checked)
-    elif row["active_verify"]["state"] == "running":
-        # 명령 완료 영수증 뒤, 인계 원장 갱신 전에 죽은 경우만 기존 결말을 회수한다.
-        pending = row["active_verify"]
-        path = Path(pending.get("output_path") or ".").resolve()
-        home = Path(base or get_base_path()).resolve() / "data/system_ai_state/repair_check_outputs"
-        checked = read_json(path) if path.is_relative_to(home) else None
-        expected = hashlib.sha256(command.encode()).hexdigest()
-        if checked and checked.get("command_sha256") == expected == pending.get("command_sha256"):
-            pending.update(state="passed" if checked.get("exit_code") == 0 else "failed",
-                           receipt={k: v for k, v in checked.items() if k != "output"}, recovered=True)
+    from repair_live_probe import activation_check
+    from red_apply import _run_post_verify, ACTIVE_VERIFY_TIMEOUT_S
+    def persist(record):
+        row.update(phase="active_verify", active_verify=record)
+        save(row, base)
+    row['active_verify'] = activation_check(base or get_base_path(), row.get('active_verify'),
+                                            command, persist, _run_post_verify, timeout=ACTIVE_VERIFY_TIMEOUT_S)
     if row["active_verify"]["state"] == "passed":
         _commit_ready(row, base)
     row["phase"] = "verify_remaining" if row["active_verify"]["state"] == "passed" else "repair_active"
@@ -102,6 +80,13 @@ def _commit_ready(row, base=None):
     sess = st.read_session(root, session_key)
     # 과거 영수증을 소급 각인하지 않는다. 새 판본의 검증된 묶음만 소비한다.
     if sess and sess.get("readiness"):
+        # ACTIVE 소비자가 이미 수행한 같은 명령을 각인 경로에서 다시 실행하지 않는다.
+        record = row.get('active_verify') or {}
+        command = sess['readiness'].get('activation_commands', {}).get('active_verify_cmd')
+        if (command and record.get('state') == 'passed' and
+                record.get('command_sha256') == hashlib.sha256(command.encode()).hexdigest()):
+            sess.setdefault('activation_checks', {})['active_verify_cmd'] = record
+            st._save_session(root, sess)
         row["commit"] = st.commit_applied(root, session_key)
 
 
@@ -313,17 +298,6 @@ def process_pending(base, generation, execute=_execute):
                 row = active_check(row, base)
             if cancelled(row, base):
                 _settle(row, "cancelled", "사용자가 수리 재개를 취소했습니다.", base)
-                continue
-            receipt = (row.get("active_verify") or {}).get("receipt") or {}
-            if receipt.get("failure_kind") == "environment":
-                row.update(status="blocked", phase="verify_environment",
-                           reason="활성 검사 환경이 차단되었습니다. 코드 수리 세션을 추가로 열지 않습니다. "
-                           "환경 복구 후 실패한 검사만 다시 실행하세요. " + receipt.get("output_path", ""))
-                save(row, base)
-                _close_root(row, base, complete=False, reason=row["reason"],
-                            resume_condition="환경 복구 뒤 retry_environment 로 실패한 활성 검사만 재실행")
-                _deliver(row, row["reason"], base)
-                _settle(row, "blocked", row["reason"], base)
                 continue
             with resuming(row):
                 answer = _receipt_completion(row, base) or execute(row)

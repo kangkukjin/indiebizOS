@@ -37,7 +37,7 @@ def test_test_refactor_does_not_require_separate_semantic_approval(repair):
     assert 'test_change.py' in session['sealed']
 
 
-def test_regression_evidence_links_before_failure_to_after_pass(repair):
+def test_before_failure_and_after_pass_are_preserved_without_machine_reproduction_claim(repair):
     root, wt, st, session, controller = repair
     (wt / 'a.txt').write_text('fixed')
     command = _test_file(wt, 'def test_fix():\n    assert __import__("pathlib").Path("a.txt").read_text() == "fixed"\n')
@@ -48,10 +48,11 @@ def test_regression_evidence_links_before_failure_to_after_pass(repair):
     _plan(session, command)
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
     assert result['success'], result
-    evidence = session['readiness']['regression_evidence'][0]
-    assert evidence['status'] == 'reproduced' and evidence['before_failed_check'] == 'before'
-    verdict, note = policy.symptom_recheck(session, {}, root)
-    assert verdict == 'verified' and '수정 전 실패' in note
+    observations = session['execution_checks']
+    assert observations[0]['id'] == 'before' and observations[0]['status'] == 'failed'
+    assert observations[-1]['command'] == command and observations[-1]['status'] == 'passed'
+    # A passing command is not automatically a proof of the original symptom.
+    assert 'regression_evidence' not in session['readiness']
 
 
 def test_symptom_recheck_is_unverified_without_reproduction_or_active_check(repair):
@@ -61,7 +62,7 @@ def test_symptom_recheck_is_unverified_without_reproduction_or_active_check(repa
     controller._final_criteria_contract = criteria_contract('고쳐줘', {'criteria': [{'text': 'a 는 fixed'}]})
     _plan(session, command)
     assert policy.prepare(controller, str(root), session, st.verify, st._candidate)['success']
-    assert session['readiness']['regression_evidence'][0]['status'] == 'unknown'
+    assert 'regression_evidence' not in session['readiness']
     verdict, note = policy.symptom_recheck(session, {}, root)
     assert verdict == 'unverified' and '재현' in note
     session.setdefault('activation_checks', {})['active_verify_cmd'] = {'state': 'passed'}

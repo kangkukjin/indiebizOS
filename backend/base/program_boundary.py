@@ -210,8 +210,6 @@ def protected_reason(relative):
     for prefix, reason in CORE_PREFIXES.items():
         if relative == prefix.rstrip('/') or relative.startswith(prefix if prefix.endswith('/') else prefix + '/'):
             return reason
-    if path.name.startswith('test_') or 'tests' in path.parts:
-        return 'existing acceptance contract'
     if relative.startswith('backend/') and path.stem in CORE_MODULES:
         return CORE_MODULES[path.stem]
     if relative.startswith('data/packages/installed/tools/system_essentials/') and path.stem in ESSENTIALS_CORE:
@@ -259,12 +257,13 @@ def _describe(relative):
         if relative in MANAGED_RESOURCES:
             return {'kind': 'managed', 'owner': MANAGED_RESOURCES[relative],
                     'reason': reason, 'mutable': False, 'activation': 'owner-revision'}
-        if reason == 'existing acceptance contract':
-            return {'kind': 'acceptance', 'owner': 'existing-tests', 'reason': reason,
-                    'mutable': False, 'activation': 'external-development'}
         return {'kind': 'core', 'owner': 'protected-core', 'reason': reason,
                 'mutable': False, 'activation': 'external-development'}
     parts = path.parts
+    if (parts[0] in LIVE_CODE_ROOTS or relative.startswith('data/packages/')) and (
+            path.name.startswith('test_') or 'tests' in parts):
+        return {'kind': 'test', 'owner': 'test:' + relative, 'mutable': True,
+                'activation': 'acceptance-source'}
     if requires_restart(relative):
         return {'kind': 'host', 'owner': 'host:' + relative, 'mutable': True,
                 'activation': 'generation-restart',
@@ -398,8 +397,7 @@ MANAGED_RESOURCES = {'data/scripts/registry.yaml': 'script-registry'}
 def change(relative, before, after, *, managed=None, derived=None):
     """One decision for an actual delta, shared by collection and publication.
 
-    Static ownership is not permission to weaken an existing acceptance test.
-    New tests are candidate support; owner outputs require exact host receipts.
+    Tests follow their program workspace. Owner outputs require exact host receipts.
     """
     if not canonical(relative):
         return describe(relative)
@@ -411,12 +409,6 @@ def change(relative, before, after, *, managed=None, derived=None):
     if relative in (derived or {}) and derived[relative] == after:
         return _contract({'kind': 'derived', 'owner': 'host-builder', 'mutable': True,
                           'activation': 'derived-publication'})
-    path = PurePosixPath(relative)
-    if (before is None and after is not None and path.name.startswith('test_')
-            and path.suffix == '.py' and relative.startswith('backend/')
-            and protected_reason(relative) == 'existing acceptance contract'):
-        return _contract({'kind': 'test', 'owner': 'test:' + relative, 'mutable': True,
-                          'activation': 'acceptance-source'})
     return describe(relative)
 
 

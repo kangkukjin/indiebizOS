@@ -22,7 +22,7 @@ def test_new_programs_need_no_allow_list_entry(path):
     'backend/base/program_boundary.py', 'backend/datastore/red_apply.py',
     'data/common_prompts/fragments/13_repair.md',
     'data/packages/installed/tools/system_essentials/program_apply.py',
-    'data/ibl_nodes_src/self.yaml', 'backend/test_existing.py',
+    'data/ibl_nodes_src/self.yaml',
     'backend/base/../base/not_core.py'])
 def test_program_scope_cannot_grant_itself_governance(path):
     assert not eligible(path)
@@ -118,7 +118,7 @@ def test_document_route_is_not_program_admission_or_publication(path):
 
 
 @pytest.mark.parametrize('path', ['docs/AGENTS.md', 'docs/generated_templates/anatomy.md',
-                                'outputs/.env', 'outputs/tests/contract.py',
+                                'outputs/.env',
                                 'data/common_prompts/fragments/13_repair.md',
                                 'data/system_ai_state/repair_sessions/a.json'])
 def test_content_route_cannot_shadow_protected_ownership(path):
@@ -134,13 +134,13 @@ def test_repository_root_has_no_single_mutable_owner():
     assert status['success'] and status['items'][0]['route'] == 'unmanaged'
 
 
-def test_dynamic_change_keeps_old_tests_protected_and_binds_owner_output():
+def test_test_maintenance_and_managed_outputs_follow_their_owners():
     from program_boundary import change
     stamp = {'sha': 'exact', 'mode': 420}
     test = 'backend/test_new_behavior.py'
     assert change(test, None, stamp)['kind'] == 'test'
-    assert not change(test, stamp, {'sha': 'edited'})['mutable']
-    assert not change(test, stamp, None)['mutable']
+    assert change(test, stamp, {'sha': 'edited'})['mutable']
+    assert change(test, stamp, None)['mutable']
     assert not change('backend/conftest.py', None, stamp)['mutable']
     path = 'data/scripts/registry.yaml'
     receipts = {path: {'owner': 'script-registry', 'fingerprint': stamp}}
@@ -183,7 +183,7 @@ def test_common_boundary_drives_task_admission_and_path_query(tmp_path, monkeypa
     assert not st.op_status({'_repo_root': str(tmp_path), 'path': '../outside.py'})['success']
     assert not st.op_status({'_repo_root': str(tmp_path), 'path': '/tmp/outside.py'})['success']
     assert boundary.describe('data/scripts/registry.yaml')['kind'] == 'managed'
-    assert boundary.describe('backend/test_existing.py')['kind'] == 'acceptance'
+    assert boundary.describe('backend/test_existing.py')['kind'] == 'test'
 
 
 def test_task_scope_accepts_only_exact_managed_receipt(monkeypatch):
@@ -218,3 +218,12 @@ def test_planner_and_executor_receive_the_same_boundary_guidance(tmp_path, monke
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+@pytest.mark.parametrize('path', ['backend/test_existing.py', 'frontend/tests/ui.test.js',
+                                 'scripts/tests/test_build.py'])
+def test_test_sources_can_be_added_edited_and_removed(path):
+    from program_boundary import change
+    for before, after in [(None, {'sha': 'new'}), ({'sha': 'old'}, {'sha': 'new'}), ({'sha': 'old'}, None)]:
+        result = change(path, before, after)
+        assert result['route'] == 'workspace' and result['kind'] == 'test'

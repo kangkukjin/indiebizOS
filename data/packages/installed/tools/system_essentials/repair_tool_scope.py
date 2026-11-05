@@ -1,8 +1,6 @@
 """승인된 자기수리 도구의 공통 경로와 실행 증거. 일반 작업에는 적용하지 않는다."""
 import json
 import os
-import re
-import uuid
 from pathlib import Path
 
 WRITE_TOOLS = {"write_file", "edit_file", "make_directory", "delete_path", "move_path", "copy_path"}
@@ -12,26 +10,10 @@ PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source"
 
 
 def protected_write_reason(handler, path, body_root):
-    """The file gate must use the same baseline as candidate preflight.
-
-    Only this task's owned staging workspace may add a new acceptance test.
-    Live files, other candidates and direct registry writes stay protected.
-    """
-    from program_boundary import protected_reason, change
+    """File tools and candidate publication share one protected boundary."""
+    from program_boundary import protected_reason
     relative = Path(path).relative_to(body_root).as_posix()
-    reason = protected_reason(relative)
-    if not reason or not handler._red_grant_active():
-        return reason
-    st, repo = handler._staging_mod(), str(handler._REPO_ROOT)
-    session = st.read_session(repo, handler._staging_key())
-    if (not session or not session.get('program_policy') or session.get('status') != 'staging'
-            or session.get('reused_by') or session.get('owner') != st._repair_owner()
-            or (Path(repo) / session['worktree']).resolve() != Path(body_root).resolve()):
-        return reason
-    from task_repair import check_delta
-    check_delta(session, [relative])
-    item = change(relative, session['baseline'].get(relative), {'pending': True})
-    return None if item and item['mutable'] else reason
+    return protected_reason(relative)
 
 
 def source_path(st, root, wt, path):
@@ -163,63 +145,18 @@ def prepare(self_module, name, payload, project):
 
 
 def run_shell(handler, command, timeout):
-    from repair_process import run
     from supervision_bus import current
+    from repair_check_runner import execute
     st, repo, key = handler._staging_mod(), str(handler._REPO_ROOT), handler._staging_key()
     sess = st.ensure_session(repo, key)
     if not sess:
         raise PermissionError("수리 사본이 없습니다")
-    candidate = st._candidate
-    wt = Path(repo) / sess["worktree"]
-    if sess.get("repair_policy") == 2:
-        from repair_check_runner import execute
-        # Refresh before the command, as direct apply does before its checks.
-        candidate.refresh(repo, sess)
-        record = execute(repo, sess, candidate, command, current(), timeout)
-        st._save_session(repo, sess)
-        return shell_result({"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
-                "output": record["output"],
-                "verification": {k: v for k, v in record.items() if k != "output"}, "worktree": str(wt),
-                "repository_baseline": sess.get("repository_baseline")}, current())
-    before = candidate.digest(candidate.collect(repo, sess))
-    before_env = candidate.environment(wt)
-    controller = current()
-    def check():
-        if controller and controller.cancelled():
-            raise PermissionError("수리가 취소됐습니다")
-    import subprocess
-    try:
-        result = run(["/bin/sh", "-c", command], wt, timeout=timeout, check=check)
-        output = result.stdout + result.stderr
-    except (subprocess.TimeoutExpired, PermissionError) as exc:
-        result = subprocess.CompletedProcess(command, 124 if isinstance(exc, subprocess.TimeoutExpired) else 130, "", "")
-        chunks = [getattr(exc, "stdout", None), getattr(exc, "stderr", None), str(exc)]
-        output = "\n".join(c.decode("utf-8", "replace") if isinstance(c, bytes) else c
-                           for c in chunks if c)
-    after = candidate.digest(candidate.collect(repo, sess))
-    after_env = candidate.environment(wt)
-    # 종료 코드와 내부 검사 결과는 별개다. skip·0건·실패를 초록으로 승격하지 않는다.
-    passed = result.returncode == 0 and bool(output.strip()) and before == after and before_env == after_env
-    if re.search(r"(?:no tests ran|collected 0 items|\b[1-9]\d* (?:failed|errors?|skipped)\b)", output):
-        passed = False
-    try:
-        internal = json.loads(output)
-        if isinstance(internal, dict) and (internal.get("ok") is False or internal.get("success") is False):
-            passed = False
-    except ValueError:
-        pass
-    record = {"id": uuid.uuid4().hex, "command": command, "exit_code": result.returncode,
-              "status": "passed" if passed else "unverified" if result.returncode == 0 else "failed",
-              "candidate_hash": after, "output": output, "before_hash": before,
-              "environment_hash": after_env}
-    if controller:
-        record["evidence_ref"] = controller.store.evidence(record)
-    sess.setdefault("execution_checks", []).append(record)
-    candidate.invalidate(sess)
+    record = execute(repo, sess, st._candidate, command, current(), timeout)
     st._save_session(repo, sess)
-    return shell_result({"success": result.returncode == 0, "exit_code": result.returncode,
-            "output": output, "verification": {k: v for k, v in record.items() if k != "output"},
-            "worktree": str(wt)}, controller)
+    return shell_result({"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
+            "output": record["output"], "verification": {k: v for k, v in record.items() if k != "output"},
+            "worktree": str(Path(repo) / sess["worktree"]),
+            "repository_baseline": sess.get("repository_baseline")}, current())
 
 
 def shell_result(result, controller):
@@ -242,7 +179,7 @@ def record_write(st, repo, key, result):
         parsed = {"success": not str(result).startswith("Error:"), "message": str(result)}
     if isinstance(parsed, dict) and parsed.get("success", True) and not parsed.get("error"):
         parsed.update(staged=True, worktree=session["worktree"],
-                      message="격리 사본에 변경을 보존했습니다. 정본 무변경. 요청 전체를 검증한 뒤 apply 하세요")
+                      message="격리 사본에 변경을 보존했습니다. 필요한 확인을 하고 apply 하세요")
         return json.dumps(parsed, ensure_ascii=False)
     return result
 

@@ -122,7 +122,7 @@ def test_artifact_only_receipt_checks_live_bytes_without_empty_git_commit(setup,
     'frontend/i18n/new.json', 'data/new_rules.json', 'docs/new_inputs.md',
     'backend/new_module.py',
 ])
-def test_new_live_input_invalidates_readiness_before_any_write(setup, relative):
+def test_unrelated_live_file_is_not_a_publication_conflict(setup, relative):
     """새 설정·문서·소스도 파일 탐색과 검사 결과를 바꿀 수 있다."""
     root, wt, st, sess = setup
     (wt / 'a.txt').write_text('fixed')
@@ -130,15 +130,14 @@ def test_new_live_input_invalidates_readiness_before_any_write(setup, relative):
     path = root / relative
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text('new input')
-    assert st._candidate.conflicts(str(root), sess) == [relative]
-    with pytest.raises(ValueError, match='정본 충돌'):
-        st._candidate.validate(str(root), sess)
-    assert not st._perform_apply(str(root), sess, [], None, None)['applied']
-    assert (root / 'a.txt').read_text() == 'before'
+    assert st._candidate.conflicts(str(root), sess) == []
+    assert st._candidate.validate(str(root), sess)
+    assert st._perform_apply(str(root), sess, [], None, None)['applied']
+    assert (root / 'a.txt').read_text() == 'fixed'
     assert path.read_text() == 'new input'
 
 
-def test_new_root_conftest_changes_pytest_and_invalidates_readiness(setup):
+def test_changed_test_configuration_is_observed_without_freezing_code_publication(setup):
     import os
     import sys
 
@@ -156,8 +155,8 @@ def test_new_root_conftest_changes_pytest_and_invalidates_readiness(setup):
     live = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=30)
     assert staged.returncode == 0, staged.stdout + staged.stderr
     assert live.returncode != 0 and 'new live verification input' in live.stdout
-    with pytest.raises(ValueError, match='conftest.py'):
-        st._candidate.validate(str(root), sess)
+    assert st._candidate.validate(str(root), sess)
+    assert (root / 'conftest.py').read_text().startswith('def pytest_collection')
 
 
 def test_unregistered_ignored_output_is_not_a_repair_input(setup):

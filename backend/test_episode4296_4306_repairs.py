@@ -59,17 +59,18 @@ def test_candidate_read_does_not_reopen(repair_handler, setup, state):
 
 
 @pytest.mark.parametrize('state,version,drift,runs', [
-    ('failed', 1, False, 1), ('failed', 2, False, 0),
-    ('running', 1, False, 0), ('failed', 1, True, 0),
+    ('failed', 1, False, 1), ('failed', 2, False, 1),
+    ('running', 1, False, 0), ('failed', 1, True, 1),
 ])
-def test_activation_retry_requires_new_environment_and_unchanged_files(
+def test_explicit_probe_retry_does_not_require_environment_version_change(
         setup, monkeypatch, state, version, drift, runs):
     from repair_live_probe import ENVIRONMENT_VERSION
     root, wt, st, session = setup
     command = 'read-only probe'
     record = {'state': state, 'command_sha256': hashlib.sha256(command.encode()).hexdigest(),
               'receipt': {'exit_code': 1, 'environment_version': ENVIRONMENT_VERSION - (version == 1)}}
-    session.update(activation_checks={'active_verify_cmd': record},
+    session.update(activation_commands={'active_verify_cmd': command},
+                   activation_checks={'active_verify_cmd': record},
                    sealed={'a.txt': {'after': st._candidate.fingerprint(root / 'a.txt')}})
     if drift:
         (root / 'a.txt').write_text('concurrent edit')
@@ -78,13 +79,14 @@ def test_activation_retry_requires_new_environment_and_unchanged_files(
         calls.append(1)
         return {'exit_code': 0, 'environment_version': ENVIRONMENT_VERSION}
     monkeypatch.setattr('red_apply._run_post_verify', probe)
+    st._candidate.activation_plan(session, {})  # Only explicit apply requests a fresh attempt.
     result = st._candidate.activation(str(root), session, 'active_verify_cmd', command, st._save_session)
     assert len(calls) == runs
     if runs:
         assert result['state'] == 'passed'
         assert session['activation_history']['active_verify_cmd'] == [record]
     else:
-        assert result['state'] == ('conflict' if drift else state)
+        assert result['state'] == state
     st._candidate.activation(str(root), session, 'active_verify_cmd', command, st._save_session)
     assert len(calls) == runs
 
@@ -97,7 +99,11 @@ def test_activation_failure_keeps_cause_through_ibl_and_status(repair, monkeypat
         'activation_commands': {'active_verify_cmd': 'probe'}}, activation_checks={
         'active_verify_cmd': {'state': 'failed', 'receipt': {'exit_code': 1, 'output': '403 != 200'}}})
     st._save_session(str(root), session)
-    monkeypatch.setattr(st._candidate, 'activation', lambda *a: session['activation_checks']['active_verify_cmd'])
+    failure = session['activation_checks']['active_verify_cmd']
+    def activation(repo, current, field, command, save):
+        current.setdefault('activation_checks', {})[field] = failure
+        return failure
+    monkeypatch.setattr(st._candidate, 'activation', activation)
     result = st._complete_immediate(str(root), session, {'success': True, 'applied': True}, {})
     assert not result['success'] and result['applied'] and result['stage'] == 'activation'
     assert '403 != 200' in result['error']
@@ -116,7 +122,7 @@ def test_activation_failure_keeps_cause_through_ibl_and_status(repair, monkeypat
     {'exit_code': None}, {'exit_code': 1, 'effect_unknown': True},
     {'exit_code': 1, 'timed_out': True},
 ])
-def test_activation_unknown_outcome_is_never_retried(setup, monkeypatch, receipt):
+def test_completed_probe_is_not_automatically_retried(setup, monkeypatch, receipt):
     root, wt, st, session = setup
     command = 'probe'
     record = {'state': 'failed', 'command_sha256': hashlib.sha256(command.encode()).hexdigest(),

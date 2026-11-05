@@ -33,7 +33,7 @@ def test_retry_keeps_activation_plan_and_applied_repair_accepts_missing_probe(re
     assert saved['activation_checks']['active_verify_cmd']['state'] == 'passed'
     assert policy.completion(saved, {}, root)[0]
     assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root) == head
-    assert not st.op_apply({**args, 'active_verify_cmd': ''})['success']
+    assert st.op_apply({**args, 'active_verify_cmd': ''})['complete']
     assert st.op_apply(args)['complete']  # Omission retains the successful probe.
 
 
@@ -51,20 +51,21 @@ def test_supplementary_probe_failure_does_not_repeat_publication_or_claim_comple
     assert not policy.completion(st.read_session(str(root), session['key']), {}, root)[0]
 
 
-def test_live_change_stops_remaining_expensive_checks(repair, monkeypatch):
+def test_unrelated_live_change_does_not_stop_requested_checks(repair, monkeypatch):
     root, wt, st, session, controller = repair
     controller._final_criteria_contract = criteria_contract('수리', {'criteria': [{'text': 'a'}, {'text': 'b'}]})
     session['verification_plan'] = [{'criterion_id': 'C1', 'command': 'pytest first.py'},
                                     {'criterion_id': 'C2', 'command': 'pytest expensive.py'}]
+    (wt / 'a.txt').write_text('fixed')
     calls = []
     def check(*args):
         calls.append(args[3])
         (root / 'b.txt').write_text('concurrent change')
-        return {'status': 'passed', 'test_report': {'passed': True}, 'id': 'first'}
+        return {'exit_code': 0, 'status': 'passed', 'test_report': {'passed': True}, 'id': 'first'}
     monkeypatch.setattr('repair_check_runner.check', check)
     result = policy.prepare(controller, str(root), session, lambda *a: pytest.fail('late gate'), st._candidate)
-    assert result['stage'] == 'conflict' and result['changed_files'] == ['b.txt']
-    assert calls == ['pytest first.py']
+    assert result['success'], result
+    assert calls == ['pytest first.py', 'pytest expensive.py']
 
 
 def test_direct_apply_refreshes_untouched_dependencies_before_real_checks(repair):
@@ -89,7 +90,7 @@ def test_direct_apply_preserves_real_collision_without_running_checks(repair, mo
     session['verification_plan'] = [{'criterion_id': 'C1', 'command': 'pytest expensive.py'}]
     monkeypatch.setattr('repair_check_runner.check', lambda *a: pytest.fail('unresolved collision'))
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert result['stage'] == 'conflict' and 'a.txt' in result['error']
+    assert result['stage'] == 'prepare' and 'a.txt' in result['error']
     assert (root / 'a.txt').read_text() == 'other repair'
     assert (wt / 'a.txt').read_text() == 'our repair'
 
@@ -197,7 +198,8 @@ def test_apply_preserves_unfinished_goal_without_criterion_gate_or_second_review
     record = execute(str(root), session, st._candidate, cmd, controller)
     assert record['status'] == 'passed'
     st._save_session(str(root), session)
-    monkeypatch.setattr('repair_check_runner.execute', lambda *a, **kw: pytest.fail('duplicate test'))
+    if plan_kind == 'omitted':
+        monkeypatch.setattr('repair_check_runner.execute', lambda *a, **kw: pytest.fail('unsolicited test'))
     args = {'_repo_root': str(root), '_grant_key': session['key']}
     if plan_kind == 'commands':
         args['verification_plan'] = [{'command': cmd}]
@@ -232,3 +234,26 @@ def test_legacy_workspace_uses_same_check_path_without_semantic_review(repair):
     result = prepare(controller, str(root), session, st.verify, st._candidate)
     assert result['success'], result
     assert session['readiness']['version'] == 2
+
+
+@pytest.mark.parametrize('revise_command', [False, True])
+def test_applied_repair_retries_read_probe_without_environment_version_change(repair, revise_command):
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    args = {'_repo_root': str(root), '_grant_key': session['key']}
+    probe = shlex.quote(sys.executable) + ' -c ' + shlex.quote(
+        'from pathlib import Path; assert Path("available.flag").exists()')
+    result = st.op_apply({**args, 'active_verify_cmd': probe})
+    assert result['applied'] and not result['complete']
+    (root / 'available.flag').touch()
+    retry = {**args, 'active_verify_cmd': probe + ' '} if revise_command else args
+    if revise_command:
+        retry['active_verify_cmd'] = shlex.quote(sys.executable) + ' -c "assert True"'
+    result = st.op_apply(retry)
+    assert result['complete'], result
+    saved = st.read_session(str(root), session['key'])
+    assert saved['activation_history']['active_verify_cmd'][0]['state'] == 'failed'
+    assert saved['activation_checks']['active_verify_cmd']['state'] == 'passed'
+    head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root)
+    assert st.op_apply(args)['complete']
+    assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root) == head

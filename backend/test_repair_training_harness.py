@@ -174,6 +174,7 @@ import subprocess
 
 
 def test_original_requirement_and_scope():
+    from program_boundary import WORKSPACE_PRIVATE
     spec = importlib.util.spec_from_file_location("frozen_verifier", {str(SOURCE / 'verify_subject_v3.py')!r})
     verifier = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(verifier)
@@ -188,7 +189,7 @@ def test_original_requirement_and_scope():
         path = Path(rel)
         if set(path.parts) & {{"__pycache__", ".pytest_cache", ".venv", "node_modules"}}:
             continue
-        if rel.startswith(("data/system_ai_state/", ".worktrees/")):
+        if any(rel == p or rel.startswith(p + "/") for p in WORKSPACE_PRIVATE):
             continue
         current[rel] = ({{"sha": hashlib.sha256(path.read_bytes()).hexdigest(), "mode": path.stat().st_mode & 0o777}} if path.is_file() else None)
     assert {{r for r in set(baseline) | set(current) if baseline.get(r) != current.get(r)}} == {{"a.txt"}}

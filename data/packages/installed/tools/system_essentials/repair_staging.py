@@ -1,7 +1,7 @@
 """승인된 자기수리의 사본 개발·준비 평가·고정 묶음 적용.
 
-모든 수리 편집은 같은 사본에 남는다. 기계 검증과 기존 의미 평가의 준비 판정 뒤에만
-적용을 예약한다. 실제 적용은 판정·취소·정본 기준을 다시 확인하고 고정된 바이트를 쓴다.
+모든 수리 편집은 같은 사본에 남는다. 실행자가 검사·오류를 보고 적용을 요청하면
+게시할 바이트와 충돌을 확인해 적용을 예약한다. 실제 적용은 판정·취소·정본 기준을 다시 확인하고 고정된 바이트를 쓴다.
 사전 검사/폐기는 정본을 수정하지 않는다. 예약 실패의 즉시 적용 폴백은 없다.
 네이티브 파일 쓰기는 제한하며 격리 셸은 repair_process의 OS 경계를 사용한다.
 정본 설계: docs/SELF_REPAIR_WORKSPACE_COMPLETION_DESIGN_2026_10_03.md.
@@ -748,50 +748,25 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
             pass
         return None
     rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
-    # ★"기다리는 그 턴이 곧 당신이다" 를 기계가 들이민다 (2026-08-25, ep1934 실측)
-    #   — 옛 문구는 "이 턴이 닫힌 뒤 적용된다"까지만 말했다. 사실로는 맞지만, 예약을 낸
-    #   AI 는 자기 턴이 **그 병목이라는 것**을 읽지 못하고 턴 안에서 적용을 폴링했다.
-    #   그러면 적용은 영영 안 오고 대기 상한이 통째로 타며, 안전망이던 상한이 시간표가 된다.
-    #   episode_id 는 이미 잡에 있다 — 없던 것은 정보가 아니라 **자기수용감각**이었다.
     eid = job.get("episode_id")
-    _cap = _turn_cap_s()
-    _who = f"지금 이 턴(주행기록 {eid})" if eid else "지금 이 턴"
-    _verify_note = (
-        f"활성화 전 읽기·부팅 검증(`{job['verify_cmd'][:120]}`)은 수행자가 돌리고 결과를 보존합니다. "
-        "ACTIVE 이후 active_verify_cmd는 읽기 확인만 수행하고, 커밋은 각인 서비스가 맡습니다."
-        if job.get("verify_cmd") else
-        "부팅·읽기 검사는 verify_cmd, 활성화 후 읽기 확인은 active_verify_cmd로 맡기세요. 커밋은 각인 서비스가 맡습니다. "
-        "이 턴에서 기다려서는 결과를 볼 수 없습니다.")
     return {
         "success": True, "applied": False, "scheduled": True, "verified": True,
         "checks": [{"gate": c["gate"], "passed": c.get("passed", True)} for c in checks],
-        "files": rels,
-        "waiting_on_episode": eid,
-        "do_not_wait": True,
-        "message": (f"검증 통과 — 라이브 적용을 예약했습니다({len(rels)}건). "
-                    f"★{_who}이 닫혀야 적용이 일어납니다 — 기다리는 대상이 곧 당신입니다. "
-                    f"그러니 이 턴에서 적용을 기다리거나 폴링하지 마십시오. 기다리면 적용은 "
-                    f"오지 않고 대기 상한 {_cap}초를 통째로 태운 뒤에야 강행됩니다. "
-                    f"**지금 실행 구간을 닫고 적용을 기다리는 상태로 넘기세요. 작업 완료는 아닙니다.** "
-                    f"턴이 닫히면(응답 전송·주행기록 저장·증류 완료) 분리 수행자가 **다른 턴이 "
-                    f"하나도 안 도는 순간**(정적, 상한 {_quiesce_cap_s()}초)을 골라 쓰기 직전 "
-                    f"재검증 후 적용하고, 리로드는 그때 한 번 일어납니다 — 그 사이 들어온 새 명령은 "
-                    f"정상 처리되고, 쓰기~재기동의 몇 초에 들어온 새 턴만 '재기동 중' 안내를 "
-                    f"받습니다. 적용·헬스 판정은 "
-                    f"원래 사용자 수리의 인계 원장을 통해 재기동 후 자동 재개·검증됩니다. {_verify_note} "
-                    f"사용자에게는 '검증 통과, 적용 예약됨'으로 알리세요 — "
-                    f"아직 라이브에 반영되지 않았습니다."),
+        "files": rels, "waiting_on_episode": eid, "do_not_wait": True,
+        "message": (f"라이브 적용을 예약했습니다({len(rels)}건). 지금 실행 구간을 닫아야 적용됩니다. "
+                    "이 턴에서 기다리거나 폴링하지 말고 적용 대기로 넘기세요. "
+                    "분리 수행자가 고정 바이트를 적용하고 재기동 뒤 같은 업무를 재개합니다. "
+                    "지정한 verify_cmd·active_verify_cmd의 결과도 보존합니다. "
+                    "사용자에게는 적용 예약 상태로 알리세요. 아직 라이브 반영·작업 완료가 아닙니다."),
         "worktree": sess["worktree"],
     }
 
 
 def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
-    """예약된 적용의 실제 수행 — 분리 수행자(red_apply)가 턴 종료 대기 후 부른다.
+    """턴 종료 뒤 고정 묶음과 덮어쓸 파일의 충돌을 확인해 적용한다.
 
-    ★쓰기 직전 재검증: 예약~수행 사이에도 라이브는 변할 수 있다(그 창도 세계다).
-    verify 의 live_sync 가 그 드리프트까지 맞춘 뒤 관문을 다시 돌린다. 실패하면
-    라이브 무변경 + 세션은 staging 으로 되돌아가(<repair_staged> 가 계속 문다)
-    결말은 result.json 으로 다음 턴에 보고된다. 멱등: 이미 적용된 세션은 no-op."""
+    검사·의미 판정을 반복하지 않는다. 실패 시 수정분을 사본에 보존하고 결과를 반환한다.
+    이미 적용된 세션은 기존 결과를 회수한다."""
     sess = read_session(repo, key)
     if not sess:
         return {"success": False, "applied": False, "error": f"세션 원장이 없습니다: {key}"}
@@ -951,8 +926,18 @@ def op_apply(ti):
         _candidate.activation_plan(sess, ti)
     except ValueError as exc:
         return {"success": False, "applied": False, "error": str(exc)}
-    if "verification_plan" in ti:
-        sess["verification_plan"] = ti["verification_plan"]
+    # 계획은 이번 명시 호출의 명령뿐이다. 이전 실패 계획을 자동 재실행하지 않는다.
+    sess["verification_plan"] = ti.get("verification_plan", [])
+    sess["publication_checks"] = []
+    rels = [r["rel"] for r in sess["files"].values()]
+    if _surfaces.touched(rels, repo):
+        surface = _surfaces.build(os.path.join(repo, sess["worktree"]), sys.executable,
+                                  _sandbox_check, _smoke_env(os.path.join(repo, sess["worktree"])))
+        sess["publication_checks"].append(surface)
+        if not surface["passed"]:
+            _save_session(repo, sess)
+            return {"success": False, "applied": False, "stage": "build", "checks": [surface],
+                    "error": "게시할 화면 빌드 실패. 출력을 보고 수정하세요."}
     approval = controller.prepare_repair(repo, sess, verify, _candidate)
     _save_session(repo, sess)
     _root_note("note_prepared", repo, sess, approval)
@@ -1429,7 +1414,7 @@ def op_propose(ti):
             "note": ("이 변경은 격리 사본에만 있고 라이브는 무변경입니다. "
                      f'적용: 사용자가 수리(REPAIR) 경로로 명령한 턴에서 '
                      f'[self:patch]{{op:"apply", proposal_id:"{ts}"}} — '
-                     "그때 검증을 다시 돌려 통과분만 라이브로 갑니다(재작업 불필요). "
+                     "실행자가 결과를 보고 적용 여부를 판단합니다. 과거 검사 실패는 적용을 막지 않습니다. "
                      f'폐기: [self:patch]{{op:"discard", proposal_id:"{ts}"}}.'),
         }
     except Exception as e:
@@ -1462,8 +1447,8 @@ _KILL_RE = re.compile(r"\b(?:kill|pkill|killall)\b([^;&|]*)")
 _BACKEND_MARKERS = ("uvicorn", "api.py", "backend_keeper", "8765")
 
 _RELOAD_HINT = (
-    "수리 반영은 [self:patch]{op:\"apply\"} 가 합니다 — 검증(구문·import·삼각)을 통과한 "
-    "내용만 라이브로 옮기고, 그때 리로드가 한 번 일어납니다. 그 뒤 헬스 판정은 분리 "
+    "수리 반영은 [self:patch]{op:\"apply\"} 가 맡습니다. 권한·충돌·고정 바이트를 확인해 "
+    "라이브로 옮기고 리로드합니다. 그 뒤 헬스 판정은 분리 "
     "워치독이 맡아 다음 턴에 보고하므로, 직접 폴링할 필요도 없습니다."
 )
 

@@ -1,4 +1,4 @@
-"""운영 검증의 읽기 제한·환경 장애 분류·모델 재호출 금지."""
+"""운영 확인의 읽기 제한·실패 관측·명시적 재시도."""
 import boot_paths  # noqa: F401
 import json
 import threading
@@ -42,17 +42,20 @@ def test_live_probe_only_forwards_explicit_reads(surface):
         server.server_close()
 
 
-def test_environment_failures_never_start_an_executor(consumer, tmp_path, monkeypatch):
+def test_environment_failure_returns_to_executor_for_judgment(consumer, tmp_path, monkeypatch):
     module, deliveries, settled = consumer
     row = record(tmp_path, active_verify={"state": "failed", "receipt": {
         "exit_code": 1, "failure_kind": "environment", "output_path": "full-receipt.json"}})
     receipt(tmp_path)
     monkeypatch.setattr(module, "_commit_ready", lambda *a: None)
-    module.process_pending(tmp_path, "new", lambda *a: pytest.fail("환경 오류 뒤 모델 실행"))
+    calls = []
+    def execute(current):
+        calls.append(current)
+        return {'response': '환경 오류를 확인했습니다', 'evaluation': {'goal_status': 'UNKNOWN'}}
+    module.process_pending(tmp_path, "new", execute)
+    assert len(calls) == 1
+    assert calls[0]['active_verify']['receipt']['output_path'] == 'full-receipt.json'
     assert settled == ["blocked"]
-    import repair_continuation
-    assert repair_continuation.read(row["task_id"], tmp_path)["phase"] == "verify_environment"
-    assert "full-receipt.json" in deliveries[0]["reason"]
 
 
 def test_failure_classification_does_not_hide_assertions():
@@ -61,7 +64,7 @@ def test_failure_classification_does_not_hide_assertions():
     assert failure_kind("sandbox_apply: Operation not permitted", 0) is None
 
 
-def test_environment_retry_preserves_receipt_and_is_bounded(tmp_path, monkeypatch):
+def test_explicit_retry_preserves_receipt_without_lifetime_attempt_limit(tmp_path, monkeypatch):
     from types import SimpleNamespace
     import api_repair_continuation as worker
     from restart_protocol import atomic_json
@@ -75,8 +78,30 @@ def test_environment_retry_preserves_receipt_and_is_bounded(tmp_path, monkeypatc
     assert updated["status"] == "waiting_apply" and updated["active_verify"] is None
     atomic_json(tmp_path / "data/system_ai_state/repair_continuations/task-repair.json",
                 {**updated, "status": "blocked", "active_verify": active})
-    with pytest.raises(ValueError, match="한 번"):
-        worker.retry_environment(row["task_id"], tmp_path)
+    again = worker.retry_environment(row["task_id"], tmp_path)
+    assert len(again['active_verify_history']) == 2
+    assert again['active_verify'] is None
+
+
+def test_continuation_commit_consumes_existing_active_probe(tmp_path, monkeypatch):
+    import hashlib
+    from types import SimpleNamespace
+    import api_repair_continuation as worker
+
+    command = 'python live_check.py'
+    checked = {'state': 'passed', 'command_sha256': hashlib.sha256(command.encode()).hexdigest(),
+               'receipt': {'exit_code': 0}}
+    session = {'readiness': {'activation_commands': {'active_verify_cmd': command}}}
+    persisted = []
+    def commit(*args):
+        assert persisted and session['activation_checks']['active_verify_cmd'] == checked
+        return {'success': True}
+    staging = SimpleNamespace(read_session=lambda *a: session,
+                              _save_session=lambda *a: persisted.append(True), commit_applied=commit)
+    monkeypatch.setattr('red_apply._load_handler', lambda *a: SimpleNamespace(_staging_mod=lambda: staging))
+    row = {'task_id': 'task', 'active_verify': checked}
+    worker._commit_ready(row, tmp_path)
+    assert row['commit']['success']
 
 
 if __name__ == "__main__":

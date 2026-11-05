@@ -1,7 +1,6 @@
-"""수리 적용은 실제 검사와 고정 바이트를 확인한다. 업무의 완료 판단은 실행자에게 남긴다."""
+"""수리 적용은 권한·충돌·고정 바이트를 확인한다. 적합성 판단은 실행자에게 남긴다."""
 import copy
 import json
-from pathlib import Path
 
 VERSION = 2
 
@@ -14,8 +13,8 @@ def direct_framing(message):
             "capability_focus": {"hint": "변경 대상부터 확인하세요. 관리 연산으로 개정하는 정의·데이터는 그 연산으로 수정하고 새 호출로 검증합니다. "
                 "관용구는 workflow detail의 revision을 expected_revision으로 save합니다. 코드 적용 없이 원래 목표를 평가합니다. "
                 "보호 코어 밖의 일반 프로그램 구현 변경이 필요하면 같은 사본에서 수정·검사하세요. "
-                "관련 검사를 실행한 뒤 apply하면 같은 후보·환경의 통과 결과를 재사용합니다. "
-                "검사를 함께 실행하려면 verification_plan:[{command:'pytest 명령'}]을 전달하세요. "
+                "관련 검사·오류를 보고 적합성을 판단한 뒤 apply하세요. 검사 이력은 적용 허가 조건이 아닙니다. "
+                "검사를 함께 실행하려면 verification_plan:[{command:'검사 명령'}]을 전달하세요. "
                 "적용은 전체 업무의 완료가 아닙니다. 반영 뒤 남은 업무를 이어가세요."}}
 
 
@@ -50,124 +49,45 @@ def failure(stage, message, **details):
 
 
 def prepare(controller, repo, session, verify, candidate):
-    """같은 입력의 실패도 재사용한다. 검증 함수는 후보를 변경할 수 없다."""
+    """실행자가 요청한 확인과 게시를 수행한다. 과거 검사 결과는 허가 조건이 아니다."""
     from red_report import current_owner
     from supervisor_handoff import criteria_contract
-    if controller.cancelled() or session.get("owner") != current_owner():
-        return failure("ownership", "취소됐거나 수리 소유자가 일치하지 않습니다")
-    contract = copy.deepcopy(getattr(controller, "_final_criteria_contract", None)
-                             or criteria_contract(controller.message, controller.framing))
-    plan = copy.deepcopy(session.get("verification_plan") or [])
-    if not isinstance(plan, list) or any(not isinstance(p, dict) for p in plan):
-        return failure("plan", "verification_plan은 검사 명령 객체의 목록입니다")
-    # 이전 기준 ID·semantic 항목은 적용 조건이 아니다. 원래 업무 기준은 그대로 보존한다.
-    if any(p.get("command") is not None and not isinstance(p["command"], str) for p in plan):
-        return failure("plan", "검사 command는 문자열입니다")
-    commands = list(dict.fromkeys(p["command"] for p in plan if p.get("command")))
-    wt = Path(repo) / session["worktree"]
-    # The same preparation owns dependency refresh for direct apply and shell
-    # entry. Sync before capturing evidence; never change inputs during checks.
-    try:
-        before = candidate.refresh(repo, session)
-    except (ValueError, OSError) as exc:
-        return failure("conflict", str(exc))
-    env = candidate.execution_environment(wt, session)
-    token = candidate.digest({"candidate": before, "env": env, "contract": contract, "commands": commands,
-                              "activation": session.get("activation_commands"),
-                              "evidence": session.get("execution_checks", [])})
-    drift = candidate.conflicts(repo, session)
-    if drift:
-        return failure("conflict", "정본 변경을 사본에 합친 뒤 검사하세요", changed_files=sorted(drift))
-    cached = session.get("preparation_result", {})
-    if cached.get("input_hash") == token:
-        return {**cached["result"], "reused": True}
+
     def finish(result):
-        session["preparation_result"] = {"input_hash": candidate.digest({
-            "candidate": before, "env": env, "contract": contract, "commands": commands,
-            "activation": session.get("activation_commands"), "evidence": session.get("execution_checks", [])}),
-            "result": result}
+        session["preparation_result"] = {"result": result}
         controller._repair_failure = None if result.get("success") else result
         return result
-    from repair_check_runner import check as run_check
-    for command in commands:
-        drift = candidate.conflicts(repo, session)
-        if drift:
-            return finish(failure("conflict", "검사 사이 정본이 변경됐습니다", changed_files=sorted(drift)))
-        try:
-            record = run_check(repo, session, candidate, command, controller)
-        except (ValueError, OSError) as exc:
-            return finish(failure("test", str(exc)))
-        if record.get("status") != "passed" or not (record.get("test_report") or {}).get("passed"):
-            return finish(failure("test", "관련 검사가 통과하지 않았습니다", checks=[record]))
-    observations = [r for r in session.get("execution_checks", [])
-                    if r.get("candidate_hash") == r.get("before_hash") == candidate.digest(before)
-                    and r.get("environment_hash") == env]
-    passed = [r for r in observations if r.get("status") == "passed" and (r.get("test_report") or {}).get("passed")]
-    if not passed:
-        return finish(failure("test", "현재 사본의 통과 검사 결과가 없습니다. 관련 검사를 실행하세요.",
-                              checks=observations))
-    unresolved = unresolved_checks(session, candidate.digest(before), env)
-    if unresolved:
-        return finish(failure("test", "같은 후보에 미해결 검사 실패가 남아 있습니다. 원래 범위를 다시 검사하세요",
-                              checks=unresolved))
-    drift = candidate.conflicts(repo, session)
-    if drift:
-        return finish(failure("conflict", "검사 중 정본이 변경됐습니다. 적용 관문을 실행하지 않습니다",
-                              changed_files=sorted(drift)))
-    ok, checks = verify(repo, session)
-    after = candidate.collect(repo, session)
-    if before != after or env != candidate.execution_environment(wt, session):
-        return finish(failure("candidate_changed", "검사 중 후보가 변경됐습니다. 변경 후 관련 검사를 다시 실행하세요",
-                              changed_files=sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))))
-    if not ok:
-        return finish(failure("gate", "필수 기계 검사가 통과하지 않았습니다", checks=checks))
-    regression = regression_evidence(session, [{"command": r["command"]} for r in passed])
-    decision = {"status": "APPROVED", "method": "tests",
-                "check_evidence": [check_evidence(r) for r in passed]}
-    if controller.cancelled() or before != candidate.collect(repo, session) or env != candidate.execution_environment(wt, session):
-        return finish(failure("candidate_changed", "검사 이후 후보·환경 변경 또는 취소가 발생했습니다"))
-    candidate.seal(repo, session, checks, decision, contract)
-    session["readiness"]["regression_evidence"] = regression
+
+    if controller.cancelled() or session.get("owner") != current_owner():
+        return finish(failure("ownership", "취소됐거나 수리 소유자가 일치하지 않습니다"))
+    contract = copy.deepcopy(getattr(controller, "_final_criteria_contract", None)
+                             or criteria_contract(controller.message, controller.framing))
+    # 명시한 명령은 이번 호출에서만 실행한다. 다음 apply에 옛 실패·계획을 강제하지 않는다.
+    plan = session.pop("verification_plan", None) or []
+    if (not isinstance(plan, list) or any(not isinstance(p, dict) or
+            p.get("command") is not None and not isinstance(p["command"], str) for p in plan)):
+        return finish(failure("plan", "verification_plan은 command 문자열을 담은 객체의 목록입니다"))
+    try:
+        candidate.refresh(repo, session)
+        from repair_check_runner import check as run_check
+        for item in plan:
+            if not item.get("command"):
+                continue
+            record = run_check(repo, session, candidate, item["command"], controller)
+            if record.get("exit_code") != 0:
+                return finish(failure("test", "요청한 명령이 실패했습니다. 결과를 보고 다음 행동을 결정하세요.",
+                                      checks=[record]))
+        # 빌드·형식 검사 실패도 실행자가 판단할 관측이다. 게시 권한·충돌·고정 바이트는
+        # candidate.seal/validate가 소유하며 검사 수·형식·성공 이력으로 대신하지 않는다.
+        if controller.cancelled():
+            return finish(failure("ownership", "수리가 취소됐습니다"))
+        decision = {"status": "APPROVED", "method": "executor_apply"}
+        candidate.seal(repo, session, session.get("publication_checks", []), decision, contract)
+    except (ValueError, OSError) as exc:
+        return finish(failure("prepare", str(exc)))
     controller.log("repair.workspace_ready", role="harness", method=decision["method"],
-                   candidate_hash=candidate.digest(before), criteria=contract,
-                   regression_evidence=regression)
-    return finish({"success": True, "ready": True, "applied": False, "method": decision["method"],
-                   "regression_evidence": regression})
-
-
-def check_evidence(record):
-    return {key: record.get(key) for key in ("id", "command", "candidate_hash", "before_hash",
-                                            "environment_hash", "test_report", "selection", "evidence_ref", "failure_kind")}
-
-
-def unresolved_checks(session, candidate_hash, environment_hash):
-    latest = {}
-    for row in session.get("execution_checks", []):
-        if (row.get("before_hash") == row.get("candidate_hash") == candidate_hash
-                and row.get("environment_hash") == environment_hash and row.get("test_report")):
-            latest[row.get("command")] = row
-    return [check_evidence(row) for row in latest.values() if row.get("status") != "passed"]
-
-
-def regression_evidence(session, plan):
-    """같은 검사가 수정 전 실패·수정 후 통과했는가(G5 원 증상 재검사의 사본 측 근거).
-
-    실행자가 사본에서 같은 명령을 실패시킨 영수증(다른 candidate_hash)이 있으면 before_failed 로 연결한다.
-    없으면 unknown — 통과만으로 재현을 주장하지 않는다."""
-    records = session.get("execution_checks") or []
-    out = []
-    for item in plan:
-        if item.get("method", "test") != "test":
-            continue
-        command = item.get("command")
-        passed = next((r for r in reversed(records) if r.get("command") == command and r.get("status") == "passed"), None)
-        failed = next((r for r in reversed(records) if r.get("command") == command and r.get("status") == "failed"
-                       and (not passed or r.get("candidate_hash") != passed.get("candidate_hash"))), None)
-        out.append({"command": command,
-                    "before_failed_check": failed.get("id") if failed else None,
-                    "after_passed_check": passed.get("id") if passed else None,
-                    "status": "reproduced" if failed and passed else "unknown"})
-    return out
+                   candidate_hash=session["readiness"]["candidate_hash"], criteria=contract)
+    return finish({"success": True, "ready": True, "applied": False, "method": decision["method"]})
 
 
 def symptom_recheck(session, row, base):
@@ -242,8 +162,6 @@ def finalize(controller, response):
         preserve_unfinished(controller, session, response, reason)
     tail = "" if passed else ("\n\n[작업 계속] 같은 사본과 전체 기준으로 남은 수리를 자동 재개합니다." if pending
                               else "\n\n[수리 미완료] " + reason)
-    if passed and recheck != "verified":
-        tail += "\n\n[원 증상 재검사 미확인] " + recheck_note
     return response + tail
 
 

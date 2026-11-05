@@ -31,33 +31,32 @@ func TestChangedBehavior(t *testing.T) {
     record = execute(str(root), session, st._candidate, cmd, controller)
     assert record["status"] == "passed", record
     assert record["test_report"]["cases"] == ["example/repair::TestChangedBehavior"]
-    assert record["changed_files"] == []
     assert not (wt / "repair").exists()
     st._save_session(str(root), session)
     monkeypatch.setattr("repair_check_runner.execute", lambda *a, **k: pytest.fail("duplicate Go test"))
     result = st.op_apply({"_repo_root": str(root), "_grant_key": session["key"],
                           "active_verify_cmd": shlex.quote(sys.executable) + " -c " + shlex.quote(
                               'from pathlib import Path; assert Path("a.txt").read_text() == "fixed"'),
-                          "verification_plan": [{"criterion_id": "C1", "method": method, "command": cmd}]})
+                          "verification_plan": [{"criterion_id": "C1", "method": method}]})
     assert result.get("complete"), result
     assert (root / "a.txt").read_text() == "fixed"
     assert policy.completion(st.read_session(str(root), session["key"]), {}, root)[0]
 
 
 @pytest.mark.parametrize("status", ["unverified", "failed", "stale", "none"])
-def test_semantic_without_current_pass_stops_before_model(repair, monkeypatch, status):
+def test_old_failures_or_missing_tests_do_not_decide_publication(repair, monkeypatch, status):
     root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
     stamp = st._candidate.digest(st._candidate.collect(str(root), session))
     session["execution_checks"] = [] if status == "none" else [{
         "id": "old-check", "command": "go test . | tail -1", "exit_code": 0,
         "status": "passed" if status == "stale" else status,
         "candidate_hash": "old" if status == "stale" else stamp, "before_hash": stamp,
-        "environment_hash": st._candidate.environment(wt), "test_report": None}]
+        "environment_hash": "old-environment", "test_report": None}]
     session["verification_plan"] = [{"criterion_id": "C1", "method": "semantic"}]
     result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert not result["success"] and result["stage"] == "test"
-    repeated = policy.prepare(controller, str(root), session, st.verify, st._candidate)
-    assert repeated["reused"]
+    assert result["success"], result
+    assert session['sealed']['a.txt']['after'] != session['sealed']['a.txt']['before']
 
 
 def test_leading_env_assignment_reaches_the_test_process(repair):
@@ -93,7 +92,7 @@ def test_explicit_shell_failure_recovery_remains_supported(repair):
     assert result['status'] == 'unverified'
 
 
-def test_interrupted_scope_preserves_unrun_and_narrow_pass_cannot_erase_failure(repair):
+def test_interrupted_scope_and_narrow_pass_remain_observations_for_executor(repair):
     root, wt, st, session, controller = repair
     (wt / 'test_scope.py').write_text('def test_a(): assert False\ndef test_b(): pass\n')
     cmd = shlex.quote(sys.executable) + ' -m pytest test_scope.py -x'
@@ -104,18 +103,17 @@ def test_interrupted_scope_preserves_unrun_and_narrow_pass_cannot_erase_failure(
     narrow = execute(str(root), session, st._candidate,
                      shlex.quote(sys.executable) + ' -m pytest test_scope.py::test_b', controller)
     assert narrow['status'] == 'passed'
-    remaining = policy.unresolved_checks(session, narrow['candidate_hash'], narrow['environment_hash'])
-    assert [r['id'] for r in remaining] == [failed['id']]
+    assert session['execution_checks'] == [failed, narrow]
+    assert failed['status'] == 'failed'  # Preserved, not silently relabelled by the new pass.
+    result = policy.prepare(controller, str(root), session, st.verify, st._candidate)
+    assert result['success'], result
 
 
-@pytest.mark.parametrize('kind', ['permission', 'cancel', 'timeout', 'changed'])
+@pytest.mark.parametrize('kind', ['permission', 'cancel', 'timeout'])
 def test_failure_diagnosis_preserves_missing_report(repair, monkeypatch, kind):
     import subprocess
     root, wt, st, session, controller = repair
     def fail(*args, **kwargs):
-        if kind == 'changed':
-            (wt / 'a.txt').write_text('changed during check')
-            return subprocess.CompletedProcess([], 0, 'partial', '')
         if kind == 'timeout':
             raise subprocess.TimeoutExpired('pytest', 1, output='original output')
         if kind == 'cancel':
@@ -124,7 +122,7 @@ def test_failure_diagnosis_preserves_missing_report(repair, monkeypatch, kind):
     monkeypatch.setattr('repair_process.run', fail)
     row = execute(str(root), session, st._candidate, 'python -m pytest test.py', controller)
     assert row['failure_kind'] == {'permission': 'environment', 'cancel': 'cancelled',
-                                  'timeout': 'timeout', 'changed': 'candidate_changed'}[kind]
+                                  'timeout': 'timeout'}[kind]
     assert row['test_report']['error']
     assert row['status'] != 'passed'
 
@@ -157,3 +155,27 @@ def test_changed_candidate_does_not_force_old_plan_commands(repair):
     assert result['success']  # 새 후보의 검사 범위는 실행자가 선택한다. 옛 계획을 강제 재실행하지 않는다.
     assert session['execution_checks'][0]['status'] == 'failed'
     assert session['execution_checks'][-1]['test_report']['scope']['collected'] == ['test_required.py::test_b']
+
+
+def test_shell_observation_does_not_scan_candidate_or_environment(repair, monkeypatch):
+    root, wt, st, session, controller = repair
+    for method in ('collect', 'refresh', 'invalidate'):
+        monkeypatch.setattr(st._candidate, method, lambda *a, **kw: pytest.fail('observation scanned candidate'))
+    monkeypatch.setattr('python_environment_lock.fingerprint',
+                        lambda *a, **kw: pytest.fail('observation scanned environment'))
+    row = execute(str(root), session, st._candidate, 'pwd', controller)
+    assert row['exit_code'] == 0 and str(wt) in row['output']
+
+
+def test_explicit_check_retries_latest_failure_and_accepts_arbitrary_commands(repair):
+    from repair_check_runner import check
+    root, wt, st, session, controller = repair
+    command = 'test -f recovered.flag'
+    failed = check(str(root), session, st._candidate, command, controller)
+    assert failed['exit_code'] != 0
+    (wt / 'recovered.flag').touch()
+    passed = check(str(root), session, st._candidate, command, controller)
+    assert passed['exit_code'] == 0 and passed['id'] != failed['id']
+    (wt / 'recovered.flag').unlink()
+    assert check(str(root), session, st._candidate, command, controller)['exit_code'] != 0
+    assert len(session['execution_checks']) == 3

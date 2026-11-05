@@ -340,8 +340,8 @@ def run():
         st.op_discard({"_repo_root": str(tmp), "_grant_key": st.task_key(task_s8)})
 
         # ══ S9 — 지연 창 드리프트 (2026-08-19 지연 적용) ══
-        # 예약(검증 통과)~수행 사이에도 라이브는 변한다 — 수행자는 쓰기 직전 재검증해야
-        # 하고, 실패하면 라이브 무변경 + 세션은 staging 복귀 + 결말은 result.json.
+        # 예약~수행 사이 덮어쓸 파일의 변경은 보존해야 한다.
+        # 충돌하면 라이브 무변경 + 세션은 staging 복귀 + 결말은 result.json.
         dep9 = tmp / "backend" / "cognition" / "dep9.py"
         dep9.write_text("NINE = 1\n")
         imp9 = tmp / "backend" / "cognition" / "imp9.py"
@@ -352,11 +352,11 @@ def run():
         r = st.op_apply({"_repo_root": str(tmp), "_grant_key": st.task_key(task9),
                          "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
         check("S9_scheduled", r.get("scheduled") is True, json.dumps(r, ensure_ascii=False)[:200])
-        dep9.write_text("GONE = 1\n")           # 예약~수행 사이 라이브 드리프트(NINE 소멸)
+        imp9.write_text("EXTERNAL = 1\n")      # 예약~수행 사이 같은 대상의 동시 변경
         r = st.perform_scheduled_apply(str(tmp), st.task_key(task9),
                                        prepare=h._red_write_prepare, finalize=h._red_write_finalize)
         check("S9_reverify_blocks_stale_apply",
-              r.get("applied") is not True and not imp9.exists(),
+              r.get("applied") is not True and imp9.read_text() == "EXTERNAL = 1\n",
               json.dumps(r, ensure_ascii=False)[:300])
         sess9 = st.read_session(str(tmp), st.task_key(task9))
         check("S9_session_back_to_staging", bool(sess9) and sess9.get("status") == "staging",
@@ -568,17 +568,17 @@ def run():
                            "verify_cmd": "python3 -c \"print('activation_checked')\"",
                            "_red_prepare": h._red_write_prepare,
                            "_red_finalize": h._red_write_finalize})
-        # (가) 자기수용감각 — 응답이 '기다리는 대상이 곧 너'라고 말하는가
+        # (가) 예약 응답은 적용 대기와 현재 실행 종료를 안내한다.
         check("S13a_scheduled", r13.get("scheduled") is True,
               json.dumps(r13, ensure_ascii=False)[:200])
         check("S13a_do_not_wait_flag", r13.get("do_not_wait") is True,
               "예약 응답이 기계가 읽을 수 있는 '기다리지 말라'를 안 실었다")
         _m13 = r13.get("message") or ""
         check("S13a_message_forbids_waiting",
-              "폴링" in _m13 and "기다리는 대상이 곧 당신" in _m13,
+              "폴링하지 말고" in _m13 and "실행 구간을 닫아야" in _m13,
               "문구가 '기다리지 마라'를 명령형으로 말하지 않는다: " + _m13[:200])
-        check("S13a_message_names_the_cap", str(st._turn_cap_s()) in _m13,
-              "기다림의 대가(대기 상한)를 숫자로 말하지 않는다 — 문구와 실제가 갈라진다")
+        check("S13a_message_does_not_claim_completion", "작업 완료가 아닙니다" in _m13,
+              "예약을 작업 완료로 보고하면 안 된다")
         # (나) 위탁 — 검증 명령이 잡에 실려 수행자에게 건네지는가
         job13 = (tmp5 / "data" / "system_ai_state" / "repair_sessions"
                  / f"{st.task_key(task13)}.apply.json")

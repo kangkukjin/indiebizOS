@@ -514,7 +514,7 @@
     },
     {
       "name": "patch_op",
-      "description": "자기수리 사본의 검사·정본 반영. 일반 업무는 propose(path, reason)로 필요한 구현 수리를 맡긴다. 수정안 content 또는 old_string/new_string은 선택이며 paths는 같은 업무에 필요한 기존 상대 경로 1~64개다. 대상 권한은 program_boundary를 따른다. pending_repair 뒤 현재 구간을 닫으면 같은 대화·목표·예산으로 업무가 복귀한다. 등록 순수 부품은 같은 사본에서 검사·커밋·무재기동 활성화한다. apply는 같은 후보·환경의 통과 검사를 재사용한다. 추가 검사는 verification_plan:[{command:단일 pytest/node --test/go test 명령}]으로 실행한다. criterion_id·method 연결과 별도 의미 승인은 필요 없다. 생성·빌드를 마친 후보의 바이트를 고정하고 소유권·취소·정본 충돌을 확인해 반영한다. 세대 교체가 필요한 scheduled 응답 뒤에는 턴을 닫으면 기존 제어자가 적용·복구·커밋을 이어간다. verify_cmd와 active_verify_cmd는 읽기 전용 확인이다. status는 기존 사본·검사·적용 기록 조회, discard는 미적용 사본 폐기다. 수리 반영과 원래 업무 완료는 별개이며 반영 뒤 남은 일을 계속한다. 자기 지침·권한·검사 계약은 수리 대상이 아니다.",
+      "description": "자기수리 사본의 검사·정본 반영. 일반 업무는 propose(path, reason)로 필요한 구현 수리를 맡긴다. 수정안 content 또는 old_string/new_string은 선택이며 paths는 같은 업무에 필요한 기존 상대 경로 1~64개다. 대상 권한은 program_boundary를 따른다. pending_repair 뒤 현재 구간을 닫으면 같은 대화·목표·예산으로 업무가 복귀한다. 등록 순수 부품은 같은 사본에서 검사·커밋·무재기동 활성화한다. apply는 검사 이력을 허가 조건으로 쓰지 않는다. 실행자가 검사·오류를 보고 판단한다. verification_plan:[{command:검사 명령}]은 이번 호출에만 명령을 실행하며 실패 출력을 반환한다. 생략하면 이전 명령을 재실행하지 않는다. 생성·빌드를 마친 후보의 바이트를 고정하고 소유권·취소·정본 충돌을 확인해 반영한다. 세대 교체가 필요한 scheduled 응답 뒤에는 턴을 닫으면 기존 제어자가 적용·복구·커밋을 이어간다. verify_cmd와 active_verify_cmd는 읽기 전용 확인이다. status는 기존 사본·검사·적용 기록 조회, discard는 미적용 사본 폐기다. 수리 반영과 원래 업무 완료는 별개이며 반영 뒤 남은 일을 계속한다. 자기 지침·권한·적용 원장은 수리 대상이 아니다. 기존 시험은 현재 계약에 맞게 유지보수한다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -570,7 +570,7 @@
           },
           "verification_plan": {
             "type": "array",
-            "description": "(apply, 선택) 실행할 검사 명령 목록. 같은 후보·환경의 통과 검사를 이미 실행했으면 생략한다. 단일 pytest, node --test 또는 go test 명령을 사용한다. 이전 criterion_id·method는 적용 조건으로 사용하지 않는다.",
+            "description": "(apply, 선택) 이번 호출 전에 실행할 명령 목록. 임의 셸·검증 스크립트를 지원하며 명령 실패는 출력과 함께 반환한다. 생략하면 이전 명령을 반복하지 않는다. 검사 결과의 적합성은 실행자가 판단한다.",
             "items": {
               "type": "object",
               "properties": {

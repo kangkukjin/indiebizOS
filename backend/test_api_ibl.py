@@ -135,7 +135,7 @@ def test_project_reentry_passes_own_repair_gate_but_rejects_other_owner(tmp_path
                       {'owner': '하드웨어:agent_001', 'repair_policy': VERSION, 'worktree': '.'}, None, candidate)
         other = prepare(controller, str(tmp_path),
                         {'owner': '다른프로젝트:agent_001', 'repair_policy': VERSION}, None, candidate)
-        assert own['stage'] == 'conflict' and '사본 검사 도달' in own['error']
+        assert own['stage'] == 'prepare' and '사본 검사 도달' in own['error']
         assert other['stage'] == 'ownership'
         assert inspected == ['하드웨어:agent_001']
         return {'success': True}

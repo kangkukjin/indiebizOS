@@ -169,7 +169,8 @@ def test_repair_command_route_reaches_same_workspace_and_records_real_check(tmp_
     command = shlex.join([sys.executable, '-c', code])
     result = api_supervision.dispatch('worker', supervisor.task, {'command': command}, repair_command=True)
     assert result.get('success'), result
-    assert result['verification']['status'] == 'passed', result
+    assert result['verification']['exit_code'] == 0 and '1 passed' in result['output'], result
+    assert result['verification']['test_report'] is None  # stdout alone is not a test report.
     stored = st.load_session(str(root), supervisor.task)
     assert stored['execution_checks'][-1]['id'] == result['verification']['id']
     assert stored['execution_checks'][-1]['evidence_ref']['id']

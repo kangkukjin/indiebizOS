@@ -128,8 +128,7 @@ def test_real_test_apply_and_completion_without_ai(repair, monkeypatch):
     st._save_session(str(root), session)
     import repair_check_runner
     monkeypatch.setattr(repair_check_runner, 'execute', lambda *a, **kw: pytest.fail('duplicate test'))
-    result = st.op_apply({'_repo_root': str(root), '_grant_key': session['key'],
-                         'verification_plan': [{'criterion_id': 'C1', 'method': 'test', 'command': cmd}]})
+    result = st.op_apply({'_repo_root': str(root), '_grant_key': session['key']})
     assert result.get('complete'), result
     assert (root / 'a.txt').read_text() == 'fixed'
     saved = st.read_session(str(root), session['key'])
@@ -139,17 +138,21 @@ def test_real_test_apply_and_completion_without_ai(repair, monkeypatch):
     assert not policy.completion(saved, {}, root)[0]
 
 
-def test_failed_test_preserved_and_identical_prepare_not_repeated(repair, monkeypatch):
+def test_failed_command_is_reported_then_executor_can_apply_without_replaying_it(repair, monkeypatch):
     root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
     cmd = command(wt, 'assert False, "actual cause"')
     result = prepare(repair, cmd)
     assert result['stage'] == 'test'
     assert 'actual cause' in result['checks'][0]['output']
-    import repair_check_runner
-    monkeypatch.setattr(repair_check_runner, 'execute', lambda *a, **kw: pytest.fail('same failure repeated'))
-    repeated = prepare(repair, cmd)
-    assert repeated['reused'] and repeated['checks'] == result['checks']
     assert (root / 'a.txt').read_text() == 'before'
+    st._save_session(str(root), session)
+    monkeypatch.setattr('repair_check_runner.execute', lambda *a, **kw: pytest.fail('old failed plan replayed'))
+    result = st.op_apply({'_repo_root': str(root), '_grant_key': session['key']})
+    assert result['complete'], result
+    assert (root / 'a.txt').read_text() == 'fixed'
+    saved = st.read_session(str(root), session['key'])
+    assert saved['execution_checks'][0]['status'] == 'failed'
 
 
 def test_report_rejects_zero_skip_and_shell_success(tmp_path):
@@ -166,20 +169,36 @@ def test_report_rejects_zero_skip_and_shell_success(tmp_path):
     assert not summary(node, 'passed', 0)['passed']
 
 
-def test_test_that_mutates_candidate_cannot_be_reused_as_pass(repair):
+def test_requested_command_can_generate_sources_before_publication(repair):
     root, wt, st, session, controller = repair
     cmd = command(wt, '__import__("pathlib").Path("a.txt").write_text("mutated")')
     result = prepare(repair, cmd)
-    assert not result['success']
-    assert result['checks'][0]['status'] == 'unverified'
-    assert not session.get('readiness')
+    assert result['success'], result
+    assert (wt / 'a.txt').read_text() == 'mutated'
+    assert session['sealed']['a.txt']['after'] == st._candidate.fingerprint(wt / 'a.txt')
+
+
+def test_optional_skipped_case_does_not_negate_executed_test(repair):
+    from repair_check_runner import execute
+    root, wt, st, session, controller = repair
+    (wt / 'a.txt').write_text('fixed')
+    (wt / 'test_skip.py').write_text(
+        'import pytest\nfrom pathlib import Path\n'
+        'def test_change(): assert Path("a.txt").read_text() == "fixed"\n'
+        '@pytest.mark.skip(reason="optional integration unavailable")\n'
+        'def test_optional(): pass\n')
+    row = execute(str(root), session, st._candidate,
+                  shlex.quote(sys.executable) + ' -m pytest test_skip.py', controller)
+    assert row['status'] == 'passed'
+    assert row['test_report']['tests'] == 2 and row['test_report']['skipped'] == 1
+    assert row['test_report']['scope']['skipped'] == ['test_skip.py::test_optional']
 
 
 def test_verify_does_not_sync_live_after_receipt(repair):
     root, wt, st, session, controller = repair
     (root / 'b.txt').write_text('new dependency')
     ok, checks = st.verify(str(root), session)
-    assert not ok and checks[0]['gate'] == 'live_sync'
+    assert ok, checks
     assert (wt / 'b.txt').read_text() == 'before'
 
 

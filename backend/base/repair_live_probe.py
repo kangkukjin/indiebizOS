@@ -57,3 +57,33 @@ def failure_kind(output, exit_code):
     signatures = ("sandbox_apply: Operation not permitted", "<urlopen error [Errno 1] Operation not permitted>",
                   "Live verification upstream unavailable", "Executable doesn't exist at")
     return "environment" if any(value in output for value in signatures) else "check"
+
+
+def activation_check(base, record, command, persist, run, *, timeout=None):
+    """공통 읽기 확인: 실행 중 결과 회수·완료 영수증 보존. 재시도 결정은 호출자 소유."""
+    import hashlib
+    from pathlib import Path
+    from uuid import uuid4
+    from restart_protocol import read_json
+
+    expected = hashlib.sha256(command.encode()).hexdigest()
+    home = Path(base).resolve() / 'data/system_ai_state/repair_check_outputs'
+    if record and record.get('command_sha256') != expected:
+        return {'state': 'conflict', 'error': '기존 활성 확인 명령과 현재 계획이 다릅니다'}
+    if record is None:
+        path = home / (uuid4().hex + '.json')
+        record = {'state': 'running', 'command': command,
+                  'command_sha256': expected, 'output_path': str(path)}
+        persist(record)
+        receipt = run(str(base), command, receipt_path=path,
+                      **({'timeout': timeout} if timeout is not None else {}))
+        record.update(state='passed' if receipt.get('exit_code') == 0 else 'failed', receipt=receipt)
+        persist(record)
+    elif record.get('state') == 'running':
+        path = Path(record.get('output_path') or '.').resolve()
+        receipt = read_json(path) if path.is_relative_to(home) else None
+        if receipt and receipt.get('command_sha256') == expected:
+            record.update(state='passed' if receipt.get('exit_code') == 0 else 'failed',
+                          receipt=receipt, recovered=True)
+            persist(record)
+    return record

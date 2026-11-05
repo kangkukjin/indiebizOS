@@ -93,7 +93,7 @@ def test_unrelated_live_edit_and_installed_libraries_do_not_block_component(setu
     assert invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})['staged']
     (repo / 'frontend/.keep').write_text('another feature changed')
     st = h._staging_mod()
-    monkeypatch.setattr(st._candidate, 'environment', lambda *a, **kw: pytest.fail('whole app environment'))
+    monkeypatch.setattr('python_environment_lock.fingerprint', lambda *a, **kw: pytest.fail('whole app environment'))
     applied = invoke(h, repo, 'patch_op', {'op': 'apply'})
     assert applied['success'], applied
     assert (repo / 'frontend/.keep').read_text() == 'another feature changed'
@@ -102,13 +102,14 @@ def test_unrelated_live_edit_and_installed_libraries_do_not_block_component(setu
     assert not requires_code_receipts(NS(task=turn.component_session))
 
 
-def test_registered_contract_change_blocks_component_publication(setup):
+def test_registry_formatting_does_not_block_component_publication(setup):
     repo, source, h, turn = setup
     assert invoke(h, repo, 'write_file', {'path': str(source), 'content': revised(source.read_text())})['staged']
     manifest = source.parent / 'runtime_components.json'
     manifest.write_text(manifest.read_text() + '\n')
     applied = invoke(h, repo, 'patch_op', {'op': 'apply'})
-    assert not applied['success'] and ('기준' in applied['error'] or '충돌' in applied['error'])
+    assert applied['success'], applied
+    assert manifest.read_text().endswith('\n\n')
 
 
 def test_explicit_repair_of_registered_component_uses_partial_apply(setup, monkeypatch):

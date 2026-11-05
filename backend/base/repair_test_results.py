@@ -112,14 +112,14 @@ def summary(spec, output, exit_code):
                           skipped=totals["skipped"] + totals["todo"],
                           cases=re.findall(r"(?m)^# Subtest: (.+)$", output))
         result["passed"] = (exit_code == 0 and result["tests"] > 0
-                            and result["failures"] == 0 and result["skipped"] == 0)
+                            and result["failures"] == 0 and result["tests"] > result["skipped"])
     except (OSError, ValueError, ET.ParseError) as exc:
         result["error"] = str(exc)
     if spec["kind"] == "pytest":
         result["scope"] = _pytest_scope(spec)
         scope = result["scope"]
         if (not scope.get("observed") or scope.get("not_run") or scope.get("conflict")
-                or scope.get("failed") or scope.get("skipped")
+                or scope.get("failed")
                 or len(scope.get("collected", [])) != result["tests"]):
             result["passed"] = False
     return result

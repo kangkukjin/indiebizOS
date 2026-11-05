@@ -19,22 +19,6 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def environment(worktree, *, search_paths=None, modules=None, include_npm=True):
-    from python_environment_lock import fingerprint as python_fingerprint
-    from repair_live_probe import ENVIRONMENT_VERSION
-    npm = Path(worktree) / "frontend/node_modules/.package-lock.json"
-    return digest({"python": python_fingerprint(worktree, details=True, search_paths=search_paths, modules=modules)["environment"],
-                   "npm": fingerprint(npm) if include_npm else None, "repair_environment": ENVIRONMENT_VERSION})
-
-
-def execution_environment(worktree, session, *, search_paths=None):
-    scope = session.get('program_scope') or {}
-    if scope and not scope.get('unresolved'):
-        return environment(worktree, search_paths=search_paths, modules=scope['external_modules'],
-                           include_npm=any(p['kind'] == 'surface' for p in scope['programs']))
-    return environment(worktree, search_paths=search_paths)
-
-
 def target(root, relative, *, read_only=False):
     root = Path(root).resolve()
     rel = Path(relative)
@@ -239,19 +223,10 @@ def register_derived(repo, session, gate):
 
 
 def conflicts(repo, session, current=None):
-    """검사 기준선 이후의 정본 입력 변경을 적용 전에 거절한다."""
-    paths = session.get("component_dependencies")
-    if paths is None and session.get('program_scope'):
-        from program_dependencies import watched_paths
-        paths = watched_paths(repo, session['program_scope'])
-    live = ({p: fingerprint(target(repo, p)) for p in paths} if paths is not None else
-            inventory(repo, session.get("artifact_paths", [])))
-    # 새 파일도 설정 탐색·glob·문서 입력을 바꾼다. 폴더·확장자로 무관함을 추정하지 않는다.
-    # inventory의 추적/비무시 파일과 명시한 배치 산출물 전체가 의존 범위다.
-    # 관측 로그는 미등록·Git 무시 출력에 보존한다. 충돌 거절 시 몸의 생존은 제어자가 맡는다.
-    baseline = session["baseline"]
-    return sorted(p for p in (paths if paths is not None else set(baseline) | set(live))
-                  if live.get(p) != baseline.get(p))
+    """덮어쓸 파일의 동시 변경만 충돌이다. 다른 작업의 변경은 적용을 막지 않는다."""
+    paths = {r['rel'] for r in session.get('files', {}).values()}
+    baseline = session['baseline']
+    return sorted(p for p in paths if fingerprint(target(repo, p)) != baseline.get(p))
 
 
 def invalidate(session):
@@ -318,26 +293,14 @@ def seal(repo, session, checks, decision, criteria):
     for rel, item in payload.items():
         if item["before_data"] is not None and hashlib.sha256(base64.b64decode(item["before_data"])).hexdigest() != item["before"]["sha"]:
             raise ValueError("고정 중 정본이 변경됐습니다: " + rel)
-    import sys
-    # 검사를 수행한 import 환경을 재관측한다. 제어자의 더 작은 sys.path와
-    # 워커의 pylibs/venv 차이를 설치 변경으로 오인하지 않는다.
-    search_paths = sorted({str(Path(p or os.getcwd()).resolve()) for p in sys.path})
-    if session.get("component_dependencies"):
-        from component_runtime import execution_fingerprint
-        environment_hash = execution_fingerprint()
-    else:
-        environment_hash = execution_environment(Path(repo) / session["worktree"], session, search_paths=search_paths)
     session["sealed"] = payload
-    session["readiness"] = {"version": 2 if session.get("repair_policy") == 2 else VERSION, "candidate_hash": digest(current),
-                            "environment_hash": environment_hash,
-                            "environment_paths": search_paths,
+    session["readiness"] = {"version": 2 if session.get("repair_policy") == 2 else VERSION,
+                            "candidate_hash": digest({p: item['after'] for p, item in payload.items()}),
                             "bundle_hash": digest(payload), "criteria": criteria,
                             "criteria_hash": digest(criteria), "checks": checks,
                             "decision": decision, "owner": session.get("owner"),
                             "root_task_id": session["root_task_id"],
                             "activation_commands": session.get("activation_commands", {})}
-    if session.get("component_dependencies"):
-        session["readiness"].update(environment_paths=None, environment_kind="pure-json/1")
 
 
 def validate(repo, session):
@@ -364,16 +327,12 @@ def validate(repo, session):
         ownership = candidate_plan(session, current)
         if ownership['protected'] or ownership['unmanaged']:
             raise PermissionError('적용 후보의 변경 권한이 유효하지 않습니다')
-    if digest(current) != ready["candidate_hash"]:
-        raise ValueError("검증 이후 사본이 변경됐습니다. 준비 판정이 무효입니다")
-    if ready.get("environment_kind") == "pure-json/1":
-        from component_runtime import execution_fingerprint
-        current_environment = execution_fingerprint()
-    else:
-        current_environment = execution_environment(Path(repo) / session["worktree"], session,
-                                                    search_paths=ready.get("environment_paths"))
-    if current_environment != ready.get("environment_hash"):
-        raise ValueError("검증 이후 실행 의존 환경이 변경됐습니다")
+    # 봉인한 게시 바이트와 실제 수정분을 대조한다. 설치 환경·무관한 파일의
+    # 지문을 시험 유효성의 대리 기준으로 쓰지 않는다.
+    delta = {p: current.get(p) for p in set(current) | set(session['baseline'])
+             if current.get(p) != session['baseline'].get(p)}
+    if delta != {p: item['after'] for p, item in payload.items()}:
+        raise ValueError("봉인 이후 사본의 수정분이 변경됐습니다. 다시 apply 하세요")
     drift = conflicts(repo, session, current)
     if drift:
         raise ValueError("정본 충돌: " + ", ".join(sorted(drift)[:12]))
@@ -525,64 +484,30 @@ def locked(repo, key, *, nonblocking=False):
 
 
 def activation_plan(session, request):
-    """생략한 검사는 보존한다. 적용 뒤에는 읽기 검사 추가만 허용한다."""
+    """명시적 apply는 실패한 읽기 확인을 재시도하며, 확인 명령도 고칠 수 있다."""
     applied = session.get('status') == 'applied'
     commands = dict(((session.get('readiness') or {}).get('activation_commands') if applied else
                      session.get('activation_commands')) or {})
+    records = session.setdefault('activation_checks', {})
     for field in ('verify_cmd', 'active_verify_cmd'):
-        if field not in request:
-            continue
-        command = str(request[field] or '').strip()
-        if len(command) > 2000:
-            raise ValueError('검증 명령이 너무 깁니다(2000자 상한) — 스크립트 경로를 주세요.')
-        if applied and commands.get(field) and command != commands[field]:
-            raise ValueError('적용한 활성 확인 계획은 제거하거나 바꿀 수 없습니다: ' + field)
+        command = str(request[field] or '').strip() if field in request else commands.get(field, '')
+        record = records.get(field)
+        if record and (record.get('state') == 'failed' or command != commands.get(field, '')):
+            if record.get('state') == 'running':
+                raise ValueError('진행 중인 활성 확인의 결과를 먼저 회수하세요: ' + field)
+            session.setdefault('activation_history', {}).setdefault(field, []).append(records.pop(field))
         commands[field] = command
     session['activation_commands'] = commands
     if applied:
-        # Existing read-only probe isolation owns execution. Adding evidence does
-        # not reopen source publication or weaken the approved workspace criteria.
         session.setdefault('readiness', {})['activation_commands'] = dict(commands)
     return commands
 
 
 def activation(repo, session, field, command, save):
-    """이미 실행한 활성 확인은 영수증으로 회수한다. 결과 불명 명령은 반복하지 않는다."""
-    import uuid
+    from repair_live_probe import activation_check
     from red_apply import _run_post_verify
-    from restart_protocol import read_json
-    records = session.setdefault("activation_checks", {})
-    record = records.get(field)
-    expected = hashlib.sha256(command.encode()).hexdigest()
-    from repair_live_probe import ENVIRONMENT_VERSION
-    if record and record.get("command_sha256") != expected:
-        return {"state": "conflict", "error": "기존 활성 확인 명령과 검사한 계획이 다릅니다"}
-    # 명시적 apply 재개만 새 환경에서 실패한 읽기 검사를 재시도한다. 결과 불명은 반복하지 않는다.
-    if (record and record.get("state") == "failed"
-            and record.get("receipt", {}).get("exit_code") is not None
-            and not record.get("receipt", {}).get("effect_unknown")
-            and not record.get("receipt", {}).get("timed_out")
-            and record.get("receipt", {}).get("environment_version", ENVIRONMENT_VERSION) < ENVIRONMENT_VERSION):
-        for rel, item in (session.get("sealed") or {}).items():
-            if fingerprint(target(repo, rel)) != item["after"]:
-                return {"state": "conflict", "error": "활성 확인 전에 적용된 파일이 변경됐습니다: " + rel}
-        if not session.get("sealed"):
-            return {"state": "conflict", "error": "고정 적용 묶음이 없어 활성 확인을 재시도하지 않습니다"}
-        session.setdefault("activation_history", {}).setdefault(field, []).append(record)
-        record = None
-        records.pop(field)
-    if record is None:
-        path = Path(repo) / "data/system_ai_state/repair_check_outputs" / (uuid.uuid4().hex + ".json")
-        record = records[field] = {"state": "running", "command_sha256": expected, "output_path": str(path)}
+    records = session.setdefault('activation_checks', {})
+    def persist(record):
+        records[field] = record
         save(repo, session)
-        receipt = _run_post_verify(repo, command, receipt_path=path)
-        record.update(state="passed" if receipt.get("exit_code") == 0 else "failed", receipt=receipt)
-        save(repo, session)
-    elif record.get("state") == "running":
-        path = Path(record.get("output_path", "")).resolve()
-        home = Path(repo).resolve() / "data/system_ai_state/repair_check_outputs"
-        receipt = read_json(path) if path.is_relative_to(home) else None
-        if receipt and receipt.get("command_sha256") == record.get("command_sha256") == expected:
-            record.update(state="passed" if receipt.get("exit_code") == 0 else "failed", receipt=receipt)
-            save(repo, session)
-    return record
+    return activation_check(repo, records.get(field), command, persist, _run_post_verify)

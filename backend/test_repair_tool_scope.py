@@ -269,7 +269,7 @@ def test_registered_candidate_accepts_new_test_checks_and_commits(repair, monkey
     assert subprocess.check_output(['git', 'show', result['commit']['commit'] + ':backend/test_fresh_script.py'], cwd=repo).decode() == source
 
 
-@pytest.mark.parametrize('path', ['backend/test_existing.py', 'backend/conftest.py', 'data/scripts/registry.yaml'])
+@pytest.mark.parametrize('path', ['backend/conftest.py', 'data/scripts/registry.yaml'])
 def test_protected_write_is_rejected_before_mutation_and_does_not_poison_candidate(repair, path):
     repo, wt, st, controller, call = repair
     script_candidate(repair)
@@ -346,7 +346,7 @@ def test_managed_write_rolls_back_out_of_scope_registry_change(repair):
     assert st.read_session(str(repo), 'script-repair')['managed_files'] == session['managed_files']
 
 
-def test_bound_execution_uses_candidate_permission_for_new_tests(repair):
+def test_bound_execution_maintains_tests_in_the_same_candidate(repair):
     import execution_turn
     repo, wt, st, controller, call = repair
     token = execution_turn._current.set(execution_turn.Binding(controller.runner, 'worker', 'script-repair'))
@@ -355,10 +355,12 @@ def test_bound_execution_uses_candidate_permission_for_new_tests(repair):
                                     'content': 'def test_value(): assert 1 + 1 == 2\n'})
         assert result['success'], result
         assert not (repo / 'backend/test_bound_script.py').exists()
-        handler = __import__('red_apply')._load_handler({'repo': str(repo)})
-        assert handler._red_zone_violation(str(repo / 'backend/test_bound_script.py'))
-        for path in ('backend/test_existing.py', 'backend/base/program_boundary.py'):
-            assert not call('write_file', {'path': path, 'content': 'bypass'})['success']
+        original = (repo / 'backend/test_existing.py').read_bytes()
+        changed = call('write_file', {'path': 'backend/test_existing.py',
+                                      'content': 'def test_existing(): assert 2 == 2\n'})
+        assert changed['success'], changed
+        assert (repo / 'backend/test_existing.py').read_bytes() == original
+        assert not call('write_file', {'path': 'backend/base/program_boundary.py', 'content': 'bypass'})['success']
     finally:
         execution_turn._current.reset(token)
 
@@ -567,8 +569,8 @@ def test_host_indexes_new_candidate_for_builders_without_changing_canonical_inde
     assert subprocess.check_output(command, cwd=wt, text=True).strip() == 'data/scripts/new_build_input.py'
     assert not subprocess.check_output(command, cwd=repo, text=True).strip()
     assert (repo / '.git/index').read_bytes() == index
-    # Existing acceptance contracts still fail before any host index update.
+    # Existing tests are maintained in the candidate, without touching the live index.
     (wt / 'backend/test_existing.py').write_text('def test_existing(): pass\n')
-    with pytest.raises(PermissionError):
-        st._candidate.collect(str(repo), session)
+    st._candidate.collect(str(repo), session)
+    assert any(row['rel'] == 'backend/test_existing.py' for row in session['files'].values())
     assert (repo / '.git/index').read_bytes() == index

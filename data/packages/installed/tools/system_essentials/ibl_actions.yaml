@@ -138,7 +138,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-11-06", impl: "a12d77f29ca5ac0c"}  # 회원 선행 분기·경로 권한 유지. 일반 프로그램 수리는 소유자 문맥·보호 코어 제외·사본 검증을 통해서만 게시.
+        path_audited: {at: "2026-11-06", impl: "cb3e077b288fadbf"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +151,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-11-06", impl: "a12d77f29ca5ac0c"}  # 회원 선행 분기·경로 권한 유지. 일반 프로그램 수리는 소유자 문맥·보호 코어 제외·사본 검증을 통해서만 게시.
+        path_audited: {at: "2026-11-06", impl: "cb3e077b288fadbf"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +231,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-11-06", impl: "a12d77f29ca5ac0c"}  # 회원 선행 분기·경로 권한 유지. 일반 프로그램 수리는 소유자 문맥·보호 코어 제외·사본 검증을 통해서만 게시.
+        path_audited: {at: "2026-11-06", impl: "cb3e077b288fadbf"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         target_key: path
       list:
         callable_contract:
@@ -557,7 +557,7 @@ nodes:
         target_key: path
       patch:
         returns: effect
-        description: 자기수리 사본·관련 검사·정본 반영. 같은 후보의 통과 검사를 재사용하며 적용 후 원래 업무를 이어간다.
+        description: 자기수리 사본·관련 검사·정본 반영. 실행자가 검사·오류를 판단해 적용하며 반영 후 원래 업무를 이어간다.
         group: file
         ops:
           default: propose
@@ -569,10 +569,10 @@ nodes:
             status: '[self:patch]{op: "status"}'
           values:
             propose: 등록 부품 사본 적재 또는 한정 구현 수리 후 업무 복귀. pending_repair 뒤 턴 종료. 나머지는 승인용 제안.
-            apply: 조건별 검사 뒤 고정 묶음 정본 반영과 소유자 활성화. scheduled이면 턴 종료
+            apply: 실행자가 선택한 고정 묶음 정본 반영과 소유자 활성화. scheduled이면 턴 종료
             status: path 지정 시 공통 소유권·보호 사유 조회. 그 밖에는 사본·적용·활성·커밋·재개 상태를 key로 조회
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): path + reason으로 관측 결함의 진단·수리를 맡긴다(content 또는 old_string/new_string 수정안은 선택). paths는 path를 포함하는 같은 업무에 필요한 일반 프로그램의 기존 상대 경로 1~64개. 대상 권한은 program_boundary의 공통 판정이며 일반 모듈·패키지·스크립트·개인 사전을 포함하고 보호 코어·기존 검사 계약은 제외한다. 등록 순수 부품의 수정안은 무재기동 사본에 우선 적재한다. pending_repair 뒤 턴을 닫으면 수리 후 같은 목표·예산으로 업무가 복귀한다. 그 밖의 RED 변경은 승인용 제안만 저장(apply{proposal_id}) / apply: 실제 검사 결과로 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — 세대 교체가 필요하면 이 턴이 닫힌 뒤 분리 수행자가 활성화하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: path 지정 시 공통 판정기의 정적 소유권 조회(사본 생성 없음), 그 밖에는 스테이징 세션 + 적용 대기 제안 목록(verified 는 candidate_hash 판본의 기계 검증, key 조회는 현재 사본 해시를 다시 세어 verified_current·현재 files 로 답함) / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
+        target_description: 'op — propose(기본): path + reason으로 관측 결함의 진단·수리를 맡긴다(content 또는 old_string/new_string 수정안은 선택). paths는 path를 포함하는 같은 업무에 필요한 일반 프로그램의 기존 상대 경로 1~64개. 대상 권한은 program_boundary의 공통 판정이며 일반 모듈·패키지·스크립트·개인 사전을 포함하고 보호 코어는 제외하며 관련 시험은 함께 유지보수한다. 등록 순수 부품의 수정안은 무재기동 사본에 우선 적재한다. pending_repair 뒤 턴을 닫으면 수리 후 같은 목표·예산으로 업무가 복귀한다. 그 밖의 RED 변경은 승인용 제안만 저장(apply{proposal_id}) / apply: 실행자가 선택한 고정 묶음 정본 적용 — 적용 전 거절은 라이브 무변경이며 적용 후 실패는 applied·stage·activation·commit·recovery로 구분한다. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — 세대 교체가 필요하면 이 턴이 닫힌 뒤 분리 수행자가 활성화하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 활성화 전 읽기 검사는 verify_cmd, 반영 후 읽기 전용 확인은 active_verify_cmd 로 위탁. 기능 검사는 사본에서 끝내며 커밋은 기존 각인 서비스가 수리 델타만 수행 / status: path 지정 시 공통 판정기의 정적 소유권 조회(사본 생성 없음), 그 밖에는 스테이징 세션 + 적용 대기 제안 목록(verified 는 candidate_hash 판본의 기계 검증, key 조회는 현재 사본 해시를 다시 세어 verified_current·현재 files 로 답함) / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 반영·활성 확인·커밋·전체 완료를 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           # 관습어 수용 — 핸들러 _patch_op 이 읽던 별칭을 데이터로 (2026-08-29 구현-읽기 감사 상환).
           old_string: [old]
@@ -982,7 +982,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-11-06", impl: "a12d77f29ca5ac0c"}  # 회원 선행 분기·경로 권한 유지. 일반 프로그램 수리는 소유자 문맥·보호 코어 제외·사본 검증을 통해서만 게시.
+        path_audited: {at: "2026-11-06", impl: "cb3e077b288fadbf"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1826,7 +1826,7 @@ tool_json:
       required:
       - path
   - name: patch_op
-    description: "자기수리 사본의 검사·정본 반영. 일반 업무는 propose(path, reason)로 필요한 구현 수리를 맡긴다. 수정안 content 또는 old_string/new_string은 선택이며 paths는 같은 업무에 필요한 기존 상대 경로 1~64개다. 대상 권한은 program_boundary를 따른다. pending_repair 뒤 현재 구간을 닫으면 같은 대화·목표·예산으로 업무가 복귀한다. 등록 순수 부품은 같은 사본에서 검사·커밋·무재기동 활성화한다. apply는 같은 후보·환경의 통과 검사를 재사용한다. 추가 검사는 verification_plan:[{command:단일 pytest/node --test/go test 명령}]으로 실행한다. criterion_id·method 연결과 별도 의미 승인은 필요 없다. 생성·빌드를 마친 후보의 바이트를 고정하고 소유권·취소·정본 충돌을 확인해 반영한다. 세대 교체가 필요한 scheduled 응답 뒤에는 턴을 닫으면 기존 제어자가 적용·복구·커밋을 이어간다. verify_cmd와 active_verify_cmd는 읽기 전용 확인이다. status는 기존 사본·검사·적용 기록 조회, discard는 미적용 사본 폐기다. 수리 반영과 원래 업무 완료는 별개이며 반영 뒤 남은 일을 계속한다. 자기 지침·권한·검사 계약은 수리 대상이 아니다."
+    description: "자기수리 사본의 검사·정본 반영. 일반 업무는 propose(path, reason)로 필요한 구현 수리를 맡긴다. 수정안 content 또는 old_string/new_string은 선택이며 paths는 같은 업무에 필요한 기존 상대 경로 1~64개다. 대상 권한은 program_boundary를 따른다. pending_repair 뒤 현재 구간을 닫으면 같은 대화·목표·예산으로 업무가 복귀한다. 등록 순수 부품은 같은 사본에서 검사·커밋·무재기동 활성화한다. apply는 검사 이력을 허가 조건으로 쓰지 않는다. 실행자가 검사·오류를 보고 판단한다. verification_plan:[{command:검사 명령}]은 이번 호출에만 명령을 실행하며 실패 출력을 반환한다. 생략하면 이전 명령을 재실행하지 않는다. 생성·빌드를 마친 후보의 바이트를 고정하고 소유권·취소·정본 충돌을 확인해 반영한다. 세대 교체가 필요한 scheduled 응답 뒤에는 턴을 닫으면 기존 제어자가 적용·복구·커밋을 이어간다. verify_cmd와 active_verify_cmd는 읽기 전용 확인이다. status는 기존 사본·검사·적용 기록 조회, discard는 미적용 사본 폐기다. 수리 반영과 원래 업무 완료는 별개이며 반영 뒤 남은 일을 계속한다. 자기 지침·권한·적용 원장은 수리 대상이 아니다. 기존 시험은 현재 계약에 맞게 유지보수한다."
     input_schema:
       type: object
       properties:
@@ -1864,7 +1864,7 @@ tool_json:
           description: (apply) 반영 후 읽기 전용 부팅 검증 명령. 기존 제어자가 실행하며 실패 시 복구한다. 구현·빌드·커밋을 넣지 않는다. 리로드 없는 즉시 적용도 실행 영수증을 보존한다.
         verification_plan:
           type: array
-          description: '(apply, 선택) 실행할 검사 명령 목록. 같은 후보·환경의 통과 검사를 이미 실행했으면 생략한다. 단일 pytest, node --test 또는 go test 명령을 사용한다. 이전 criterion_id·method는 적용 조건으로 사용하지 않는다.'
+          description: '(apply, 선택) 이번 호출 전에 실행할 명령 목록. 임의 셸·검증 스크립트를 지원하며 명령 실패는 출력과 함께 반환한다. 생략하면 이전 명령을 반복하지 않는다. 검사 결과의 적합성은 실행자가 판단한다.'
           items:
             type: object
             properties:

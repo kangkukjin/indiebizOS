@@ -12,9 +12,10 @@ from repair_test_results import invocation, selected_invocation, summary
 def execute(repo, session, candidate, command, controller=None, timeout=300):
     from repair_process import run
     wt = Path(repo) / session["worktree"]
-    before = candidate.collect(repo, session)
-    env = candidate.execution_environment(wt, session)
-    spec = invocation(command, wt)
+    try:
+        spec = invocation(command, wt)
+    except ValueError:
+        spec = None  # 계측하지 못하는 합법적인 명령도 그대로 실행하고 출력을 전달한다.
     def cancelled():
         if controller and controller.cancelled():
             raise PermissionError("수리가 취소됐습니다")
@@ -49,52 +50,23 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
         exit_code = 124 if failure_kind == "timeout" else 130 if failure_kind == "cancelled" else 126
         output = "\n".join(x.decode("utf-8", "replace") if isinstance(x, bytes) else x
                            for x in (getattr(exc, "stdout", None), getattr(exc, "stderr", None), str(exc)) if x)
-    after = candidate.collect(repo, session)
-    after_env = candidate.execution_environment(wt, session)
     report = summary(spec, output, exit_code) if spec else None
-    unchanged = before == after and env == after_env
-    status = ("passed" if report and report["passed"] and unchanged else
-              "failed" if exit_code or report and report["failures"] else "unverified")
-    if not unchanged:
-        failure_kind = "candidate_changed"
-    elif not failure_kind and exit_code:
+    status = "failed" if exit_code else "passed" if report and report["passed"] else "unverified"
+    if not failure_kind and exit_code:
         from repair_live_probe import failure_kind as classify
         failure_kind = classify(output, exit_code)
-        if failure_kind == "check" and report and report.get("error"):
-            failure_kind = "execution_incomplete"
     record = {"id": uuid.uuid4().hex, "command": command, "exit_code": exit_code, "status": status,
-              "candidate_hash": candidate.digest(after), "before_hash": candidate.digest(before),
-              "environment_hash": after_env, "output": output, "test_report": report,
-              "failure_kind": failure_kind, "selection": selection,
-              "changed_files": sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))}
+              "output": output, "test_report": report, "failure_kind": failure_kind,
+              "selection": selection, "workspace": str(wt.resolve())}
     if controller:
         record["evidence_ref"] = controller.store.evidence(record)
     session.setdefault("execution_checks", []).append(record)
-    from execution_situation import emit
-    subject = {'kind': 'code_candidate', 'workspace': str(wt.resolve()), 'session': session.get('id')}
-    emit(subject, 'version', {}, source='repair_check',
-         subject_revision=record['candidate_hash'])
-    emit(subject, 'validation:tests', {'status': status, 'exit_code': exit_code,
-                                     'test_report': report}, source='repair_check',
-         source_ref=record.get('evidence_ref') or {'check_id': record['id']},
-         subject_revision=record['before_hash'],
-         relation=[{'subject': subject, 'revision': record['before_hash']}])
-    candidate.invalidate(session)
+    # 관측은 명령의 결과다. 셸 조회마다 사본 전체와 설치 환경을 승인/무효화하지 않는다.
     return record
 
 
 def check(repo, session, candidate, command, controller):
-    wt = Path(repo) / session["worktree"]
-    if not isinstance(command, str) or len(command) > 4000 or (invocation(command, wt) is None and selected_invocation(command, wt) is None):
-        return {"status": "unverified", "error": "기능 검사는 단일 pytest, node --test 또는 go test 명령으로 지정하세요. "
-                "파이프·복합 셸·빌드는 검사 영수증이 아닙니다. 빌드 뒤 검사를 별도 실행하세요. "
-                "앞머리 환경변수 대입(VAR=값 명령)은 허용되며 시험 프로세스의 환경으로 전달됩니다."}
-    current = candidate.digest(candidate.collect(repo, session))
-    env = candidate.execution_environment(wt, session)
-    prior = next((r for r in reversed(session.get("execution_checks", []))
-                  if r.get("command") == command and r.get("candidate_hash") == current
-                  and r.get("before_hash") == current and r.get("environment_hash") == env
-                  and r.get("test_report") and r.get("status") == "passed"), None)
-    if prior:
-        return prior
+    """명시적 실행은 항상 새 관측을 만든다. 과거 성공/실패 캐시가 대신하지 않는다."""
+    if not isinstance(command, str) or not command.strip():
+        raise ValueError("실행할 command 문자열이 필요합니다")
     return execute(repo, session, candidate, command, controller)

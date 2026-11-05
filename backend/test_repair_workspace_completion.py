@@ -90,7 +90,7 @@ def test_stale_candidate_or_live_or_cancel_never_applies(setup, change):
     assert not result["applied"] and (root / "a.txt").read_bytes() == before
 
 
-def test_scheduled_validator_observes_verifiers_installation_not_its_own_sys_path(setup, monkeypatch, tmp_path):
+def test_installation_changes_do_not_revoke_sealed_publication(setup, monkeypatch, tmp_path):
     root, wt, st, sess = setup
     dist = tmp_path / 'worker_libs' / 'worker_fixture-1.dist-info'
     dist.mkdir(parents=True)
@@ -102,8 +102,7 @@ def test_scheduled_validator_observes_verifiers_installation_not_its_own_sys_pat
     sys.path.remove(str(dist.parent))
     assert st._candidate.validate(str(root), sess)
     (dist / 'METADATA').write_text('Name: worker_fixture\nVersion: 2\n')
-    with pytest.raises(ValueError, match='환경'):
-        st._candidate.validate(str(root), sess)
+    assert st._candidate.validate(str(root), sess)
 
 
 def test_prepare_callback_cannot_swap_sealed_bytes(setup):
@@ -214,7 +213,7 @@ from test_conscious_supervisor import supervisor  # noqa: E402,F401
 
 
 @pytest.mark.parametrize('mode', ['zero', 'skip', 'failed', 'empty', 'timeout', 'changed', 'passed'])
-def test_execution_evidence_rejects_missing_or_stale_results(setup, monkeypatch, mode):
+def test_shell_observation_keeps_output_without_inventing_test_results(setup, monkeypatch, mode):
     import repair_process
     import supervision_bus
     root, wt, st, sess = setup
@@ -231,7 +230,10 @@ def test_execution_evidence_rejects_missing_or_stale_results(setup, monkeypatch,
         return subprocess.CompletedProcess('probe', 0, output, '')
     monkeypatch.setattr(repair_process, 'run', execute)
     result = scope.run_shell(handler, 'probe', 1)
-    assert (result['verification']['status'] == 'passed') is (mode == 'passed')
+    assert result['verification']['status'] == ('failed' if mode == 'timeout' else 'unverified')
+    assert result['verification']['test_report'] is None
+    if mode == 'changed':
+        assert (wt / 'a.txt').read_text() == 'changed while tested'
     assert st.read_session(str(root), 'task')['execution_checks'][-1]['id'] == result['verification']['id']
 
 

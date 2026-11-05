@@ -191,13 +191,13 @@ def test_invalid_candidate_reports_error_without_arming_parent(env):
 @pytest.mark.parametrize('path', ['backend/cognition/agent_pipeline.py', 'backend/datastore/red_grant.py',
     'data/common_prompts/consciousness_prompt.md', 'data/ibl_nodes_src/self.yaml',
     'backend/base/program_boundary.py', 'backend/base/repair_process.py',
-    'data/packages/installed/tools/web/tests/test_handler.py', 'backend/test_ibl_v2_parser.py',
     'backend/ibl/../ibl/ibl_v2_parser.py'])
-def test_control_contract_and_checks_are_not_automatic_repair_targets(path):
+def test_control_contract_is_not_an_automatic_repair_target(path):
     assert not repair.eligible(path)
 
 
 @pytest.mark.parametrize('path', [
+    'data/packages/installed/tools/web/tests/test_handler.py', 'backend/test_ibl_v2_parser.py',
     'data/packages/installed/tools/system_essentials/tool_fake.py',
     'backend/base/future_program.py', 'data/packages/installed/tools/web/handler.py',
     'data/packages/installed/tools/web/parsers/news.py', 'backend/services/document_scanner.py',
@@ -527,12 +527,12 @@ if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
 
 
-def test_scoped_repair_can_add_regression_without_expanding_implementation_scope(monkeypatch):
+def test_scoped_repair_can_maintain_tests_without_expanding_implementation_scope(monkeypatch):
     monkeypatch.setattr(journal, 'current', lambda: None)
     path = 'backend/services/document_parser.py'
     session = {'task_scope': {'paths': [path]}, 'baseline': {'backend/test_existing.py': {'sha': 'old'}}}
-    repair.check_delta(session, [path, 'backend/test_new_regression.py'])
-    for forbidden in ('backend/test_existing.py', 'backend/conftest.py',
+    repair.check_delta(session, [path, 'backend/test_new_regression.py', 'backend/test_existing.py'])
+    for forbidden in ('backend/conftest.py',
                       'backend/services/unrelated.py', 'data/scripts/registry.yaml'):
         with pytest.raises(PermissionError, match='범위 밖'):
             repair.check_delta(session, [path, forbidden])

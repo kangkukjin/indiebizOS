@@ -7,11 +7,9 @@
 도구 결과로 같은 대화에 돌아온다. 대화는 끊기지 않는다 — 새 규정이 가장 최근 메시지가
 될 뿐이다(연속 메타인식이 아니라 *놀랐을 때 다시 묻기*).
 
-두 방아쇠:
-  ① 실행자의 판단 — 도구 `reframe` (자기 관리 도구 부류: ask_user_question 과 같은 자리.
-     IBL 어휘가 아니다 — 의식↔실행자 이음매 신호는 해마 코퍼스에 섞이면 안 된다).
-  ② 판단 없는 기계 방아쇠 — 평가 루프가 치명(severity 3)이거나 두 번째 라운드도 미달이면
-     평가자의 피드백을 근거로 재규정(cognitive_eval.revise_from_eval).
+실행자가 반증된 전제와 근거를 제시하는 도구 `reframe`이 입구다.
+IBL 어휘가 아니다 — 의식↔실행자 이음매 신호는 해마 코퍼스에 섞이지 않는다.
+검수의 실패 횟수·심각도만으로 완료 기준을 자동 교체하지 않는다.
 상한: 한 턴에 MAX_REVISIONS 회 — 의식과 실행자가 서로 떠넘기며 도는 것을 막는다.
 
 두-경로 대칭(read_guide·조향과 같다): 인프로세스 프로바이더는 system_tools 디스패치,
@@ -314,18 +312,3 @@ def execute_reframe(tool_input: dict, agent_id: str, task_id: str = None) -> str
     env = _revise(ch, trigger="executor", broken=broken, evidence=evidence,
                   progress=str(tool_input.get("progress") or ""), kind=str(tool_input.get("kind") or "other"))
     return render_for_executor(env)
-
-
-def revise_from_eval(key: str, criteria: str, feedback: str, severity: int, round_num: int) -> Optional[dict]:
-    """평가 루프의 기계 방아쇠 — 판단 없이 조건만. 반환 = 새 의식 산출물 또는 None."""
-    ch = current(key or "")
-    if ch is None:
-        return None
-    if not (int(severity or 0) >= 3 or int(round_num or 0) >= 2):
-        return None
-    env = _revise(ch, trigger="goal_eval",
-                  broken=f"달성 기준이 현재 규정 안에서 {round_num}라운드째 충족되지 않는다(severity={severity})",
-                  evidence=(feedback or "")[:3000],
-                  progress=f"평가 중이던 달성 기준: {criteria}",
-                  kind="impossible" if int(severity or 0) >= 3 else "other")
-    return env.get("output") if env.get("revised") else None

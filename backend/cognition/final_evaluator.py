@@ -31,6 +31,7 @@ evidence이면 부족한 기준 id와 기존 evidence_index에서 확인할 증�
 EVIDENCE_REQUESTS: [{"criterion_id":"C1","evidence_id":"원문 주소의 evidence_id","revision":"그 원문 주소의 revision","start":0,"end":1000}]
 표시 구획의 지문을 그 안에서 참조한 도구 원문의 판본과 혼동하지 않는다. 범위를 모르면 필요한 기준·근거 id만 적는다.
 start/end는 저장된 마스킹 원문의 Unicode 문자 좌표다. 새 URL 수집이나 검사 실행 요청이 아니다.
+원문 주소의 unit이 images이면 보존된 이미지 한 장을 start:0,end:1로 요청한다. visual_evidence는 관측 주소이며 실제 첨부 여부는 delivered로 구별한다.
 NOT_ACHIEVED면 SEVERITY: 1|2|3 다음에 REPAIR_SCOPE: local|research를 적는다.
 기존 증거로 문구·수치만 고칠 수 있으면 local, 새 조사·실행이 필요하면 research다.
 REPAIR_BLOCK_IDS: ["블록 id"]도 적고, DEFECTS 한 줄 JSON 배열에 기준 id·구체적 증거·최소 보완을 적는다.
@@ -58,20 +59,19 @@ recovery_incidents는 과거 실패·효과 미확인의 관측 이력이다. �
 
 
 RESEARCH_POLICY = """
-research_citations의 각 인용 표지 앞의 주장을 연결된 원문과 대조한다.
-receipts는 고정된 읽기 영수증 주소이며 본문은 role=citation 구획의 실제 ranges로 전달된다.
-candidate_state와 candidate_included는 후보 보존 상태이지 표시·의미 검토의 증명이 아니다.
-claim_context가 생략된 주장은 실제로 표시된 제출 문서의 context_start/end 범위에서 읽는다.
-인용의 존재·읽기 기록은 의미적 지지의 증명이 아니다. 다른 주장에 같은 표지를 붙인 경우도 확인한다.
-research_claims의 파일·해시·위치별 주장을 각각 검사한다. 같은 인용도 다른 주장에 대한 승인을 공유하지 않는다.
-옛 packet의 quote가 null이면 segments의 quote를 각각 읽는다. 떨어진 구간·다른 추출 판본을 이어 새 원문으로 만들지 않는다.
-questions의 범위·잠정 답·gaps·next_probes와 제출 주장을 대조한다. 질문의 종결은 이번 요청 달성과 별개다.
-수치는 분모·기간·비교군, 인과는 통제·경쟁 설명, 권고는 반론·적용 조건을 원문 및 유효한 criteria와 대조한다.
-invalid는 실제 읽기 증거가 없는 인용이다. reading_verified는 의미 승인이 아니다.
-evidence_state=partial/missing과 unreviewed는 검토 입력의 미완전성이다. 핵심 조건이 빠졌으면
-UNKNOWN/evidence로 필요한 원문 위치를 지정해 보완하고, 링크만으로 열람·지지를 추정하지 않는다.
-unresolved_references는 자료실 읽기 이력과 연결되지 않은 URL·각주다. 다른 실제 도구 근거와 대조하고
-필요한 원문이 없으면 미확인으로 남긴다. 새 평가 기준·상시 추가 검토 호출을 만들지 않는다.
+research_claims는 인용 후보의 위치와 문맥이다. 표지 자체가 실제 인용이라는 뜻은 아니다.
+각 후보가 주장을 뒷받침하는 실제 근거인지, 표기 예시·언급인지, 미확인 인용인지 판단한다.
+research_citations.valid는 권한 내 보존 원문을 해소했다는 뜻이다. 실제 본문은 role=citation의 ranges로 읽는다.
+invalid는 원문 해소 실패이며 예시까지 내용 오류로 만들지 않는다. 과거 run의 원문도 제공된 판본·범위에서 사용한다.
+현재 주장과 원문을 대조하고 반대·조건·시점·수치와 미확인을 보존한다. 같은 원문도 새 주장에 대한 승인은 별개다.
+questions의 범위·반론·남은 확인과 수정 전후 문맥을 실제 사용자 기준에 필요한 만큼 대조한다.
+근거가 생략되거나 부족하면 기존 원문을 요청한다. 읽기 이력·링크만으로 의미 지지를 추정하지 않는다.
+인용 후보가 있으면 같은 응답에 한 줄 JSON을 반환한다:
+CITATION_USES: [{"index":0,"use":"source"}]
+research_claims의 모든 index를 한 번씩 포함한다. use는 source(실제 근거), example(예시·언급),
+unverified(미확인)이다. source는 valid의 제공된 원문에 연결돼야 한다. 실제 허위 인용과 반대 의미는 REWORK,
+판단에 필요한 원문 부족은 UNKNOWN/evidence로 다룬다. 비핵심 미확인만으로 새 완료 기준을 만들지 않는다.
+표지 밖 URL·각주·주장도 실제 근거와 대조한다. 다른 추출 판본이나 떨어진 구간을 하나의 원문으로 합치지 않는다.
 """
 
 
@@ -159,6 +159,8 @@ def execution_trace(controller, tool_calls):
         entry = {"name": row["name"], "input": payload,
                  "result": controller.store.read_evidence(row["result"]["id"], 0, None)["text"],
                  "is_error": row["is_error"]}
+        if 'visual_evidence' in row:
+            entry['visual_evidence'] = row['visual_evidence']
         if "execute_ibl" in row["name"]:
             entry["runtime_calls"] = runtime_calls(controller.store, entry["result"])
         matches = pending[signature(row["name"], payload)]
@@ -264,47 +266,41 @@ def prepare(controller, tool_calls=None):
     for target, draft in staged.items():
         artifact_response = artifact_response.replace(target, draft)
     artifact_response += "\n" + "\n".join(staged.values())
-    controller.content_artifacts = [a for a in discover(controller, artifact_response, calls)
+    controller.content_artifacts = [a for a in discover(controller, artifact_response, calls, submitted=staged.values())
                                     if a["path"] not in staged]
     from research_review import submission_paths, review_text, claims
-    submitted = submission_paths(artifact_response, controller.project_path)
-    # 공개 URL만 전달한 경우에도 기존 출력 영수증의 산출물을 잃지 않는다.
-    explicit_submission = any(a['path'] in submitted for a in controller.content_artifacts)
+    references = sorted(submission_paths(response, controller.project_path))
     research_documents = []
     from evaluation_input import record
     attachments = []
     files, snapshots = [], {}
     for artifact in controller.content_artifacts:
         path = artifact["path"]
+        if artifact.get("error"):
+            continue
         text = controller.store.read_evidence(artifact["evidence_id"], 0, None)["text"]
-        if path in submitted:
-            research_documents.append({'path': path, 'hash': artifact['hash'], 'text': text})
+        research_documents.append({'path': path, 'hash': artifact['hash'], 'text': text})
         attachments.append(record(text, subject=path, source_ref=artifact['evidence_id'],
                                   revision=artifact['evidence_id'],
-                                  role='submission' if not explicit_submission or path in submitted else 'support'))
+                                  role='submission'))
         from cognitive_eval import bounded_attachment
         files.append(f"### {path}\n{bounded_attachment(path, text, 2 * EVALUATION_FILE_CHARS)}")
         # 모델엔 비밀이 가려진 증거 본문을 주되, 변경 감지 지문은 디스크 원문 기준이다.
         # 가려진 본문의 지문을 쓰면 마스킹이 한 번이라도 닿은 산출물은 평가 뒤 원문과 늘 어긋나
         # "평가 중 산출물이 변경됐습니다"로 판정이 비워진다(ep5045·5518 AI 동향 보고서).
-        snapshots[path] = {"hash": artifact["hash"], "mode": "text"}
+        snapshots[path] = {"hash": artifact["hash"], "mode": "bytes"}
     evaluator = Evaluator()
     with controller.evaluation_stage("visual"):
-        images = evaluator._collect_visual_artifacts(artifact_response, tool_calls=calls)
-    for img in images:
-        path = img.get("_path")
-        if path:
-            import hashlib
-            # 이미지는 관측 증거다. 임시 원본의 수명과 검수 증거의 수명을 분리한다.
-            import base64
-            snapshots.setdefault(path, {"hash": hashlib.sha256(base64.b64decode(img["base64"], validate=True)).hexdigest(),
-                                        "mode": "image"})
+        images = evaluator._collect_visual_artifacts(artifact_response, tool_calls=calls, evidence_store=controller.store)
     criteria = getattr(controller, "_final_criteria_contract", None)
     if criteria is None:
         criteria = criteria_contract(controller.message, controller.framing)
         controller._final_criteria_contract = copy.deepcopy(criteria)
     criteria = copy.deepcopy(criteria)
-    context = {"criteria_contract": criteria,
+    context = {"criteria_contract": criteria, "reference_paths": references,
+               "visual_evidence": getattr(evaluator, 'visual_evidence', []),
+               "visual_errors": getattr(evaluator, 'visual_errors', []),
+               "artifact_errors": [a for a in controller.content_artifacts if a.get("error")],
                "pending_delivery": delivery, "previous_evaluation": controller.last_decision,
                "quantity_checks": {"durations": duration_table(response), "issues": arithmetic_issues(response)},
                "evidence_index": controller.store.tool_index(limit=10000),
@@ -324,14 +320,19 @@ def prepare(controller, tool_calls=None):
     attachments.extend(result_sections(context['evidence_index'], controller.store, criteria,
                                        controller.cancelled))
     from research_context import citation_review
-    research_citations = citation_review(review_text(response, research_documents), query=controller.message, full_receipts=True)
+    occurrences = claims(response) + [c for a in research_documents
+        for c in claims(a['text'], path=a['path'], digest=a['hash'])]
+    occurrences = [dict(row, index=i) for i, row in enumerate(occurrences)]
+    research_citations = citation_review(review_text(response, research_documents), query=controller.message,
+                                         full_receipts=True, occurrences=occurrences)
     if research_citations is not None:
+        from research_context import current
+        current()['submissions'] = [{k: a[k] for k in ('path', 'hash', 'text')} for a in research_documents]
         from evaluation_evidence import freeze_receipts
         freeze_receipts(research_citations, controller.store, controller.cancelled)
         context['research_citations'] = research_citations
         context['research_submissions'] = [{k: a[k] for k in ('path', 'hash')} for a in research_documents]
-        context['research_claims'] = claims(response) + [c for a in research_documents
-            for c in claims(a['text'], path=a['path'], digest=a['hash'])]
+        context['research_claims'] = occurrences
         # 위치는 research_claims 한 벌이 소유한다. 같은 문맥을 두 번 싣지 않는다.
         for row in research_citations['valid']:
             row['occurrence_refs'] = [i for i, claim in enumerate(context['research_claims'])
@@ -364,17 +365,24 @@ def prepare(controller, tool_calls=None):
         recovered = recovered_pages(controller.store, refs)
     if recovered:
         context["recovered_evidence"] = recovered
-    # 공개 텍스트 초안은 위에서 읽는다. 그 밖의 생성 파일도 기존 평가 수집 경로를 유지한다.
-    extra_snapshots = {}
-    # 이미 공개된 옛 파일 대신 이번 턴의 비공개 초안을 평가한다.
-    other_files = evaluator._collect_created_files(artifact_response, tool_calls=calls,
-        exclude_paths=set(snapshots) | set(staged), snapshots=extra_snapshots, full_content=True,
-        attachments=attachments, evidence_store=controller.store)
-    snapshots.update({p: {"hash": h, "mode": "text"} for p, h in extra_snapshots.items()})
-    if other_files:
-        files.append(other_files)
+    previous = getattr(controller, '_evaluation_packet', None)
+    if previous:
+        import difflib
+        old_sections = {r['subject']: r for r in previous.get('attachments', []) if r['role'] == 'submission'}
+        changes = []
+        for row in attachments:
+            old = old_sections.get(row['subject'])
+            if old and old['revision'] != row['revision']:
+                delta = ''.join(difflib.unified_diff(old['text'].splitlines(True), row['text'].splitlines(True)))
+                ref = controller.store.evidence(delta)
+                changes.append(record(delta, subject='changes:' + row['subject'],
+                                      source_ref=ref['id'], revision=ref['id']))
+        if previous.get('response') and previous['response'] != '\n'.join(f'<block id="{b["id"]}">{b["text"]}</block>' for b in controller.store.blocks):
+            ref = controller.store.evidence(previous['response'])
+            changes.append(record(previous['response'], subject='previous_response', source_ref=ref['id'], revision=ref['id']))
+        attachments.extend(changes)
     controller._evaluation_packet = {
-        "format_version": 2,
+        "format_version": 3,
         "response": "\n".join(f'<block id="{b["id"]}">{b["text"]}</block>' for b in controller.store.blocks),
         "files": "\n\n".join(files), "attachments": attachments,
         "images": images, "calls": calls, "context": context,
@@ -382,18 +390,56 @@ def prepare(controller, tool_calls=None):
         "conversation_history": copy.deepcopy(getattr(controller, "history", [])),
     }
     controller._evaluation_snapshot = {"response": controller.store.manifest(), "files": snapshots,
+                                       "visuals": copy.deepcopy(context['visual_evidence']),
                                        "research_state": (research_citations or {}).get('state_revision'),
+                                       "research_dependencies": (research_citations or {}).get('dependencies'),
                                        "delivery": delivery, "criteria": copy.deepcopy(criteria),
                                        "assertion_sources": [r for e in context['assertion_evidence']
                                                              if e['sources_unchanged'] for r in e['source_snapshots']]}
     return controller._evaluation_packet
 
 
+def prepare_standalone(runner, response, message, framing, calls=(), history=(), cancel_check=None, previous=None):
+    """Adapt unsupervised evaluation to the same input builder, without opening a supervisor."""
+    from types import SimpleNamespace
+    from contextlib import nullcontext
+    from model_result_view import evidence_store
+    store = evidence_store()
+    store.put_response(response, replace=True)
+    controller = SimpleNamespace(store=store, project_path=getattr(runner, 'project_path', None) or '.',
+        message=message, framing=framing or {}, history=list(history or []), job_states={}, last_decision=None,
+        delivery=SimpleNamespace(manifest=lambda: None), cancelled=cancel_check or (lambda: False),
+        evaluation_stage=lambda stage: nullcontext(), log=lambda *args, **kwargs: None)
+    if previous:
+        controller._evaluation_packet = previous._evaluation_packet
+    prepare(controller, calls)
+    return controller
+
+
 def snapshot_error(controller):
     snapshot = controller._evaluation_snapshot
+    import base64, hashlib
+    visual_refs = {r['id']: r for r in snapshot.get('visuals', [])}
+    for img in controller._evaluation_packet.get('images', []):
+        if controller._evaluation_packet.get('format_version', 0) >= 3 and not visual_refs:
+            return '시각 증거의 보존 참조가 없습니다'
+        if visual_refs:
+            ref = visual_refs.get(img.get('_evidence_id'))
+            try:
+                if not ref or hashlib.sha256(base64.b64decode(img['base64'], validate=True)).hexdigest() != ref['sha256']:
+                    return '보존된 시각 증거가 변경됐습니다'
+                page = controller.store.read_evidence(ref['id'], 0, None)
+                if page.get('integrity') != 'verified':
+                    return '보존된 시각 증거의 무결성을 확인하지 못했습니다'
+            except (ValueError, OSError, KeyError):
+                return '보존된 시각 증거를 읽을 수 없습니다'
     if snapshot.get('research_state'):
         from research_context import review_state
-        if review_state() != snapshot['research_state']:
+        try:
+            current = review_state(snapshot.get('research_dependencies'))
+        except (ValueError, OSError):
+            current = None
+        if current != snapshot['research_state']:
             return '평가 중 연구 질문·근거 판본이 변경됐습니다'
     if snapshot["response"] != controller.store.manifest():
         return "평가 중 응답이 변경됐습니다"
@@ -433,6 +479,9 @@ def snapshot_error(controller):
 def invoke(controller, prompt="", *, phase="final"):
     """기존 평가 축의 원샷 호출. 의식 AIAgent/도구 실행 경로에 들어가지 않는다."""
     packet = controller._evaluation_packet
+    supplied_images = {i.get('_evidence_id') for i in packet.get('images', [])}
+    for ref in packet['context'].get('visual_evidence', []):
+        ref['delivered'] = ref['id'] in supplied_images
     started = time.monotonic()
     controller.call_stop = None
     if controller.cancelled():
@@ -502,14 +551,7 @@ def invoke(controller, prompt="", *, phase="final"):
         delivery = controller._evaluation_snapshot["delivery"]
         if delivery:
             result["delivery_hash"] = delivery["hash"]
-    citation_issues = packet['context'].get('research_citations', {}).get('invalid', [])
-    if citation_issues and not controller.cancelled():
-        # 의미 평가는 같은 한 번의 호출에서 수행한다. 기계적으로 무효인 인용을
-        # 모델의 승인으로 통과시키거나, 저장 뒤 조용히 바꿔 승인 지문을 깨지 않는다.
-        detail = json.dumps(citation_issues, ensure_ascii=False)
-        feedback += '\n연구 자료실 인용 검사 실패: ' + detail
-        result.update(status='REWORK', reason=feedback, severity=max(1, severity or 0),
-                      goal_status='UNKNOWN', goal_reason='최종 인용의 읽기 증거 보완 필요')
+    result['citation_uses'] = getattr(evaluator, 'citation_uses', [])
     if result["status"] == "REWORK":
         result["defects"] = parse_criterion_defects(feedback, packet["context"]["criteria_contract"])
         scope = re.search(r"(?mi)^REPAIR_SCOPE:\s*(local|research)\s*$", feedback)
@@ -523,11 +565,6 @@ def invoke(controller, prompt="", *, phase="final"):
             result["repair_block_ids"] = []
         result["instruction"] = ("아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 "
                                  "전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\n" + feedback)
-        if citation_issues:
-            result['repair_scope'] = 'research'  # 누락된 읽기 기록은 실제 notebook 호출이 필요하다.
-            targets = {issue['citation'] for issue in citation_issues}
-            result['repair_block_ids'] = list(dict.fromkeys(result['repair_block_ids'] + [
-                b['id'] for b in controller.store.blocks if any(ref in b['text'] for ref in targets)]))
     elif (result["status"] == "UNKNOWN" and not controller.cancelled()
           and re.search(r"UNKNOWN_REASON:\s*evidence\b", feedback)):
         # 판정 실패/전송 예외와 증거 부족을 구별한다. 기존 실행 문맥에서 필요한

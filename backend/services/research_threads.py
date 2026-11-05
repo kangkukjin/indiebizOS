@@ -106,6 +106,9 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
                     store.write_response(tid, run, text)
                 elif kind == 'final' and event.get('content'):
                     final = str(event['content'])
+                    if event.get('evaluation') and not context.get('final_review'):
+                        from research_context import finish_review
+                        finish_review(final, event['evaluation'])
                 elif kind == 'error':
                     failure = str(event.get('content') or event.get('error') or '실행 실패')
                 elif kind in {'tool_start', 'tool_result', 'cognition', 'thinking'}:
@@ -132,23 +135,8 @@ def _work(store, tid, run, message, cancel, lease, snapshot):
                 text = '조사를 중단했습니다.' if cancel.is_set() else '답변을 받지 못했습니다.'
                 if not cancel.is_set():
                     state = 'failed'
-            lib = ResearchLibrary(store)
-            from research_review import documents, review_text
-            checked_text = review_text(text, documents(text, store.path))
-            citations = lib.citations(checked_text, run)
-            valid = {(c['version_id'], c['locator']) for c in citations}
-            import re
-            invalid = lib.citation_review(checked_text, run)['invalid']
-            if invalid:
-                # 평가가 꺼졌거나 보완을 다 쓴 경우의 마지막 방어선. 전달 변형을
-                # 성공으로 숨기지 않고 원문·위치를 사건에 남긴다.
-                with store.connect(True) as db:
-                    store.event(db, 'citation.validation_failed', {'invalid': invalid, 'response': text}, tid, run)
-                text = re.sub(r'\[자료:([^:\]]+):([^\]]+)\]', lambda m: m.group(0) if (m[1], m[2]) in valid else '[확인되지 않은 인용]', text)
-                if state == 'completed':
-                    state = 'failed'
-                    text += '\n\n인용 검증을 완료하지 못했습니다. 확인되지 않은 인용은 근거로 사용할 수 없습니다.'
-            store.write_response(tid, run, text, state, citations)
+            outcome = context.get('final_review') if not failure else None
+            store.write_response(tid, run, text, state, outcome=outcome)
             if state == 'completed' and _summarize:
                 try:
                     _summarize(store, tid)
@@ -181,8 +169,13 @@ def task_status(ref):
                      'cancelled': 'cancelled', 'completed': 'succeeded'}[repair]
             return task_receipts.view(ref, state, result=row.get('result'))
         states = {'completed': 'succeeded', 'running': 'running', 'failed': 'failed', 'cancelled': 'cancelled', 'interrupted': 'interrupted'}
-        return task_receipts.view(ref, states.get(row['status'], 'unknown'), result=row.get('result'),
-                                  error=row.get('result') if row['status'] == 'failed' else None)
+        result = task_receipts.view(ref, states.get(row['status'], 'unknown'), result=row.get('result'),
+                                    error=row.get('result') if row['status'] == 'failed' else None)
+        with store.connect() as db:
+            final = db.execute("SELECT payload FROM research_events WHERE run_id=? AND kind='response.finalized' ORDER BY sequence DESC LIMIT 1",
+                               (ref['task_id'],)).fetchone()
+        result['evaluation'] = json.loads(final['payload']).get('outcome', {}) if final else {}
+        return result
     except ValueError as exc:
         return task_receipts.view(ref, 'unknown', error=str(exc))
 
@@ -524,7 +517,7 @@ def resume_repair(row):
             text = final if final is not None else text
             evaluation = thread_context.get_goal_eval_outcome() or {}
             state = 'cancelled' if Cancellation().is_set() else 'completed'
-            store.write_response(tid, run, text, state)
+            store.write_response(tid, run, text, state, outcome=context.get('final_review'))
             return {'response': text, 'evaluation': evaluation, 'cancelled': state == 'cancelled'}
     except Exception as exc:
         store.write_response(tid, run, text + '\n\n수리 재개 오류: ' + str(exc), 'failed')

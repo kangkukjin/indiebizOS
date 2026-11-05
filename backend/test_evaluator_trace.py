@@ -185,7 +185,7 @@ def test_created_files_from_tool_calls():
 
 
 def test_ibl_self_write_file_path():
-    """IBL execute_ibl([self:write]) 같은 케이스: input.params.path에서 경로 추출."""
+    """실제로 실행한 IBL write의 runtime receipt에서 경로를 회수한다."""
     import tempfile
     from agent_cognitive import AgentCognitiveMixin
 
@@ -196,7 +196,8 @@ def test_ibl_self_write_file_path():
     try:
         tool_calls = [{
             "name": "execute_ibl",
-            "input": {"node": "self", "action": "write", "params": {"path": tmp_path, "content": "hello"}},
+            "input": {"code": "[self:write]{path:target, content:body}"},
+            "runtime_calls": [{"action": "self:write", "targets": {"path": tmp_path}}],
             "result": "ok",
         }]
 

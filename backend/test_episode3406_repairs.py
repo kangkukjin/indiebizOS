@@ -6,8 +6,7 @@ from types import SimpleNamespace
 import pytest
 import boot_paths  # noqa: F401
 from supervision_store import TurnStore
-from supervisor_content import discover, validate
-from supervisor_review import content_changes, final_state
+from supervisor_content import discover
 from test_conscious_supervisor import supervisor, manager_tool, finish, verdict  # noqa: F401
 
 
@@ -39,7 +38,7 @@ def test_hidden_tail_and_gaps_do_not_become_read(tmp_path):
 def setup_report(controller, tmp_path):
     path = tmp_path / "report.md"
     path.write_text("취업자 증가는 AI의 인과 효과를 식별하지 못한다.")
-    controller.content_artifacts = discover(controller, str(path), [])
+    controller.run_tool("Write", {"path": str(path)}, lambda: "saved")
     return path
 
 
@@ -63,58 +62,17 @@ def test_evaluator_receives_body_without_extra_receipt_round(supervisor, tmp_pat
     monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: pytest.fail("최종평가에 의식 호출"))
     events = finish(supervisor, str(path))
     assert calls == ["evaluate"]
-    assert ("검수 미승인" not in events[-1]["content"]) is approved
+    assert events[-1]["content"] == str(path)
+    assert (events[-1]["evaluation"]["review_status"] == "APPROVED") is approved
     assert not supervisor.calls
 
 
-def test_fabricated_quote_does_not_trigger_receipt_approval(supervisor, monkeypatch):
-    from supervisor_review import recover_citations
-    from supervisor_content import ContentIssue
-    source = supervisor.store.evidence("실제 원문")
-    decision = {"status": "APPROVED", "content_checks": [{"sources": {
-        "evidence": [{"id": source["id"], "quote": "원문에 없는 주장"}]}}]}
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: pytest.fail("fabricated quote"))
-    assert recover_citations(supervisor, decision, ContentIssue("불일치", kind="citation")) is decision
-    assert not supervisor.store.evidence_fully_read(source["id"])
 
 
-def test_changed_artifact_presents_delta_and_preserves_read_provenance(supervisor, tmp_path):
-    path = setup_report(supervisor, tmp_path)
-    old = "유지되는 줄\n" * 2000 + "잘못된 결론\n" + "유지되는 끝\n" * 2000
-    path.write_text(old)
-    supervisor.content_artifacts = discover(supervisor, str(path), [])
-    assert content_changes(supervisor)[0]["mode"] == "full_read_required"
-    art = supervisor.content_artifacts[0]
-    supervisor.store.read_evidence(art["evidence_id"], 0, None, mark=True)
-    path.write_text(old.replace("잘못된 결론", "확인한 범위로 수정"))
-    supervisor.content_artifacts = discover(supervisor, str(path), [])
-    changes = content_changes(supervisor)
-    new_key = supervisor.content_artifacts[0]["evidence_id"]
-    assert "확인한 범위로 수정" in json.dumps(changes, ensure_ascii=False)
-    assert len(json.dumps(changes, ensure_ascii=False)) < 2000
-    assert supervisor.store.evidence_fully_read(new_key)
-    assert supervisor.store.evidence_quote_read(new_key, "수정\n유지되는 끝")
-    assert content_changes(supervisor)[0]["mode"] == "unchanged"
 
 
-def test_large_unseen_change_requires_remainder_read(supervisor, tmp_path):
-    path = setup_report(supervisor, tmp_path)
-    content_changes(supervisor)
-    supervisor.store.read_evidence(supervisor.content_artifacts[0]["evidence_id"], mark=True)
-    path.write_text("완전히 새로운 주장\n" * 3000)
-    supervisor.content_artifacts = discover(supervisor, str(path), [])
-    changes = content_changes(supervisor)
-    assert changes[0]["pages"][0]["remaining_offset"]
-    assert not supervisor.store.evidence_fully_read(supervisor.content_artifacts[0]["evidence_id"])
 
 
-def test_unread_old_artifact_cannot_seed_new_coverage(supervisor, tmp_path):
-    path = setup_report(supervisor, tmp_path)
-    content_changes(supervisor)
-    path.write_text(path.read_text() + "추가")
-    supervisor.content_artifacts = discover(supervisor, str(path), [])
-    assert content_changes(supervisor)[0]["mode"] == "full_read_required"
-    assert not supervisor.store.evidence_fully_read(supervisor.content_artifacts[0]["evidence_id"])
 
 
 def test_repair_index_preserves_existing_source_handles(supervisor):
@@ -128,7 +86,6 @@ def test_repair_index_preserves_existing_source_handles(supervisor):
     assert "https://example.test/source" in row["input"]["excerpt"]
     assert "기존 원문" in supervisor.store.read_evidence(row["result"]["id"])["text"]
     assert not supervisor.store.evidence_fully_read(row["result"]["id"])
-    assert "events" not in final_state(supervisor)
 
 
 def test_planning_receives_actual_idiom_map_only_when_requested(supervisor, monkeypatch):

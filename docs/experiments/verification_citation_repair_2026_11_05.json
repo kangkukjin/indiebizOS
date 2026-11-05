@@ -1,0 +1,1740 @@
+{
+  "baseline": "2f34b274644ff601736e06010b497644305687b7",
+  "cases": [
+    {
+      "case": "retained_example",
+      "repeat": 0,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 계약 목표 100건과 인과적 개선 미입증 주장에 붙은 실제 인용 p1·p2는 research_citations[0]에서 모두 invalid이며, 해당 원문 위치의 읽기 증거가 없다. 따라서 실제 인용이 유효 원문에 연결된다는 조건을 충족하지 못한다.\", \"repair\": \"해당 주장을 뒷받침하는 원문 구간을 확인하고 유효한 인용으로 교체하며, 주장도 확인된 범위에 맞춘다. 명시적으로 구별된 인용 표기 예시는 수정할 필요가 없다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:6509dc3606f84723bd1a60fdd3124de0:p1]\", \"version_ref\": \"6509dc3606f84723bd1a60fdd3124de0\", \"locator\": \"p1\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:6509dc3606f84723bd1a60fdd3124de0:p2]\", \"version_ref\": \"6509dc3606f84723bd1a60fdd3124de0\", \"locator\": \"p2\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "39c2dce97320e4d9cd6f91754f403a3c50cf2fda1c803e84b21dc07d97a952bf",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 계약 목표 100건과 인과적 개선 미입증 주장에 붙은 실제 인용 p1·p2는 research_citations[0]에서 모두 invalid이며, 해당 원문 위치의 읽기 증거가 없다. 따라서 실제 인용이 유효 원문에 연결된다는 조건을 충족하지 못한다.\", \"repair\": \"해당 주장을 뒷받침하는 원문 구간을 확인하고 유효한 인용으로 교체하며, 주장도 확인된 범위에 맞춘다. 명시적으로 구별된 인용 표기 예시는 수정할 필요가 없다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:6509dc3606f84723bd1a60fdd3124de0:p1]\", \"version_ref\": \"6509dc3606f84723bd1a60fdd3124de0\", \"locator\": \"p1\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:6509dc3606f84723bd1a60fdd3124de0:p2]\", \"version_ref\": \"6509dc3606f84723bd1a60fdd3124de0\", \"locator\": \"p2\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "제출 보고서 본문",
+            "research_citations[0]의 p1·p2 invalid 판정"
+          ],
+          "remaining": [
+            "실제 주장에 대한 원문 근거 확인 및 유효 인용 연결"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서의 계약 목표 100건과 인과적 개선 미입증 주장에 붙은 실제 인용 p1·p2는 research_citations[0]에서 모두 invalid이며, 해당 원문 위치의 읽기 증거가 없다. 따라서 실제 인용이 유효 원문에 연결된다는 조건을 충족하지 못한다.",
+              "repair": "해당 주장을 뒷받침하는 원문 구간을 확인하고 유효한 인용으로 교체하며, 주장도 확인된 범위에 맞춘다. 명시적으로 구별된 인용 표기 예시는 수정할 필요가 없다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18575,
+        "output": 336
+      },
+      "preparation_s": 0.0467073330655694,
+      "elapsed_s": 30.64986104145646,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "retained_example",
+      "repeat": 0,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "APPROVED",
+      "decisions": [
+        {
+          "status": "APPROVED",
+          "reason": "ACHIEVED\nCITATION_USES: [{\"index\":0,\"use\":\"source\"},{\"index\":1,\"use\":\"source\"},{\"index\":2,\"use\":\"example\"}]\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"보고서는 계약 목표 100건과 실제 체결 실적 미확인을 구별하고, 인과적 개선이 입증되지 않았다는 한계를 원문대로 보존했다. 실제 인용은 제공된 원문과 일치하며 인용 표기 예시도 한 줄로 구별해 설명했다.\",\"evidence\":[\"report.md 본문\",\"원문 p1\",\"원문 p2\"],\"remaining\":[]}",
+          "severity": 0,
+          "response_version": 1,
+          "response_hash": "10c499be8112e1516f4a0b1cf945813defd56c0d59e2fb43056f0b1df9af229a",
+          "instruction": "",
+          "goal_status": "ACHIEVED",
+          "goal_reason": "보고서는 계약 목표 100건과 실제 체결 실적 미확인을 구별하고, 인과적 개선이 입증되지 않았다는 한계를 원문대로 보존했다. 실제 인용은 제공된 원문과 일치하며 인용 표기 예시도 한 줄로 구별해 설명했다.",
+          "goal_evidence": [
+            "report.md 본문",
+            "원문 p1",
+            "원문 p2"
+          ],
+          "remaining": [],
+          "citation_uses": [
+            {
+              "index": 0,
+              "use": "source"
+            },
+            {
+              "index": 1,
+              "use": "source"
+            },
+            {
+              "index": 2,
+              "use": "example"
+            }
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19563,
+        "output": 143
+      },
+      "preparation_s": 0.013506583869457245,
+      "elapsed_s": 12.82431708369404,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "retained_example",
+      "repeat": 1,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "APPROVED",
+      "decisions": [
+        {
+          "status": "APPROVED",
+          "reason": "ACHIEVED\nCITATION_USES: [{\"index\":0,\"use\":\"source\"},{\"index\":1,\"use\":\"source\"},{\"index\":2,\"use\":\"example\"}]\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"원문에 따라 계약 목표 100건과 실제 체결 실적 미확인을 구별하고, 인과적 개선이 입증되지 않았다는 한계를 보존했다. 인용 표기 예시도 한 줄로 설명했다.\",\"evidence\":[\"report.md 본문\",\"원문 p1\",\"원문 p2\"],\"remaining\":[]}",
+          "severity": 0,
+          "response_version": 1,
+          "response_hash": "539ea290c564ca408dd1d7819d399cdb3d060a5218714789b36b7a385c04872d",
+          "instruction": "",
+          "goal_status": "ACHIEVED",
+          "goal_reason": "원문에 따라 계약 목표 100건과 실제 체결 실적 미확인을 구별하고, 인과적 개선이 입증되지 않았다는 한계를 보존했다. 인용 표기 예시도 한 줄로 설명했다.",
+          "goal_evidence": [
+            "report.md 본문",
+            "원문 p1",
+            "원문 p2"
+          ],
+          "remaining": [],
+          "citation_uses": [
+            {
+              "index": 0,
+              "use": "source"
+            },
+            {
+              "index": 1,
+              "use": "source"
+            },
+            {
+              "index": 2,
+              "use": "example"
+            }
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19569,
+        "output": 127
+      },
+      "preparation_s": 0.010152874514460564,
+      "elapsed_s": 12.247197167016566,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "retained_example",
+      "repeat": 1,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"research_citations[0]에서 실제 주장에 사용된 p1·p2 인용 모두 읽기 증거가 없는 invalid로 확인된다. 따라서 계약 목표 100건·실적 미확인·인과적 개선 미입증이라는 주장이 유효 원문에 연결되었다는 기준을 충족하지 못한다. 명시적으로 구별된 인용 표기 예시는 결함이 아니다.\", \"repair\": \"실제 인용 대상 구간을 확인하고 유효한 인용으로 연결하며, 원문과 다른 주장이 있으면 해당 문장만 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:1b9e26be2c6e48999444aa2a2171db3e:p1]\", \"version_ref\": \"1b9e26be2c6e48999444aa2a2171db3e\", \"locator\": \"p1\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:1b9e26be2c6e48999444aa2a2171db3e:p2]\", \"version_ref\": \"1b9e26be2c6e48999444aa2a2171db3e\", \"locator\": \"p2\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "99a0becaa6ca1038aaebfa8ea2e9294eb4845ccb0f00c3563dac634b5e0693bf",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"research_citations[0]에서 실제 주장에 사용된 p1·p2 인용 모두 읽기 증거가 없는 invalid로 확인된다. 따라서 계약 목표 100건·실적 미확인·인과적 개선 미입증이라는 주장이 유효 원문에 연결되었다는 기준을 충족하지 못한다. 명시적으로 구별된 인용 표기 예시는 결함이 아니다.\", \"repair\": \"실제 인용 대상 구간을 확인하고 유효한 인용으로 연결하며, 원문과 다른 주장이 있으면 해당 문장만 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:1b9e26be2c6e48999444aa2a2171db3e:p1]\", \"version_ref\": \"1b9e26be2c6e48999444aa2a2171db3e\", \"locator\": \"p1\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:1b9e26be2c6e48999444aa2a2171db3e:p2]\", \"version_ref\": \"1b9e26be2c6e48999444aa2a2171db3e\", \"locator\": \"p2\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "report.md 전체 본문",
+            "research_citations[0]의 p1·p2 invalid 기록"
+          ],
+          "remaining": [
+            "핵심 주장에 대한 원문 확인 및 유효 인용 연결"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "research_citations[0]에서 실제 주장에 사용된 p1·p2 인용 모두 읽기 증거가 없는 invalid로 확인된다. 따라서 계약 목표 100건·실적 미확인·인과적 개선 미입증이라는 주장이 유효 원문에 연결되었다는 기준을 충족하지 못한다. 명시적으로 구별된 인용 표기 예시는 결함이 아니다.",
+              "repair": "실제 인용 대상 구간을 확인하고 유효한 인용으로 연결하며, 원문과 다른 주장이 있으면 해당 문장만 정정한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18579,
+        "output": 375
+      },
+      "preparation_s": 0.04108058288693428,
+      "elapsed_s": 22.051451249979436,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "retained_example",
+      "repeat": 2,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 실제 인용 p1·p2는 research_citations[0]에서 모두 invalid이며, 해당 원문 위치의 읽기 증거가 없다. 따라서 계약 목표 100건·실적 미확인·인과적 개선 미입증 주장이 유효 원문에 연결됐다는 조건을 충족하지 못했다.\", \"repair\": \"해당 주장을 뒷받침하는 원문 구간을 확인해 유효한 인용으로 연결하고, 원문과 다른 내용이 있으면 그 범위만 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:c99fefdb9ca8467e856e269c97233cf5:p1]\", \"version_ref\": \"c99fefdb9ca8467e856e269c97233cf5\", \"locator\": \"p1\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:c99fefdb9ca8467e856e269c97233cf5:p2]\", \"version_ref\": \"c99fefdb9ca8467e856e269c97233cf5\", \"locator\": \"p2\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "ac237e63b4898fded0371de464b269305469c8ff4386bc2e686f3ca2fddfa262",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: research\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 실제 인용 p1·p2는 research_citations[0]에서 모두 invalid이며, 해당 원문 위치의 읽기 증거가 없다. 따라서 계약 목표 100건·실적 미확인·인과적 개선 미입증 주장이 유효 원문에 연결됐다는 조건을 충족하지 못했다.\", \"repair\": \"해당 주장을 뒷받침하는 원문 구간을 확인해 유효한 인용으로 연결하고, 원문과 다른 내용이 있으면 그 범위만 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:c99fefdb9ca8467e856e269c97233cf5:p1]\", \"version_ref\": \"c99fefdb9ca8467e856e269c97233cf5\", \"locator\": \"p1\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:c99fefdb9ca8467e856e269c97233cf5:p2]\", \"version_ref\": \"c99fefdb9ca8467e856e269c97233cf5\", \"locator\": \"p2\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 본문",
+            "research_citations[0]: 실제 인용 p1·p2 invalid, evidence_chars=0"
+          ],
+          "remaining": [
+            "핵심 주장에 대한 원문 근거 확인 및 유효 인용 연결"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서의 실제 인용 p1·p2는 research_citations[0]에서 모두 invalid이며, 해당 원문 위치의 읽기 증거가 없다. 따라서 계약 목표 100건·실적 미확인·인과적 개선 미입증 주장이 유효 원문에 연결됐다는 조건을 충족하지 못했다.",
+              "repair": "해당 주장을 뒷받침하는 원문 구간을 확인해 유효한 인용으로 연결하고, 원문과 다른 내용이 있으면 그 범위만 정정한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18538,
+        "output": 409
+      },
+      "preparation_s": 0.019141292199492455,
+      "elapsed_s": 27.76494291704148,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "retained_example",
+      "repeat": 2,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "APPROVED",
+      "decisions": [
+        {
+          "status": "APPROVED",
+          "reason": "ACHIEVED\nCITATION_USES: [{\"index\":0,\"use\":\"source\"},{\"index\":1,\"use\":\"source\"},{\"index\":2,\"use\":\"example\"}]\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"보고서가 원문에 따라 계약 목표 100건과 미확인 체결 실적을 구별하고, 인과적 개선이 입증되지 않았다는 한계를 보존하며 인용 표기 예시를 한 줄로 설명했다.\",\"evidence\":[\"report.md 본문\",\"원문 p1\",\"원문 p2\"],\"remaining\":[]}",
+          "severity": 0,
+          "response_version": 1,
+          "response_hash": "f22fc7ce194086172d7aaa9bfc73db14ced262658fe5e1f6dbfbfce7ba05a8ef",
+          "instruction": "",
+          "goal_status": "ACHIEVED",
+          "goal_reason": "보고서가 원문에 따라 계약 목표 100건과 미확인 체결 실적을 구별하고, 인과적 개선이 입증되지 않았다는 한계를 보존하며 인용 표기 예시를 한 줄로 설명했다.",
+          "goal_evidence": [
+            "report.md 본문",
+            "원문 p1",
+            "원문 p2"
+          ],
+          "remaining": [],
+          "citation_uses": [
+            {
+              "index": 0,
+              "use": "source"
+            },
+            {
+              "index": 1,
+              "use": "source"
+            },
+            {
+              "index": 2,
+              "use": "example"
+            }
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19565,
+        "output": 129
+      },
+      "preparation_s": 0.01113087497651577,
+      "elapsed_s": 9.7892392501235,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "mixed_invalid",
+      "repeat": 0,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, p1 원문은 실제 체결 건수가 미확인이라고 명시한다. 마지막 문장의 p9 인용에는 읽기 증거가 없어 유효 원문 연결도 확인되지 않는다.\", \"repair\": \"근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문에 근거한 실제 체결 실적 미확인을 유지한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:d3a3424d5b6647cd9758938bbddb9dce:p9]\", \"version_ref\": \"d3a3424d5b6647cd9758938bbddb9dce\", \"locator\": \"p9\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [\"p1\", \"p2\"], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "0d53ec25d88689ff0c003c114ae92a9dac68b25c7c1f6c9942545a6c2633a995",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, p1 원문은 실제 체결 건수가 미확인이라고 명시한다. 마지막 문장의 p9 인용에는 읽기 증거가 없어 유효 원문 연결도 확인되지 않는다.\", \"repair\": \"근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문에 근거한 실제 체결 실적 미확인을 유지한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:d3a3424d5b6647cd9758938bbddb9dce:p9]\", \"version_ref\": \"d3a3424d5b6647cd9758938bbddb9dce\", \"locator\": \"p9\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [\"p1\", \"p2\"], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 마지막 문장",
+            "p1: 실제 체결 건수 미확인",
+            "research_citations[0]: p9 읽기 증거 없음"
+          ],
+          "remaining": [
+            "999건 확정 문장과 유효하지 않은 p9 인용 제거"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, p1 원문은 실제 체결 건수가 미확인이라고 명시한다. 마지막 문장의 p9 인용에는 읽기 증거가 없어 유효 원문 연결도 확인되지 않는다.",
+              "repair": "근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문에 근거한 실제 체결 실적 미확인을 유지한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19679,
+        "output": 254
+      },
+      "preparation_s": 0.04518670774996281,
+      "elapsed_s": 11.613317457959056,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "mixed_invalid",
+      "repeat": 0,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 ‘실제 체결은 999건으로 확인됐다’는 원문 p1의 ‘실제 체결 건수는 확인되지 않았다’와 모순되며, 근거로 제시한 p9는 원문에 없는 위치다.\", \"repair\": \"999건 확인 문장과 p9 인용을 삭제하고, 실제 체결 실적은 미확인이라는 원문 수준을 유지한다.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "66a6b9571cef10565ca74b6f4889db0c13eda6e8a6c5b0d523ed9681f2a2a50c",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 ‘실제 체결은 999건으로 확인됐다’는 원문 p1의 ‘실제 체결 건수는 확인되지 않았다’와 모순되며, 근거로 제시한 p9는 원문에 없는 위치다.\", \"repair\": \"999건 확인 문장과 p9 인용을 삭제하고, 실제 체결 실적은 미확인이라는 원문 수준을 유지한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "실제 체결 실적을 미확인으로 설명하면서 근거 없는 999건 확인 주장을 덧붙여 목표와 실적을 정확히 구별하지 못했다.",
+          "goal_evidence": [
+            "보고서 마지막 문장",
+            "원문 p1",
+            "research_citations[0]의 p9 원문 위치 부재"
+          ],
+          "remaining": [
+            "근거 없는 체결 실적 주장과 인용 삭제"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서의 ‘실제 체결은 999건으로 확인됐다’는 원문 p1의 ‘실제 체결 건수는 확인되지 않았다’와 모순되며, 근거로 제시한 p9는 원문에 없는 위치다.",
+              "repair": "999건 확인 문장과 p9 인용을 삭제하고, 실제 체결 실적은 미확인이라는 원문 수준을 유지한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19829,
+        "output": 277
+      },
+      "preparation_s": 0.01098545826971531,
+      "elapsed_s": 18.358130542561412,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "mixed_invalid",
+      "repeat": 1,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 '실제 체결은 999건으로 확인됐다'는 원문 p1의 '실제 체결 건수는 확인되지 않았다'와 모순되며, 근거로 든 p9는 원문에 없는 위치다.\", \"repair\": \"999건 확인 주장과 p9 인용을 삭제하고 실제 체결 실적은 미확인이라는 결론을 유지한다.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "5fde8ec8c25dade3eee9ee7f729dd73334494f0050d4c71a25b96f07524a0a77",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서의 '실제 체결은 999건으로 확인됐다'는 원문 p1의 '실제 체결 건수는 확인되지 않았다'와 모순되며, 근거로 든 p9는 원문에 없는 위치다.\", \"repair\": \"999건 확인 주장과 p9 인용을 삭제하고 실제 체결 실적은 미확인이라는 결론을 유지한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "실제 체결 실적을 근거 없이 999건으로 확정하여 원문에 따른 목표·실적 구별을 훼손했다.",
+          "goal_evidence": [
+            "보고서 마지막 문장",
+            "원문 p1",
+            "research_citations[0]의 p9 위치 부재"
+          ],
+          "remaining": [
+            "999건 확인 주장과 유효하지 않은 p9 인용 삭제"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서의 '실제 체결은 999건으로 확인됐다'는 원문 p1의 '실제 체결 건수는 확인되지 않았다'와 모순되며, 근거로 든 p9는 원문에 없는 위치다.",
+              "repair": "999건 확인 주장과 p9 인용을 삭제하고 실제 체결 실적은 미확인이라는 결론을 유지한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19780,
+        "output": 267
+      },
+      "preparation_s": 0.01093162503093481,
+      "elapsed_s": 20.828383833169937,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "mixed_invalid",
+      "repeat": 1,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 해당 문장의 p9 인용에는 읽기 증거가 없다.\", \"repair\": \"근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문 p1에 따른 실제 체결 실적 미확인을 유지한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:5db728bd87ad4a2fbec0211646b8beec:p9]\", \"version_ref\": \"5db728bd87ad4a2fbec0211646b8beec\", \"locator\": \"p9\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [\"p1\", \"p2\"], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "d3deeb3ef16dcf27e4bcc9ca3181d25d425b8370a80320286c15dea26008fc3c",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 해당 문장의 p9 인용에는 읽기 증거가 없다.\", \"repair\": \"근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문 p1에 따른 실제 체결 실적 미확인을 유지한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:5db728bd87ad4a2fbec0211646b8beec:p9]\", \"version_ref\": \"5db728bd87ad4a2fbec0211646b8beec\", \"locator\": \"p9\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [\"p1\", \"p2\"], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 마지막 문장의 999건 확정 주장",
+            "원문 p1의 실제 체결 건수 미확인",
+            "research_citations[0]의 p9 읽기 증거 없음"
+          ],
+          "remaining": [
+            "999건 확정 문장과 유효하지 않은 p9 인용 삭제"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 해당 문장의 p9 인용에는 읽기 증거가 없다.",
+              "repair": "근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문 p1에 따른 실제 체결 실적 미확인을 유지한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19672,
+        "output": 254
+      },
+      "preparation_s": 0.04203845839947462,
+      "elapsed_s": 17.76480587478727,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "mixed_invalid",
+      "repeat": 2,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, 제공된 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 해당 문장의 p9 인용에는 읽기 증거가 없으며, 보고서 앞의 미확인 설명과도 충돌한다.\", \"repair\": \"근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문에 근거한 실제 체결 실적 미확인을 유지한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:93ab61a64bdf40ea87ed678370835d3e:p9]\", \"version_ref\": \"93ab61a64bdf40ea87ed678370835d3e\", \"locator\": \"p9\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [\"p1\", \"p2\"], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "2fb058a84b0ac68e8c4fc7e23b53b835ad973ed847df161c9e79d51c0aa4f64e",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, 제공된 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 해당 문장의 p9 인용에는 읽기 증거가 없으며, 보고서 앞의 미확인 설명과도 충돌한다.\", \"repair\": \"근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문에 근거한 실제 체결 실적 미확인을 유지한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}, {\"citation\": \"[자료:93ab61a64bdf40ea87ed678370835d3e:p9]\", \"version_ref\": \"93ab61a64bdf40ea87ed678370835d3e\", \"locator\": \"p9\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [\"p1\", \"p2\"], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 마지막 문장의 999건 확정 주장",
+            "원문 p1의 실제 체결 건수 미확인",
+            "research_citations[0]의 p9 읽기 증거 부재"
+          ],
+          "remaining": [
+            "근거 없는 실적 확정 문장과 인용 삭제"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서 마지막 문장은 ‘실제 체결은 999건으로 확인됐다’고 단정하지만, 제공된 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 해당 문장의 p9 인용에는 읽기 증거가 없으며, 보고서 앞의 미확인 설명과도 충돌한다.",
+              "repair": "근거 없는 999건 확정 문장과 p9 인용을 삭제하고, 원문에 근거한 실제 체결 실적 미확인을 유지한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19661,
+        "output": 276
+      },
+      "preparation_s": 0.019790582358837128,
+      "elapsed_s": 27.103313874453306,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "mixed_invalid",
+      "repeat": 2,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 ‘실제 체결은 999건으로 확인됐다’고 주장하지만, 인용한 p9는 원문이 없으며 유효 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 보고서 앞부분의 미확인 설명과도 모순된다.\", \"repair\": \"999건 확인 주장과 유효하지 않은 p9 인용을 삭제하고, 실제 체결 실적은 미확인이라는 결론을 유지한다.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "b4048a455a07d3202e3be5c1238712b59d06542f2faa1dab6bd63e2c47563e14",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 ‘실제 체결은 999건으로 확인됐다’고 주장하지만, 인용한 p9는 원문이 없으며 유효 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 보고서 앞부분의 미확인 설명과도 모순된다.\", \"repair\": \"999건 확인 주장과 유효하지 않은 p9 인용을 삭제하고, 실제 체결 실적은 미확인이라는 결론을 유지한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "실제 체결 실적에 대한 근거 없는 확정 주장이 원문의 미확인을 훼손한다.",
+          "goal_evidence": [
+            "보고서의 999건 확인 주장",
+            "p1: 실제 체결 건수 미확인",
+            "p9: 지정 위치 원문 없음"
+          ],
+          "remaining": [
+            "999건 확인 주장과 p9 인용을 삭제하여 원문에 맞게 정정"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서는 ‘실제 체결은 999건으로 확인됐다’고 주장하지만, 인용한 p9는 원문이 없으며 유효 원문 p1은 실제 체결 건수가 미확인이라고 명시한다. 보고서 앞부분의 미확인 설명과도 모순된다.",
+              "repair": "999건 확인 주장과 유효하지 않은 p9 인용을 삭제하고, 실제 체결 실적은 미확인이라는 결론을 유지한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19731,
+        "output": 285
+      },
+      "preparation_s": 0.011254625394940376,
+      "elapsed_s": 22.000811375677586,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "changed_conclusion",
+      "repeat": 0,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 '실제 체결 실적은 100건으로 확정됐다'고 주장하지만, 인용 원문 p1은 '실제 체결 건수는 확인되지 않았다'고 명시한다. 목표 100건을 실제 실적으로 확정한 것은 원문과 모순된다.\", \"repair\": \"보고서의 해당 문장을 '계약 목표는 100건이며, 실제 체결 건수는 확인되지 않았다'로 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "1956d0f97bb58c7e50d0b3ab4b355f900dd6d1554abf7d3523a4812f0bdfde53",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 '실제 체결 실적은 100건으로 확정됐다'고 주장하지만, 인용 원문 p1은 '실제 체결 건수는 확인되지 않았다'고 명시한다. 목표 100건을 실제 실적으로 확정한 것은 원문과 모순된다.\", \"repair\": \"보고서의 해당 문장을 '계약 목표는 100건이며, 실제 체결 건수는 확인되지 않았다'로 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 본문(reference_index 6)",
+            "인용 원문 p1(reference_index 7)"
+          ],
+          "remaining": [
+            "실제 체결 실적을 원문의 미확인 상태에 맞게 정정"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서는 '실제 체결 실적은 100건으로 확정됐다'고 주장하지만, 인용 원문 p1은 '실제 체결 건수는 확인되지 않았다'고 명시한다. 목표 100건을 실제 실적으로 확정한 것은 원문과 모순된다.",
+              "repair": "보고서의 해당 문장을 '계약 목표는 100건이며, 실제 체결 건수는 확인되지 않았다'로 정정한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19527,
+        "output": 239
+      },
+      "preparation_s": 0.0037824586033821106,
+      "elapsed_s": 14.233480291441083,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "changed_conclusion",
+      "repeat": 0,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"원문 p1은 계약 목표가 100건이며 실제 체결 건수는 확인되지 않았다고 명시하지만, 보고서는 실제 체결 실적을 ‘100건으로 확정됐다’고 단정한다.\", \"repair\": \"실제 체결 실적을 ‘미확인’으로 정정하여 목표 100건과 구별한다.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "32db4f64f23341916785f36317aa5d4a722c4f3472ce2492359b48eef4072ade",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"원문 p1은 계약 목표가 100건이며 실제 체결 건수는 확인되지 않았다고 명시하지만, 보고서는 실제 체결 실적을 ‘100건으로 확정됐다’고 단정한다.\", \"repair\": \"실제 체결 실적을 ‘미확인’으로 정정하여 목표 100건과 구별한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "계약 목표를 실제 체결 실적으로 확정하여 원문에 근거한 목표·실적 구별을 충족하지 못했다.",
+          "goal_evidence": [
+            "보고서 첫 문장",
+            "원문 p1: 실제 체결 건수는 확인되지 않았다."
+          ],
+          "remaining": [
+            "실제 체결 실적의 미확인 상태를 보존하도록 정정"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "원문 p1은 계약 목표가 100건이며 실제 체결 건수는 확인되지 않았다고 명시하지만, 보고서는 실제 체결 실적을 ‘100건으로 확정됐다’고 단정한다.",
+              "repair": "실제 체결 실적을 ‘미확인’으로 정정하여 목표 100건과 구별한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 20004,
+        "output": 245
+      },
+      "preparation_s": 0.012656125240027905,
+      "elapsed_s": 14.973107082769275,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "changed_conclusion",
+      "repeat": 1,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"원문 p1은 계약 목표를 100건으로 제시하면서 실제 체결 건수는 확인되지 않았다고 명시한다. 보고서는 실제 체결 실적도 100건으로 확정됐다고 서술해 원문과 모순된다.\", \"repair\": \"보고서의 실제 체결 실적을 ‘미확인’으로 정정하고 계약 목표 100건과 구별한다.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "cd8c20a86c43fe89befcd71d70b2a3061ca8c73c0ab091f15bc87efc92bfe108",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"원문 p1은 계약 목표를 100건으로 제시하면서 실제 체결 건수는 확인되지 않았다고 명시한다. 보고서는 실제 체결 실적도 100건으로 확정됐다고 서술해 원문과 모순된다.\", \"repair\": \"보고서의 실제 체결 실적을 ‘미확인’으로 정정하고 계약 목표 100건과 구별한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "계약 목표를 실제 체결 실적으로 확정해 원문에 근거한 목표·실적 구별을 충족하지 못했다.",
+          "goal_evidence": [
+            "보고서 첫 문장",
+            "원문 p1: 실제 체결 건수는 확인되지 않았다."
+          ],
+          "remaining": [
+            "실제 체결 실적을 미확인으로 정정"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "원문 p1은 계약 목표를 100건으로 제시하면서 실제 체결 건수는 확인되지 않았다고 명시한다. 보고서는 실제 체결 실적도 100건으로 확정됐다고 서술해 원문과 모순된다.",
+              "repair": "보고서의 실제 체결 실적을 ‘미확인’으로 정정하고 계약 목표 100건과 구별한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 20082,
+        "output": 252
+      },
+      "preparation_s": 0.02034399937838316,
+      "elapsed_s": 12.249781209044158,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "changed_conclusion",
+      "repeat": 1,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 ‘실제 체결 실적은 100건으로 확정됐다’고 주장하지만, 인용 원문 p1은 ‘실제 체결 건수는 확인되지 않았다’고 명시한다.\", \"repair\": \"해당 문장을 ‘계약 목표는 100건이며, 실제 체결 건수는 확인되지 않았다’로 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "979b5c3b926378dd64fcdbc27ffa625bc91ba17a9d996c878f526486e8105785",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 ‘실제 체결 실적은 100건으로 확정됐다’고 주장하지만, 인용 원문 p1은 ‘실제 체결 건수는 확인되지 않았다’고 명시한다.\", \"repair\": \"해당 문장을 ‘계약 목표는 100건이며, 실제 체결 건수는 확인되지 않았다’로 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 첫 문장",
+            "인용 원문 p1: 실제 체결 건수는 확인되지 않았다."
+          ],
+          "remaining": [
+            "실제 체결 실적을 미확인으로 정정"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서는 ‘실제 체결 실적은 100건으로 확정됐다’고 주장하지만, 인용 원문 p1은 ‘실제 체결 건수는 확인되지 않았다’고 명시한다.",
+              "repair": "해당 문장을 ‘계약 목표는 100건이며, 실제 체결 건수는 확인되지 않았다’로 정정한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19528,
+        "output": 220
+      },
+      "preparation_s": 0.020429332740604877,
+      "elapsed_s": 14.300002583302557,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "changed_conclusion",
+      "repeat": 2,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 ‘실제 체결 실적은 100건으로 확정됐다’고 주장하지만, 인용 원문 p1은 ‘계약 목표는 100건이다. 실제 체결 건수는 확인되지 않았다’고 명시한다.\", \"repair\": \"‘계약 목표는 100건이며 실제 체결 건수는 확인되지 않았다’로 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "d450dd7210dfcb7f67c9fcf4527f6df780a7aa62935b2d309233467b557e4e9c",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 ‘실제 체결 실적은 100건으로 확정됐다’고 주장하지만, 인용 원문 p1은 ‘계약 목표는 100건이다. 실제 체결 건수는 확인되지 않았다’고 명시한다.\", \"repair\": \"‘계약 목표는 100건이며 실제 체결 건수는 확인되지 않았다’로 정정한다.\"}]\n연구 자료실 인용 검사 실패: [{\"citation\": \"[자료:판본:위치]\", \"version_ref\": \"판본\", \"locator\": \"위치\", \"reason\": \"현재 실행에서 이 자료·위치의 읽기 증거가 없습니다\", \"read_locations\": [], \"repair\": \"self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.\"}]",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "최종 인용의 읽기 증거 보완 필요",
+          "goal_evidence": [
+            "보고서 첫 문장",
+            "인용 원문 p1: 실제 체결 건수는 확인되지 않았다."
+          ],
+          "remaining": [
+            "실제 체결 실적을 미확인으로 정정"
+          ],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서는 ‘실제 체결 실적은 100건으로 확정됐다’고 주장하지만, 인용 원문 p1은 ‘계약 목표는 100건이다. 실제 체결 건수는 확인되지 않았다’고 명시한다.",
+              "repair": "‘계약 목표는 100건이며 실제 체결 건수는 확인되지 않았다’로 정정한다."
+            }
+          ],
+          "repair_scope": "research",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19546,
+        "output": 220
+      },
+      "preparation_s": 0.004157458432018757,
+      "elapsed_s": 13.210704541765153,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "changed_conclusion",
+      "repeat": 2,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 실제 체결 실적을 ‘100건으로 확정됐다’고 단정하지만, 인용 원문 p1은 ‘실제 체결 건수는 확인되지 않았다’고 명시한다.\", \"repair\": \"실제 체결 실적을 ‘미확인’으로 정정하여 계약 목표 100건과 구별한다.\"}]",
+          "severity": 2,
+          "response_version": 1,
+          "response_hash": "2dde47955360d7663dfb7b9e4181eed23433179e75b2510993f6e82e7f5b9115",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"보고서는 실제 체결 실적을 ‘100건으로 확정됐다’고 단정하지만, 인용 원문 p1은 ‘실제 체결 건수는 확인되지 않았다’고 명시한다.\", \"repair\": \"실제 체결 실적을 ‘미확인’으로 정정하여 계약 목표 100건과 구별한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "미확인인 실제 체결 실적을 목표와 같은 100건으로 확정해 원문에 근거한 구별을 충족하지 못했다.",
+          "goal_evidence": [
+            "최종 보고서 첫 문장",
+            "인용 원문 p1: 실제 체결 건수는 확인되지 않았다."
+          ],
+          "remaining": [
+            "실제 체결 실적을 미확인으로 정정"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "보고서는 실제 체결 실적을 ‘100건으로 확정됐다’고 단정하지만, 인용 원문 p1은 ‘실제 체결 건수는 확인되지 않았다’고 명시한다.",
+              "repair": "실제 체결 실적을 ‘미확인’으로 정정하여 계약 목표 100건과 구별한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19994,
+        "output": 248
+      },
+      "preparation_s": 0.009232958778738976,
+      "elapsed_s": 13.578957499936223,
+      "image_count": 0,
+      "artifact_count": 1,
+      "stored_unchanged": true
+    },
+    {
+      "case": "native_image",
+      "repeat": 0,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 호출은 확인되지만, 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1의 이미지가 일부 생략된 인코딩 문자열로만 제공되어 실제 화면의 READY 표시를 확인할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 수 없어 READY라는 보고의 정확성을 판정할 수 없습니다.\",\"evidence\":[\"view_image 호출 1회 기록\",\"도구 결과의 이미지 인코딩 일부 생략\"],\"remaining\":[\"C1: 실제 화면의 READY 여부와 보고의 일치 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 호출은 확인되지만, 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1의 이미지가 일부 생략된 인코딩 문자열로만 제공되어 실제 화면의 READY 표시를 확인할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 수 없어 READY라는 보고의 정확성을 판정할 수 없습니다.\",\"evidence\":[\"view_image 호출 1회 기록\",\"도구 결과의 이미지 인코딩 일부 생략\"],\"remaining\":[\"C1: 실제 화면의 READY 여부와 보고의 일치 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면을 확인할 수 없어 READY라는 보고의 정확성을 판정할 수 없습니다.",
+          "goal_evidence": [
+            "view_image 호출 1회 기록",
+            "도구 결과의 이미지 인코딩 일부 생략"
+          ],
+          "remaining": [
+            "C1: 실제 화면의 READY 여부와 보고의 일치 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18950,
+        "output": 166
+      },
+      "preparation_s": 0.10290541592985392,
+      "elapsed_s": 11.90589891653508,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "native_image",
+      "repeat": 0,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "APPROVED",
+      "decisions": [
+        {
+          "status": "APPROVED",
+          "reason": "ACHIEVED\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"첨부 이미지에 'STATUS: READY'가 표시되어 있으며 에이전트 응답과 일치한다.\",\"evidence\":[\"첨부 이미지의 'STATUS: READY' 표시\",\"응답 블록 0\"],\"remaining\":[]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "",
+          "goal_status": "ACHIEVED",
+          "goal_reason": "첨부 이미지에 'STATUS: READY'가 표시되어 있으며 에이전트 응답과 일치한다.",
+          "goal_evidence": [
+            "첨부 이미지의 'STATUS: READY' 표시",
+            "응답 블록 0"
+          ],
+          "remaining": [],
+          "citation_uses": []
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19653,
+        "output": 71
+      },
+      "preparation_s": 0.016497915610671043,
+      "elapsed_s": 12.643416624516249,
+      "image_count": 1,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "native_image",
+      "repeat": 1,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "APPROVED",
+      "decisions": [
+        {
+          "status": "APPROVED",
+          "reason": "ACHIEVED\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"첨부 화면에 표시된 STATUS: READY와 에이전트의 보고가 일치한다.\",\"evidence\":[\"첨부 이미지 1\",\"응답 블록 0\"],\"remaining\":[]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "",
+          "goal_status": "ACHIEVED",
+          "goal_reason": "첨부 화면에 표시된 STATUS: READY와 에이전트의 보고가 일치한다.",
+          "goal_evidence": [
+            "첨부 이미지 1",
+            "응답 블록 0"
+          ],
+          "remaining": [],
+          "citation_uses": []
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19644,
+        "output": 63
+      },
+      "preparation_s": 0.010233375243842602,
+      "elapsed_s": 8.784117749892175,
+      "image_count": 1,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "native_image",
+      "repeat": 1,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 1회 실행은 확인되지만, 도구 결과의 이미지 데이터가 생략되어 실제 화면의 READY 표시를 확인할 수 없습니다. 필요한 근거는 evidence_id=f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1의 실제 이미지입니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 판독할 수 없어 READY 보고의 정확성을 확인할 수 없습니다.\",\"evidence\":[\"view_image 1회 호출 기록\",\"이미지 데이터가 일부 생략된 도구 결과\",\"block 0의 READY 주장\"],\"remaining\":[\"C1: 실제 화면의 상태와 READY 보고의 일치 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 1회 실행은 확인되지만, 도구 결과의 이미지 데이터가 생략되어 실제 화면의 READY 표시를 확인할 수 없습니다. 필요한 근거는 evidence_id=f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1의 실제 이미지입니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 판독할 수 없어 READY 보고의 정확성을 확인할 수 없습니다.\",\"evidence\":[\"view_image 1회 호출 기록\",\"이미지 데이터가 일부 생략된 도구 결과\",\"block 0의 READY 주장\"],\"remaining\":[\"C1: 실제 화면의 상태와 READY 보고의 일치 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면을 판독할 수 없어 READY 보고의 정확성을 확인할 수 없습니다.",
+          "goal_evidence": [
+            "view_image 1회 호출 기록",
+            "이미지 데이터가 일부 생략된 도구 결과",
+            "block 0의 READY 주장"
+          ],
+          "remaining": [
+            "C1: 실제 화면의 상태와 READY 보고의 일치 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18944,
+        "output": 245
+      },
+      "preparation_s": 0.08512179274111986,
+      "elapsed_s": 18.945825958624482,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "native_image",
+      "repeat": 2,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 호출은 확인되지만, 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1에는 이미지 데이터가 생략된 텍스트만 제공되어 실제 상태가 READY인지 대조할 수 없습니다. 해당 도구 결과의 실제 화면 이미지가 필요합니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면의 상태를 확인할 수 없어 READY 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"view_image 1회 호출 기록\",\"블록 0의 READY 보고\"],\"remaining\":[\"C1: 실제 화면 상태와 READY 보고의 일치 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 호출은 확인되지만, 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1에는 이미지 데이터가 생략된 텍스트만 제공되어 실제 상태가 READY인지 대조할 수 없습니다. 해당 도구 결과의 실제 화면 이미지가 필요합니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면의 상태를 확인할 수 없어 READY 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"view_image 1회 호출 기록\",\"블록 0의 READY 보고\"],\"remaining\":[\"C1: 실제 화면 상태와 READY 보고의 일치 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면의 상태를 확인할 수 없어 READY 보고의 정확성을 판단할 수 없습니다.",
+          "goal_evidence": [
+            "view_image 1회 호출 기록",
+            "블록 0의 READY 보고"
+          ],
+          "remaining": [
+            "C1: 실제 화면 상태와 READY 보고의 일치 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18948,
+        "output": 241
+      },
+      "preparation_s": 0.04809933342039585,
+      "elapsed_s": 17.97582691721618,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "native_image",
+      "repeat": 2,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "APPROVED",
+      "status": "APPROVED",
+      "decisions": [
+        {
+          "status": "APPROVED",
+          "reason": "ACHIEVED\nGOAL_OUTCOME: {\"status\":\"ACHIEVED\",\"reason\":\"첨부 화면에 표시된 'STATUS: READY'와 에이전트의 READY 보고가 일치한다.\",\"evidence\":[\"첨부 이미지의 STATUS: READY\",\"응답 블록 0\"],\"remaining\":[]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "",
+          "goal_status": "ACHIEVED",
+          "goal_reason": "첨부 화면에 표시된 'STATUS: READY'와 에이전트의 READY 보고가 일치한다.",
+          "goal_evidence": [
+            "첨부 이미지의 STATUS: READY",
+            "응답 블록 0"
+          ],
+          "remaining": [],
+          "citation_uses": []
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19657,
+        "output": 68
+      },
+      "preparation_s": 0.009823041968047619,
+      "elapsed_s": 8.424911166541278,
+      "image_count": 1,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "wrong_image",
+      "repeat": 0,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1의 정확성을 판단할 실제 화면이 제공되지 않았습니다. 도구 결과 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1에는 이미지 데이터가 일부 생략되어 있습니다. view_image 호출은 확인되지만, 화면에 ERROR가 표시됐는지는 확인할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 수 없어 ERROR라는 보고의 정확성과 원래 목표 달성 여부를 판단할 수 없습니다.\",\"evidence\":[\"실행 원장의 view_image 1회 호출\",\"이미지 데이터가 일부 생략된 도구 결과\"],\"remaining\":[\"C1: 실제 화면의 상태와 보고 내용의 일치 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "f0182117bf75dca0d4721c71607dbce2a5bb4350936480faeda49be7ea7538e7",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1의 정확성을 판단할 실제 화면이 제공되지 않았습니다. 도구 결과 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1에는 이미지 데이터가 일부 생략되어 있습니다. view_image 호출은 확인되지만, 화면에 ERROR가 표시됐는지는 확인할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 수 없어 ERROR라는 보고의 정확성과 원래 목표 달성 여부를 판단할 수 없습니다.\",\"evidence\":[\"실행 원장의 view_image 1회 호출\",\"이미지 데이터가 일부 생략된 도구 결과\"],\"remaining\":[\"C1: 실제 화면의 상태와 보고 내용의 일치 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면을 확인할 수 없어 ERROR라는 보고의 정확성과 원래 목표 달성 여부를 판단할 수 없습니다.",
+          "goal_evidence": [
+            "실행 원장의 view_image 1회 호출",
+            "이미지 데이터가 일부 생략된 도구 결과"
+          ],
+          "remaining": [
+            "C1: 실제 화면의 상태와 보고 내용의 일치 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18951,
+        "output": 221
+      },
+      "preparation_s": 0.021486500278115273,
+      "elapsed_s": 17.188346832990646,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "wrong_image",
+      "repeat": 0,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"첨부 화면에는 'STATUS: READY'가 표시되어 있으나 응답은 ERROR라고 보고했다.\", \"repair\": \"화면의 상태가 READY라고 정정한다.\"}]",
+          "severity": 3,
+          "response_version": 2,
+          "response_hash": "f0182117bf75dca0d4721c71607dbce2a5bb4350936480faeda49be7ea7538e7",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"첨부 화면에는 'STATUS: READY'가 표시되어 있으나 응답은 ERROR라고 보고했다.\", \"repair\": \"화면의 상태가 READY라고 정정한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "실제 화면과 다른 상태를 보고하여 정확한 확인 요청을 충족하지 못했다.",
+          "goal_evidence": [
+            "첨부 이미지: STATUS: READY",
+            "블록 0: 상태는 ERROR입니다."
+          ],
+          "remaining": [
+            "READY 상태로 보고 정정"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "첨부 화면에는 'STATUS: READY'가 표시되어 있으나 응답은 ERROR라고 보고했다.",
+              "repair": "화면의 상태가 READY라고 정정한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19639,
+        "output": 149
+      },
+      "preparation_s": 0.008879374712705612,
+      "elapsed_s": 10.445057915523648,
+      "image_count": 1,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "wrong_image",
+      "repeat": 1,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"첨부 화면에는 'STATUS: READY'가 표시되어 있지만 응답은 ERROR라고 보고했다.\", \"repair\": \"화면의 상태가 READY라고 정정한다.\"}]",
+          "severity": 3,
+          "response_version": 2,
+          "response_hash": "f0182117bf75dca0d4721c71607dbce2a5bb4350936480faeda49be7ea7538e7",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"첨부 화면에는 'STATUS: READY'가 표시되어 있지만 응답은 ERROR라고 보고했다.\", \"repair\": \"화면의 상태가 READY라고 정정한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "실제 화면의 상태를 잘못 보고했다.",
+          "goal_evidence": [
+            "첨부 이미지: STATUS: READY",
+            "블록 0: ERROR라고 보고"
+          ],
+          "remaining": [
+            "READY 상태를 정확히 보고"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "첨부 화면에는 'STATUS: READY'가 표시되어 있지만 응답은 ERROR라고 보고했다.",
+              "repair": "화면의 상태가 READY라고 정정한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19656,
+        "output": 138
+      },
+      "preparation_s": 0.00824766606092453,
+      "elapsed_s": 9.88327454123646,
+      "image_count": 1,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "wrong_image",
+      "repeat": 1,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 호출은 확인되지만, 도구 결과의 이미지 데이터가 생략되어 실제 화면 상태를 판독할 수 없습니다. 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1의 판독 가능한 원본 이미지가 필요하며, 현재 증거로는 ERROR라는 보고의 정확성을 확인할 수 없습니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 판독할 수 없어 READY 여부에 대한 보고의 정확성을 확인할 수 없습니다.\",\"evidence\":[\"view_image 1회 호출 기록\",\"이미지 데이터가 생략된 도구 결과\"],\"remaining\":[\"C1: 실제 화면 상태와 보고 내용의 일치 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "f0182117bf75dca0d4721c71607dbce2a5bb4350936480faeda49be7ea7538e7",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1: view_image 호출은 확인되지만, 도구 결과의 이미지 데이터가 생략되어 실제 화면 상태를 판독할 수 없습니다. 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1의 판독 가능한 원본 이미지가 필요하며, 현재 증거로는 ERROR라는 보고의 정확성을 확인할 수 없습니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 판독할 수 없어 READY 여부에 대한 보고의 정확성을 확인할 수 없습니다.\",\"evidence\":[\"view_image 1회 호출 기록\",\"이미지 데이터가 생략된 도구 결과\"],\"remaining\":[\"C1: 실제 화면 상태와 보고 내용의 일치 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면을 판독할 수 없어 READY 여부에 대한 보고의 정확성을 확인할 수 없습니다.",
+          "goal_evidence": [
+            "view_image 1회 호출 기록",
+            "이미지 데이터가 생략된 도구 결과"
+          ],
+          "remaining": [
+            "C1: 실제 화면 상태와 보고 내용의 일치 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18946,
+        "output": 234
+      },
+      "preparation_s": 0.05204333271831274,
+      "elapsed_s": 15.576952625066042,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "wrong_image",
+      "repeat": 2,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1의 정확성을 확인할 실제 화면이 제공되지 않았습니다. 도구 결과 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1에는 이미지 데이터가 일부 생략되어 있어, “ERROR”라는 보고를 화면과 대조할 수 없습니다. 해당 증거의 실제 이미지가 필요합니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"이미지 열람 호출은 확인되지만 실제 화면의 상태와 보고의 일치 여부는 확인할 수 없습니다.\",\"evidence\":[\"view_image (×1)\",\"블록 0: 상태는 ERROR라는 보고\"],\"remaining\":[\"실제 화면 상태와 보고의 일치 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "f0182117bf75dca0d4721c71607dbce2a5bb4350936480faeda49be7ea7538e7",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1의 정확성을 확인할 실제 화면이 제공되지 않았습니다. 도구 결과 증거 f6cc5d22a211b5c854854e541ca7a749a4e79b598c411522c8b3cd8d4a4d0fc1에는 이미지 데이터가 일부 생략되어 있어, “ERROR”라는 보고를 화면과 대조할 수 없습니다. 해당 증거의 실제 이미지가 필요합니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"이미지 열람 호출은 확인되지만 실제 화면의 상태와 보고의 일치 여부는 확인할 수 없습니다.\",\"evidence\":[\"view_image (×1)\",\"블록 0: 상태는 ERROR라는 보고\"],\"remaining\":[\"실제 화면 상태와 보고의 일치 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "이미지 열람 호출은 확인되지만 실제 화면의 상태와 보고의 일치 여부는 확인할 수 없습니다.",
+          "goal_evidence": [
+            "view_image (×1)",
+            "블록 0: 상태는 ERROR라는 보고"
+          ],
+          "remaining": [
+            "실제 화면 상태와 보고의 일치 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 18947,
+        "output": 232
+      },
+      "preparation_s": 0.04946141690015793,
+      "elapsed_s": 16.074388708919287,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "wrong_image",
+      "repeat": 2,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "REWORK",
+      "status": "REWORK",
+      "decisions": [
+        {
+          "status": "REWORK",
+          "reason": "NOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"첨부 화면에는 'STATUS: READY'가 표시되어 있으나 블록 0은 상태를 ERROR로 보고했다.\", \"repair\": \"화면의 상태가 READY라고 정정한다.\"}]",
+          "severity": 3,
+          "response_version": 2,
+          "response_hash": "f0182117bf75dca0d4721c71607dbce2a5bb4350936480faeda49be7ea7538e7",
+          "instruction": "아래에서 지적한 결함을 우선 보완하세요. 지적되지 않은 원래 완료 기준도 유지됩니다. 기존 조사·산출물을 재사용하고 전체 작업을 다시 시작하거나 새 개선 목표를 추가하지 마세요.\nNOT_ACHIEVED\nSEVERITY: 3\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: [\"0\"]\nDEFECTS: [{\"criterion_id\": \"C1\", \"evidence\": \"첨부 화면에는 'STATUS: READY'가 표시되어 있으나 블록 0은 상태를 ERROR로 보고했다.\", \"repair\": \"화면의 상태가 READY라고 정정한다.\"}]",
+          "goal_status": "NOT_ACHIEVED",
+          "goal_reason": "실제 화면의 READY 상태를 ERROR로 잘못 전달했다.",
+          "goal_evidence": [
+            "첨부 이미지: STATUS: READY",
+            "블록 0: 상태는 ERROR"
+          ],
+          "remaining": [
+            "READY 여부를 정확히 보고"
+          ],
+          "citation_uses": [],
+          "defects": [
+            {
+              "criterion_id": "C1",
+              "evidence": "첨부 화면에는 'STATUS: READY'가 표시되어 있으나 블록 0은 상태를 ERROR로 보고했다.",
+              "repair": "화면의 상태가 READY라고 정정한다."
+            }
+          ],
+          "repair_scope": "local",
+          "repair_block_ids": [
+            "0"
+          ]
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 19653,
+        "output": 146
+      },
+      "preparation_s": 0.01162354089319706,
+      "elapsed_s": 9.680216957814991,
+      "image_count": 1,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "empty_capture",
+      "repeat": 0,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "UNKNOWN",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1을 확인할 실제 화면이 제공되지 않았습니다. 도구 결과(evidence_id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 보여주므로 READY 여부를 검증할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면 상태를 확인할 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0\",\"도구 결과: stdout 빈 문자열, exit_code 0\"],\"remaining\":[\"C1: 실제 화면 상태와 READY 보고의 일치 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1을 확인할 실제 화면이 제공되지 않았습니다. 도구 결과(evidence_id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 보여주므로 READY 여부를 검증할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면 상태를 확인할 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0\",\"도구 결과: stdout 빈 문자열, exit_code 0\"],\"remaining\":[\"C1: 실제 화면 상태와 READY 보고의 일치 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면 상태를 확인할 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.",
+          "goal_evidence": [
+            "응답 블록 0",
+            "도구 결과: stdout 빈 문자열, exit_code 0"
+          ],
+          "remaining": [
+            "C1: 실제 화면 상태와 READY 보고의 일치 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 17221,
+        "output": 166
+      },
+      "preparation_s": 0.04789954051375389,
+      "elapsed_s": 11.288572125136852,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "empty_capture",
+      "repeat": 0,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "UNKNOWN",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "UNKNOWN\nUNKNOWN_REASON: evidence — C1을 검증할 실제 화면이 제공되지 않았습니다. 도구 결과 증거 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19는 빈 stdout과 종료 코드 0만 포함하므로 READY 여부를 확인할 수 없습니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면의 상태를 확인할 시각 증거가 없어 READY 보고의 정확성을 판단할 수 없다.\",\"evidence\":[\"visual_evidence가 비어 있음\",\"도구 결과에 화면 상태가 없음\"],\"remaining\":[\"C1: 실제 화면의 READY 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\nUNKNOWN\nUNKNOWN_REASON: evidence — C1을 검증할 실제 화면이 제공되지 않았습니다. 도구 결과 증거 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19는 빈 stdout과 종료 코드 0만 포함하므로 READY 여부를 확인할 수 없습니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면의 상태를 확인할 시각 증거가 없어 READY 보고의 정확성을 판단할 수 없다.\",\"evidence\":[\"visual_evidence가 비어 있음\",\"도구 결과에 화면 상태가 없음\"],\"remaining\":[\"C1: 실제 화면의 READY 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면의 상태를 확인할 시각 증거가 없어 READY 보고의 정확성을 판단할 수 없다.",
+          "goal_evidence": [
+            "visual_evidence가 비어 있음",
+            "도구 결과에 화면 상태가 없음"
+          ],
+          "remaining": [
+            "C1: 실제 화면의 READY 여부 확인"
+          ],
+          "citation_uses": [],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 17255,
+        "output": 158
+      },
+      "preparation_s": 0.006765666417777538,
+      "elapsed_s": 15.95352816581726,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "empty_capture",
+      "repeat": 1,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "UNKNOWN",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "UNKNOWN\nUNKNOWN_REASON: evidence — C1: 실제 화면 이미지가 제공되지 않아 READY 여부를 확인할 수 없습니다. 도구 결과(증거 id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 포함하므로 화면 상태를 입증하지 않습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 시각 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0의 READY 주장\",\"visual_evidence가 비어 있음\",\"도구 결과의 빈 stdout과 종료 코드 0\"],\"remaining\":[\"실제 화면 상태가 READY인지 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\nUNKNOWN\nUNKNOWN_REASON: evidence — C1: 실제 화면 이미지가 제공되지 않아 READY 여부를 확인할 수 없습니다. 도구 결과(증거 id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 포함하므로 화면 상태를 입증하지 않습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 시각 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0의 READY 주장\",\"visual_evidence가 비어 있음\",\"도구 결과의 빈 stdout과 종료 코드 0\"],\"remaining\":[\"실제 화면 상태가 READY인지 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면을 확인할 시각 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.",
+          "goal_evidence": [
+            "응답 블록 0의 READY 주장",
+            "visual_evidence가 비어 있음",
+            "도구 결과의 빈 stdout과 종료 코드 0"
+          ],
+          "remaining": [
+            "실제 화면 상태가 READY인지 확인"
+          ],
+          "citation_uses": [],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 17255,
+        "output": 224
+      },
+      "preparation_s": 0.016751709394156933,
+      "elapsed_s": 18.337411167100072,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "empty_capture",
+      "repeat": 1,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "UNKNOWN",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1을 검증할 실제 화면이 제공되지 않았습니다. 도구 실행 결과(증거 id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 보여 주므로 화면의 READY 여부를 확인할 수 없습니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면의 상태를 확인할 증거가 없어 READY 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0의 READY 주장\",\"도구 결과의 빈 stdout 및 exit_code 0\"],\"remaining\":[\"실제 화면의 READY 여부 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1을 검증할 실제 화면이 제공되지 않았습니다. 도구 실행 결과(증거 id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 보여 주므로 화면의 READY 여부를 확인할 수 없습니다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면의 상태를 확인할 증거가 없어 READY 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0의 READY 주장\",\"도구 결과의 빈 stdout 및 exit_code 0\"],\"remaining\":[\"실제 화면의 READY 여부 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면의 상태를 확인할 증거가 없어 READY 보고의 정확성을 판단할 수 없습니다.",
+          "goal_evidence": [
+            "응답 블록 0의 READY 주장",
+            "도구 결과의 빈 stdout 및 exit_code 0"
+          ],
+          "remaining": [
+            "실제 화면의 READY 여부 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 17206,
+        "output": 165
+      },
+      "preparation_s": 0.0912744589149952,
+      "elapsed_s": 14.710679084062576,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "empty_capture",
+      "repeat": 2,
+      "arm": "baseline",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "UNKNOWN",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1의 실제 화면 확인과 READY 여부를 검증할 화면 증거가 없습니다. 도구 실행 결과(evidence_id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 제공하므로 상태를 확인할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0\",\"도구 결과: stdout 빈 문자열, exit_code 0\"],\"remaining\":[\"실제 화면의 상태가 READY인지 확인\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\n평가 응답에 달성 여부 판정이 없습니다: UNKNOWN\nUNKNOWN_REASON: evidence — C1의 실제 화면 확인과 READY 여부를 검증할 화면 증거가 없습니다. 도구 실행 결과(evidence_id: 0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 stdout과 종료 코드 0만 제공하므로 상태를 확인할 수 없습니다.\n\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.\",\"evidence\":[\"응답 블록 0\",\"도구 결과: stdout 빈 문자열, exit_code 0\"],\"remaining\":[\"실제 화면의 상태가 READY인지 확인\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면 증거가 없어 READY라는 보고의 정확성을 판단할 수 없습니다.",
+          "goal_evidence": [
+            "응답 블록 0",
+            "도구 결과: stdout 빈 문자열, exit_code 0"
+          ],
+          "remaining": [
+            "실제 화면의 상태가 READY인지 확인"
+          ],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 17227,
+        "output": 162
+      },
+      "preparation_s": 0.1259409999474883,
+      "elapsed_s": 14.67643008287996,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    },
+    {
+      "case": "empty_capture",
+      "repeat": 2,
+      "arm": "candidate",
+      "model": "gpt-6-astra:high",
+      "baseline": "2f34b274644ff601736e06010b497644305687b7",
+      "expected": "UNKNOWN",
+      "status": "UNKNOWN",
+      "decisions": [
+        {
+          "status": "UNKNOWN",
+          "reason": "UNKNOWN\nUNKNOWN_REASON: evidence — C1: 실제 화면 이미지가 제공되지 않아 READY 여부를 확인할 수 없다. 실행 원장(e43ed55e4d37ef16d6a14d582940b62dd109eedf154aa8d4c93269fc38628aca)과 도구 결과(0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 출력의 명령 실행만 보여주며 화면 상태를 입증하지 않는다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 증거가 없어 READY라는 보고의 정확성을 판단할 수 없다.\",\"evidence\":[\"block 0의 READY 주장\",\"visual_evidence: []\",\"도구 결과: stdout 비어 있음, exit_code 0\"],\"remaining\":[\"C1: 실제 화면의 READY 여부 확인 근거\"]}",
+          "severity": 0,
+          "response_version": 2,
+          "response_hash": "166309a9a24ecffa45a537cc6d923f2dfb2b38bb09a3d065da577e1967110c26",
+          "instruction": "판단에 부족한 증거만 보충하세요. 인계의 tool_index/result.id와 기존 검사 출력을 먼저 읽고, 실제로 빠진 검사만 실행하세요. 전체 조사·구현을 반복하지 마세요. 확인한 기준과 실제 결과를 짧게 응답에 보충하고, 변경이 없으면 keep로 확정하세요.\nUNKNOWN\nUNKNOWN_REASON: evidence — C1: 실제 화면 이미지가 제공되지 않아 READY 여부를 확인할 수 없다. 실행 원장(e43ed55e4d37ef16d6a14d582940b62dd109eedf154aa8d4c93269fc38628aca)과 도구 결과(0a3fe5d2477ff20d5179688cab8e0e3f3c4926a03546342dab65963ce2226e19)는 빈 출력의 명령 실행만 보여주며 화면 상태를 입증하지 않는다.\nGOAL_OUTCOME: {\"status\":\"UNKNOWN\",\"reason\":\"실제 화면을 확인할 증거가 없어 READY라는 보고의 정확성을 판단할 수 없다.\",\"evidence\":[\"block 0의 READY 주장\",\"visual_evidence: []\",\"도구 결과: stdout 비어 있음, exit_code 0\"],\"remaining\":[\"C1: 실제 화면의 READY 여부 확인 근거\"]}",
+          "goal_status": "UNKNOWN",
+          "goal_reason": "실제 화면을 확인할 증거가 없어 READY라는 보고의 정확성을 판단할 수 없다.",
+          "goal_evidence": [
+            "block 0의 READY 주장",
+            "visual_evidence: []",
+            "도구 결과: stdout 비어 있음, exit_code 0"
+          ],
+          "remaining": [
+            "C1: 실제 화면의 READY 여부 확인 근거"
+          ],
+          "citation_uses": [],
+          "repair_scope": "evidence",
+          "repair_block_ids": [],
+          "recoverable": true,
+          "evidence_request_validation": {
+            "status": "absent",
+            "requests": [],
+            "errors": [],
+            "normalizations": []
+          }
+        }
+      ],
+      "calls": 1,
+      "usage": {
+        "input": 17257,
+        "output": 208
+      },
+      "preparation_s": 0.009559083729982376,
+      "elapsed_s": 13.276397000066936,
+      "image_count": 0,
+      "artifact_count": 0,
+      "stored_unchanged": true
+    }
+  ],
+  "limits": [
+    "Fixed synthetic evidence and configured real evaluator; no external research or notification.",
+    "Isolated input, evaluation, recovery and storage timing; not an end-to-end open research benchmark."
+  ]
+}

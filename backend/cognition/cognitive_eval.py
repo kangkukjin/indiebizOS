@@ -164,175 +164,146 @@ class CognitiveEvalMixin:
                                 tool_calls: Optional[List[Dict[str, Any]]] = None, *,
                                 exclude_paths=(), snapshots=None, full_content=False,
                                 attachments=None, evidence_store=None) -> str:
-        """생성/수정된 파일 경로를 찾아 내용을 읽는다.
-
-        1차: tool_calls(있으면)에서 Write/Edit/MultiEdit/NotebookEdit 같은 파일 변경 도구의
-             input.file_path 등을 직접 수집. IBL execute_ibl `[self:write]` 같은 케이스도
-             input.params.path 등에서 추출. 응답 텍스트에 안 보여도 누락 안 됨.
-        2차: 응답 텍스트에서 절대 경로 정규식 fallback — 1차에서 못 찾은 경로 보강용.
-
-        Args:
-            response: 에이전트 최종 응답 텍스트
-            tool_calls: `{name, input, result, ...}` 리스트 (선택)
-        """
-        import os
-
-        paths_seen: List[str] = []
-        seen_set: set = set()
-
-        def _add(path: str):
-            if path and path not in seen_set and path not in exclude_paths and path.startswith("/"):
-                seen_set.add(path)
-                paths_seen.append(path)
-
-        # 1차: tool_calls에서 직접 수집
-        if tool_calls:
-            for entry in tool_calls:
-                if not isinstance(entry, dict):
-                    continue
-                name = entry.get("name") or entry.get("tool_name") or ""
-                inp = entry.get("input") or {}
-                if not isinstance(inp, dict):
-                    continue
-
-                # 표준 Write/Edit 류
-                if name in _FILE_WRITE_TOOL_NAMES or name.endswith("/Write") or name.endswith("/Edit"):
-                    for key in _FILE_PATH_INPUT_KEYS:
-                        v = inp.get(key)
-                        if isinstance(v, str):
-                            _add(v)
-
-                # IBL self:write 같은 케이스: execute_ibl({node:"self", action:"write", params:{path:...}})
-                if name in ("execute_ibl", "mcp__indiebizos__execute_ibl"):
-                    params = inp.get("params") or {}
-                    if isinstance(params, dict):
-                        for key in _FILE_PATH_INPUT_KEYS:
-                            v = params.get(key)
-                            if isinstance(v, str):
-                                _add(v)
-
-        # 2차: 응답 텍스트에서 절대 경로 fallback (1차에서 못 잡은 경우 보강)
-        path_pattern = re.compile(r'(/[^\s"\'<>]+\.\w{1,10})')
-        for p in path_pattern.findall(response or ""):
-            _add(p)
-
-        files_content = []
-        for path in paths_seen:
-            if os.path.isfile(path):
-                try:
-                    with open(path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    if snapshots is not None:
-                        from supervision_store import digest
-                        snapshots[path] = digest(content)
-                    if evidence_store is not None:
-                        ref = evidence_store.evidence(content)
-                        content = evidence_store.read_evidence(ref['id'], 0, None)['text']
-                        if attachments is not None:
-                            from evaluation_input import record
-                            attachments.append(record(content, subject=path, source_ref=ref['id'], revision=ref['id']))
-                    if not full_content and len(content) > 10000:
-                        content = content[:10000] + "\n\n... (10000자 초과, 생략됨)"
-                    elif full_content:
-                        content = bounded_attachment(path, content)
-                    files_content.append(f"### {os.path.basename(path)} ({path})\n```\n{content}\n```")
-                except Exception:
-                    pass
-
-        return "\n\n".join(files_content) if files_content else ""
+        """Use the shared output collection; a link alone is not a new output."""
+        from types import SimpleNamespace
+        from model_result_view import evidence_store as current_store
+        from supervisor_content import discover
+        from evaluation_input import record
+        store = evidence_store or current_store()
+        controller = SimpleNamespace(store=store, project_path=getattr(self, 'project_path', None) or '.')
+        files = []
+        for artifact in discover(controller, response, tool_calls):
+            path = artifact['path']
+            if path in exclude_paths:
+                continue
+            if artifact.get('error'):
+                files.append(f"### {path}\n원문 회수 불가: {artifact['error']}")
+                continue
+            content = store.read_evidence(artifact['evidence_id'], 0, None)['text']
+            if snapshots is not None:
+                snapshots[path] = artifact['hash']
+            if attachments is not None:
+                attachments.append(record(content, subject=path, source_ref=artifact['evidence_id'],
+                                          revision=artifact['evidence_id'], role='submission'))
+            files.append(f"### {path}\n{bounded_attachment(path, content)}")
+        return '\n\n'.join(files)
 
     _VISUAL_EXTS = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                     ".webp": "image/webp", ".gif": "image/gif"}
 
     def _collect_visual_artifacts(self, response: str,
-                                   tool_calls: Optional[List[Dict[str, Any]]] = None,
-                                   max_images: int = 3) -> List[Dict[str, str]]:
-        """생성된 시각 산출물(이미지)을 멀티모달 평가용으로 수집한다 (G 루프 보편 백스톱).
+                                   tool_calls=None, max_images=3, evidence_store=None):
+        """Preserve actual pixels in the existing evidence store, including native returns.
 
-        _collect_created_files는 파일을 UTF-8 텍스트로 읽어 이미지를 조용히 버린다 —
-        이게 평가자가 픽셀을 못 보던 물리적 원인. 여기서는 이미지 경로를 따로 모아
-        base64로 인코딩해 평가자(경량 비전 모델)가 직접 보게 한다.
-
-        수집원: tool_calls의 input(파일 경로 키)·result(산출 경로, 예 image_path)·응답 텍스트.
-        반환: [{"base64","media_type","_path"}], 최신순 max_images개.
+        Paths are observations, never proof that a capture command succeeded. Once
+        registered, a call's image bytes cannot be replaced by a later file at that path.
         """
-        import os, base64 as _b64
-        cand: List[str] = []
-        seen: set = set()
+        import base64
+        from pathlib import Path
+        from types import SimpleNamespace
+        from supervisor_content import result_paths
+        images, errors, seen = [], [], set()
+        store = evidence_store
+        image_path = re.compile(r'(?<![^\s"\'<>`(\[={])(/[^\s"\'<>`]+\.(?:png|jpe?g|webp|gif))(?=$|[\s"\'<>`)\]},;])', re.I)
 
-        def _add(p):
-            if (isinstance(p, str) and p.startswith("/")
-                    and os.path.splitext(p)[1].lower() in self._VISUAL_EXTS
-                    and p not in seen):
-                seen.add(p)
-                cand.append(p)
+        def add(data, media, path='', observed_at=None, ref=None):
+            try:
+                raw = base64.b64decode(data, validate=True)
+                if not raw or len(raw) > 6 * 1024 * 1024:
+                    raise ValueError('이미지가 비었거나 공급자 입력 크기를 초과했습니다')
+                from PIL import Image
+                import io
+                with Image.open(io.BytesIO(raw)) as decoded:
+                    decoded.verify()
+                import hashlib
+                fingerprint = hashlib.sha256(raw).hexdigest()
+                if fingerprint in seen:
+                    return
+                seen.add(fingerprint)
+                value = {'base64': data, 'media_type': media, '_path': path,
+                         'observed_at': observed_at, 'sha256': fingerprint}
+                if store and not ref:
+                    ref = store.evidence(value)['id']
+                images.append({**value, '_evidence_id': ref})
+            except (ValueError, TypeError, OSError) as exc:
+                errors.append({'path': path, 'error': str(exc)})
 
-        # 경로는 토큰 경계에서만 시작한다. base64의 매 '/'부터 긴 실패 검색을
-        # 반복하던 정규식은 이미지가 많은 턴의 최종 준비를 수십 초 막았다.
-        img_re = re.compile(
-            r'(?<![^\s"\'<>`(\[={])(/[^\s"\'<>`]+\.(?:png|jpe?g|webp|gif))'
-            r'(?=$|[\s"\'<>`)\]},;])', re.IGNORECASE)
+        def path_image(path):
+            if not isinstance(path, str) or Path(path).suffix.lower() not in self._VISUAL_EXTS:
+                return
+            try:
+                raw = Path(path).read_bytes()
+                add(base64.b64encode(raw).decode(), self._VISUAL_EXTS[Path(path).suffix.lower()], path)
+            except OSError as exc:
+                errors.append({'path': path, 'error': str(exc)})
 
         def collect(value):
-            # 원 증거는 그대로 두고 JSON 구조의 문자열만 본다. 이미지 바이트는
-            # 파일 경로가 아니며, 이 함수는 생성된 로컬 산출물만 수집한다.
-            pending = [value]
-            while pending:
-                item = pending.pop()
-                if isinstance(item, dict):
-                    pending.extend(v for k, v in reversed(list(item.items()))
-                                   if k not in {"base64", "b64", "image_base64"})
-                elif isinstance(item, list):
-                    pending.extend(reversed(item))
-                elif isinstance(item, str):
-                    stripped = item.lstrip()
-                    if stripped.startswith(("{", "[")):
-                        try:
-                            pending.append(json.loads(item))
-                            continue
-                        except ValueError:
-                            pass  # 기존 평문/Markdown 도구 결과도 지원한다.
-                    if stripped.startswith("data:"):
-                        continue
-                    _add(item)  # 구조화된 경로는 공백·한글도 원형대로 받는다.
-                    for path in img_re.findall(item):
-                        _add(path)
+            if isinstance(value, str):
+                if value.lstrip().startswith(('{', '[')):
+                    try:
+                        collect(json.loads(value))
+                        return
+                    except ValueError:
+                        pass
+                if value.startswith('data:image/') and ';base64,' in value:
+                    header, data = value.split(';base64,', 1)
+                    add(data, header[5:])
+                    return
+                path_image(value)
+                for path in image_path.findall(value):
+                    path_image(path)
+            elif isinstance(value, list):
+                for item in value:
+                    collect(item)
+            elif isinstance(value, dict):
+                data = value.get('base64') or value.get('image_base64')
+                if value.get('type') == 'image':
+                    data = data or value.get('data')
+                media = value.get('media_type') or value.get('mimeType') or 'image/png'
+                if data:
+                    add(data, media, value.get('_path', ''), value.get('observed_at'))
+                for key, item in value.items():
+                    if key not in {'base64', 'b64', 'image_base64', 'data'}:
+                        collect(item)
 
-        if tool_calls:
-            for entry in tool_calls:
-                if not isinstance(entry, dict):
-                    continue
-                inp = entry.get("input") or {}
-                if isinstance(inp, dict):
-                    for key in _FILE_PATH_INPUT_KEYS:
-                        _add(inp.get(key))
-                    params = inp.get("params")
-                    if isinstance(params, dict):
-                        for key in _FILE_PATH_INPUT_KEYS:
-                            _add(params.get(key))
-                collect(entry.get("result"))
-
-        collect(response or "")
-
-        # 실존+크기 검증을 max_images 슬라이스 *전에* 수행 — 그래야 상한이 진짜
-        # 이미지에만 쓰인다. (상대경로 'slides/s.png' 안의 '/s.png' 조각 같은 가짜
-        # 후보가 창을 갉아먹어 실제 이미지가 덜 첨부되던 것을 막는다.)
-        valid = [p for p in cand
-                 if os.path.isfile(p) and os.path.getsize(p) <= 6 * 1024 * 1024]
-        # 최신순 max_images개 (마지막 산출물이 보통 최종본)
-        chosen = valid[-max_images:] if len(valid) > max_images else valid
-        artifacts: List[Dict[str, str]] = []
-        for path in chosen:
-            try:
-                with open(path, "rb") as f:
-                    b64 = _b64.b64encode(f.read()).decode("utf-8")
-                mt = self._VISUAL_EXTS.get(os.path.splitext(path)[1].lower(), "image/png")
-                artifacts.append({"base64": b64, "media_type": mt, "_path": path})
-            except Exception:
-                pass
-        if len(valid) > len(artifacts) and artifacts:
-            self._log(f"[GoalEval] 시각 산출물 {len(valid)}개 중 {len(artifacts)}개만 평가 첨부(상한)")
-        return artifacts
+        for entry in tool_calls or []:
+            if not isinstance(entry, dict) or entry.get('is_error'):
+                continue
+            cached = entry.get('visual_evidence')
+            if cached is not None and store:
+                for ref in cached:
+                    try:
+                        page = store.read_evidence(ref['id'], 0, None)
+                        if page.get('integrity') != 'verified':
+                            raise ValueError('이미지 원문 무결성 확인 실패')
+                        value = json.loads(page['text'])
+                        add(value['base64'], value['media_type'], value.get('_path', ''),
+                            value.get('observed_at'), ref['id'])
+                    except (ValueError, OSError, KeyError) as exc:
+                        errors.append({'evidence_id': ref['id'], 'error': str(exc)})
+                continue
+            start = len(images)
+            collect(entry.get('result'))
+            # Native image reads return pixels or a path; an arbitrary shell input
+            # is never parsed to infer a screenshot that was not returned.
+            name = (entry.get('name') or entry.get('tool_name') or '').rsplit('__', 1)[-1].rsplit('.', 1)[-1]
+            if name in {'view_image', 'read_image', 'open_image'}:
+                for key in _FILE_PATH_INPUT_KEYS:
+                    path_image((entry.get('input') or {}).get(key))
+            if store:
+                for path in result_paths(SimpleNamespace(store=store), entry):
+                    path_image(path)
+                entry['visual_evidence'] = [{'id': img['_evidence_id'], 'path': img['_path']}
+                                           for img in images[start:]]
+        # Explicit response images are evidence candidates too. File bytes, not
+        # their textual mention, are delivered; failures remain visible.
+        for path in image_path.findall(response or ''):
+            path_image(path)
+        self.visual_evidence = [{'id': img['_evidence_id'], 'path': img['_path'],
+                                 'sha256': img['sha256'], 'observed_at': img['observed_at']}
+                                for img in images]
+        self.visual_errors = errors
+        return images if max_images is None else images[-max_images:]
 
     # 예약이 이보다 오래 apply_scheduled 로 남아 있으면 수행자(red_apply) 좌초로 보고
     # 주입하지 않는다 — red_report.SCHEDULED_STALE_S 와 같은 값(그쪽이 좌초 재보고를 맡는다).
@@ -446,6 +417,7 @@ class CognitiveEvalMixin:
         self.evaluation_failure = None
         self.evaluation_retryable = False
         self.evaluation_usage = {}
+        self.citation_uses = []
         from evaluation_input import EvaluationPrompt, context_sections, record
         sections = []
         try:
@@ -592,9 +564,23 @@ class CognitiveEvalMixin:
             # 관용 파서 — 서두 문장·마크다운 장식 뒤로 밀린 판정도 흡수 (모듈 함수 참조)
             self.goal_outcome = parse_goal_outcome(eval_response)
             achieved, severity = parse_eval_verdict(eval_response)
+            if achieved is True and reference_context.get('research_claims'):
+                from research_review import citation_uses
+                try:
+                    self.citation_uses, unresolved = citation_uses(eval_response,
+                        reference_context['research_claims'], reference_context['research_citations']['valid'])
+                except ValueError as exc:
+                    self.evaluation_failure = {'kind': 'protocol', 'message': str(exc)}
+                    self.goal_outcome = parse_goal_outcome('')
+                    return None, str(exc), 0
+                if unresolved:
+                    self.citation_uses = []
+                    self.goal_outcome = parse_goal_outcome('')
+                    return None, ('UNKNOWN\nUNKNOWN_REASON: evidence\n실제 근거로 채택한 인용의 원문이 없습니다: '
+                                  + json.dumps(unresolved, ensure_ascii=False)), 0
             if achieved is None:
                 self.evaluation_retryable = not bool(_VERDICT_WORD_RE.search(eval_response))
-                return None, "평가 응답에 달성 여부 판정이 없습니다: " + eval_response, 0
+                return None, eval_response if _VERDICT_WORD_RE.search(eval_response) else "평가 응답 형식 오류: " + eval_response, 0
             if achieved is False:
                 defects = parse_criterion_defects(eval_response, contract)
                 if not defects:
@@ -659,64 +645,32 @@ class CognitiveEvalMixin:
         clear_goal_eval_outcome()
         response = initial_response
 
-        def unreviewed(reason, *, status="UNKNOWN"):
-            set_goal_eval_outcome(False, 0, status=status, reason=reason)
-            # 기존 증거 보관함에 남겨 재실행 없이 다음 요청에서 검수할 수 있다.
+        def persist_review(learning):
             from model_result_view import evidence_store
             from supervision_store import digest
-            store = evidence_store()
-            ref = store.evidence(response)
-            (store.directory / "review_status.json").write_text(json.dumps({
-                **get_goal_eval_outcome(), "original_goal": user_message,
-                "criteria": criteria, "response": {"hash": digest(response), **ref},
-                "learning": "deferred", "validator": "goal_eval",
-            }, ensure_ascii=False), encoding="utf-8")
-            return response + "\n\n[검수 미완료] " + reason
-
-        def rejected(reason, feedback, severity):
-            """검수에서 거절한 초안을 완료 응답으로 채택하지 않는다. 추가 모델 호출은 없다."""
-            from model_result_view import evidence_store
-            from supervision_store import digest
-            outcome = self.goal_outcome
-            goal_text = {
-                'NOT_ACHIEVED': '마지막 검수에서 사용자 목표가 미달성으로 판정됐습니다.',
-                'ACHIEVED': '목표 달성은 확인됐지만 응답에 보완이 필요합니다.',
-                'UNKNOWN': '목표 달성 여부는 확인되지 않았습니다.',
-            }[outcome['goal_status']]
-            parts = ['[검수 미통과] ' + reason, goal_text]
-            if outcome['goal_reason']:
-                parts.append('판정 근거: ' + outcome['goal_reason'])
-            if outcome['remaining']:
-                parts.append('남은 작업:\n' + '\n'.join('- ' + row for row in outcome['remaining']))
-            # 목표 상태와 별개로 응답 자체의 결함도 전달한다.
-            match = re.search(r'(?m)^DEFECTS:\s*(\[.*\])\s*$', feedback or '')
-            try:
-                defects = json.loads(match[1]) if match else []
-                details = [row['evidence'] + ' → ' + row['repair'] for row in defects]
-            except (ValueError, TypeError, KeyError):
-                details = []
-            if details:
-                parts.append('검수에서 필요한 보완:\n' + '\n'.join('- ' + row for row in details))
-            set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback, **outcome)
             try:
                 store = evidence_store()
-                draft = store.evidence(response)
-                parts.append(f"[검수 미통과 응답 원문](<{store.directory / (draft['id'] + '.txt')}>)")
-                delivered = '\n\n'.join(parts)
-                set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback,
-                                      response_hash=digest(delivered), **outcome)
+                ref = store.evidence(response)
                 (store.directory / 'review_status.json').write_text(json.dumps({
-                    **get_goal_eval_outcome(), 'original_goal': user_message,
-                    'criteria': criteria, 'draft_response': draft,
-                    'response': {'hash': digest(delivered), **store.evidence(delivered)},
-                    'learning': 'deferred', 'validator': 'goal_eval', 'stop_reason': reason,
-                }, ensure_ascii=False), encoding='utf-8')
+                    **get_goal_eval_outcome(), 'original_goal': user_message, 'criteria': criteria,
+                    'response': {'hash': digest(response), **ref}, 'learning': learning,
+                    'validator': 'goal_eval'}, ensure_ascii=False), encoding='utf-8')
             except OSError as exc:
-                self._log(f'[GoalEval] 검수 미통과 응답 보관 실패: {exc}')
-            delivered = '\n\n'.join(parts)
+                get_goal_eval_outcome()['storage_error'] = str(exc)
+                self._log(f'[GoalEval] 검수 결과 보존 실패: {exc}')
+
+        def unreviewed(reason, *, status="UNKNOWN"):
+            from supervision_store import digest
+            set_goal_eval_outcome(False, 0, status=status, reason=reason, response_hash=digest(response))
+            persist_review('deferred')
+            return response
+
+        def rejected(reason, feedback, severity):
+            from supervision_store import digest
             set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback,
-                                  response_hash=digest(delivered), **outcome)
-            return delivered
+                                  response_hash=digest(response), **self.goal_outcome)
+            persist_review('components_only')
+            return response
 
         if max_rounds < 1:
             return unreviewed("평가 라운드가 배정되지 않았습니다", status="NOT_RUN")
@@ -761,6 +715,8 @@ class CognitiveEvalMixin:
                 _trace_dicts = trace_source
         _tc_seen = len(_tc_calls())
 
+        prepared = None
+        reuse_packet = False
         for round_num in range(1, max_rounds + 1):
             if cancel_check and cancel_check():
                 self._log("[GoalEval] 사용자 중단 — 현재 응답 반환")
@@ -777,17 +733,27 @@ class CognitiveEvalMixin:
             self.goal_outcome = parse_goal_outcome("")
             # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
             try:
-                created_files = self._collect_created_files(response, tool_calls=_trace_dicts)
-                # 시각 산출물은 픽셀까지 확인한다. 수집 실패도 성공으로 덮지 않는다.
-                visual_artifacts = self._collect_visual_artifacts(response, tool_calls=_trace_dicts)
+                from final_evaluator import prepare_standalone, snapshot_error, POLICY, FINAL_POLICY, RESEARCH_POLICY
+                if not reuse_packet:
+                    prepared = prepare_standalone(self, response, user_message,
+                        consciousness_output or {'achievement_criteria': criteria}, _trace_dicts, history, cancel_check,
+                        previous=prepared)
+                reuse_packet = False
+                packet = prepared._evaluation_packet
+                supplied_images = {i.get('_evidence_id') for i in packet.get('images', [])}
+                for ref in packet['context'].get('visual_evidence', []):
+                    ref['delivered'] = ref['id'] in supplied_images
+                self.evaluation_store = prepared.store
                 achieved, feedback, severity = self._evaluate_achievement(
-                    user_message, criteria, response, created_files,
-                    consciousness_output=consciousness_output,
-                    tool_results_str=tool_results_str,
-                    action_ledger=action_ledger,
-                    visual_artifacts=visual_artifacts,
-                    conversation_history=history,
-                )
+                    user_message, packet['criteria'], response, packet['files'],
+                    consciousness_output=consciousness_output, tool_results_str=tool_results_str,
+                    action_ledger=action_ledger, visual_artifacts=packet['images'], conversation_history=history,
+                    evaluation_context=json.dumps(packet['context'], ensure_ascii=False),
+                    evaluation_policy=POLICY + FINAL_POLICY + (RESEARCH_POLICY if packet['context'].get('research_citations') else ''),
+                    evaluation_attachments=packet['attachments'], full_response=True)
+                packet['selection_sources'] = getattr(self, 'evaluation_sources', [])
+                if achieved and (cancel_check and cancel_check() or snapshot_error(prepared)):
+                    achieved, feedback, severity = None, '검수 중 결과 또는 관련 입력이 변경됐습니다', 0
             except Exception as exc:
                 achieved, feedback, severity = None, f"검수 준비 또는 평가 실패: {exc}", 0
 
@@ -825,64 +791,42 @@ class CognitiveEvalMixin:
             )
 
             if achieved is None:
+                if (prepared and round_num < max_rounds
+                        and re.search(r'UNKNOWN_REASON:\s*evidence\b', feedback or '')):
+                    from evaluation_input import evidence_requests, new_evidence_requests, recover
+                    parsed = evidence_requests(feedback, prepared._evaluation_packet)
+                    requests = new_evidence_requests(parsed['requests'], packet.get('attachments', []))
+                    if parsed['status'] in {'valid', 'normalized'} and requests:
+                        try:
+                            if changed := snapshot_error(prepared):
+                                return unreviewed(changed)
+                            packet['attachments'].extend(recover(prepared, requests))
+                            reuse_packet = True
+                            continue
+                        except (ValueError, OSError) as exc:
+                            return unreviewed(str(exc))
                 return unreviewed(feedback or "판정을 확보하지 못했습니다")
             if achieved:
-                set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback, **self.goal_outcome)
+                set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback,
+                                      citation_uses=getattr(self, "citation_uses", []),
+                                      response_hash=__import__("hashlib").sha256(response.encode()).hexdigest(), **self.goal_outcome)
+                persist_review('eligible' if self.goal_outcome.get('goal_status') == 'ACHIEVED' else 'components_only')
                 return response
 
-            # 판정과 전달을 일치시킨다. 거절된 초안은 근거로 보관하고 완료 주장으로 내보내지 않는다.
+            # 본문은 보존하고 판정은 별도 상태로 전달한다.
             if round_num >= max_rounds:
-                self._log('[GoalEval] 라운드 소진, 검수 미통과 안내 반환')
+                self._log('[GoalEval] 라운드 소진, 검수 결과와 본문 보존')
                 return rejected('응답 보완을 위한 재시도 한도에 도달했습니다.', feedback, severity)
 
-            # 기계 방아쇠 — 치명(severity 3) 또는 두 번째 라운드도 미달이면 판단 없이 재규정한다
-            # (reframe.py). 이룰 수 없는 기준에 재실행만 반복하던 부류(ep2386)가 이 방아쇠가 잡는 것.
-            # 새 규정이 오면 이후 라운드의 기준은 새 기준이고, 재실행 메시지 앞에 새 규정이 실린다.
-            _reframe_note = ""
-            try:
-                from reframe import revise_from_eval, turn_key_for, render_for_executor
-                _new_co = revise_from_eval(turn_key_for(self), criteria, feedback, severity, round_num)
-            except Exception as _rfe:
-                _new_co = None
-                self._log(f"[GoalEval] 재규정 방아쇠 실패(무시): {_rfe}")
-            if _new_co:
-                consciousness_output = _new_co
-                _nc = (_new_co.get("achievement_criteria") or "").strip()
-                if _nc:
-                    criteria = _nc
-                try:
-                    _rendered = json.loads(render_for_executor({"revised": True, "output": _new_co}))
-                    _reframe_note = (_rendered.get("content") or "") + "\n\n"
-                except Exception:
-                    _reframe_note = "[재규정] 규정이 갱신됐다:\n" + (_new_co.get("task_framing") or "") + "\n\n"
-                self._log(f"[GoalEval] 재규정 반영 — 기준 갱신: {criteria[:80]}")
-
-            # 피드백을 주입하여 재실행 — severity에 따라 전략 분기
+            # 원래 완료 기준으로 보완한다. 실패 횟수·심각도로 목표를 바꾸지 않는다.
             self._log(f"[GoalEval] 재실행 시작 (severity={severity_label}, 피드백 주입)")
 
-            if severity >= 3:
-                # 치명적: 전략 전환 유도
-                retry_directive = (
-                    "⚠️ 이전 접근 방식이 근본적으로 잘못되었습니다. "
-                    "동일한 방법을 반복하지 마세요.\n"
-                    "아래 피드백의 '대안 전략'을 참고하여 완전히 다른 접근법으로 시도하세요. "
-                    "이전 결과물은 폐기하고 처음부터 다시 작업하세요."
-                )
-            elif severity >= 2:
-                # 중대: 접근법 부분 수정
-                retry_directive = (
-                    "핵심적인 부분이 미흡합니다. "
-                    "이전 작업의 기본 틀은 유지하되, 접근 방식을 수정하세요. "
-                    "특히 피드백에서 지적한 도구 활용이나 핵심 기준을 중점적으로 보완하세요."
-                )
-            else:
-                # 경미: 기존 방식 보완
-                retry_directive = (
-                    "이전 작업 결과를 최대한 활용하고, 부족한 부분만 보완하세요."
-                )
+            retry_directive = (
+                "원래 전체 완료 기준과 확보한 근거·결과물을 유지하고 지적된 결함을 보완하세요. "
+                "이미 완료한 작업과 외부 효과를 반복하지 마세요."
+            )
 
             feedback_message = (
-                f"{_reframe_note}"
                 f"[평가 피드백] 이전 응답이 달성 기준을 충족하지 못했습니다. "
                 f"(심각도: {severity_label})\n\n"
                 f"달성 기준: {criteria}\n\n"

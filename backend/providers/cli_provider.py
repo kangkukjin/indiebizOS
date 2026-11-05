@@ -808,6 +808,7 @@ class CliSubprocessProvider(BaseProvider):
 
         # 1) 이미지 → 임시 파일 → 프롬프트에 path 주입
         image_paths: List[str] = self._save_images_to_temp(images or [])
+        self._input_image_paths = image_paths
 
         # 2) 도구 브리지 확보 (벤더마다 방식이 다름 — 파일/인라인)
         from completion_lease import create_channel, cancel_channel, is_waiting, pending_tickets

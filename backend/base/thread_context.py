@@ -563,7 +563,8 @@ def clear_tool_calls():
 
 def set_goal_eval_outcome(achieved=None, severity=0, *, status=None, reason="", method=None,
                           goal_status="UNKNOWN", review_status=None, goal_reason="",
-                          goal_evidence=None, remaining=None, response_hash=None):
+                          goal_evidence=None, remaining=None, response_hash=None, citation_uses=None,
+                          delivery=None):
     """검수 승인과 관측된 목표 달성을 별도로 보존한다. 옛 bool은 달성 증거가 아니다."""
     goal_status = goal_status if goal_status in {"ACHIEVED", "NOT_ACHIEVED", "UNKNOWN"} else "UNKNOWN"
     review_status = review_status or ({"ACHIEVED": "APPROVED", "NOT_ACHIEVED": "REWORK",
@@ -574,6 +575,8 @@ def set_goal_eval_outcome(achieved=None, severity=0, *, status=None, reason="", 
         "review_status": review_status, "goal_status": goal_status,
         "goal_reason": goal_reason, "goal_evidence": list(goal_evidence or []),
         "remaining": list(remaining or []), "response_hash": response_hash,
+        "citation_uses": list(citation_uses or []),
+        **({'delivery': delivery} if delivery else {}),
     }
     if method is not None:
         _thread_local.goal_eval_outcome["method"] = method

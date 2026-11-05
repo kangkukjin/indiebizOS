@@ -76,19 +76,24 @@ def test_exception_cleans_context_and_marks_interrupted_work_failed(workspace):
         assert db.execute('SELECT status FROM tasks WHERE task_id=?', (ctx['run_id'],)).fetchone()[0] == 'failed'
 
 
-def test_file_citation_failure_is_visible_before_delivery(workspace):
+def test_unreviewed_submission_preserves_body_and_diagnostics(workspace):
     runner, path = workspace
     (path / 'outputs').mkdir()
     (path / 'outputs/report.md').write_text('성공했다 [자료:missing:p1]')
     with TurnResearch() as turn:
         turn.activate(runner, {'_research_plan': {'path': 'plan.md'}}, '연구')
         ctx = dict(current())
-        response = turn.validate('[보고서](outputs/report.md)')
-        assert '인용 검증을 완료하지 못했습니다' in response
+        from final_evaluator import prepare_standalone
+        from research_context import finish_review
+        response = '[보고서](outputs/report.md)'
+        prepare_standalone(runner, response, '연구', {}, [{'name': 'Write', 'input': {'path': str(path / 'outputs/report.md')}, 'result': 'saved'}])
+        outcome = finish_review(response)
+        assert outcome['review_status'] == 'NOT_RUN'
+        assert outcome['unresolved_citations'] and not outcome['citations']
         list(turn.events(iter([{'type': 'final', 'content': response}])))
     store = ResearchStore(path)
     with store.connect() as db:
-        assert db.execute('SELECT status FROM tasks WHERE task_id=?', (ctx['run_id'],)).fetchone()[0] == 'failed'
+        assert db.execute('SELECT status FROM tasks WHERE task_id=?', (ctx['run_id'],)).fetchone()[0] == 'completed'
 
 
 def test_native_tool_capture_and_interrupted_run_recovery(workspace):
@@ -166,7 +171,8 @@ def test_supported_workspace_capture_read_question_submit_review_roundtrip(works
         lib = ResearchLibrary(store, ctx['thread_id'])
         vid = lib.sources()['items'][0]['version_ref']
         page = lib.read(vid)
-        refs = lib.citations(page['text'], ctx['run_id'])
+        with store.connect() as db:
+            refs = [dict(r) for r in db.execute('SELECT version_id,revision AS extraction_revision,locator,quote FROM research_access WHERE run_id=?', (ctx['run_id'],))]
         assert refs
         ref = refs[0]
         questions = ResearchQuestions(store, ctx['thread_id'])
@@ -178,7 +184,10 @@ def test_supported_workspace_capture_read_question_submit_review_roundtrip(works
         report = path / 'outputs/result.md'
         report.write_text('실사용량은 아직 미확인이다. ' + f"[자료:{vid}:{ref['locator']}]")
         response = '[보고서](outputs/result.md)'
-        assert turn.validate(response) == response
+        from final_evaluator import prepare_standalone
+        from research_context import finish_review
+        prepare_standalone(runner, response, '실사용량 판단', {}, [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}])
+        assert finish_review(response)['review_status'] == 'NOT_RUN'
         result = citation_review(report.read_text(), question_ids=[q['question_id']])
         assert not result['invalid'] and result['questions']['items'][0]['status'] == 'open'
         assert result['valid'][0]['semantic_status'] == 'unreviewed'

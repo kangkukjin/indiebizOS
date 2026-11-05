@@ -41,6 +41,29 @@ function CognitionChip({ info }: { info: NonNullable<ChatMessage['cognition']> }
   );
 }
 
+function ReviewStatus({ outcome }: { outcome: ChatMessage['evaluation'] }) {
+  if (!outcome) return null;
+  const reviews: Record<string, string> = { APPROVED: '승인', REWORK: '보완 필요', UNKNOWN: '미확정', NOT_RUN: '미실행' };
+  const goals: Record<string, string> = { ACHIEVED: '달성', NOT_ACHIEVED: '미달성', UNKNOWN: '미확인' };
+  const detail = outcome.delivery?.reason || outcome.goal_reason || outcome.reason;
+  return <details className="my-2 rounded border border-stone-400/40 px-2 py-1 text-xs">
+    <summary>검수: {reviews[outcome.review_status || 'UNKNOWN'] || '미확정'} · 목표: {goals[outcome.goal_status || 'UNKNOWN'] || '미확인'}{outcome.delivery && ' · 전달 미확인'}</summary>
+    {detail && <p className="mt-2 whitespace-pre-wrap">{detail}</p>}
+  </details>;
+}
+
+function ResultStatus({ message }: { message: ChatMessage }) {
+  if (message.role !== 'assistant') return null;
+  return <>
+    {message.executionStatus && <p className="text-xs text-stone-500">{message.executionStatus}</p>}
+    <ReviewStatus outcome={message.evaluation} />
+    {message.reviewedArtifacts?.filter(a => a.changed !== false).map(a => <div key={a.path} className="text-xs">
+      <span>{a.changed ? '연결된 파일이 검수 뒤 변경됐습니다.' : '연결된 현재 파일을 확인할 수 없습니다.'}</span>
+      {a.reviewed_path && <MessageContent content={`[검수 당시 본문](<${a.reviewed_path}>)`} role="assistant" />}
+    </div>)}
+  </>;
+}
+
 // ── 메시지 버블 ──
 
 /**
@@ -97,6 +120,7 @@ export const MessageBubble = memo(function MessageBubble({ message, variant = 'w
             ? 'bg-amber-500 text-white rounded-br-md'
             : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
         }`}>
+          <ResultStatus message={message} />
           <MessageContent
             content={message.content}
             role={message.role}
@@ -128,6 +152,7 @@ export const MessageBubble = memo(function MessageBubble({ message, variant = 'w
           ? 'bg-[#3B82F6] text-white rounded-tr-sm'
           : 'bg-[#E5DFD5] text-[#4A4035] rounded-tl-sm'
       }`}>
+        <ResultStatus message={message} />
         <MessageContent
           content={message.content}
           role={message.role}

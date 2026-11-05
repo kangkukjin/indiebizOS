@@ -104,18 +104,18 @@ def test_missing_temporary_screenshot_uses_frozen_bytes_but_changed_code_rejects
     from repair_resume import restore_review
     authorize(supervisor, tmp_path, monkeypatch)
     image = tmp_path / "pytest-screen.png"
-    image.write_bytes(b"actual screenshot bytes")
+    from PIL import Image
+    Image.new("RGB", (16, 16), "red").save(image)
     code = tmp_path / "implementation.py"
     code.write_text("x = 1")
     encoded = base64.b64encode(image.read_bytes()).decode()
-    monkeypatch.setattr(Evaluator, "_collect_visual_artifacts", lambda *a, **k:
-        [{"_path": str(image), "base64": encoded, "media_type": "image/png"}])
     supervisor.store.put_response("검사 완료")
-    prepare(supervisor, [])
+    prepare(supervisor, [{"name": "view_image", "input": {"path": str(image)}, "result": "shown"}])
     supervisor._evaluation_snapshot["files"][str(code)] = {
         "mode": "bytes", "hash": hashlib.sha256(code.read_bytes()).hexdigest()}
     if legacy:
-        supervisor._evaluation_snapshot["files"][str(image)]["mode"] = "bytes"
+        supervisor._evaluation_packet["format_version"] = 2
+        supervisor._evaluation_snapshot["files"][str(image)] = {"mode": "bytes", "hash": hashlib.sha256(image.read_bytes()).hexdigest()}
     row = journal.review_checkpoint(supervisor, supervisor._evaluation_packet, supervisor._evaluation_snapshot, tmp_path)
     image.unlink()
     restore_review(supervisor, row)

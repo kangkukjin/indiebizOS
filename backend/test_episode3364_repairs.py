@@ -54,7 +54,9 @@ def test_unknown_preserves_cause_and_defers_learning(supervisor, monkeypatch, ca
         return ""
     monkeypatch.setattr("final_evaluator.invoke", invoke)
     result = finish(supervisor, "파일은 생성됨")[-1]["content"]
-    assert "토큰 예산" in result and "JSON" not in result and "사용자 취소" not in result
+    assert result == "파일은 생성됨"
+    reason = tc.get_goal_eval_outcome()["reason"]
+    assert "토큰 예산" in reason and "JSON" not in reason and "사용자 취소" not in reason
     outcome = tc.get_goal_eval_outcome()
     assert outcome["status"] == "UNKNOWN" and outcome["severity"] == 0
     status = json.loads((supervisor.store.directory / "review_status.json").read_text())

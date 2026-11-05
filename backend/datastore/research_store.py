@@ -155,7 +155,7 @@ class ResearchStore:
             raise ValueError('잘못된 원문 참조')
         path = self.root / 'files' / (digest + suffix)
         with project_lock(self.path):
-            if not path.exists():
+            if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                 data = self.blob(digest)
                 path.parent.mkdir(exist_ok=True)
                 tmp = path.with_name(identifier())
@@ -244,6 +244,18 @@ class ResearchStore:
                 item['mine'] = row['role'] == 'user'
                 item['citations'] = [dict(r) for r in db.execute(
                     'SELECT * FROM research_citations WHERE message_id=?', (row['id'],))]
+                final = db.execute("SELECT payload FROM research_events WHERE thread_id=? AND run_id=? "
+                                   "AND kind='response.finalized' ORDER BY sequence DESC LIMIT 1", (tid, row['run_id'])).fetchone()
+                if row['role'] == 'assistant':
+                    item['evaluation'] = json.loads(final['payload']).get('outcome', {}) if final else {}
+                    item['submissions'] = []
+                    for artifact in item['evaluation'].get('submissions', []):
+                        try:
+                            changed = hashlib.sha256(Path(artifact['path']).read_bytes()).hexdigest() != artifact['hash']
+                        except OSError:
+                            changed = None
+                        item['submissions'].append({**artifact, 'changed': changed,
+                            'reviewed_path': self.material_path(artifact['blob'], 'text/plain') if artifact.get('blob') else None})
                 result.append(item)
         result.sort(key=lambda item: item['display_order'])
         return {'items': result, 'next_cursor': str(rows[limit - 1]['id']) if len(rows) > limit else None,
@@ -279,22 +291,50 @@ class ResearchStore:
             self.event(db, 'run.started', {}, tid, run)
         return run, True
 
-    def write_response(self, tid, run, text, state='running', citations=()):
-        with self.connect(True) as db:
+    def write_response(self, tid, run, text, state='running', citations=(), *, outcome=None):
+        """Persist an already-finalized response atomically; never re-read or re-judge its contents."""
+        fingerprint = hashlib.sha256(text.encode()).hexdigest()
+        outcome = dict(outcome or {})
+        if outcome:
+            identity = outcome.get('research_identity', {})
+            if (identity != {'project_uid': self.uid, 'thread_id': tid, 'run_id': run}
+                    or outcome.get('response_hash') != fingerprint):
+                raise ResearchConflict('최종 응답의 실행 신원·지문이 일치하지 않습니다')
+            citations = outcome.get('citations', [])
+        with project_lock(self.path), self.connect(True) as db:
             self.check_epoch(db)
+            if outcome.get('submissions'):
+                outcome['submissions'] = [{**{k: v for k, v in a.items() if k != 'text'},
+                    **({'blob': self._put_blob(a['text'].encode('utf-8'))} if 'text' in a else {})}
+                    for a in outcome['submissions']]
             row = self.thread(tid, db)
+            message = db.execute("SELECT id,content,research_status FROM messages WHERE thread_id=? "
+                                 "AND research_run=? AND research_role='assistant'", (tid, run)).fetchone()
             if row['active_run'] != run:
-                raise ResearchConflict('실행 신원이 만료됐습니다')
+                previous = db.execute("SELECT payload FROM research_events WHERE thread_id=? AND run_id=? "
+                                      "AND kind='response.finalized' ORDER BY sequence DESC LIMIT 1", (tid, run)).fetchone()
+                if previous and message and state != 'running':
+                    saved = json.loads(previous['payload'])
+                    if (message['content'] == text and message['research_status'] == state
+                            and saved.get('response_hash') == fingerprint and saved.get('outcome') == outcome):
+                        return saved
+                raise ResearchConflict('실행 신원이 만료됐거나 이미 다른 결과로 확정됐습니다')
+            if state != 'running' and outcome.get('research_state'):
+                from research_evidence import review_state
+                if review_state(self, db, tid, outcome['research_dependencies']) != outcome['research_state']:
+                    raise ResearchConflict('최종 저장 전 검수에 사용한 연구 입력이 변경됐습니다')
             db.execute("UPDATE messages SET content=?,research_status=? WHERE thread_id=? AND research_run=? AND research_role='assistant'",
                        (text, state, tid, run))
             if state != 'running':
-                mid = db.execute("SELECT id FROM messages WHERE research_run=? AND research_role='assistant'", (run,)).fetchone()[0]
                 for citation in citations:
                     db.execute('INSERT OR IGNORE INTO research_citations(message_id,version_id,locator,quote,extraction_revision) VALUES (?,?,?,?,?)',
-                               (mid, citation['version_id'], citation['locator'], citation.get('quote', ''), citation.get('extraction_revision', 1)))
+                               (message['id'], citation['version_id'], citation['locator'], citation.get('quote', ''), citation.get('extraction_revision', 1)))
+                payload = {'response_hash': fingerprint, 'outcome': outcome, 'citations': list(citations)}
+                self.event(db, 'response.finalized', payload, tid, run)
                 db.execute('UPDATE tasks SET status=?,result=?,completed_at=? WHERE task_id=?', (state, text, now(), run))
                 db.execute('UPDATE research_threads SET active_run=NULL,updated_at=? WHERE id=?', (now(), tid))
             self.event(db, 'response.' + state, {'chars': len(text)}, tid, run)
+            return payload if state != 'running' else None
 
     def recover_runs(self, live):
         with self.connect(True) as db:

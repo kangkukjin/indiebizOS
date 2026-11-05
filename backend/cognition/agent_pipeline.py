@@ -97,6 +97,7 @@ def drain_stream(gen) -> Dict[str, Any]:
          "session_reset": bool}
     """
     final = ""
+    evaluation = None
     error = None
     tool_calls: List[Dict] = []
     clarify = False
@@ -106,6 +107,7 @@ def drain_stream(gen) -> Dict[str, Any]:
         et = ev.get("type")
         if et == "final":
             final = ev.get("content", "")
+            evaluation = ev.get("evaluation")
         elif et == "error":
             error = ev.get("content", "")
         elif et == "_turn_meta":
@@ -113,7 +115,7 @@ def drain_stream(gen) -> Dict[str, Any]:
             tool_calls.extend(ev.get("tool_calls") or [])
             clarify = bool(ev.get("clarify"))
             session_reset = bool(ev.get("session_reset"))
-    return {"final": final, "error": error, "tool_calls": tool_calls,
+    return {"final": final, "error": error, "tool_calls": tool_calls, "evaluation": evaluation,
             "clarify": clarify, "session_reset": session_reset, "turn_tokens": turn_tokens}
 
 
@@ -734,6 +736,14 @@ class CognitivePipelineMixin:
                         eval_tool_calls[_idx]["input"] = ev["input"]
                     eval_tool_calls[_idx]["is_error"] = _is_err
                     eval_tool_calls[_idx]['transport_error'] = bool(ev.get('transport_error'))
+                    if not (_supervisor and _supervisor.enabled):
+                        from model_result_view import evidence_store
+                        from cognitive_eval import CognitiveEvalMixin
+                        visual = dict(eval_tool_calls[_idx])
+                        if ev.get('images'):
+                            visual['result'] = [_rt, ev['images']]
+                        CognitiveEvalMixin()._collect_visual_artifacts('', [visual], evidence_store=evidence_store())
+                        eval_tool_calls[_idx]['visual_evidence'] = visual.get('visual_evidence', [])
                     if _idx < len(tool_calls_log):
                         if not _is_err:
                             try:
@@ -897,33 +907,19 @@ class CognitivePipelineMixin:
                 record_trajectory_event("cognition.evaluation", {"path": "none"})
             _response_completed = not (cancel_check and cancel_check())
             if final_content and _response_completed:
-                # 평가 보완으로 본문이 달라졌으면 같은 턴 예산으로 채택한다. 승인 후 새 실행은 금지.
-                reviewed_content = final_content
-                final_content = yield from adopt_response(
-                    _capability_guard, self, message, final_content, eval_tool_calls, history,
-                    collect=_collect, images=images, supervisor=_supervisor,
-                    allowed_set=allowed_set, cancel_check=cancel_check, allow_resume=False)
+                from thread_context import get_goal_eval_outcome, set_goal_eval_outcome
+                from research_context import current as research_current, finish_review
+                if not _eval_ran:
+                    set_goal_eval_outcome(status='NOT_RUN', review_status='NOT_RUN', reason='명시 목표 평가 미실행')
+                    if research_current():
+                        from final_evaluator import prepare_standalone
+                        prepare_standalone(self, final_content, message, consciousness_output,
+                                           eval_tool_calls, history, cancel_check)
+                outcome = get_goal_eval_outcome() or {}
+                finish_review(final_content, outcome, outcome.get('citation_uses', []))
                 _response_completed = not (cancel_check and cancel_check())
-                if _research_session:
-                    final_content = _research_session.validate(final_content)
-                if _eval_ran:
-                    from thread_context import get_goal_eval_outcome, set_goal_eval_outcome
-                    from supervision_store import digest
-                    if final_content != reviewed_content or not _response_completed:
-                        set_goal_eval_outcome(status="UNKNOWN", reason="검수 후 응답 변경 또는 전달 취소")
-                        from model_result_view import evidence_store
-                        store = _supervisor.store if _supervisor else evidence_store()
-                        path = store.directory / "review_status.json"
-                        prior = json.loads(path.read_text()) if path.exists() else {}
-                        path.write_text(json.dumps({**prior, **get_goal_eval_outcome(),
-                            "response": {"hash": digest(final_content), **store.evidence(final_content)},
-                            "learning": "components_only"}, ensure_ascii=False), encoding="utf-8")
-                    outcome = get_goal_eval_outcome() or {}
-                    record_trajectory_event("validation.completed", {
-                        "validator": "goal_eval", "final": True, **outcome,
-                        "response_hash": digest(final_content)})
                 if _response_completed:
-                    yield {"type": "final", "content": final_content}
+                    yield {'type': 'final', 'content': final_content, 'evaluation': outcome}
 
         except GeneratorExit:
             # 소비자 조기 종료(취소·타임아웃) — finally에서 뒷정리만 하고 전파

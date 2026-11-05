@@ -1,0 +1,269 @@
+{
+  "phase": "ACTIVE",
+  "generation": "b790a799da33901af8676e96b7ab9a85",
+  "code_digest": "2f97d48c8b6c8e3184f30f9d219a4c2a",
+  "matched_files": [
+    "backend/base/research_context.py",
+    "backend/base/research_review.py",
+    "backend/base/thread_context.py",
+    "backend/cognition/agent_pipeline.py",
+    "backend/cognition/cognitive_eval.py",
+    "backend/cognition/conscious_supervisor.py",
+    "backend/cognition/evaluation_input.py",
+    "backend/cognition/final_evaluator.py",
+    "backend/cognition/reframe.py",
+    "backend/cognition/repair_resume.py",
+    "backend/cognition/supervisor_content.py",
+    "backend/cognition/supervisor_review.py",
+    "backend/datastore/conversation_sessions.py",
+    "backend/datastore/research_evidence.py",
+    "backend/datastore/research_store.py",
+    "backend/datastore/supervision_delivery.py",
+    "backend/datastore/supervision_store.py",
+    "backend/providers/cli_provider.py",
+    "backend/providers/codex.py",
+    "backend/services/chat_streams.py",
+    "backend/services/research_capture.py",
+    "backend/services/research_library.py",
+    "backend/services/research_task_session.py",
+    "backend/services/research_threads.py"
+  ],
+  "http": {
+    "/health": {
+      "status": 200,
+      "body": {
+        "status": "healthy",
+        "timestamp": "2026-11-05T20:24:41.419237",
+        "base_path": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+        "live_turns": [],
+        "live_turns_observation": "known",
+        "restart_controller": {
+          "verdict": "controller_alive",
+          "controller": {
+            "born": 1793855884.315607,
+            "pid": 7845
+          },
+          "controller_alive": true,
+          "state_age_s": 0.5,
+          "phase": "ACTIVE"
+        }
+      }
+    },
+    "/ibl/capabilities": {
+      "status": 200
+    },
+    "/chat-sessions?target=system_ai": {
+      "status": 200,
+      "session_count": 43
+    }
+  },
+  "mcp": {
+    "initialize": true,
+    "execute_ibl": {
+      "success": true,
+      "value": [
+        {
+          "status": "ok"
+        }
+      ],
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "list",
+          [
+            [
+              "record",
+              [
+                [
+                  "status",
+                  [
+                    "scalar",
+                    "ok"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "46d541fe71a341a01c04c244841042ad0c5fb4cb0441a2dbe74c9a4a690f5b6b",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:32:36",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": [],
+          "selected_parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "record:24:37",
+          "invocation_id": 2,
+          "kind": "record",
+          "parents": [
+            1
+          ],
+          "selected_parents": [
+            1
+          ]
+        },
+        {
+          "id": 3,
+          "node_id": "list:23:38",
+          "invocation_id": 3,
+          "kind": "list",
+          "parents": [
+            2
+          ],
+          "selected_parents": [
+            2
+          ]
+        },
+        {
+          "id": 4,
+          "node_id": "sequence:15:38",
+          "invocation_id": 4,
+          "kind": "selection",
+          "parents": [
+            3
+          ],
+          "selected_parents": [
+            3
+          ]
+        }
+      ],
+      "source_map": {
+        "sequence:15:38": {
+          "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+          "start": 15,
+          "end": 38,
+          "line": 1,
+          "column": 16
+        },
+        "return:16:38": {
+          "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+          "start": 16,
+          "end": 38,
+          "line": 2,
+          "column": 1
+        },
+        "list:23:38": {
+          "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+          "start": 23,
+          "end": 38,
+          "line": 2,
+          "column": 8
+        },
+        "record:24:37": {
+          "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+          "start": 24,
+          "end": 37,
+          "line": 2,
+          "column": 9
+        },
+        "literal:32:36": {
+          "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+          "start": 32,
+          "end": 36,
+          "line": 2,
+          "column": 17
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 5,
+        "rows": 0,
+        "elapsed_ms": 412,
+        "limits": {
+          "steps": 1000000,
+          "rows": 10000
+        },
+        "steps_by_span": [
+          {
+            "node_id": "list:23:38",
+            "steps": 1,
+            "location": {
+              "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+              "start": 23,
+              "end": 38,
+              "line": 2,
+              "column": 8
+            }
+          },
+          {
+            "node_id": "literal:32:36",
+            "steps": 1,
+            "location": {
+              "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+              "start": 32,
+              "end": 36,
+              "line": 2,
+              "column": 17
+            }
+          },
+          {
+            "node_id": "record:24:37",
+            "steps": 1,
+            "location": {
+              "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+              "start": 24,
+              "end": 37,
+              "line": 2,
+              "column": 9
+            }
+          },
+          {
+            "node_id": "return:16:38",
+            "steps": 1,
+            "location": {
+              "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+              "start": 16,
+              "end": 38,
+              "line": 2,
+              "column": 1
+            }
+          },
+          {
+            "node_id": "sequence:15:38",
+            "steps": 1,
+            "location": {
+              "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c",
+              "start": 15,
+              "end": 38,
+              "line": 1,
+              "column": 16
+            }
+          }
+        ],
+        "steps_other": 0,
+        "steps_by_line": [
+          {
+            "line": 2,
+            "steps": 4,
+            "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c"
+          },
+          {
+            "line": 1,
+            "steps": 1,
+            "source_hash": "d41b56ed6c8b932cbe3dae573b1dcf5e73b390d374985e880c419e373fee568c"
+          }
+        ],
+        "tool_ms_by_line": []
+      },
+      "resume": {
+        "run_id": "822820c9e8bc4ae39e2bff82cbbb6081"
+      },
+      "resumed": false,
+      "run_status": "completed",
+      "task_ref": {
+        "kind": "ibl_run",
+        "task_id": "822820c9e8bc4ae39e2bff82cbbb6081",
+        "owner": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/_backups/2026-11-05_verification_citation_ui"
+      }
+    }
+  }
+}

@@ -17,7 +17,7 @@ def library(context):
     store = ResearchStore(context['path'])
     if store.uid != context['project_uid'] or store.epoch != context['epoch']:
         raise ValueError('자료 보존의 프로젝트 신원이 만료됐습니다')
-    return ResearchLibrary(store)
+    return ResearchLibrary(store, context['thread_id'])
 
 
 def clean_url(value):
@@ -161,41 +161,43 @@ def _preserved_selection(lib, value):
     return not body or isinstance(body, str) and body in '\n\n'.join(originals)
 
 
-def review(context, text, *, query='', question_ids=(), state_only=False, full_receipts=False):
+def review(context, text, *, query='', question_ids=(), state_only=False, full_receipts=False,
+           occurrences=None, dependencies=None):
     from research_questions import ResearchQuestions
-    from research_questions import digest
+    from research_store import ResearchConflict
     lib = library(context)
-    def state():
+
+    def state(deps):
+        from research_evidence import review_state
         with lib.store.connect() as db:
-            lib.store.check_epoch(db)
-            questions = [tuple(r) for r in db.execute(
-                'SELECT question_id,revision_digest FROM research_questions q WHERE thread_id=? '
-                'AND revision=(SELECT MAX(revision) FROM research_questions h WHERE h.question_id=q.question_id) '
-                'ORDER BY question_id', (context['thread_id'],))]
-            reads = [tuple(r) for r in db.execute(
-                'SELECT version_id,revision,locator,quote FROM research_access WHERE run_id=? ORDER BY rowid',
-                (context['run_id'],))]
-        return digest([context['project_uid'], context['thread_id'], context['run_id'], questions, reads])
-    initial = state()
+            return review_state(lib.store, db, context['thread_id'], deps)
+
     if state_only:
-        return initial
+        return state(dependencies) if dependencies is not None else None
     questions = ResearchQuestions(lib.store, context['thread_id'])
     projection = questions.context(query=query or text, question_ids=question_ids)
     evidence = []
     for item in projection['items']:
-        # 요약과 근거를 같은 불변 질문 판본에서 읽는다. 동시 수정된 head로 바꾸지 않는다.
         question = questions.revision(item['question_id'], item['revision'])
         for role in ('supporting', 'contradicting'):
             for ref in question[role]:
                 evidence.append({**ref, **{k: question[k] for k in
                     ('question_id', 'revision', 'revision_digest')}, 'role': role})
-    result = lib.citation_review(text, context['run_id'], question_evidence=evidence, full_receipts=full_receipts)
-    result['research_identity'] = {k: context[k] for k in ('project_uid', 'thread_id', 'run_id')}
-    result['questions'] = projection
-    if state() != initial:
-        from research_store import ResearchConflict
-        raise ResearchConflict('검수 입력 조립 중 연구 질문·읽기 판본이 변경됐습니다')
-    result['state_revision'] = initial
+    result = lib.citation_review(text, context['run_id'], question_evidence=evidence,
+                                full_receipts=full_receipts, occurrences=occurrences)
+    deps = {'questions': [r['question_id'] for r in projection['items']],
+            'sources': sorted({(r['version_ref'], rev) for r in result['valid']
+                               for rev in r['extraction_revisions']})}
+    initial = state(deps)
+    with lib.store.connect() as db:
+        for item in projection['items']:
+            row = db.execute('SELECT revision_digest FROM research_questions WHERE thread_id=? '
+                             'AND question_id=? ORDER BY revision DESC LIMIT 1',
+                             (context['thread_id'], item['question_id'])).fetchone()
+            if not row or row[0] != item['revision_digest']:
+                raise ResearchConflict('검수 입력 조립 중 연구 질문 판본이 변경됐습니다')
+    result.update(research_identity={k: context[k] for k in ('project_uid', 'thread_id', 'run_id')},
+                  questions=projection, dependencies=deps, state_revision=initial)
     return result
 
 

@@ -12,7 +12,7 @@ interface Steering { id: string; instruction: string; timestamp: string; request
 interface SteeringRequest { message: string; turn_id: string; request_id: string }
 interface Snapshot {
  steering?: Steering[];
- messages: { id: string; role: string; content: string; timestamp: string; images: string[] }[];
+ messages: { id: string; role: string; content: string; timestamp: string; images: string[]; evaluation?: ChatMessage['evaluation'] }[];
  panels?: { todo?: {todos?: TodoItem[]}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
  has_older: boolean; turn: { id: string; state: string; stream_content?: string; progress?: TurnProgress | null } | null; events: Event[];
 }

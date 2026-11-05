@@ -144,7 +144,8 @@ def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeyp
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
     original = "  시작\n\n```py\nx = 1\n```\n\n끝  \n"
     events = finish(supervisor, original)
-    assert events[-1] == {"type": "final", "content": original}
+    assert events[-1]["type"] == "final" and events[-1]["content"] == original
+    assert events[-1]["evaluation"]["review_status"] == "APPROVED"
     assert [e["content"] for e in events if e["type"] == "text"] == [original]
     assert not supervisor.calls
     assert tc.get_goal_eval_outcome()["review_status"] == "APPROVED"
@@ -156,7 +157,7 @@ def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeyp
 def test_empty_or_malformed_judgment_never_passes(supervisor, monkeypatch, raw):
     monkeypatch.setattr("final_evaluator.invoke", lambda *a, **kw: raw)
     events = finish(supervisor, "원래 결과")
-    assert "검수 미승인" in events[-1]["content"]
+    assert events[-1]["evaluation"]["review_status"] != "APPROVED"
     assert events[-1]["content"].startswith("원래 결과")
     assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
     assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
@@ -169,7 +170,7 @@ def test_unread_tail_is_supplied_and_its_defect_can_fail_evaluation(supervisor, 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     supervisor.config["max_repairs"] = 0
     events = finish(supervisor, "x" * 24000 + "뒤쪽 중요한 오류")
-    assert "미승인" in events[-1]["content"]
+    assert events[-1]["evaluation"]["review_status"] != "APPROVED"
     assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
     assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
@@ -329,7 +330,7 @@ def test_stale_response_approval_is_unknown(supervisor, monkeypatch):
         c.store.read_response(mark=True)
         return old
     monkeypatch.setattr("final_evaluator.invoke", invoke)
-    assert "검수 미승인" in finish(supervisor, "original")[-1]["content"]
+    assert finish(supervisor, "original")[-1]["evaluation"]["review_status"] != "APPROVED"
 
 
 def test_real_aiagent_role_uses_same_tools_but_separate_identity(supervisor, monkeypatch):

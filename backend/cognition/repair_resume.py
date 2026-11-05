@@ -176,6 +176,42 @@ def restore_review(controller, row):
     controller._review_row = row
     if controller.store.manifest() != saved["snapshot"]["response"]:
         raise ValueError("평가 체크포인트의 응답 지문이 일치하지 않습니다")
+    if saved['packet'].get('format_version', 0) < 3:
+        # Rebuild inputs once at the existing restore boundary. Preserve the
+        # observed pixels; do not rerun a capture or inherit an old approval.
+        from final_evaluator import prepare, snapshot_error
+        if snapshot_error(controller):
+            return  # finalize가 기존 지문 불일치를 보고한다. 현재 파일로 과거 승인을 덮지 않는다.
+        packet = prepare(controller, saved['packet'].get('calls', []))
+        controller._evaluation_snapshot['files'].update(saved['snapshot']['files'])
+        known = {r['id'] for r in packet['context']['visual_evidence']}
+        for img in saved['packet'].get('images', []):
+            value = dict(img)
+            value['sha256'] = hashlib.sha256(base64.b64decode(img['base64'], validate=True)).hexdigest()
+            ref = controller.store.evidence(value)['id']
+            if ref in known:
+                continue
+            value['_evidence_id'] = ref
+            metadata = {'id': ref, 'path': value.get('_path'), 'sha256': value['sha256'],
+                        'observed_at': value.get('observed_at')}
+            packet['images'] = [*packet['images'], value][-3:]
+            packet['context']['visual_evidence'].append(metadata)
+            controller._evaluation_snapshot['visuals'].append(copy.deepcopy(metadata))
+        controller.log('evaluation.checkpoint_upgraded', role='harness', format_version=3)
+    from research_context import current as research_current
+    context = research_current()
+    citations = controller._evaluation_packet['context'].get('research_citations')
+    if context and citations:
+        prepared = copy.deepcopy(citations)
+        prepared['claims'] = controller._evaluation_packet['context'].get('research_claims', [])
+        for source in prepared.get('valid', []):
+            for receipt in source.get('receipts', []):
+                receipt['quote'] = controller.store.read_evidence(receipt['evidence_ref']['id'], 0, None)['text']
+        context['prepared_review'] = prepared
+        texts = {a['subject']: a['text'] for a in controller._evaluation_packet.get('attachments', [])
+                 if a.get('role') == 'submission'}
+        context['submissions'] = [{**row, 'text': texts.get(row['path'], '')} for row in
+                                  controller._evaluation_packet['context'].get('research_submissions', [])]
 
 
 def review_stream(runner, controller, row, cancel_check=None):

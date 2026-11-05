@@ -407,6 +407,7 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
               id: newMsgId,
               role: 'assistant',
               content: data.content,
+              evaluation: data.evaluation,
               timestamp: new Date(),
               toolActivities: savedTools,
             }];

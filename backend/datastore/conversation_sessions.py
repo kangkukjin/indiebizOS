@@ -289,6 +289,12 @@ class SessionStore:
                     "role": r.get("role", "user" if r.get("from_agent_id") == human else "assistant"),
                     "timestamp": timestamp,
                     "images": json.loads(r["images"]) if r.get("images") else []})
+                if messages[-1]['role'] == 'assistant':
+                    event = conn.execute("SELECT payload FROM conversation_events WHERE session_id=? "
+                        "AND json_extract(payload,'$.message_id')=? "
+                        "AND json_extract(payload,'$.type') IN ('response','auto_report') ORDER BY id DESC LIMIT 1",
+                        (sid, r['id'])).fetchone()
+                    messages[-1]['evaluation'] = (json.loads(event[0]).get('evaluation') or {}) if event else {}
             return {"messages": messages, "has_older": len(rows) > limit}
 
     def begin(self, sid):

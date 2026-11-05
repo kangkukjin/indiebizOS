@@ -12,12 +12,17 @@ from final_evaluator import Evaluator
 from test_conscious_supervisor import supervisor, finish, verdict  # noqa: F401
 
 
+def write_image(path, color):
+    from PIL import Image
+    Image.new('RGB', (16, 16), color).save(path)
+
+
 @pytest.mark.parametrize("encoded", [False, True])
 def test_visual_collection_keeps_paths_and_ignores_image_bytes(tmp_path, encoded):
     image = tmp_path / "그림 공백.png"
-    image.write_bytes(b"local visual evidence")
+    write_image(image, 'red')
     other = tmp_path / "other.jpg"
-    other.write_bytes(b"other evidence")
+    write_image(other, 'blue')
     ignored = tmp_path / "binary.jpg"
     ignored.write_bytes(b"not a path field")
     result = {"result": json.dumps({"image_path": str(image)}),
@@ -34,14 +39,52 @@ def test_visual_collection_keeps_paths_and_ignores_image_bytes(tmp_path, encoded
 
 def test_plain_text_paths_and_limit_keep_latest_existing_images(tmp_path):
     images = [tmp_path / f"image{i}.PNG" for i in range(4)]
-    for image in images:
-        image.write_bytes(image.name.encode())
+    for i, image in enumerate(images):
+        write_image(image, (i * 60, 0, 0))
     calls = [{"input": {"path": str(images[0])},
               "result": f"Created: {images[1]}\n![view]({images[2]})"}]
     response = f"`{images[3]}`\n/missing.png"
     found = Evaluator()._collect_visual_artifacts(response, calls, max_images=3)
     assert [i["_path"] for i in found] == [str(p) for p in images[1:]]
     assert all(i["media_type"] == "image/png" for i in found)
+
+
+def test_native_pixels_survive_path_replacement_and_omitted_image_can_be_recovered(supervisor, tmp_path):
+    from final_evaluator import prepare, snapshot_error
+    from evaluation_input import evidence_requests, recover, new_evidence_requests
+    paths = [tmp_path / f'screenshot-{i}.png' for i in range(4)]
+    for i, path in enumerate(paths):
+        write_image(path, (i * 60, 0, 0))
+        supervisor.observe_native({'type': 'tool_start', 'id': str(i), 'name': 'view_image',
+                                   'input': {'path': str(path)}})
+        supervisor.observe_native({'type': 'tool_result', 'id': str(i), 'name': 'view_image',
+                                   'result': '', 'images': [{'base64': base64.b64encode(path.read_bytes()).decode(),
+                                                             'media_type': 'image/png'}]})
+    original = paths[0].read_bytes()
+    paths[0].unlink()
+    write_image(paths[1], 'green')
+    supervisor.store.put_response('네 화면을 대조했다.')
+    packet = prepare(supervisor)
+    assert len(packet['images']) == 3 and len(packet['context']['visual_evidence']) == 4
+    ref = packet['context']['visual_evidence'][0]['id']
+    request = evidence_requests('EVIDENCE_REQUESTS: ' + json.dumps([
+        {'criterion_id': 'C1', 'evidence_id': ref, 'start': 0, 'end': 1}]), packet)
+    assert request['status'] == 'normalized'
+    packet['attachments'].extend(recover(supervisor, request['requests']))
+    assert base64.b64decode(packet['images'][-1]['base64']) == original
+    assert not new_evidence_requests(request['requests'], packet['attachments'])
+    assert snapshot_error(supervisor) is None
+    packet['images'][-1]['base64'] = base64.b64encode(b'altered').decode()
+    assert snapshot_error(supervisor)
+
+
+def test_successful_empty_capture_command_does_not_invent_pixels(supervisor, tmp_path):
+    from final_evaluator import prepare
+    path = tmp_path / 'hidden.png'
+    write_image(path, 'blue')
+    supervisor.run_tool('shell', {'command': f'capture-screen {path}'}, lambda: '')
+    supervisor.store.put_response('촬영 명령 종료')
+    assert prepare(supervisor)['images'] == []
 
 
 def test_large_binary_and_plain_slash_runs_do_not_rescan_each_slash():

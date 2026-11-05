@@ -8,6 +8,39 @@ def evidence_key(ref):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False).encode()).hexdigest()
 
 
+def source_paragraphs(store, db, tid, version, revision=None):
+    """Resolve immutable source bytes in the owning conversation, without inventing a read."""
+    store.check_epoch(db)
+    scope = 'AND c.thread_id=?' if tid else ''
+    args = [version, *([tid] if tid else [])]
+    pinned = 'AND e.revision=?' if revision is not None else ''
+    if revision is not None:
+        args.append(revision)
+    row = db.execute(
+        'SELECT e.revision,e.blob FROM research_extractions e WHERE e.version_id=? '
+        f'AND EXISTS (SELECT 1 FROM research_captures c WHERE c.version_id=e.version_id {scope}) '
+        f'{pinned} ORDER BY e.revision DESC LIMIT 1', args).fetchone()
+    if not row:
+        raise ValueError('이 대화에 보존된 자료의 추출 판본만 인용할 수 있습니다')
+    return json.loads(store.blob(row['blob'])), row['revision']
+
+
+def review_state(store, db, tid, dependencies):
+    """Fingerprint only the question heads and immutable sources used by this input."""
+    from research_questions import digest
+    store.check_epoch(db)
+    questions = []
+    for qid in dependencies['questions']:
+        row = db.execute('SELECT revision_digest FROM research_questions WHERE thread_id=? '
+                         'AND question_id=? ORDER BY revision DESC LIMIT 1', (tid, qid)).fetchone()
+        questions.append([qid, row[0] if row else None])
+    sources = []
+    for version, revision in dependencies['sources']:
+        paragraphs, actual = source_paragraphs(store, db, tid, version, revision)
+        sources.append([version, actual, digest(paragraphs)])
+    return digest([store.uid, tid, store.epoch, questions, sources])
+
+
 def validate_reference(store, db, tid, value, *, run=None, retained=None):
     """새 AI 인용은 현재 실행의 읽기 증거가 필요하다. 기존 연결은 원래 영수증을 유지한다."""
     if not isinstance(value, dict) or set(value) - {
@@ -19,12 +52,7 @@ def validate_reference(store, db, tid, value, *, run=None, retained=None):
             or len(ref['quote']) > 4000 or len(ref['locator']) > 1000
             or type(ref['extraction_revision']) is not int or ref['extraction_revision'] < 1):
         raise ValueError('근거 판본·위치·비어 있지 않은 원문 인용이 필요합니다')
-    row = db.execute('SELECT e.blob FROM research_extractions e WHERE e.version_id=? AND e.revision=? '
-                     'AND EXISTS (SELECT 1 FROM research_captures c WHERE c.version_id=e.version_id AND c.thread_id=?)',
-                     (ref['version_ref'], ref['extraction_revision'], tid)).fetchone()
-    if not row:
-        raise ValueError('이 대화에 보존된 자료의 추출 판본만 인용할 수 있습니다')
-    paragraphs = json.loads(store.blob(row['blob']))
+    paragraphs, _ = source_paragraphs(store, db, tid, ref['version_ref'], ref['extraction_revision'])
     if not any(loc == ref['locator'] and ref['quote'] in text for loc, text in paragraphs):
         raise ValueError(
             f"인용이 지정한 원문 위치와 일치하지 않습니다: version_ref={ref['version_ref']}, "

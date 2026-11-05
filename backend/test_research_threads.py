@@ -142,7 +142,7 @@ def test_summary_failure_preserves_completed_answer(world, monkeypatch):
     assert store.thread(tid)['active_run'] is None
 
 
-def test_invalid_citation_at_delivery_is_not_reported_as_completed(world, monkeypatch):
+def test_storage_does_not_invent_review_or_rewrite_citation(world, monkeypatch):
     import research_threads as service
     import runtime_work
     import thread_context
@@ -161,11 +161,12 @@ def test_invalid_citation_at_delivery_is_not_reported_as_completed(world, monkey
     finally:
         thread_context.restore(snapshot)
     answer = store.messages(tid)['items'][-1]
-    assert answer['status'] == 'failed'
-    assert '확인되지 않은 인용' in answer['content']
+    assert answer['status'] == 'completed'
+    assert answer['content'] == original
+    assert answer['evaluation'].get('review_status', 'UNKNOWN') == 'UNKNOWN'
     with store.connect() as db:
         event = db.execute("SELECT payload FROM research_events WHERE kind='citation.validation_failed'").fetchone()
-    assert json.loads(event[0])['response'] == original
+    assert event is None
 
 
 def test_foreign_principal_cannot_read_research(world, monkeypatch):

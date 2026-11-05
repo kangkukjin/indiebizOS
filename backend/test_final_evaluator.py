@@ -65,10 +65,11 @@ def test_only_explicit_submissions_receive_submission_priority(supervisor, tmp_p
     report.write_text('최종 보고서')
     source.write_text('{"text":"수집 원문"}')
     supervisor.store.put_response(f'보고서: {report}')
-    packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(source)}, 'result': 'saved'}])
+    packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'},
+                                  {'name': 'Read', 'input': {'path': str(source)}, 'result': source.read_text()}])
     roles = {r['subject']: r['role'] for r in packet['attachments']}
     assert roles[str(report)] == 'submission'
-    assert roles[str(source)] == 'support'
+    assert str(source) not in roles
 
 
 @pytest.mark.parametrize('reference,blocked', [
@@ -155,12 +156,14 @@ def test_research_invalid_citation_is_repaired_before_approval(supervisor, monke
         assert 'research_citations' in prompt
         if len(evaluations) == 2:
             assert '정확한 근거 788' in prompt
-        # 모델 승인이 무효 인용을 덮어쓰지 못한다.
-        return 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"근거 확인","evidence":["인용"],"remaining":[]}'
+        if len(evaluations) == 1:
+            return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: ["0"]\n'
+                    'DEFECTS: [{"criterion_id":"C1","evidence":"없는 위치 ¶1, 원문 위치 ¶27","repair":"실제 위치로 수정"}]')
+        return 'ACHIEVED\nCITATION_USES: [{"index":0,"use":"source"}]\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"근거 확인","evidence":["인용"],"remaining":[]}'
 
     def repair(prompt, **kwargs):
         repairs.append(prompt)
-        assert '인용 검사 실패' in prompt and '¶27' in prompt
+        assert '없는 위치' in prompt and '¶27' in prompt
         packet = json.loads(prompt.split('작업 인계=', 1)[1])
         block = packet['target_blocks']['blocks'][0]
         supervisor.store.patch(packet['response']['version'], [
@@ -358,7 +361,8 @@ def test_rework_uses_updated_evidence_and_stops_after_one_repair(supervisor, mon
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     result = finish(supervisor, "기존 답변")[-1]["content"]
     assert len(evaluations) == 2 and len(repairs) == 1
-    assert result.startswith("수정한 답변") and "미승인" in result
+    assert result == "수정한 답변"
+    assert tc.get_goal_eval_outcome()["review_status"] == "REWORK"
     assert tc.get_goal_eval_outcome()["status"] == "NOT_ACHIEVED"
 
 
@@ -394,6 +398,7 @@ def test_whole_repair_criteria_are_included_in_review(supervisor, monkeypatch):
 def test_changed_code_file_cannot_be_approved_with_old_snapshot(supervisor, tmp_path, monkeypatch):
     path = tmp_path / "made.py"
     path.write_text("print('원래 코드')")
+    supervisor.run_tool("Write", {"path": str(path)}, lambda: "saved")
 
     def evaluate(prompt, **kwargs):
         assert "print('원래 코드')" in prompt
@@ -402,7 +407,8 @@ def test_changed_code_file_cannot_be_approved_with_old_snapshot(supervisor, tmp_
 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     result = finish(supervisor, str(path))[-1]["content"]
-    assert "산출물이 변경" in result
+    assert result == str(path)
+    assert "산출물이 변경" in tc.get_goal_eval_outcome()["reason"]
     assert tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
 
 
@@ -415,7 +421,7 @@ def test_unknown_reason_mentioning_achieved_does_not_trigger_approval(supervisor
     monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw:
                         "UNKNOWN\n필수 출처가 없어 ACHIEVED라고 판단할 수 없습니다.")
     result = finish(supervisor, "출처 없는 답변")[-1]["content"]
-    assert "미승인" in result and tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
+    assert result == "출처 없는 답변" and tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
 
 
 def test_tool_capable_supervisor_rejects_final_phase(supervisor):
@@ -779,7 +785,7 @@ def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch
         report = tmp_path / 'report.md'
         report.write_text('효과가 입증되었다. ' + marker)
         supervisor.store.put_response(f'보고서: [파일]({report})')
-        packet = prepare(supervisor, [])
+        packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}])
     import hashlib
     context = packet['context']
     receipt = context['research_citations']['valid'][0]['receipts'][0]
@@ -788,6 +794,62 @@ def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch
     assert context['research_claims'][0]['path'] == str(report)
     assert context['research_claims'][0]['hash'] == hashlib.sha256(report.read_bytes()).hexdigest()
     assert '효과가 입증' in context['research_claims'][0]['claim_context']
+
+
+def test_reference_links_are_not_submissions_but_explicit_republication_is(supervisor, tmp_path):
+    from final_evaluator import prepare
+    plan, report = tmp_path / 'plan.md', tmp_path / 'report.md'
+    plan.write_text('기존 계획의 인용 [자료:old:p70]')
+    report.write_text('다시 제출하는 기존 보고서')
+    supervisor.store.put_response(f'참고 계획: {plan}\n보고서: {report}')
+    packet = prepare(supervisor, [{'name': 'artifact', 'result': {'path': str(report), 'role': 'submission'}}])
+    assert plan.read_text() not in packet['files']
+    assert report.read_text() in packet['files']
+    assert str(plan) in packet['context']['reference_paths']
+
+
+def test_repair_presents_changed_source_and_prior_response_without_transferring_approval(supervisor, tmp_path):
+    from final_evaluator import prepare
+    report = tmp_path / 'report.md'
+    report.write_text('목표는 100건. 실적은 미확인.\n결론은 잠정적이다.')
+    calls = [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}]
+    supervisor.store.put_response('실적은 미확인입니다.')
+    original = prepare(supervisor, calls)
+    report.write_text('목표는 100건. 실적은 100건으로 확정.\n결론은 잠정적이다.')
+    block = supervisor.store.blocks[0]
+    supervisor.store.patch(supervisor.store.version, [{'id': block['id'], 'hash': block['hash'], 'text': '실적 100건입니다.'}])
+    revised = prepare(supervisor, calls)
+    change = next(a for a in revised['attachments'] if a['subject'].startswith('changes:'))
+    assert '-목표는 100건. 실적은 미확인.' in change['text']
+    assert '+목표는 100건. 실적은 100건으로 확정.' in change['text']
+    assert any(a['subject'] == 'previous_response' for a in revised['attachments'])
+    assert revised['criteria'] == original['criteria']
+
+
+def test_unused_question_and_read_additions_do_not_invalidate_selected_inputs(supervisor, tmp_path):
+    import research_capture
+    from research_context import scope, review_state
+    from research_store import ResearchStore
+    from research_questions import ResearchQuestions
+    from research_library import ResearchLibrary
+    store = ResearchStore(tmp_path, 'input-dependencies')
+    tid = store.create_thread('연구')['id']
+    ctx = {'project_uid': store.uid, 'thread_id': tid, 'run_id': 'r', 'epoch': store.epoch, 'path': str(tmp_path)}
+    with scope(ctx):
+        questions = ResearchQuestions(store, tid)
+        rows = questions.apply([{'expected_revision': 0, 'text': f'질문 {i}', 'scope': '문맥' * 100}
+                                for i in range(20)])['items']
+        result = research_capture.review(ctx, '', query=rows[0]['question_id'], full_receipts=True)
+        deps = result['dependencies']
+        unused = next(q for q in rows if q['question_id'] not in deps['questions'])
+        questions.apply([{'question_id': unused['question_id'], 'expected_revision': 1, 'scope': '무관한 수정'}])
+        lib = ResearchLibrary(store, tid)
+        ref = lib.capture('새 읽기 행', title='추가 근거')
+        lib.read(ref['version_ref'])
+        assert review_state(deps) == result['state_revision']
+        used = next(q for q in rows if q['question_id'] in deps['questions'])
+        questions.apply([{'question_id': used['question_id'], 'expected_revision': 1, 'scope': '관련 수정'}])
+        assert review_state(deps) != result['state_revision']
 
 
 def test_research_question_correction_invalidates_review_of_same_file(supervisor, tmp_path):
@@ -814,7 +876,7 @@ def test_research_question_correction_invalidates_review_of_same_file(supervisor
         report = tmp_path / 'report.md'
         report.write_text('체결 실적이다. [자료:' + rec['version_ref'] + ':p1]')
         supervisor.store.put_response(f'[보고서]({report})')
-        packet = prepare(supervisor, [])
+        packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}])
         citations = packet['context']['research_citations']
         assert citations['questions']['items'][0]['revision_digest'] == q['revision_digest']
         assert citations['valid'][0]['question_links'][0]['candidate_included']

@@ -465,7 +465,7 @@ class Supervisor:
         if self.trigger == "unchanged_repeat":
             self.trigger = ""
 
-    def _finish(self, key, result, error=False, unknown=False):
+    def _finish(self, key, result, error=False, unknown=False, images=None):
         from execution_situation import current as current_situation, active_call_id
         situation = current_situation()
         recovery_key = active_call_id() or key
@@ -481,6 +481,13 @@ class Supervisor:
         with self.lock:
             call = self.active.pop(key, {})
             ref = self.store.evidence(result)
+            from cognitive_eval import CognitiveEvalMixin
+            visual_call = {'name': call.get('name'), 'input': call.get('_payload') or {},
+                           'result': [result, images] if images else result, 'is_error': error}
+            if str(call.get('name', '')).endswith('execute_ibl'):
+                from final_evaluator import runtime_calls
+                visual_call['runtime_calls'] = runtime_calls(self.store, result) or []
+            CognitiveEvalMixin()._collect_visual_artifacts('', [visual_call], evidence_store=self.store)
             from supervisor_review import missing_read_observation
             observation = error and missing_read_observation(call.get("name", ""),
                                                              call.get("_payload") or {}, result)
@@ -501,6 +508,7 @@ class Supervisor:
             except (TypeError, ValueError):
                 detail, evidence_summary = {}, {}
             self.recent.append(self.log("tool.finished", id=key, name=call.get("name"), evidence=ref,
+                                        visual_evidence=visual_call.get('visual_evidence', []),
                                         is_error=error, observation="missing_read" if observation else "",
                                         internal_tool_failures=evidence_summary.get('tool_failures', 0),
                                         operation_outcomes=evidence_summary.get('operation_outcomes',
@@ -653,7 +661,7 @@ class Supervisor:
             key = self._native.pop(event.get("id") or name, None)
             if key:
                 self._finish(key, event.get("result", event.get("content", "")), event.get("is_error", False),
-                             unknown=bool(event.get('transport_error')))
+                             unknown=bool(event.get('transport_error')), images=event.get('images'))
 
     def boundary(self):
         if self.cancelled():
@@ -1124,26 +1132,33 @@ class Supervisor:
             if error:
                 approved = False
                 decision = {"status": "UNKNOWN", "reason": error}
+        delivery_result = None
         if approved:
             try:
                 self.delivery.deliver(decision.get("delivery_hash"), self.cancelled)
             except Exception as exc:
                 self.log("delivery.failed", role="harness", error=str(exc))
-                approved = False
-                decision = {"status": "UNKNOWN", "reason": f"검수한 산출물·알림을 전달하지 못했습니다: {exc}"}
+                delivery_result = {'status': 'UNKNOWN', 'reason': str(exc)}
                 record_trajectory_event("validation.completed", {
                     "validator": "goal_eval", "status": "UNKNOWN", "achieved": False,
-                    "feedback_text": decision["reason"], "stage": "delivery"})
+                    "feedback_text": str(exc), "stage": "delivery"})
         status = "ACHIEVED" if approved else "NOT_ACHIEVED" if decision["status"] == "REWORK" else "UNKNOWN"
         from repair_continuation import finish_review
-        if finish_review(self, decision):
+        completion = decision
+        if delivery_result:
+            status = "UNKNOWN"
+            completion = {**decision, 'status': 'UNKNOWN', 'goal_status': 'UNKNOWN',
+                          'reason': delivery_result['reason'], 'repair_scope': 'blocked'}
+        if finish_review(self, completion):
             status = "PENDING_EXECUTION" if self._review_row.get("phase") == "execution" else "PENDING_REVIEW"
         set_goal_eval_outcome(approved, 2 if status == "NOT_ACHIEVED" else 0,
                               status=status, reason=decision.get("reason", ""), review_status=decision["status"],
-                              goal_status=decision.get("goal_status", "UNKNOWN") if not status.startswith("PENDING_") else "UNKNOWN",
-                              goal_reason=decision.get("goal_reason", ""),
+                              goal_status=completion.get("goal_status", "UNKNOWN") if not status.startswith("PENDING_") else "UNKNOWN",
+                              goal_reason=delivery_result['reason'] if delivery_result else decision.get("goal_reason", ""),
                               goal_evidence=decision.get("goal_evidence", []), remaining=decision.get("remaining", []),
-                              response_hash=self.store.manifest()["hash"])
+                              response_hash=self.store.manifest()["hash"],
+                              citation_uses=decision.get("citation_uses", []) if approved else [],
+                              delivery=delivery_result)
         from thread_context import get_goal_eval_outcome
         outcome = get_goal_eval_outcome()
         record_trajectory_event("validation.completed", {"validator": "goal_eval", "final": True, **outcome})
@@ -1156,17 +1171,11 @@ class Supervisor:
         }, ensure_ascii=False), encoding="utf-8")
         print(f"[GoalEval] 최종 판정: {status}")
         final = self.store.text
-        if status == "PENDING_EXECUTION":
-            final += "\n\n[작업 계속] 전체 완료 기준을 보존했습니다. 남은 구현·검사를 같은 목표로 이어갑니다."
-        elif status == "PENDING_REVIEW":
-            final += "\n\n[평가 대기] 구현과 검사 결과를 보존했습니다. 평가만 재개하며 구현은 반복하지 않습니다."
-            if (getattr(self, "_review_row", {}) or {}).get("review_failures", 0) >= 3:
-                final += " 평가 서비스가 계속 실패해 자동 호출을 멈췄습니다. 평가 재개가 필요합니다."
-        elif not approved:
-            final += "\n\n[평가 검수 미승인] " + str(decision.get("reason", "검수 미완료"))
+        from research_context import finish_review
+        finish_review(final, outcome, outcome.get('citation_uses', []))
         self.log("response.delivered", role="harness", status=decision["status"], response=self.store.manifest())
         yield {"type": "text", "content": final}
-        yield {"type": "final", "content": final}
+        yield {"type": "final", "content": final, "evaluation": outcome}
         return final
 
 

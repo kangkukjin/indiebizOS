@@ -82,7 +82,7 @@ def test_evaluator_timeout_resumes_only_review_after_restart(supervisor, tmp_pat
     def unavailable(*a, **kw):
         raise TimeoutError("평가 서비스 일시 장애")
     monkeypatch.setattr("consciousness_agent.system_ai_call", unavailable)
-    assert "평가 대기" in finish(supervisor, "실제 검사 완료")[-1]["content"]
+    assert finish(supervisor, "실제 검사 완료")[-1]["content"] == "실제 검사 완료"
     row = journal.read(supervisor.task, tmp_path)
     assert row["status"] == "waiting_review" and row["review_failures"] == 1
     assert journal.task_state(supervisor.task, tmp_path) == "waiting"
@@ -115,7 +115,8 @@ def test_review_rejects_changed_artifact_without_model_or_implementation(supervi
     artifact.write_text("changed by another task")
     restore_review(supervisor, row)
     output = finish(supervisor, supervisor.store.text)[-1]["content"]
-    assert "증거 재사용 불가" in output and not tc.get_goal_eval_outcome()["achieved"]
+    assert output == "저장된 결과" and not tc.get_goal_eval_outcome()["achieved"]
+    assert "변경" in tc.get_goal_eval_outcome()["reason"]
 
 
 def test_explicit_unknown_is_not_retried_as_service_failure(supervisor, tmp_path, monkeypatch):

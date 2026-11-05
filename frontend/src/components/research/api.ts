@@ -11,6 +11,8 @@ export interface ResearchMessage {
   id: number; run_id?: string; display_order?: number; content: string; role: 'user' | 'assistant'; message_time: string;
   status: string; tool_activities?: ToolActivity[]; cognition?: CognitionInfo; thinking?: string; todos?: TodoItem[]; questions?: QuestionItem[]; plan_mode?: PlanModeState;
   status_label: string; attachments: SavedAttachment[];
+  evaluation?: import('../chat/types').ReviewOutcome;
+  submissions?: import('../chat/types').ChatMessage['reviewedArtifacts'];
 }
 export interface ConversationData extends ResearchThread {
   items: ResearchMessage[]; next_cursor: string | null;

@@ -172,6 +172,7 @@ def tool_index_at(directory, limit=40):
                              "input": {"id": inp.get("id"), "excerpt": inp.get("excerpt", "")[:240]},
                              "result": {"id": result["id"], "chars": result.get("chars")},
                              "is_error": bool(event.get("is_error")),
+                             **({'visual_evidence': event['visual_evidence']} if 'visual_evidence' in event else {}),
                              **({"check_rejected": True} if event.get("check_rejected") else {})})
     return rows[-limit:]
 
@@ -446,15 +447,22 @@ class TurnStore:
         return {"events": rows, "next_offset": cursor, "requested": requested,
                 "limit": limit, "clamped": requested != limit}
 
-    def put_response(self, text):
+    def put_response(self, text, *, replace=False):
         with self.lock:
-            if self.version:
+            if self.version and not replace:
                 raise ValueError("후보가 이미 있습니다. 변경 블록만 patch 하세요")
+            if self.version and text == self.text:
+                return self.manifest()
             # 최대 2000자: 장문/코드 단락도 뒤쪽을 페이지 단위로 빠짐없이 읽을 수 있다.
             parts = response_parts(text)
+            previous = self.blocks, self.version
             self.blocks = [{"id": str(i), "text": p, "hash": digest(p)} for i, p in enumerate(parts)]
-            self.version = 1
-            self._save()
+            self.version += 1
+            try:
+                self._save()
+            except OSError:
+                self.blocks, self.version = previous
+                raise
             return self.manifest()
 
     @property

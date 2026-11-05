@@ -111,3 +111,18 @@ def test_final_wrapped_cli_limit_stops_before_subprocess(monkeypatch):
     events = list(p.process_message_stream('본문' * 1000))
     assert events[-1]['failure_kind'] == 'input_too_large'
     assert events[-1]['failure_details']['exceeded']['chars']['excess'] > 0
+
+
+@pytest.mark.parametrize('resume', [None, 'fixture-session'])
+@pytest.mark.parametrize('profile', ['', 'coding'])
+def test_codex_attaches_pixels_to_initial_and_resumed_input(monkeypatch, resume, profile):
+    from providers.codex import CodexProvider
+    p = CodexProvider(api_key='', model='fake', system_prompt='', tools=[])
+    p.execution_profile = profile
+    p._input_image_paths = ['/tmp/screen one.png', '/tmp/screen-two.png']
+    p._binary_path = 'codex'
+    if profile:
+        monkeypatch.setattr('providers.coding_profile.codex_command', lambda *a: ['codex', 'exec', '-'])
+    command = p._build_command(mcp_config_path=None, tools_mode='read', resume_session_id=resume)
+    assert command[-5:] == ['--image', *p._input_image_paths[:1], '--image', p._input_image_paths[1], '-']
+    assert '도구' not in p._image_prompt_prefix(p._input_image_paths)

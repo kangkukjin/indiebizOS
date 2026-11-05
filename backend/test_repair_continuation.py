@@ -239,7 +239,8 @@ def test_unknown_non_evidence_does_not_start_blind_repair(supervisor, monkeypatc
     monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw:
                         f"UNKNOWN\nUNKNOWN_REASON: {reason}\n사용자 확인이 필요합니다.")
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("무관한 자동 보완")
-    assert "미승인" in finish(supervisor, "대기")[-1]["content"]
+    assert finish(supervisor, "대기")[-1]["content"] == "대기"
+    assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
 
 def test_evidence_recovery_does_not_spend_defect_repair(supervisor, monkeypatch):

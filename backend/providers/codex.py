@@ -476,11 +476,7 @@ class CodexProvider(CliSubprocessProvider):
         return args
 
     def _image_prompt_prefix(self, image_paths: List[str]) -> str:
-        img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
-        return (
-            f"{img_lines}\n"
-            f"(위 이미지 파일을 볼 수 있다 — 이미지 보기 도구나 셸로 확인하라)\n\n"
-        )
+        return f"이미지 {len(image_paths)}장이 현재 입력에 첨부되어 있습니다.\n\n"
 
     # ================= 도구 정책 =================
 
@@ -592,7 +588,9 @@ class CodexProvider(CliSubprocessProvider):
         """
         if getattr(self, 'execution_profile', '') == 'coding':
             from .coding_profile import codex_command
-            return codex_command(self, resume_session_id)
+            cmd = codex_command(self, resume_session_id)
+            cmd[-1:-1] = [part for path in getattr(self, '_input_image_paths', []) for part in ('--image', path)]
+            return cmd
         cmd = [
             self._binary_path,
             "exec",
@@ -654,6 +652,9 @@ class CodexProvider(CliSubprocessProvider):
         if resume_session_id:
             cmd += ["resume", resume_session_id]
 
+        # 실제 픽셀을 입력으로 전달한다. 파일 경로 산문은 시각 증거가 아니다.
+        for path in getattr(self, '_input_image_paths', []):
+            cmd += ['--image', path]
         # 프롬프트는 stdin (윈도우 argv 상한 회피 + 한글 보존)
         cmd += ["-"]
         return cmd

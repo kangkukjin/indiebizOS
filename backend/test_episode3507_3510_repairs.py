@@ -94,18 +94,6 @@ def test_block_id_does_not_return_the_whole_response(supervisor):
     assert len(json.dumps(page, ensure_ascii=False)) < 500
 
 
-def test_changed_review_reuses_read_receipts_and_invalidates_new_criteria(supervisor):
-    from supervisor_review import response_review_page
-    supervisor.store.put_response("앞\n\n틀린 값\n\n지도" + "좌표" * 1000)
-    first = response_review_page(supervisor)
-    old = next(b for b in supervisor.store.blocks if "틀린 값" in b["text"])
-    supervisor.store.patch(1, [{"id": old["id"], "hash": old["hash"], "old_string": "틀린 값", "new_string": "맞는 값"}])
-    second = response_review_page(supervisor)
-    assert second["mode"] == "changed_blocks" and len(second["blocks"]) == 1
-    assert "좌표" not in json.dumps(second, ensure_ascii=False) and supervisor.store.fully_read()
-    assert len(json.dumps(second, ensure_ascii=False)) < len(json.dumps(first, ensure_ascii=False)) / 3
-    supervisor.framing = {"achievement_criteria": "새 출처 기준"}
-    assert response_review_page(supervisor)["mode"] == "full_read_required"
 
 
 def test_legacy_local_scope_and_small_repair_do_not_resume_large_session(supervisor):

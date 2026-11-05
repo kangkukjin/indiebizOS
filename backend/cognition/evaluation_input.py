@@ -224,6 +224,10 @@ def evidence_references(packet):
         ref = row.get('evidence_ref') or {}
         add(ref.get('id'), ref.get('id'), ref.get('chars'),
             'workspace_check:' + str(row.get('id', '')), row.get('criterion_ids', []))
+    for row in packet.get('context', {}).get('visual_evidence', []):
+        add(row['id'], row['id'], 1, row.get('path') or 'image')
+        if row['id'] in refs:
+            refs[row['id']].update(unit='images', media='image', total=1)
     for row in refs.values():
         row['recoverable'] = bool(not row['ambiguous'] and re.fullmatch(r'[0-9a-f]{64}', row['evidence_id'])
                                   and row['revision'] == row['evidence_id'])
@@ -268,6 +272,8 @@ def evidence_requests(feedback, packet):
             continue
         normalized = {k: row[k] for k in ('criterion_id', 'evidence_id', 'start', 'end')}
         normalized['revision'] = ref['revision']
+        if ref.get('media') == 'image':
+            normalized['media'] = 'image'
         result['requests'].append(normalized)
         if 'revision' not in row:
             result['normalizations'].append({'index': index, 'field': 'revision',
@@ -310,6 +316,16 @@ def recover(controller, requests):
             raise ValueError('증거 회수 중 사용자 취소')
         page = controller.store.read_evidence(request['evidence_id'], 0, None)
         text = page['text']
+        if request.get('media') == 'image':
+            if page.get('integrity') != 'verified' or request['revision'] != page['id']:
+                raise ValueError('이미지 원문 무결성 확인 실패')
+            value = json.loads(text)
+            value['_evidence_id'] = page['id']
+            packet = controller._evaluation_packet
+            packet['images'] = [i for i in packet.get('images', []) if i.get('_evidence_id') != page['id']][-2:] + [value]
+            rows.append(record(' ', subject='recovered_image', role='recovered',
+                               source_ref=page['id'], revision=page['id'], total=1))
+            continue
         if (page.get('integrity') != 'verified' or request['end'] > len(text)
                 or page['id'] != request['revision']):
             raise ValueError('증거 만료·판본·범위 불일치')

@@ -22,20 +22,26 @@ def install_review(callback):
     _review = callback
 
 
-def citation_review(text, *, query='', question_ids=(), full_receipts=False):
+def citation_review(text, *, query='', question_ids=(), full_receipts=False, occurrences=None):
     """현재 연구의 인용 검사를 평가에 공급한다. 일반 실행은 추가 작업이 없다."""
     context = current()
     if not context:
         return None
     if _review is None:
         raise RuntimeError('연구 인용 검사기가 준비되지 않았습니다')
-    return _review(context, text, query=query, question_ids=question_ids,
-                   **({'full_receipts': True} if full_receipts else {}))
+    result = _review(context, text, query=query, question_ids=question_ids,
+                      full_receipts=full_receipts, occurrences=occurrences)
+    if full_receipts:
+        import copy
+        from research_review import claims
+        context['prepared_review'] = copy.deepcopy(result)
+        context['prepared_review']['claims'] = claims(text) if occurrences is None else occurrences
+    return result
 
 
-def review_state():
+def review_state(dependencies=None):
     context = current()
-    return _review(context, '', state_only=True) if context and _review else None
+    return _review(context, '', state_only=True, dependencies=dependencies) if context and _review else None
 
 
 def current():
@@ -205,20 +211,6 @@ class TurnResearch:
         framing['_research_coverage'] = status
         return '\n<research_workspace_status>\n' + json.dumps(status, ensure_ascii=False) + '\n</research_workspace_status>'
 
-    def validate(self, response):
-        """최종 전달 전에 파일 인용도 확인한다. 의미 승인은 기존 평가자가 담당한다."""
-        if not self.context:
-            return response
-        from research_review import documents, review_text
-        checked = review_text(response, documents(response, self.context['path']))
-        invalid = citation_review(checked)['invalid']
-        if not invalid:
-            return response
-        self.context['failed'] = True
-        from episode_logger import record_trajectory_event
-        record_trajectory_event('citation.validation_failed', {'invalid': invalid})
-        return response + '\n\n인용 검증을 완료하지 못했습니다. 제출 파일을 포함한 확인되지 않은 인용은 근거로 사용할 수 없습니다.'
-
     def events(self, events):
         # 활성화는 생성기 안에서 계획 작성 뒤 발생한다. 첫 도구 이벤트 이전에 결정된다.
         def selected():
@@ -229,3 +221,26 @@ class TurnResearch:
                     self.context['failed'] = True
                 yield event
         yield from capture_stream(selected(), attached_only=True)
+
+
+def finish_review(response, outcome=None, uses=()):
+    """Carry the already-decided result to both storage surfaces. No file discovery or re-review."""
+    context = current()
+    if not context:
+        return None
+    from research_review import saved_citations
+    from hashlib import sha256
+    result = dict(outcome or {'review_status': 'NOT_RUN', 'goal_status': 'UNKNOWN'})
+    fingerprint = sha256(response.encode()).hexdigest()
+    if result.get('response_hash') and result['response_hash'] != fingerprint:
+        raise ValueError('검수한 응답과 최종 전달할 응답의 지문이 다릅니다')
+    prepared = context.get('prepared_review') or {}
+    result.update(response_hash=sha256(response.encode()).hexdigest(), citation_uses=list(uses),
+                  citations=saved_citations(prepared, uses) if prepared and uses else [],
+                  research_identity={k: context[k] for k in ('project_uid', 'thread_id', 'run_id')})
+    result['unresolved_citations'] = prepared.get('invalid', [])
+    result['submissions'] = context.get('submissions', [])
+    result['research_dependencies'] = prepared.get('dependencies')
+    result['research_state'] = prepared.get('state_revision')
+    context['final_review'] = result
+    return result

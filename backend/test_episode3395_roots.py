@@ -7,7 +7,6 @@ import pytest
 import boot_paths  # noqa: F401
 from memory_evidence import source_units, grounded_fact
 from supervision_store import TurnStore
-from supervisor_content import discover, validate, reconcile
 from test_conscious_supervisor import supervisor, verdict, finish, manager_tool  # noqa: F401
 
 
@@ -62,53 +61,10 @@ def test_consolidation_selects_original_and_keeps_relative_time(monkeypatch):
 
 
 
-def test_counts_use_verified_unique_final_rows(tmp_path):
-    store = TurnStore(tmp_path)
-    rows = [{"event":"policy", "status":"NEW", "verified":True},
-            {"event":"policy", "status":"NEW", "verified":True},
-            {"event":"moon", "status":"NEW", "verified":False},
-            {"event":"model", "status":"CHANGED", "verified":True}]
-    ref = store.evidence({"items": rows})
-    calc = {"id":ref["id"], "where":{"status":"NEW", "verified":True},
-            "identity":["event"], "expected":1}
-    assert not reconcile(store, [calc])  # Unread evidence is not approval.
-    store.read_evidence(ref["id"], mark=True)
-    assert reconcile(store, [calc])
-    assert not reconcile(store, [{**calc, "expected":3}])
-    assert not reconcile(store, [{**calc, "identity":["unknown"]}])
 
 
-def test_coverage_only_approval_cannot_pass_content(supervisor, tmp_path):
-    path = tmp_path / "report.md"
-    path.write_text("투자 증가율은 둔화할 전망이다.")
-    supervisor.store.put_response(f"보고서: {path}")
-    supervisor.content_artifacts = discover(supervisor, supervisor.store.text, [])
-    assert validate(supervisor, {"status":"APPROVED", "checks":[{"path":str(path),"coverage":"읽음"}]})
 
 
-def test_content_approval_binds_read_sources_and_current_bytes(supervisor, tmp_path):
-    path = tmp_path / "report.md"
-    path.write_text("투자 증가율은 둔화할 전망이다.")
-    supervisor.store.put_response(f"보고서: {path}")
-    supervisor.content_artifacts = discover(supervisor, supervisor.store.text, [])
-    art = supervisor.content_artifacts[0]
-    source = supervisor.store.evidence("원문: 투자 증가율 79%, 38%, 16% 전망")
-    record = {"path":str(path),"hash":art["hash"],
-        "meaning":{"status":"passed","reason":"수준 아닌 증가율임을 보존", "evidence":[{"id":art["evidence_id"],"quote":"투자 증가율"}]},
-        "sources":{"status":"passed","reason":"원문 대조", "evidence":[{"id":source["id"],"quote":"증가율 79%, 38%, 16% 전망"}]},
-        "counts":{"status":"not_applicable","reason":"항목 계수 없음"}}
-    decision = {"status":"APPROVED", "content_checks":[record]}
-    assert validate(supervisor, decision)
-    supervisor.store.read_evidence(art["evidence_id"], mark=True)
-    supervisor.store.read_evidence(source["id"], mark=True)
-    assert validate(supervisor, decision) is None
-    record["sources"]["evidence"] = [{"id":art["evidence_id"],"quote":"투자 증가율"}]
-    assert validate(supervisor, decision)  # A report cannot certify its own sources.
-    record["sources"]["evidence"] = [{"id":source["id"],"quote":"증가율 79%, 38%, 16% 전망"}]
-    record["sources"]["evidence"][0]["quote"] = "투자가 감소한다"
-    assert validate(supervisor, decision)
-    path.write_text("투자가 감소한다.")
-    assert "바뀌었" in validate(supervisor, decision)
 
 
 

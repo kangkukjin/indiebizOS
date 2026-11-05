@@ -70,6 +70,28 @@ def test_idempotent_send_and_one_active_turn(project):
     assert store.begin_run(tid, '다음 질문', 'request2')[1]
 
 
+def test_final_save_is_idempotent_and_preserves_independent_verdicts(project, monkeypatch):
+    from research_context import scope, finish_review
+    store = project[2]
+    tid = store.create_thread('최종 결과')['id']
+    run, _ = store.begin_run(tid, '요청', 'final')
+    text = '미완료 보고와 표기 예시 [자료:판본:위치]'
+    with scope({'project_uid': store.uid, 'thread_id': tid, 'run_id': run}):
+        result = finish_review(text, {'review_status': 'APPROVED', 'goal_status': 'NOT_ACHIEVED'})
+    monkeypatch.setattr(ResearchLibrary, 'citation_review', lambda *a, **k: pytest.fail('저장 소비자의 재검사'))
+    first = store.write_response(tid, run, text, 'completed', outcome=result)
+    assert store.write_response(tid, run, text, 'completed', outcome=result) == first
+    row = store.messages(tid)['items'][-1]
+    assert row['content'] == text and row['status'] == 'completed'
+    assert row['evaluation'] == result
+    with store.connect() as db:
+        assert db.execute("SELECT count(*) FROM research_events WHERE kind='response.finalized'").fetchone()[0] == 1
+    with pytest.raises(ResearchConflict):
+        store.write_response(tid, run, text + '변경', 'completed', outcome=result)
+    with pytest.raises(ResearchConflict):
+        store.write_response(tid, run, text, 'completed', outcome={**result, 'goal_status': 'ACHIEVED'})
+
+
 def test_concurrent_requests_reserve_only_one_run(project):
     store = project[2]
     tid = store.create_thread('교육')['id']
@@ -192,3 +214,33 @@ def test_messages_emit_timezone_explicit_message_time(tmp_path):
         db.execute("UPDATE messages SET message_time='2026-10-13 03:17:32' WHERE thread_id=?", (tid,))
     times = {m['message_time'] for m in store.messages(tid)['items']}
     assert times == {'2026-10-13T03:17:32Z'}
+
+
+def test_reviewed_report_survives_replacement_and_restart(project, tmp_path):
+    from research_context import scope, finish_review
+    from pathlib import Path
+    import hashlib
+    store = project[2]
+    tid = store.create_thread('본문 보존')['id']
+    run, _ = store.begin_run(tid, '보고서', 'preserve')
+    path = tmp_path / 'report.md'
+    path.write_bytes('검수한 본문\r\n'.encode())
+    with scope({'project_uid': store.uid, 'thread_id': tid, 'run_id': run,
+                'submissions': [{'path': str(path), 'hash': hashlib.sha256(path.read_bytes()).hexdigest(),
+                                 'text': '검수한 본문\r\n'}]}):
+        outcome = finish_review('보고서 링크', {'review_status': 'APPROVED', 'goal_status': 'ACHIEVED'})
+    saved = store.write_response(tid, run, '보고서 링크', 'completed', outcome=outcome)
+    assert store.write_response(tid, run, '보고서 링크', 'completed', outcome=outcome) == saved
+    before = store.messages(tid)['items'][-1]
+    assert before['submissions'][0]['changed'] is False
+    path.write_text('나중에 바뀐 내용')
+    reopened = ResearchStore(store.path).messages(tid)['items'][-1]
+    assert reopened['evaluation']['review_status'] == 'APPROVED'
+    artifact = reopened['submissions'][0]
+    assert artifact['changed'] is True
+    assert Path(artifact['reviewed_path']).read_bytes() == '검수한 본문\r\n'.encode()
+    Path(artifact['reviewed_path']).write_text('변조된 표시 사본')
+    refreshed = store.messages(tid)['items'][-1]['submissions'][0]
+    assert Path(refreshed['reviewed_path']).read_bytes() == '검수한 본문\r\n'.encode()
+    path.unlink()
+    assert store.messages(tid)['items'][-1]['submissions'][0]['changed'] is None

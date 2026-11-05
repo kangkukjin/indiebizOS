@@ -159,7 +159,14 @@ def scan_consumer(path):
                     continue
                 val = node.value
                 # X = consciousness_output ...  /  X = <cons> or {}
-                names = [_name_of(n) for n in ast.walk(val) if isinstance(n, ast.Name)]
+                # 인수로 framing을 받는 함수의 반환값까지 framing 별칭은 아니다.
+                # 실제 별칭과 `co or {}`만 전파한다.
+                aliases = val.values if isinstance(val, ast.BoolOp) else [val]
+                names = [_name_of(n) for n in aliases if isinstance(n, ast.Name)]
+                for value in aliases:
+                    key = _str_key(value)
+                    if key and key[1] in FOCUS_GETTERS:
+                        names.append(_name_of(key[0]))
                 if "consciousness_output" in names or (cons & set(names)):
                     # focus getter인지 먼저 본다
                     sk = _str_key(val if isinstance(val, (ast.Call, ast.Subscript))

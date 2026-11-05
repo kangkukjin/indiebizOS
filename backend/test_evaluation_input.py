@@ -428,7 +428,8 @@ def test_recovery_after_checkpoint_does_not_reread_old_ranges(supervisor, monkey
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
     result = finish(supervisor, '응답')
     assert len(calls) == 1
-    assert '이미 전달' in result[-1]['content']
+    assert result[-1]['content'] == '응답'
+    assert '이미 전달' in result[-1]['evaluation']['reason']
 
 
 def test_review_restore_preserves_evaluation_budget(supervisor, monkeypatch, tmp_path):

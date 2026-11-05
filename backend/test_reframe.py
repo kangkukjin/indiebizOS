@@ -156,18 +156,6 @@ def test_clarification_becomes_stop_directive():
     assert "★멈춤" in out["content"] and "어느 지역을 볼까요?" in out["content"]
 
 
-def test_eval_trigger_only_on_severe_or_second_round():
-    r = _Runner([_NEW, _NEW])
-    reframe.open_turn("agent_x", r, "m", [], "", _BASE)
-    assert reframe.revise_from_eval("agent_x", "c", "fb", severity=1, round_num=1) is None
-    assert r.calls == []
-    new = reframe.revise_from_eval("agent_x", "c", "핵심 소스가 없다", severity=3, round_num=1)
-    assert new and new["achievement_criteria"] == "5건 이상 + 원장 신설"
-    assert r.calls[0]["revision"]["trigger"] == "goal_eval" and r.calls[0]["revision"]["kind"] == "impossible"
-    assert reframe.revise_from_eval("agent_x", "c", "fb", severity=2, round_num=2) is not None
-    assert reframe.close_turn("agent_x") is not None and reframe.current("agent_x") is None
-
-
 def test_consciousness_input_carries_revision_block():
     a = ConsciousnessAgent.__new__(ConsciousnessAgent)
     rev = {"trigger": "executor", "kind": "impossible", "revision_no": 1,

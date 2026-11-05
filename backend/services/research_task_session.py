@@ -85,13 +85,9 @@ def session(runner, framing, message):
         failed = context.get('failed', False) or 'response' not in context or context.get('capture_failed', False)
     finally:
         try:
-            from research_review import documents, review_text
             text = context.get('response', '')
-            checked = review_text(text, documents(text, path))
-            lib = ResearchLibrary(store, tid)
-            invalid = lib.citation_review(checked, run)['invalid']
-            state = 'failed' if failed or invalid else 'completed'
-            store.write_response(tid, run, text, state, lib.citations(checked, run))
+            state = 'failed' if failed else 'completed'
+            store.write_response(tid, run, text, state, outcome=context.get('final_review'))
         finally:
             with _lock:
                 _active.discard(run)

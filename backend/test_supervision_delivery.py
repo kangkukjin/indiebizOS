@@ -51,7 +51,7 @@ def test_unapproved_draft_never_publishes_or_notifies(supervisor, tmp_path, monk
     target, _, sent = prepare(supervisor, tmp_path, monkeypatch)
     supervisor.config["max_repairs"] = 0
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **k: verdict(c, status))
-    assert "미승인" in finish(supervisor, "draft")[-1]["content"]
+    assert finish(supervisor, "draft")[-1]["evaluation"]["review_status"] != "APPROVED"
     assert target.read_text() == "old" and not sent
 
 
@@ -63,7 +63,7 @@ def test_changed_artifact_invalidates_approval(supervisor, tmp_path, monkeypatch
         Path(artifact["staged"]).write_bytes(b"changed after review")
         return verdict(c, delivery_hash=fingerprint)
     monkeypatch.setattr("final_evaluator.invoke", approve)
-    assert "미승인" in finish(supervisor, "draft")[-1]["content"]
+    assert finish(supervisor, "draft")[-1]["evaluation"]["review_status"] != "APPROVED"
     assert target.read_text() == "old" and not sent
 
 
@@ -71,10 +71,13 @@ def test_publication_failure_is_not_achieved_and_does_not_notify(supervisor, tmp
     import thread_context as tc
     target, _, sent = prepare(supervisor, tmp_path, monkeypatch)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **k:
-                        verdict(c, delivery_hash=c.delivery.manifest()["hash"]))
+                        verdict(c, delivery_hash=c.delivery.manifest()["hash"], goal_status="ACHIEVED"))
     target.unlink()
     target.mkdir()  # cannot replace a directory with the approved file
-    assert "전달하지 못했습니다" in finish(supervisor, "draft")[-1]["content"]
+    event = finish(supervisor, "draft")[-1]
+    assert event["content"] == "draft"
+    assert event["evaluation"]["review_status"] == "APPROVED"
+    assert event["evaluation"]["delivery"]["status"] == "UNKNOWN"
     assert not sent and tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
 
 
@@ -83,6 +86,59 @@ def test_cancellation_keeps_private_draft(supervisor, tmp_path, monkeypatch):
     supervisor.cancel_check = lambda: True
     finish(supervisor, "draft")
     assert target.read_text() == "old" and not sent
+
+
+def test_restart_after_partial_publication_does_not_repeat_confirmed_effects(tmp_path, monkeypatch):
+    import supervision_delivery as module
+    public, directory = tmp_path / 'public', tmp_path / 'staged'
+    public.mkdir()
+    queue = DeliveryQueue(directory, public, lambda *a, **k: None)
+    a, b = public / 'a.txt', public / 'b.txt'
+    stage_artifact(a, b'A', public, directory=directory)
+    stage_artifact(b, b'B', public, directory=directory)
+    queue.notify('one', 'body', 'info')
+    fingerprint = queue.manifest()['hash']
+    writes, sent = [], []
+    atomic = module._atomic
+
+    def crash(path, content):
+        if path.parent == public:
+            if writes:
+                raise OSError('interrupted')
+            writes.append(path)
+        return atomic(path, content)
+
+    monkeypatch.setattr(module, '_atomic', crash)
+    with pytest.raises(OSError):
+        queue.deliver(fingerprint)
+    first = writes[0]
+    stamp = first.stat().st_mtime_ns
+    monkeypatch.setattr(module, '_atomic', atomic)
+    monkeypatch.setattr('notify_dispatch.notify_user', lambda **k: sent.append(k) or True)
+    resumed = DeliveryQueue(directory, public, lambda *a, **k: None)
+    resumed.deliver(fingerprint)
+    DeliveryQueue(directory, public, lambda *a, **k: None).deliver(fingerprint)
+    assert a.read_bytes() == b'A' and b.read_bytes() == b'B'
+    assert first.stat().st_mtime_ns == stamp and len(sent) == 1
+
+
+def test_notification_with_unknown_effect_is_not_sent_again(tmp_path, monkeypatch):
+    queue = DeliveryQueue(tmp_path / 'stage', tmp_path, lambda *a, **k: None)
+    queue.notify('one', 'body', 'info')
+    fingerprint = queue.manifest()['hash']
+    sent = []
+
+    def uncertain(**kw):
+        sent.append(kw)
+        raise OSError('connection lost after send')
+
+    monkeypatch.setattr('notify_dispatch.notify_user', uncertain)
+    with pytest.raises(OSError):
+        queue.deliver(fingerprint)
+    resumed = DeliveryQueue(queue.directory, tmp_path, lambda *a, **k: None)
+    with pytest.raises(ValueError, match='미확인'):
+        resumed.deliver(fingerprint)
+    assert len(sent) == 1
 
 
 

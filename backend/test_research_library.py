@@ -7,6 +7,11 @@ from research_library import ResearchLibrary
 from research_context import scope
 
 
+
+def read_receipts(lib, run, version, locator):
+    with lib.store.connect() as db:
+        return [dict(r) for r in db.execute('SELECT revision AS extraction_revision,quote FROM research_access WHERE run_id=? AND version_id=? AND locator=? ORDER BY rowid', (run, version, locator))]
+
 @pytest.fixture
 def lib(tmp_path, monkeypatch):
     import notebook_store
@@ -51,19 +56,19 @@ def test_citation_requires_actual_read_and_retains_extraction_revision(lib):
     receipt = lib.capture('교육 효과를 주장한 원문 자료입니다. 통제집단의 한계가 있습니다.', title='논문')
     vid = receipt['version_ref']
     marker = f'[자료:{vid}:문단 1]'
-    assert not lib.citations(marker, 'run1')
+    assert not read_receipts(lib, 'run1', vid, '문단 1')
     with scope({'project_uid': lib.store.uid, 'run_id': 'run1'}):
         content = lib.read(vid)
     loc = lib.paragraphs(vid)[0][0][0]
     marker = f'[자료:{vid}:{loc}]'
-    cited = lib.citations(marker, 'run1')
+    cited = read_receipts(lib, 'run1', vid, loc)
     assert cited and cited[0]['extraction_revision'] == 1
     lib._extraction(vid, [(loc, '추출기 변경으로 달라진 문장입니다.')])
-    assert '통제집단' in lib.citations(marker, 'run1')[0]['quote']
+    assert '통제집단' in read_receipts(lib, 'run1', vid, loc)[0]['quote']
     assert '통제집단' in lib.read(vid, revision=1)['text']
     with pytest.raises(ValueError):
         lib.read(vid, revision=99)
-    assert not lib.citations(marker, 'run2')
+    assert not read_receipts(lib, 'run2', vid, loc)
 
 
 def test_full_receipts_bypass_preview_budget_without_new_read_or_invalid_change(lib):
@@ -249,16 +254,13 @@ def test_citation_review_binds_current_run_quotes_without_inventing_reads(lib):
     assert report['valid'][0]['quote'] == '수요는 788이다.'
     assert len(report['invalid']) == 2
     assert report['invalid'][0]['read_locations'] == ['¶27']
-    assert lib.citation_review(f'[자료:{vid}:¶27]', 'other')['invalid']
+    assert lib.citation_review(f'[자료:{vid}:¶27]', 'other')['valid'][0]['source_verified']
     with lib.store.connect() as db:
         assert db.execute('SELECT count(*) FROM research_access').fetchone()[0] == 1
 
 
 def test_citation_review_bounds_large_composite_locations(lib):
-    vid = lib.capture('본문', title='자료')['version_ref']
-    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
-        for i in range(10):
-            lib.access(vid, 1, f'¶{i}', '긴 문장 ' * 2000)
+    vid = lib.capture('본문', title='자료', paragraphs=[(f'¶{i}', '긴 문장 ' * 2000) for i in range(10)])['version_ref']
     report = lib.citation_review(' '.join(f'[자료:{vid}:¶{i}]' for i in range(10)), 'run')
     assert report['evidence_chars'] == 16000
     assert len(report['valid']) == 10 and not report['invalid']
@@ -277,7 +279,7 @@ def test_legacy_script_selection_reindexes_without_rewriting_old_citations(lib):
     assert lib.paragraphs(vid) == ([['¶1', '보존한 첫 문단'], ['¶2', '보존한 둘째 문단']], 2)
     assert lib.paragraphs(vid, 1)[0] == [['¶1', raw]]
     assert lib.store.blob(lib.version(vid)['blob']).decode() == raw
-    assert lib.citations(f'[자료:{vid}:¶1]', 'old-run')[0]['extraction_revision'] == 1
+    assert read_receipts(lib, 'old-run', vid, '¶1')[0]['extraction_revision'] == 1
     lib.prepare_index()
     assert lib.paragraphs(vid)[1] == 2
 
@@ -402,7 +404,7 @@ def test_small_pages_preserve_text_revision_and_only_visible_evidence(lib):
     expected = '\n\n'.join(f'[자료:{vid}:{place}] {text}' for place, text in paras)
     with scope({'project_uid': lib.store.uid, 'run_id': 'small-page'}):
         first = lib.read(vid, limit=80)
-    citation = lib.citations(f'[자료:{vid}:{loc}]', 'small-page')[0]
+    citation = read_receipts(lib, 'small-page', vid, loc)[0]
     assert citation['quote'] in first['text']
     assert 0 < len(citation['quote']) < len(body)
     assert citation['extraction_revision'] == revision
@@ -445,25 +447,21 @@ if __name__ == "__main__":
 
 
 def test_citation_budget_is_order_invariant_and_no_starvation(lib):
-    vid = lib.capture('본문', title='자료')['version_ref']
-    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
-        for i in range(10):
-            lib.access(vid, 1, f'p{i}', str(i) * 2400)
+    vid = lib.capture('본문', title='자료', paragraphs=[(f'p{i}', str(i) * 2400) for i in range(10)])['version_ref']
     markers = [f'[자료:{vid}:p{i}]' for i in range(10)]
     forward = lib.citation_review('\n'.join(markers), 'run')
     reverse = lib.citation_review('\n'.join(reversed(markers)), 'run')
     assert forward['evidence_chars'] == 16000
     assert {r['citation']: r['quote'] for r in forward['valid']} == {r['citation']: r['quote'] for r in reverse['valid']}
     assert all(len(r['quote']) == 1600 and r['evidence_state'] == 'partial'
-               and r['reading_verified'] and r['semantic_status'] == 'unreviewed' for r in forward['valid'])
+               and r['source_verified'] and r['semantic_status'] == 'unreviewed' for r in forward['valid'])
     assert len(forward['unreviewed']) == 10
 
 
 def test_citation_window_retains_relevant_late_condition_and_offsets(lib):
     vid = lib.capture('본문', title='자료')['version_ref']
     text = '무관한 배경 정보입니다.\n' * 400 + '한국 실험은 통제집단이 없어 인과 효과를 확인하지 못했다.\n' + '다른 문단\n' * 500
-    with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
-        lib.access(vid, 1, 'p1', text)
+    lib._extraction(vid, [('p1', text)])
     marker = f'[자료:{vid}:p1]'
     row = lib.citation_review('한국 실험에서 인과 효과가 입증되었다.' + marker, 'run')['valid'][0]
     assert '통제집단이 없어' in row['quote']
@@ -477,8 +475,8 @@ def test_empty_read_receipt_does_not_imply_available_review_evidence(lib):
         lib.access(vid, 1, 'p1', '')
     marker = f'[자료:{vid}:p1]'
     review = lib.citation_review('주장 ' + marker + ' [1] https://example.org/source', 'run')
-    assert review['valid'][0]['evidence_state'] == 'missing'
-    assert review['unreviewed'] == [marker] and review['evidence_chars'] == 0
+    assert not review['valid'] and review['invalid']
+    assert review['evidence_chars'] == 0
     assert review['unresolved_references'] == ['[1]', 'https://example.org/source']
 
 
@@ -487,6 +485,10 @@ def test_disjoint_read_revisions_and_question_anchors_are_not_fused(lib):
     definition = '정격전력은 상한이다.'
     limit = '실사용량은 가동 조건에 따라 다르다.'
     full = definition + '무관한 배경 ' * 2000 + limit
+    with lib.store.connect(True) as db:
+        db.execute('DELETE FROM research_extractions WHERE version_id=?', (vid,))
+    lib._extraction(vid, [('p1', full)])
+    lib._extraction(vid, [('p1', '수정된 다른 추출 판본')])
     with scope({'project_uid': lib.store.uid, 'run_id': 'run'}):
         lib.access(vid, 1, 'p1', full)
         lib.access(vid, 2, 'p1', '수정된 다른 추출 판본')
@@ -501,4 +503,4 @@ def test_disjoint_read_revisions_and_question_anchors_are_not_fused(lib):
     originals = {1: full, 2: '수정된 다른 추출 판본'}
     assert all(s['quote'] == originals[s['extraction_revision']][s['start']:s['end']] for s in row['segments'])
     assert result['evidence_chars'] <= 2400 and row['semantic_status'] == 'unreviewed'
-    assert lib.citation_review(f'[자료:{vid}:p1]', 'unread', question_evidence=links)['invalid']
+    assert lib.citation_review(f'[자료:{vid}:p1]', 'unread', question_evidence=links)['valid'][0]['extraction_revisions'] == [1]

@@ -340,7 +340,7 @@ async def handle_chat_message(client_id: str, data: dict):
                 if not response and result.get("error"):
                     response = f"AI 응답 생성 실패: {result['error']}"
                 tool_images = runner.ai.get_last_tool_images()
-                return {"response": response, "tool_images": tool_images}
+                return {"response": response, "tool_images": tool_images, "evaluation": result.get("evaluation")}
             finally:
                 _clear()
 
@@ -375,7 +375,7 @@ async def handle_chat_message(client_id: str, data: dict):
             "type": "response",
             "content": response,
             "agent": agent_name,
-            "message_id": message_id
+            "message_id": message_id, "evaluation": result.get("evaluation")
         })
 
         # 완료 알림
@@ -497,6 +497,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 스트리밍 처리를 위한 큐
         event_queue = asyncio.Queue()
         final_content = ""
+        final_evaluation = None
         stream_error = ""
         stream_cancelled = False
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
@@ -552,7 +553,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
             runner.cognitive_stream(agent_pipeline.py) 안에서 일어난다.
             """
-            nonlocal final_content, stream_error, stream_cancelled
+            nonlocal final_content, final_evaluation, stream_error, stream_cancelled
             # 별도 스레드이므로 컨텍스트 재설정 필요
             from thread_context import set_user_input as _set_user_input, set_task_origin_for_author as _set_origin
             set_current_agent_id(agent_id)
@@ -616,6 +617,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     )
                     if event_type == "final":
                         final_content = event.get("content", "")
+                        final_evaluation = event.get("evaluation")
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
             except Exception as e:
                 stream_error = str(e) or type(e).__name__
@@ -639,7 +641,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     # 닫기·원장 닫기를 실제로 끝낸 여기서 한다(시스템 AI 경로와 대칭).
                     if final_content and not stream_error and not stream_cancelled:
                         try:
-                            filtered = filter_internal_markers(final_content)
+                            filtered = final_content if final_evaluation else filter_internal_markers(final_content)
                             msg_id = db.save_message_undelivered(target_agent_id, user_id, filtered)
                             print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
                         except Exception as save_err:
@@ -763,6 +765,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
             elif event_type == "final":
                 final_content = event.get("content", "")
+                final_evaluation = event.get("evaluation")
                 print(f"[WS while루프] final 이벤트 수신 (len={len(final_content)})")
 
             elif event_type == "error":
@@ -776,7 +779,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         print(f"[WS] while 루프 종료, final_content 길이: {len(final_content)}")
         if final_content and not stream_error and not stream_cancelled:
             # 내부 시스템 마커 필터링
-            final_content = filter_internal_markers(final_content)
+            final_content = final_content if final_evaluation else filter_internal_markers(final_content)
             # 도구 결과 이미지 수집하여 저장
             tool_images = runner.ai.get_last_tool_images()
             message_id = db.save_message(target_agent_id, user_id, final_content, images=tool_images)
@@ -786,7 +789,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 "type": "response",
                 "content": final_content,
                 "agent": agent_name,
-                "message_id": message_id
+                "message_id": message_id, "evaluation": final_evaluation
             })
 
         # 태스크 종료 처리 (실패·취소를 완료로 기록하지 않는다)
@@ -915,6 +918,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 스트리밍 처리 (AIAgent 사용)
         event_queue = asyncio.Queue()
         final_content = ""
+        final_evaluation = None
         turn_budget = {}  # 턴 토큰·캐시 적중 — _turn_meta 에서 수신, end 이벤트에 동봉(고정물이 읽음)
         tool_results_list = []  # 도구 실행 결과 기록용
         collected_tool_images = []  # 도구 결과 이미지 수집
@@ -928,7 +932,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             runner.cognitive_stream(agent_pipeline.py) 안에서 일어난다 — 프로젝트
             경로(#handle_chat_message_stream)와 같은 드라이버, _is_system_ai 플래그 분기.
             """
-            nonlocal final_content
+            nonlocal final_content, final_evaluation
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
             from thread_context import set_task_origin_for_author as _set_origin
@@ -970,6 +974,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
                     if event_type == "final":
                         final_content = event.get("content", "")
+                        final_evaluation = event.get("evaluation")
             except Exception as e:
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),
@@ -985,8 +990,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     # 전송·원장 닫기를 실제로 끝낸 쪽인 여기서 한다.
                     if final_content:
                         try:
-                            filtered = filter_internal_markers(final_content)
-                            save_conversation("assistant", filtered, source=conv_source)
+                            filtered = final_content if final_evaluation else filter_internal_markers(final_content)
+                            message_id = save_conversation("assistant", filtered, source=conv_source)
                             print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
                             # ★저장만 하면 사용자는 결과를 영영 못 본다 — 창이 다시
                             #  열려 있으면(재접속·다른 창) 밀어 준다. auto_report 는
@@ -995,6 +1000,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                                 manager.send_to_system_ai_chat({
                                     "type": "auto_report",
                                     "content": filtered,
+                                    "evaluation": final_evaluation, "message_id": message_id,
                                     "agent": "system_ai",
                                 }), loop)
                         except Exception as save_err:
@@ -1140,6 +1146,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
 
             elif event_type == "final":
                 final_content = event.get("content", "")
+                final_evaluation = event.get("evaluation")
 
             elif event_type == "error":
                 # 실패 원인을 최종 응답·대화 이력에도 남긴다. 아래의 빈 응답
@@ -1170,13 +1177,14 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 final_content = "(AI가 응답을 생성하지 않았습니다. 다시 시도해주세요.)"
 
         # 내부 시스템 마커 필터링
-        final_content = filter_internal_markers(final_content)
+        final_content = final_content if final_evaluation else filter_internal_markers(final_content)
 
-        save_conversation("assistant", final_content, source=conv_source, images=collected_tool_images if collected_tool_images else None)
+        message_id = save_conversation("assistant", final_content, source=conv_source, images=collected_tool_images if collected_tool_images else None)
 
         await manager.send_message(client_id, {
             "type": "response",
             "content": final_content,
+            "evaluation": final_evaluation, "message_id": message_id,
             "agent": "system_ai"
         })
 

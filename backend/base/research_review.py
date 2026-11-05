@@ -1,5 +1,5 @@
 """제출 판본과 인용 위치의 공통 계약. 원문 읽기와 의미 승인은 별도로 둔다."""
-import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -16,19 +16,6 @@ def submission_paths(text, root):
         if path.is_relative_to(root):
             paths.add(str(path))
     return paths
-
-
-def documents(text, root):
-    """최종 전달문에 명시된 프로젝트 내부 텍스트만 읽는다. 링크를 재귀 추적하지 않는다."""
-    result = []
-    for name in sorted(submission_paths(text, root)):
-        try:
-            raw = Path(name).read_bytes()
-            body = raw.decode('utf-8')
-        except (OSError, UnicodeError):
-            continue
-        result.append({'path': name, 'hash': hashlib.sha256(raw).hexdigest(), 'text': body})
-    return result
 
 
 def review_text(response, artifacts):
@@ -119,3 +106,35 @@ def range_windows(total, limit, targets):
         else:
             merged.append((left, right))
     return merged
+
+
+def citation_uses(feedback, occurrences, sources):
+    """Validate AI-selected uses against supplied source identities, not marker semantics."""
+    if not occurrences:
+        return [], []
+    match = re.search(r'(?m)^CITATION_USES:\s*(\[.*\])\s*$', feedback or '')
+    try:
+        rows = json.loads(match[1]) if match else None
+        if not isinstance(rows, list) or len(rows) != len(occurrences):
+            raise ValueError('모든 인용 후보의 CITATION_USES가 필요합니다')
+        if {r['index'] for r in rows} != set(range(len(occurrences))):
+            raise ValueError('인용 후보 위치가 누락되거나 중복됐습니다')
+        available = {r['citation'] for r in sources}
+        invalid = []
+        for row in rows:
+            if type(row['index']) is not int or row.get('use') not in {'source', 'example', 'unverified'}:
+                raise ValueError('인용 사용 형식이 유효하지 않습니다')
+            if row['use'] == 'source' and occurrences[row['index']]['citation'] not in available:
+                invalid.append(occurrences[row['index']])
+        return rows, invalid
+    except (TypeError, KeyError, ValueError) as exc:
+        raise ValueError('인용 사용 응답 형식 오류: ' + str(exc)) from exc
+
+
+def saved_citations(review, uses):
+    """Project confirmed source uses from the same prepared inputs for storage."""
+    selected = {review['claims'][r['index']]['citation'] for r in uses if r['use'] == 'source'}
+    return [{'version_id': row['version_ref'], 'locator': row['locator'],
+             'extraction_revision': receipt['extraction_revision'], 'quote': receipt['quote']}
+            for row in review.get('valid', []) if row['citation'] in selected
+            for receipt in row.get('receipts', [])]

@@ -47,6 +47,9 @@ class DeliveryQueue:
         self.log = log
         self.lock = threading.RLock()
         self.notifications = {}
+        saved = self.directory / "notifications.json"
+        if saved.exists():
+            self.notifications = {row['title']: row for row in json.loads(saved.read_text())}
         self.finished = False
         self.observed = ""
 
@@ -59,13 +62,22 @@ class DeliveryQueue:
             if self.finished:
                 raise ValueError("이미 전달을 확정한 턴입니다")
             # 같은 제목의 수정본은 대체한다. 보완 중 옛 수치의 알림을 중복 발송하지 않는다.
-            self.notifications[title] = {"title": title, "body": body, "kind": kind, "source": "ai"}
+            candidate = {"title": title, "body": body, "kind": kind, "source": "ai"}
+            previous = self.notifications.get(title, {})
+            if self._notification(previous) != candidate:
+                if previous.get('_delivery') == 'pending':
+                    raise ValueError("이 알림의 전송 결과가 미확인입니다. 재전송 전에 기존 효과를 확인하세요")
+                self.notifications[title] = candidate
             self.log("delivery.notification_queued", notification=self.notifications[title])
             self._save_notifications()
 
     def _save_notifications(self):
         _atomic(self.directory / "notifications.json", json.dumps(
             list(self.notifications.values()), ensure_ascii=False).encode())
+
+    @staticmethod
+    def _notification(row):
+        return {k: v for k, v in row.items() if not k.startswith('_')}
 
     def _artifacts(self):
         artifacts = []
@@ -82,7 +94,7 @@ class DeliveryQueue:
     def manifest(self):
         with self.lock:
             artifacts = self._artifacts()
-            notifications = list(self.notifications.values())
+            notifications = [self._notification(row) for row in self.notifications.values()]
             if self.finished or not (artifacts or notifications):
                 return None
             body = {"artifacts": artifacts, "notifications": notifications}
@@ -109,13 +121,29 @@ class DeliveryQueue:
             if cancelled():
                 raise ValueError("공개 전에 작업이 취소되었습니다")
             for row, content in payloads:
-                _atomic(Path(row["target"]), content)
+                if cancelled():
+                    raise ValueError("공개 중 작업이 취소되었습니다")
+                target = Path(row["target"])
+                if target.exists() and _hash(target.read_bytes()) == row['hash']:
+                    continue  # 재개 시 이미 발행된 같은 바이트를 다시 쓰지 않는다.
+                _atomic(target, content)
                 self.log("delivery.published", **row)
             from notify_dispatch import notify_user
             for notification in manifest["notifications"]:
+                saved = self.notifications[notification['title']]
+                if saved.get('_delivery') == 'completed':
+                    continue
+                if saved.get('_delivery') == 'pending':
+                    raise ValueError("알림 전송 결과가 미확인입니다. 자동으로 다시 보내지 않습니다")
                 if cancelled():
                     raise ValueError("알림 전달 전에 작업이 취소되었습니다")
+                saved['_delivery'] = 'pending'
+                self._save_notifications()
                 delivered = notify_user(**notification)
                 self.log("delivery.notified", notification=notification, delivered_to_launcher=delivered)
+                if not delivered:
+                    raise ValueError("알림 전달을 확인하지 못했습니다")
+                saved['_delivery'] = 'completed'
+                self._save_notifications()
             self.finished = True
             self.log("delivery.completed", manifest_hash=manifest["hash"])

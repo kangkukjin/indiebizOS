@@ -9,6 +9,7 @@ export function useResearchSession(project: string, thread: string, visible: boo
   const [data, setData] = useState<ConversationData | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const pending = useRef<{ signature: string; id: string } | null>(null);
   const running = useRef(false);
   const sequence = useRef(0);
@@ -26,6 +27,7 @@ export function useResearchSession(project: string, thread: string, visible: boo
     const ticket = ++sequence.current;
     const result = await researchCall(project, 'thread_messages', { thread_ref: thread, limit: 100 }) as unknown as ConversationData;
     if (ticket !== sequence.current) return;
+    setLoadError('');
     setData(prev => prev ? { ...result, next_cursor: prev.next_cursor,
       items: [...new Map([...prev.items, ...result.items].map(m => [m.id, m])).values()].sort((a, b) => (a.display_order ?? a.id) - (b.display_order ?? b.id)) } : result);
     if (running.current && !result.active_run) onChange();
@@ -36,7 +38,7 @@ export function useResearchSession(project: string, thread: string, visible: boo
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
-      try { await load(); } catch (e) { if (alive) setError(String(e)); }
+      try { await load(); } catch (e) { if (alive) setLoadError(String(e)); }
       if (alive) timer = setTimeout(tick, running.current ? 1000 : 5000);
     };
     void tick();
@@ -58,7 +60,7 @@ export function useResearchSession(project: string, thread: string, visible: boo
       }
       pending.current = null;
       // 접수 후 조회 실패는 전송 실패가 아니다. 입력을 비워 중복 전송을 피한다.
-      try { await load(); } catch (e) { setError(String(e)); }
+      try { await load(); } catch (e) { setLoadError(String(e)); }
       onChange(); return true;
     } catch (e) { setError(String(e)); return false; }
     finally { setBusy(false); }
@@ -86,12 +88,15 @@ export function useResearchSession(project: string, thread: string, visible: boo
   return { messages, loading: busy || !!data?.active_run, canSteer: !!data?.active_run && !busy, streamingContent: streaming?.content,
     toolHistory: streaming?.tool_activities as ToolActivity[] | undefined, thinkingText: streaming?.thinking,
     todos: streaming?.todos || panel?.todos, questions: panel?.questions || [],
-    planMode: panel?.plan_mode || { active: false, phase: null }, error, hasOlder: !!data?.next_cursor, loadOlder, send, cancel };
+    planMode: panel?.plan_mode || { active: false, phase: null }, error: error || loadError,
+    hasOlder: !!data?.next_cursor, loadOlder, send, cancel };
 }
 
 function toMessage(m: ResearchMessage): ChatMessage {
   return { id: String(m.id), role: m.role,
-    content: m.content + (m.status_label && m.status !== 'running' ? `\n\n*(${m.status_label})*` : ''),
+    content: m.content, executionStatus: m.status !== 'running' ? m.status_label : undefined,
+    reviewedArtifacts: m.submissions,
+    evaluation: m.role === 'assistant' && m.status !== 'running' ? m.evaluation || {} : undefined,
     timestamp: new Date(m.message_time), toolActivities: m.tool_activities,
     images: m.attachments.filter(a => a.mime.startsWith('image/')).map(a => imageUrl(a.path)),
     documentFiles: m.attachments.filter(a => !a.mime.startsWith('image/')).map(a => ({ fileName: a.name, filePath: a.path, fileType: a.mime })),

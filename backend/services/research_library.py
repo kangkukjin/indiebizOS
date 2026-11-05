@@ -411,44 +411,53 @@ class ResearchLibrary:
             db.execute('INSERT OR IGNORE INTO research_access(run_id,version_id,revision,locator,quote) VALUES (?,?,?,?,?)',
                        (context['run_id'], version, revision, loc, quote))
 
-    def citations(self, text, run):
-        result = []
-        with self.store.connect() as db:
-            for version, loc in re.findall(r'\[자료:([a-f0-9]{32}):([^\]]+)\]', text):
-                row = db.execute('SELECT version_id,revision AS extraction_revision,locator,quote FROM research_access '
-                                 'WHERE run_id=? AND version_id=? AND locator=? ORDER BY rowid DESC LIMIT 1',
-                                 (run, version, loc)).fetchone()
-                if row:
-                    result.append(dict(row))
-        return result
-
-    def citation_review(self, text, run, *, question_evidence=(), full_receipts=False):
-        """최종 인용과 이번 실행에서 읽은 문장을 연결한다. 읽기 기록은 새로 만들지 않는다."""
+    def citation_review(self, text, run, *, question_evidence=(), full_receipts=False, occurrences=None):
+        """Supply preserved source passages. Marker usage and semantic support belong to AI."""
         result = {'valid': [], 'invalid': [], 'evidence_chars': 0}
-        from research_review import claims, allocate, passages
-        occurrences = claims(text)
+        from research_review import claims, allocate, passages, MARKER
+        from research_evidence import source_paragraphs
+        occurrences = claims(text) if occurrences is None else occurrences
         originals = {}
         with self.store.connect() as db:
             self.store.check_epoch(db)
-            refs = dict.fromkeys(re.findall(r'\[자료:([^:\]]+):([^\]]+)\]', text))
-            for version, loc in refs:
-                marker = f'[자료:{version}:{loc}]'
-                rows = db.execute('SELECT rowid AS access_id,revision,quote FROM research_access '
-                                  'WHERE run_id=? AND version_id=? AND locator=? ORDER BY rowid',
-                                  (run, version, loc)).fetchall()
-                if not rows:
-                    locations = [r[0] for r in db.execute(
-                        'SELECT DISTINCT locator FROM research_access WHERE run_id=? AND version_id=?',
-                        (run, version))]
+            for marker in dict.fromkeys(o['citation'] for o in occurrences):
+                match = MARKER.fullmatch(marker)
+                version, loc = match.groups()
+                locations = set()
+                try:
+                    # version() also enforces the library's current conversation scope.
+                    self.version(version)
+                    rows = db.execute('SELECT rowid AS access_id,revision,quote FROM research_access '
+                                      'WHERE run_id=? AND version_id=? AND locator=? ORDER BY rowid',
+                                      (run, version, loc)).fetchall()
+                    revisions = sorted({r['revision'] for r in rows} | {
+                        e['extraction_revision'] for e in question_evidence
+                        if e['version_ref'] == version and e['locator'] == loc})
+                    if not revisions:
+                        # An unpinned marker must not silently combine different extraction versions.
+                        revisions = [r[0] for r in db.execute(
+                            'SELECT revision FROM research_extractions WHERE version_id=? ORDER BY revision',
+                            (version,))]
+                    receipts, locations = [], set()
+                    for revision in revisions:
+                        paragraphs, revision = source_paragraphs(self.store, db, self.thread, version, revision)
+                        locations.update(p for p, _ in paragraphs)
+                        for locator, quote in paragraphs:
+                            if locator == loc:
+                                observed = [r for r in rows if r['revision'] == revision and r['quote'] == quote]
+                                receipts.append({'access_id': observed[0]['access_id'] if observed else None,
+                                                 'revision': revision, 'quote': quote,
+                                                 'origin': 'read_receipt' if observed else 'preserved_source'})
+                    if not receipts:
+                        raise ValueError('지정한 위치의 원문이 없습니다')
+                except (ValueError, OSError) as exc:
                     result['invalid'].append({'citation': marker, 'version_ref': version, 'locator': loc,
-                        'reason': '현재 실행에서 이 자료·위치의 읽기 증거가 없습니다',
-                        'read_locations': locations[:40],
-                        'repair': 'self:notebook search/read로 해당 구간을 읽고 반환된 인용 표지로 수정하거나, 확인하지 못한 주장으로 명시하세요. 위치를 추측하지 마세요.'})
+                        'reason': str(exc), 'read_locations': sorted(locations)[:40],
+                        'repair': '표지의 용도와 실제 원문을 대조하세요. 예시·언급은 근거로 채택하지 말고, 실제 인용의 잘못된 위치는 보완하세요.'})
                     continue
-                # 같은 위치를 여러 번 나눠 읽었어도 마지막 조각만 근거로 보이지 않게 한다.
-                originals[marker] = list({(r['revision'], r['quote']): dict(r) for r in rows}.values())
+                originals[marker] = receipts
                 result['valid'].append({'citation': marker, 'version_ref': version, 'locator': loc,
-                    'extraction_revisions': sorted({r['revision'] for r in rows})})
+                    'source_verified': True, 'extraction_revisions': sorted({r['revision'] for r in receipts})})
         quotas = ({} if full_receipts else allocate(
             {key: sum(len(r['quote']) for r in value) for key, value in originals.items()}))
         for row in result['valid']:
@@ -461,7 +470,7 @@ class ResearchLibrary:
                 row.update(receipts=[{**r, 'extraction_revision': r['revision']} for r in reads],
                            question_links=[{**e, 'candidate_included': any(
                                e['extraction_revision'] == r['revision'] and e['quote'] in r['quote']
-                               for r in reads)} for e in links], occurrences=related, reading_verified=True,
+                               for r in reads)} for e in links], occurrences=related, reading_verified=all(r['origin'] == 'read_receipt' for r in reads),
                            semantic_status='unreviewed', candidate_state='complete',
                            full_chars=sum(len(r['quote']) for r in reads))
                 result['evidence_chars'] += row['full_chars']
@@ -494,7 +503,7 @@ class ResearchLibrary:
                        truncated=len(shown) < full_chars,
                        quote_start=segments[0]['start'] if len(segments) == 1 else None,
                        quote_end=segments[0]['end'] if len(segments) == 1 else None, full_chars=full_chars,
-                       reading_verified=True, evidence_state='missing' if not shown else
+                       reading_verified=all(r['origin'] == 'read_receipt' for r in reads), evidence_state='missing' if not shown else
                        'complete' if len(shown) == full_chars else 'partial', semantic_status='unreviewed',
                        occurrences=related)
             row['question_links'] = [{k: e[k] for k in

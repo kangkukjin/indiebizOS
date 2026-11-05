@@ -127,7 +127,7 @@ def test_model_failure_is_unknown_and_never_causes_retry_or_success_learning(tmp
     runner._evaluate_achievement = CognitiveEvalMixin._evaluate_achievement.__get__(runner)
     events, result = _run(runner)
     assert runner.ai.stream_calls == 0
-    assert result.startswith("초안") and "[검수 미완료]" in result
+    assert result == "초안"
     outcome = get_goal_eval_outcome()
     assert outcome["status"] == "UNKNOWN" and not outcome["achieved"]
     review = json.loads((tmp_path / "review_status.json").read_text())
@@ -147,9 +147,10 @@ def test_evidence_collection_failure_is_unreviewed(tmp_path, monkeypatch):
     runner = _Runner([])
     def broken(*args, **kwargs):
         raise OSError("artifact unavailable")
-    runner._collect_visual_artifacts = broken
+    monkeypatch.setattr("final_evaluator.Evaluator._collect_visual_artifacts", broken)
     _, result = _run(runner)
-    assert "검수 미완료" in result and "artifact unavailable" in result
+    assert result == "초안"
+    assert "artifact unavailable" in get_goal_eval_outcome()["reason"]
     assert get_goal_eval_outcome()["status"] == "UNKNOWN"
     assert runner.ai.stream_calls == 0
     clear_goal_eval_outcome()

@@ -86,7 +86,18 @@ export interface CognitionInfo {
   criteria?: string;    // 달성 기준 (숙고 경로일 때)
 }
 
+export interface ReviewOutcome {
+  review_status?: string;
+  goal_status?: string;
+  reason?: string;
+  goal_reason?: string;
+  delivery?: { status?: string; reason?: string };
+}
+
 export interface ChatMessage {
+  evaluation?: ReviewOutcome;
+  executionStatus?: string;
+  reviewedArtifacts?: { path: string; reviewed_path?: string; changed?: boolean | null }[];
   id: string;
   role: 'user' | 'assistant';
   content: string;

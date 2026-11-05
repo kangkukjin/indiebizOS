@@ -504,14 +504,15 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     assert not [e for e in events if e["type"] == "error"], events
     finals = [e["content"] for e in events if e["type"] == "final"]
     assert len(finals) == 1 and finals == saved
-    assert EYES not in finals[0]
     if route != "legacy":
+        assert EYES not in finals[0]
         assert finals[0].startswith("기존 분석과 출처는 유지됩니다.")
         assert finals[0].endswith(corrected)
         assert sum("current_capabilities" in r["message_content"] for r in requests) == 1
         meta = next(e for e in events if e["type"] == "_turn_meta")
         assert any(t["tool_name"] == "read_image" and t["success"] for t in meta["tool_calls"])
     else:
+        assert finals[0] == EYES  # 평가자를 대체한 fixture의 본문도 저장 뒤 재작성하지 않는다.
         assert len(requests) == 1  # 평가 승인/보완 뒤에는 새 원작업 실행 금지
 
 

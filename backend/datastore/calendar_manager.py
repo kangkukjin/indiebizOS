@@ -99,6 +99,9 @@ class CalendarManagerBase:
 
     def __init__(self, log_callback: Callable[[str], None] = None):
         self.log_callback = log_callback or print
+        # 저장소는 인스턴스 수명에 고정한다. 시험 격리가 해제된 뒤 끝나는
+        # 작업 스레드도 자신이 연 저장소에만 기록해야 한다.
+        self.config_path = Path(CALENDAR_CONFIG_PATH)
         self.config = self._load_config()
         self.running = False
         self.thread: Optional[threading.Thread] = None
@@ -123,17 +126,17 @@ class CalendarManagerBase:
 
     def _load_config(self) -> dict:
         """설정 파일 로드"""
-        if CALENDAR_CONFIG_PATH.exists():
+        if self.config_path.exists():
             try:
-                with open(CALENDAR_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                with open(self.config_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
                 # ★ 손상된 파일을 빈 설정으로 덮어쓰면 사용자 일정이 영구 유실된다(2026-06 생일 유실 사고).
                 #   파싱 실패 시 손상본을 백업해 복구 가능하게 남긴다.
                 try:
-                    bak = CALENDAR_CONFIG_PATH.with_name(
-                        CALENDAR_CONFIG_PATH.stem + f".corrupt.{datetime.now():%Y%m%d_%H%M%S}.json")
-                    shutil.copy(CALENDAR_CONFIG_PATH, bak)
+                    bak = self.config_path.with_name(
+                        self.config_path.stem + f".corrupt.{datetime.now():%Y%m%d_%H%M%S}.json")
+                    shutil.copy(self.config_path, bak)
                     print(f"[CalendarManager] 설정 로드 실패: {e} — 손상본 백업: {bak}")
                 except Exception:
                     print(f"[CalendarManager] 설정 로드 실패: {e}")
@@ -150,20 +153,20 @@ class CalendarManagerBase:
         잠금 한 개 + 스레드별 고유 임시 파일(같은 디렉터리 → 같은 파일시스템, 원자 교체 유지).
         """
         with _SAVE_LOCK:
-            DATA_PATH.mkdir(parents=True, exist_ok=True)
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
             # 직전 파일을 .bak으로 보존 (1단계 롤백 안전망)
-            if CALENDAR_CONFIG_PATH.exists():
+            if self.config_path.exists():
                 try:
-                    shutil.copy(CALENDAR_CONFIG_PATH, CALENDAR_CONFIG_PATH.with_suffix(".json.bak"))
+                    shutil.copy(self.config_path, self.config_path.with_suffix(".json.bak"))
                 except Exception:
                     pass
             # 임시 파일에 쓰고 원자적 교체 (부분 쓰기 손상 방지)
-            fd, tmp = tempfile.mkstemp(prefix=CALENDAR_CONFIG_PATH.name + ".", suffix=".tmp",
-                                       dir=str(CALENDAR_CONFIG_PATH.parent))
+            fd, tmp = tempfile.mkstemp(prefix=self.config_path.name + ".", suffix=".tmp",
+                                       dir=str(self.config_path.parent))
             try:
                 with os.fdopen(fd, 'w', encoding='utf-8') as f:
                     json.dump(self.config, f, ensure_ascii=False, indent=2)
-                os.replace(tmp, CALENDAR_CONFIG_PATH)
+                os.replace(tmp, self.config_path)
             finally:
                 if os.path.exists(tmp):
                     try:
@@ -173,7 +176,7 @@ class CalendarManagerBase:
         # 쓰기 관문 원장 — 일정·스케줄 변경 사건(관측, 실패 무해)
         try:
             from write_ledger import log_write
-            log_write(CALENDAR_CONFIG_PATH, event="write", gate="calendar")
+            log_write(self.config_path, event="write", gate="calendar")
         except Exception:
             pass
 

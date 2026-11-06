@@ -80,18 +80,43 @@ def test_B54_4_concurrent_save_config_has_no_race(cm):
     assert not [p for p in os.listdir(cmmod.CALENDAR_CONFIG_PATH.parent) if p.endswith(".tmp")]
 
 
-def test_B54_4_all_due_tasks_in_same_minute_run(cm):
+def test_B54_4_all_due_tasks_in_same_minute_run(cm, monkeypatch):
     """같은 분 due 4건 → 4건 전부 실행(수리 전 격리 실측: 1건)."""
     now = datetime.now()
     yesterday = now - timedelta(days=1)
     cm.config["events"] = [_due_event(i, now, created=yesterday) for i in range(4)]
     ran = []
     cm.actions = {"fake": lambda task: (ran.append(task["title"]), time.sleep(0.2))}
+    # 고정 sleep 뒤 ran만 보면 action 이후의 저장 스레드가 격리보다 오래 산다.
+    # 루프가 만든 작업자를 모두 join하고 나서 임시 경로를 해제한다.
+    import calendar_manager as cmmod
+    from types import SimpleNamespace
+    workers = []
+    loop_wait = threading.Event()
+
+    def worker_thread(*args, **kwargs):
+        worker = threading.Thread(*args, **kwargs)
+        workers.append(worker)
+        return worker
+
+    monkeypatch.setattr(cmmod, "threading", SimpleNamespace(Thread=worker_thread))
+    monkeypatch.setattr(cmmod, "time", SimpleNamespace(sleep=lambda _: loop_wait.wait(10)))
     cm.running = True
     th = threading.Thread(target=cm._run_loop, daemon=True)
     th.start()
-    time.sleep(1.5)
-    cm.running = False
+    try:
+        deadline = time.monotonic() + 10
+        while len(workers) < 4 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert len(workers) == 4
+    finally:
+        cm.running = False
+        loop_wait.set()
+        th.join(timeout=10)
+        for worker in workers:
+            worker.join(timeout=30)
+        assert not th.is_alive()
+        assert all(not worker.is_alive() for worker in workers)
     assert sorted(ran) == ["t0", "t1", "t2", "t3"], ran
     assert all(e.get("last_run") for e in cm.config["events"])
 

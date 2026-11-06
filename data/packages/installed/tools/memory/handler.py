@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 import sys
+from contextlib import closing, contextmanager
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -38,56 +39,60 @@ def _store(tool_input: dict) -> str:
     return "실행" if str(tool_input.get("store") or "").strip() == "실행" else "심층"
 
 
-def _repair_recall(tool_input):
+@contextmanager
+def _execution_memory_db():
+    """실행기억 DB가 필요한 조회만 수리 중 사본을 준비한다."""
+    from repair_context import active
+    if not active():
+        yield None
+        return
     import tempfile
     from pathlib import Path
     import hippo_tree
-    # WAL을 포함한 일관된 스냅샷. 조회가 요구하는 옛 스키마 보완도 사본에서만 한다.
+    # WAL을 포함한 일관된 스냅샷. 옛 스키마 보완도 사본에서만 한다.
     with tempfile.TemporaryDirectory(prefix="repair-recall-") as directory:
         snapshot = str(Path(directory) / "examples.db")
-        source = sqlite3.connect(Path(hippo_tree._default_db_path()).resolve().as_uri() + "?mode=ro",
-                                 uri=True, timeout=10)
-        target = sqlite3.connect(snapshot, timeout=10)
-        try:
-            source.backup(target)
-        finally:
-            target.close()
-            source.close()
-        node = hippo_tree.norm_topic(tool_input.get("node") or "")
-        if not tool_input.get("node") and tool_input.get("expand"):
-            out = hippo_tree.recall_named(tool_input['expand'], snapshot, synchronize=False)
-        elif node or tool_input.get("node"):
-            out = hippo_tree.recall(node, snapshot, expand=tool_input.get("expand"), synchronize=False)
+        uri = Path(hippo_tree._default_db_path()).resolve().as_uri() + "?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True, timeout=10)) as source:
+            with closing(sqlite3.connect(snapshot, timeout=10)) as target:
+                source.backup(target)
+        yield snapshot
+
+
+def _execution_recall(tool_input):
+    import hippo_tree
+    node = tool_input.get("node")
+    expand = tool_input.get("expand") or ""
+    # 이름은 함수 원장의 조회다. 실행기억 DB의 존재·크기·수리 모드에 의존하지 않는다.
+    if not node and expand and not expand.lstrip().startswith("#"):
+        return hippo_tree.recall_named(expand)
+    with _execution_memory_db() as db_path:
+        synchronize = db_path is None
+        if not node and expand:
+            out = hippo_tree.recall_named(expand, db_path, synchronize=synchronize)
+        elif node:
+            out = hippo_tree.recall(hippo_tree.norm_topic(node), db_path,
+                                   expand=expand, synchronize=synchronize)
         else:
-            out = {"success": True, "node": "", "map": hippo_tree.map_text(snapshot),
-                   "nodes": hippo_tree.map_lines(snapshot), "items": hippo_tree.rows_of("", snapshot)}
-        out.update(store="실행", sync_deferred=True,
-                   source_note="수리 중에는 현재 실행기억 색인의 스냅샷을 읽으며 정본 문서·색인을 갱신하지 않습니다.")
-        return json.dumps(out, ensure_ascii=False)
+            if synchronize:
+                hippo_tree.sync_all()
+            out = {"success": True, "node": "", "map": hippo_tree.map_text(db_path),
+                   "nodes": hippo_tree.map_lines(db_path), "items": hippo_tree.rows_of("", db_path),
+                   "message": "실행기억 지도(목차). 가지를 열려면 node 를 지정하라."}
+        if not synchronize:
+            out.update(sync_deferred=True,
+                       source_note="수리 중에는 현재 실행기억 색인의 스냅샷을 읽으며 정본 문서·색인을 갱신하지 않습니다.")
+        return out
 
 
 def _op_recall(tool_input: dict, context) -> str:
     """node로 가지를 연다. 실행기억의 명시 expand는 이름·ID로 한 건을 찾는다.
     node와 expand가 모두 없을 때 지도이며, 찾지 못한 expand는 실패다."""
-    import memory_db, memory_tree
-    from repair_context import active
-    if active() and _store(tool_input) == "실행":
-        return _repair_recall(tool_input)
     if _store(tool_input) == "실행":
-        import hippo_tree
-        node = hippo_tree.norm_topic(tool_input.get("node") or "")
-        if not tool_input.get("node") and tool_input.get("expand"):
-            out = hippo_tree.recall_named(tool_input['expand'])
-            out['store'] = '실행'
-            return json.dumps(out, ensure_ascii=False, indent=2)
-        if not node and not tool_input.get("node"):
-            hippo_tree.sync_all()
-            return json.dumps({"success": True, "store": "실행", "node": "", "map": hippo_tree.map_text(),
-                               "nodes": hippo_tree.map_lines(), "items": hippo_tree.rows_of(""),
-                               "message": "실행기억 지도(목차). 가지를 열려면 node 를 지정하라."}, ensure_ascii=False, indent=2)
-        out = hippo_tree.recall(node, expand=tool_input.get("expand"))   # 이름 먼저(2026-09-05): 본문은 expand 로만
+        out = _execution_recall(tool_input)
         out["store"] = "실행"
         return json.dumps(out, ensure_ascii=False, indent=2)
+    import memory_db, memory_tree
     db_path = memory_db._get_db_path(context.project_path, context.agent_id)
     node = memory_tree.norm_node(tool_input.get("node") or "")
     if not node and not tool_input.get("node"):

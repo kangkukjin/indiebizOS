@@ -179,7 +179,13 @@ def test_handler_named_recall_uses_current_catalog_without_topic_or_map(env, mon
     monkeypatch.setattr(HT, 'map_text', lambda *a: pytest.fail('명시 선택은 지도를 반환하지 않는다'))
     first = register('직접조회', '#!ibl edition=2\n[def:직접조회](){return 1}')
     def read(name):
-        return json.loads(handler._op_recall({'store': '실행', 'expand': name}, SimpleNamespace()))
+        # 함수 원장이 살아 있으면 용례 DB가 없는 몸에서도 이름 조회가 동작한다.
+        with monkeypatch.context() as access:
+            access.setattr(HT, '_default_db_path', lambda: str(Path(db).parent / 'absent' / 'usage.db'))
+            out = json.loads(handler._op_recall({'store': '실행', 'expand': name}, SimpleNamespace()))
+        assert not (Path(db).parent / 'absent').exists()
+        assert 'sync_deferred' not in out
+        return out
     result = read('직접조회')
     assert result['success'] and result['count'] == 1 and result['function_ref'] == first
     assert 'return 1' in result['text'] and 'map' not in result
@@ -190,6 +196,52 @@ def test_handler_named_recall_uses_current_catalog_without_topic_or_map(env, mon
     assert not read('직접조회')['success']
     assert not read('없는함수')['success']
     assert not read('주행')['success']
+    assert not read('   ')['success']
+
+
+@pytest.mark.parametrize('read_fails', [False, True])
+def test_repair_id_recall_reads_wal_history_and_releases_snapshot(env, monkeypatch, read_fails):
+    import importlib.util
+    from pathlib import Path
+    from types import SimpleNamespace
+    HT, db = env
+    selected = _add(db, '보존된 용례', '[self:time]{}', '연구')
+    package = Path(__file__).resolve().parents[1] / 'data/packages/installed/tools/memory/handler.py'
+    spec = importlib.util.spec_from_file_location('_test_snapshot_recall_handler', package)
+    handler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(handler)
+    monkeypatch.setattr('repair_context.active', lambda: True)
+    snapshots = []
+    original = HT.recall_named
+
+    def read(expand, db_path, **kwargs):
+        snapshots.append(Path(db_path))
+        result = original(expand, db_path, **kwargs)
+        assert result['historical'] and not result['executable']
+        assert result['items'][0]['id'] == selected
+        if read_fails:
+            raise RuntimeError('조회 중단')
+        return result
+
+    monkeypatch.setattr(HT, 'recall_named', read)
+    live = sqlite3.connect(db)
+    try:
+        live.execute('PRAGMA journal_mode=WAL')
+        live.execute('UPDATE ibl_examples SET executable=0 WHERE id=?', (selected,))
+        live.commit()
+        before = list(live.iterdump())
+        payload = {'store': '실행', 'expand': f'#{selected}'}
+        if read_fails:
+            with pytest.raises(RuntimeError, match='조회 중단'):
+                handler._op_recall(payload, SimpleNamespace())
+        else:
+            out = json.loads(handler._op_recall(payload, SimpleNamespace()))
+            assert out['success'] and out['sync_deferred'] and out['count'] == 1
+        assert list(live.iterdump()) == before
+        assert not Path(HT.DOC_DIR).exists()
+        assert len(snapshots) == 1 and not snapshots[0].parent.exists()
+    finally:
+        live.close()
 
 
 def test_file_unfiled_places_by_model_verdict(env):

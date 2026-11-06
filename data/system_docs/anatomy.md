@@ -226,6 +226,9 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 독립 파일 실행부·별도 결과 통로·일반 파일 증거·CLI 재현으로 디버깅하면서 IBL 조합을 유지한다.
 [파일 Script 가이드](../guides/script.md).
 [Python 호출 가이드](../guides/python_libraries.md) · [구조 수렴 §6.8](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md).
+모델 프로바이더와 독립적인 코드 탐색·진단·리팩터링은 기존 작업 공간을 통해 언어 서버를
+공유하는 [LSP 통합 설계](../../docs/PROVIDER_NEUTRAL_LSP_DESIGN_2026_11_06.md)를 따른다.
+이 문서는 구현 전 설계이며, 지속 동기화·여러 파일 변경·복구·각 실행 모드의 연결을 완료 범위로 정한다.
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

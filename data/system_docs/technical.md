@@ -273,6 +273,8 @@ IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 �
 
 평가 입력의 예산은 `evaluation_input`이 소유하며 Codex에서는 CLI와 같은 `context_limits`를 읽는다. 요청한 원문 구간 → 명시 제출물 → 기타 근거 순서로 선택하고, 원본 snapshot의 판본·역할을 보존한다. 같은 판본의 새 구간은 이어서 회수하되 구간 반복·취소·hard 예산·입력 초과에서 종료한다. 실제 평가 사용량과 회수 상태는 감독 체크포인트로 이어진다. 이 원문 회수와 결함 수정의 1회 보완은 별개다. [계약과 검증](../../docs/LANGUAGE_BOUNDARY_REPAIR_DESIGN_2026_11_02.md#2026-11-04--평가-입력과-연속-근거-회수-수리).
 
+산출물 수집은 `supervisor_content`가 실행 반환의 공통 출력 영수증(`output_path`·`output_file`·`artifact`·`artifacts`)을 읽어 실제 본문과 판본을 고정한다. Codex의 완료된 `file_change` 추가·수정도 프로바이더가 이 형식으로 변환한다. 실패·거절·삭제는 출력 후보가 아니며 읽기·검색의 단순 `path`와 응답 링크만으로 입력 파일을 산출물로 바꾸지 않는다. 응답의 링크는 관측된 출력 중 제출물을 선택하고 나머지는 보조 근거로 전달한다. 같은 고정 본문이 첫 평가와 원문 회수에 쓰인다.
+
 ## IBL 도구 — execute_ibl
 
 모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 6노드(sense/self/limbs/others/engines/table) 전 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조(액션 수는 아래 '물리적 구조'의 빌드 파생 수치).

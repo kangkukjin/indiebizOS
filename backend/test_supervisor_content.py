@@ -16,6 +16,109 @@ def receipt(path):
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+def test_native_file_change_reaches_first_review_and_recovery(supervisor, tmp_path, monkeypatch):
+    from providers.codex import CodexProvider
+    from evaluation_input import evidence_references, recover
+    from test_evaluation_input import provider
+
+    report = tmp_path / '최종 보고서.md'
+    report.write_text('## 판단\n실제 보고서 본문과 미확인 범위\n', encoding='utf-8')
+    source = tmp_path / 'source.json'
+    source.write_text(json.dumps({'text': '수집 원문\n' * 40000}))
+    supervisor.run_tool('shell', {}, lambda: json.dumps(receipt(source)))
+    native = CodexProvider(api_key='', model='fake', system_prompt='', tools=[])
+    native._reset_turn_state()
+    # Codex의 짧은 편집은 item.started 없이 완료 사건만 도착한다.
+    events = native._translate_stream_event({'type': 'item.completed', 'item': {
+        'id': 'patch-1', 'type': 'file_change', 'status': 'completed',
+        'changes': [{'path': report.name, 'kind': 'add'}],
+    }}, '', 0)
+    for event, _ in events:
+        if event['type'] == 'tool_start':
+            call = supervisor._start(event['name'], event['input'])
+        elif event['type'] == 'tool_result':
+            supervisor._finish(call, event['result'], error=event['is_error'])
+    supervisor.store.put_response(f'[상세 보고서]({report})')
+    packet = prepare(supervisor)
+    rows = {a['subject']: a for a in packet['attachments']}
+    assert rows[str(report)]['text'] == report.read_text()
+    assert rows[str(report)]['role'] == 'submission'
+    assert rows[str(source)]['role'] == 'support'
+    ref = next(r for r in evidence_references(packet)
+               if r['evidence_id'] == rows[str(report)]['source_ref'])
+    assert ref['recoverable'] and ref['total'] == len(report.read_text())
+    recovered = recover(supervisor, [{'criterion_id': 'C1', 'evidence_id': ref['evidence_id'],
+                                     'revision': ref['revision'], 'start': 0, 'end': ref['total']}])
+    assert recovered[0]['text'] == report.read_text()
+    observed = []
+
+    def evaluate(prompt, **kwargs):
+        text = prompt.prepare_request(provider(request_limits={'chars': 200000}))
+        observed.append(text)
+        assert report.read_text() in text
+        return 'ACHIEVED'
+
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    assert json.loads(invoke(supervisor))['status'] == 'APPROVED'
+    assert len(observed) == 1
+    assert snapshot_error(supervisor) is None
+    report.write_text('평가 후 변경')
+    assert snapshot_error(supervisor)
+
+
+@pytest.mark.parametrize('status,kind,declined,expected', [
+    ('completed', 'add', False, True),
+    ('completed', 'update', False, True),
+    ('completed', 'delete', False, False),
+    ('in_progress', 'add', False, False),
+    ('failed', 'add', False, False),
+    ('interrupted', 'update', False, False),
+    ('completed', 'add', True, False),
+])
+def test_native_change_receipts_require_completed_writes(
+        supervisor, tmp_path, status, kind, declined, expected):
+    from providers.codex import CodexProvider
+    path = tmp_path / 'existing.md'
+    path.write_text('이전 파일이 존재해도 실패·삭제를 산출물로 바꾸지 않는다')
+    item = {'type': 'file_change', 'status': status, 'declined': declined,
+            'changes': [{'path': str(path), 'kind': kind}]}
+    result, error = CodexProvider._tool_result(item)
+    found = discover(supervisor, f'[링크]({path})', [{
+        'name': 'apply_patch', 'input': {'changes': item['changes']},
+        'result': result, 'is_error': error}])
+    assert bool(found) is expected
+
+
+def test_native_multi_file_edit_preserves_receipts_without_promoting_deleted_files(supervisor, tmp_path):
+    from providers.codex import CodexProvider
+    paths = [tmp_path / name for name in ('new.md', 'updated.md', 'removed.md')]
+    for path in paths:
+        path.write_text(path.name)
+    item = {'type': 'file_change', 'status': 'completed', 'changes': [
+        {'path': str(path), 'kind': kind}
+        for path, kind in zip(paths, ('add', 'update', 'delete'))]}
+    result, error = CodexProvider._tool_result(item)
+    assert json.loads(result)['changes'] == item['changes']
+    found = discover(supervisor, '', [{'name': 'apply_patch', 'result': result, 'is_error': error}])
+    assert {a['path'] for a in found} == {str(p) for p in paths[:2]}
+
+
+@pytest.mark.parametrize('envelope', [
+    lambda p: {'artifacts': [{'output_path': str(p)}]},
+    lambda p: {'artifact': receipt(p)},
+    lambda p: {'output_file': str(p)},
+])
+def test_declared_outputs_do_not_require_a_tool_name_allowlist(supervisor, tmp_path, envelope):
+    path = tmp_path / 'result.md'
+    path.write_text('공통 출력 본문')
+    result = envelope(path)
+    calls = [{'name': 'another_provider_edit', 'result': result}]
+    assert discover(supervisor, '', calls)[0]['path'] == str(path)
+    for denial in ({'success': False}, {'executed': False}, {'not_executed': True}, {'exit_code': 1}):
+        calls[0]['result'] = {**result, **denial}
+        assert not discover(supervisor, '', calls)
+
+
 def test_shell_written_report_reaches_first_model_input(supervisor, tmp_path, monkeypatch):
     path = tmp_path / '새 보고서.md'
     body = '## 결과\n수집 사실과 미확인 범위를 구분한 최종 본문\n'

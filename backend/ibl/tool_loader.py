@@ -85,17 +85,16 @@ def build_tool_package_map(force: bool = False) -> Dict[str, str]:
                 left is right for left, right in zip(source, _tool_map_source)):
             return _tool_to_package_map
         mapping = {}
-        if get_tools_path().exists():
-            for pkg_dir in active_paths(root):
-                tool_json = pkg_dir / "tool.json"
-                if not tool_json.exists():
-                    continue
-                try:
-                    definition = json.loads(tool_json.read_text(encoding='utf-8'))
-                    for tool in _extract_tools_from_definition(definition):
-                        mapping[tool["name"]] = pkg_dir.name
-                except Exception as e:
-                    print(f"[도구 매핑 실패] {pkg_dir.name}: {e}")
+        for pkg_dir in active_paths(root):
+            tool_json = pkg_dir / "tool.json"
+            if not tool_json.exists():
+                continue
+            try:
+                definition = json.loads(tool_json.read_text(encoding='utf-8'))
+                for tool in _extract_tools_from_definition(definition):
+                    mapping[tool["name"]] = pkg_dir.name
+            except Exception as e:
+                print(f"[도구 매핑 실패] {pkg_dir.name}: {e}")
         _tool_to_package_map = mapping
         _tool_map_source = source
         return mapping

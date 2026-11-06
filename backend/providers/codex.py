@@ -764,6 +764,16 @@ class CodexProvider(CliSubprocessProvider):
             if exit_code not in (None, 0):
                 is_error = True
             return str(item.get("aggregated_output") or ""), is_error
+        if itype == "file_change":
+            # Native edit receipts cross the same output boundary as scripts and
+            # IBL. Keep the original event, but expose completed writes through
+            # the common artifact envelope; deleted/failed files are not outputs.
+            artifacts = [{"output_path": change["path"]}
+                         for change in (item.get("changes") or [])
+                         if isinstance(change, dict) and change.get("kind") in ("add", "update")
+                         and isinstance(change.get("path"), str) and change["path"]]
+            result = {**item, "artifacts": artifacts if status == "completed" and not is_error else []}
+            return json.dumps(result, ensure_ascii=False), is_error
         if itype == "mcp_tool_call":
             raw = item.get("structured_content")
             if raw is None:

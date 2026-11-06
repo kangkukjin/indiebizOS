@@ -101,6 +101,16 @@ def test_mapping_snapshot_changes_on_selection_and_metadata(packages, monkeypatc
     assert loader.build_tool_package_map() is not current
 
 
+def test_mapping_uses_inventory_paths_without_a_second_root_probe(packages, monkeypatch):
+    # 재고는 실제 활성 패키지 경로를 이미 제공한다. 다른 데이터 루트의
+    # 설치 폴더 부재로 빈 매핑을 캐시하면 루트 복원 뒤에도 그 결과가 남는다.
+    with monkeypatch.context() as isolated:
+        isolated.setattr(loader, 'get_tools_path', lambda: packages / 'absent')
+        observed = loader.build_tool_package_map(force=True)
+        assert observed == {'a': 'awake', 'b': 'awake', 'base': 'base'}
+    assert loader.build_tool_package_map() is observed
+
+
 def test_mapping_rebuild_and_clear_are_serialized(packages, monkeypatch):
     import threading
     entered, release, clear_started, cleared = (threading.Event() for _ in range(4))

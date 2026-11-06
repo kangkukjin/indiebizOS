@@ -47,7 +47,7 @@ def _receipt_paths(value, *, submissions=None):
 
 
 def result_paths(controller, call, *, submissions=None):
-    """셸·스크립트의 실행 반환 파일을 같은 턴 원문에서 회수한다."""
+    """공통 출력 영수증은 도구 이름과 무관하게, 암묵적 path는 생산자에서만 읽는다."""
     from seam_metrics import is_shell_tool
 
     if call.get("is_error") or call.get("success") is False:
@@ -62,6 +62,13 @@ def result_paths(controller, call, *, submissions=None):
         shown = _result_value(call.get("result"))
         if isinstance(shown, dict) and shown.get("role") in SUBMISSION_ROLES:
             return list(_receipt_paths(shown, submissions=submissions))
+        if isinstance(shown, dict):
+            # Explicit output envelopes are already declared by the producer
+            # adapter. Bare path/size in reads and searches remain input data.
+            return list(_receipt_paths({key: value for key, value in shown.items()
+                if key in {"output_path", "output_file", "artifact", "artifacts",
+                           "success", "executed", "not_executed", "exit_code"}},
+                submissions=submissions))
         return []
     shown = _result_value(call.get("result"))
     if isinstance(shown, dict):

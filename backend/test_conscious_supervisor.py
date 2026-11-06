@@ -32,7 +32,8 @@ def supervisor(tmp_path, monkeypatch):
                          _custom_execute_tool=execute)
     controller = Supervisor(SimpleNamespace(ai=ai), "목표 원문", [], "worker", "task-supervision-test",
                             {"tick_s": 1000}, directory=tmp_path / "store")
-    controller.configure({"task_framing": "문제", "achievement_criteria": "실제 증거 확인"})
+    controller.configure({"task_framing": "문제", "achievement_criteria": "실제 증거 확인",
+                          "independent_review": True})
     controller.calls = calls
     try:
         yield controller
@@ -56,6 +57,45 @@ def trigger_verdict(controller, instruction):
 
 def finish(controller, response):
     return list(controller.finalize(response, [], lambda ev: None))
+
+
+@pytest.mark.parametrize("selection", [None, False, "false"])
+def test_completion_criteria_do_not_require_independent_review(supervisor, monkeypatch, tmp_path, selection):
+    framing = {"task_framing": "보고서 작성", "achievement_criteria": "결과를 저장하고 확인"}
+    if selection is not None:
+        framing["independent_review"] = selection
+    supervisor.configure(framing)
+    monkeypatch.setattr('final_evaluator.prepare', lambda *a, **kw: pytest.fail('불필요한 검수 준비'))
+    monkeypatch.setattr('final_evaluator.invoke', lambda *a, **kw: pytest.fail('불필요한 독립 검토'))
+    report = tmp_path / 'report.md'
+    report.write_text('# 확인한 보고서\n본문')
+    # 셸의 자연스러운 출력 형식은 완료를 막는 별도 증명 서식이 아니다.
+    supervisor.run_tool('shell', {}, lambda: json.dumps({'path': str(report), 'role': 'submission'})
+                        + '\n' + report.read_text())
+    response = f'보고서를 저장하고 확인했습니다. [{report.name}]({report})'
+    assert finish(supervisor, response)[-1]['content'] == response
+    assert tc.get_goal_eval_outcome()['review_status'] == 'NOT_RUN'
+    assert supervisor.store.text == response
+    assert not supervisor.evaluation_enabled and supervisor.framing['achievement_criteria']
+
+
+def test_unreviewed_delivery_failure_remains_visible(supervisor, monkeypatch):
+    supervisor.configure({'task_framing': '결과 전달', 'achievement_criteria': '전달'})
+    def failed(*args):
+        raise OSError('destination unavailable')
+    monkeypatch.setattr(supervisor.delivery, 'deliver', failed)
+    result = finish(supervisor, '작성 완료')[-1]['content']
+    assert 'destination unavailable' in result
+    assert tc.get_goal_eval_outcome()['status'] == 'UNKNOWN'
+    assert tc.get_goal_eval_outcome()['review_status'] == 'NOT_RUN'
+    assert tc.get_goal_eval_outcome()['response_hash'] == digest(result)
+
+
+def test_pending_independent_review_keeps_its_checkpoint(supervisor):
+    supervisor.configure({'task_framing': '기존 검토 재개', 'achievement_criteria': '기존 기준'})
+    assert not supervisor.evaluation_enabled
+    supervisor._resume_evaluation = True
+    assert supervisor.evaluation_enabled
 
 
 def manager_tool(controller, payload):
@@ -172,7 +212,7 @@ def test_unread_tail_is_supplied_and_its_defect_can_fail_evaluation(supervisor, 
     events = finish(supervisor, "x" * 24000 + "뒤쪽 중요한 오류")
     assert events[-1]["evaluation"]["review_status"] != "APPROVED"
     assert tc.get_goal_eval_outcome()["goal_status"] == "UNKNOWN"
-    assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
+    assert tc.get_goal_eval_outcome()["review_status"] == "REWORK"
 
 
 def test_long_response_is_evaluated_without_page_read_tools(supervisor, monkeypatch):
@@ -373,7 +413,8 @@ def test_real_aiagent_role_uses_same_tools_but_separate_identity(supervisor, mon
 @pytest.mark.parametrize("lane", ["THINK", "EXECUTE", "HIGH_RECALL", "NO_FRAMING", "NO_CRITERIA", "CONTEXT_UPDATE"])
 @pytest.mark.parametrize("signal", ["read", "write", "failed", "unknown"])
 @pytest.mark.parametrize("supervised", [False, True])
-def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(supervisor, monkeypatch, lane, signal, supervised):
+@pytest.mark.parametrize("independent_review", [False, True])
+def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(supervisor, monkeypatch, lane, signal, supervised, independent_review):
     from agent_pipeline import CognitivePipelineMixin
     from pathlib import Path
     calls = []
@@ -386,7 +427,7 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
         _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ("EXECUTE" if lane == "HIGH_RECALL" else "THINK" if lane in {"NO_FRAMING", "NO_CRITERIA"} else lane,
                                           "[self:time]" if lane == "HIGH_RECALL" else None)
-        _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "achievement_criteria": "" if lane == "NO_CRITERIA" else "기준"}
+        _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "independent_review": independent_review, "achievement_criteria": "" if lane == "NO_CRITERIA" else "기준"}
         _consciousness_needs_repair = lambda *a: False
         _consciousness_clarification = lambda *a: None
         _extract_achievement_criteria = lambda *a: "" if lane == "NO_CRITERIA" else "기준"
@@ -417,11 +458,16 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
         monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: None)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: calls.append(1) or verdict(c))
     supervisor.enabled = False
+    tc.set_goal_eval_outcome(True, status="ACHIEVED", goal_status="ACHIEVED", response_hash="prior-response")
     events = list(runner._cognitive_stream_body("질문", []))
     assert not [e for e in events if e["type"] == "error"], events
     assert [e["content"] for e in events if e["type"] == "text"] == ["사용자 응답"]
-    assert len(calls) == (1 if lane == "THINK" else 0)
-    expected = {"path": "goal_eval", **({"supervised": True} if supervised else {})} if lane == "THINK" else {"path": "none"}
+    reviewed = lane == "THINK" and independent_review
+    assert len(calls) == int(reviewed)
+    if not reviewed:
+        outcome = next(e['evaluation'] for e in events if e['type'] == 'final')
+        assert outcome['review_status'] == 'NOT_RUN' and outcome['goal_status'] == 'UNKNOWN'
+    expected = {"path": "goal_eval", **({"supervised": True} if supervised else {})} if reviewed else {"path": "none"}
     assert ("cognition.evaluation", expected) in trace
 
 

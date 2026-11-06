@@ -224,6 +224,7 @@ class MemberRunner(AgentRunner):
         agent._prompt = ("회원의 요청에 대한 작업 규정자다. JSON으로 task_framing, approach, achievement_criteria, "
                          "assumptions를 반환한다. task_framing·approach·achievement_criteria는 문자열, assumptions는 문자열 목록이다. "
                          "achievement_criteria는 요청의 완료 조건이다. 선택 필드 imagined_ibl·history_summary는 문자열, "
+                         "independent_review는 기본 false인 불리언이며 실행자 확인 외에 독립 검토가 필요할 때만 true다. "
                          "capability_focus는 {hint:문자열} 객체다. hint는 작업의 입력·출력·의존 관계와 불확실성을 담고 자명하면 비운다. 액션 추천 목록이나 상세 계약을 다른 필드에 옮기지 않는다. "
                          "허브 하네스 변경은 허용되지 않는다.\n" + self._build_system_prompt(self._load_role()))
         agent._supervisor_prompt = agent._prompt

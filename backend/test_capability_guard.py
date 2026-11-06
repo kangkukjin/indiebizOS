@@ -468,7 +468,7 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
         _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ("EXECUTE" if route == "execute" else "THINK", None)
         _run_consciousness_or_reuse = lambda *a, **kw: {"task_framing": "이미지 확인",
-            **({"achievement_criteria": "이미지 설명"} if route in {"criteria", "legacy"} else {})}
+            **({"achievement_criteria": "이미지 설명", "independent_review": True} if route in {"criteria", "legacy"} else {})}
         _consciousness_needs_repair = lambda *a: False
         _consciousness_clarification = lambda *a: original if route == "clarify" else None
         _extract_achievement_criteria = lambda *a: "이미지 설명" if route in {"criteria", "legacy"} else ""

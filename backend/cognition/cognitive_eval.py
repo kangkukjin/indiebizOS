@@ -581,14 +581,8 @@ class CognitiveEvalMixin:
             if achieved is None:
                 self.evaluation_retryable = not bool(_VERDICT_WORD_RE.search(eval_response))
                 return None, eval_response if _VERDICT_WORD_RE.search(eval_response) else "평가 응답 형식 오류: " + eval_response, 0
-            if achieved is False:
-                defects = parse_criterion_defects(eval_response, contract)
-                if not defects:
-                    return None, "기존 달성 기준과 구체적 증거에 연결되지 않은 평가여서 보완하지 않았습니다", 0
-                # 자유 산문에 섞인 추가 요구는 실행자에게 전달하지 않는다.
-                routing = re.findall(r"(?mi)^(?:REPAIR_SCOPE:\s*(?:local|research)|REPAIR_BLOCK_IDS:\s*\[.*\])\s*$", eval_response)
-                eval_response = (f"NOT_ACHIEVED\nSEVERITY: {severity}\n" + "\n".join(routing)
-                                 + "\nDEFECTS: " + json.dumps(defects, ensure_ascii=False))
+            # 결함의 의미는 검토자와 실행자가 판단한다. JSON 서식의 누락이나
+            # 자유 산문이라는 이유로 모델의 판단을 지우거나 UNKNOWN으로 바꾸지 않는다.
             return achieved, eval_response, severity
 
         except Exception as e:

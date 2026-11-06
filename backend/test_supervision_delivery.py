@@ -229,7 +229,7 @@ def test_script_runner_passes_private_workbench_to_child_process(supervisor, tmp
     monkeypatch.setattr(S, "_RUN_DIR", tmp_path / "runs")
     monkeypatch.setattr(S, "_JOB_DIR", tmp_path / "runs/jobs")
     observed = []
-    supervisor.configure({"task_framing": "의식 규정", "achievement_criteria": "완료" if conscious is True else ""} if conscious else None)
+    supervisor.configure({"task_framing": "의식 규정", "independent_review": conscious is True, "achievement_criteria": "완료" if conscious is True else ""} if conscious else None)
 
     def child(*args, **kwargs):
         observed.append((kwargs.get("env") or {}).get(STAGING_ENV))

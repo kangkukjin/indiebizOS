@@ -283,7 +283,7 @@ def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_p
         monkeypatch.setattr('conscious_supervisor.open_supervisor', lambda *a, **kw: None)
     monkeypatch.setattr('consciousness_agent.get_consciousness_agent',
                         lambda: SimpleNamespace(is_ready=True, process=lambda **kw:
-                            {'task_framing': kw['user_message'], 'achievement_criteria': '현재 요청의 제목 반영'}))
+                            {'task_framing': kw['user_message'], 'achievement_criteria': '현재 요청의 제목 반영', 'independent_review': True}))
     monkeypatch.setattr('consciousness_agent.get_world_pulse_text', lambda: '')
     runner = Runner(tmp_path, execute)
     body = runner._cognitive_stream_body

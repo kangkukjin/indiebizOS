@@ -105,7 +105,7 @@ def test_pipeline_reviews_recovered_task_without_second_execution(turn, supervis
     runner._associate = lambda *a, **kw: None
     runner._decide_request_type = lambda *a, **kw: ('THINK', None)
     runner._run_consciousness_or_reuse = lambda *a, **kw: {
-        'task_framing': '초점 복구', 'achievement_criteria': '초점 복구와 실제 검사'}
+        'task_framing': '초점 복구', 'achievement_criteria': '초점 복구와 실제 검사', 'independent_review': True}
     runner._apply_consciousness_to_history = lambda history, co: history
     runner._refresh_execution_prompt = lambda message, *a, **kw: message
     runner._after_response_async = lambda *a, **kw: None

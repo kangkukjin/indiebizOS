@@ -58,7 +58,7 @@ def _fill(keys) -> dict:
             target[name] = [_sentinel(key)]
         elif name == "criteria":
             target[name] = [{"text": _sentinel(key), "user_quote": "", "fallback": "한계를 명시"}]
-        elif name.startswith("needs_") or name == "deep_research":
+        elif name.startswith("needs_") or name in {"deep_research", "independent_review"}:
             target[name] = True
         else:
             target[name] = _sentinel(key)
@@ -130,7 +130,12 @@ def _bool_probes():
     from cognitive_consciousness import CognitiveConsciousnessMixin
     from research_planning import requested
     holder = CognitiveConsciousnessMixin()
+    from conscious_supervisor import Supervisor
+    from types import SimpleNamespace
     return {
+        "independent_review": lambda v: Supervisor.evaluation_enabled.fget(SimpleNamespace(
+            enabled=True, framing={'independent_review': v, 'achievement_criteria': '요청 결과'},
+            message='요청', completion_review_required=False)),
         "deep_research": lambda v: requested({"deep_research": v}),
         "needs_clarification": lambda v: holder._consciousness_clarification(
             {"needs_clarification": v, "clarification_question": "질문"}),
@@ -147,7 +152,7 @@ def test_every_prompt_key_reaches_a_consumer(tmp_path):
     dead = []
     for key in sorted(keys):
         name = key.rpartition(".")[2]
-        if name.startswith("needs_") or name == "deep_research":
+        if name.startswith("needs_") or name in {"deep_research", "independent_review"}:
             probe = probes.get(name)
             if probe is None:
                 dead.append(f"{key} (불리언인데 소비처 프로브 미등록)")

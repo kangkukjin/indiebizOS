@@ -315,9 +315,11 @@ def test_pending_apply_preserves_scope_without_self_cycle_and_parent_returns(env
             json.dumps({'task_id': task, 'scheduled_at': 'now'}))
         c = NS(repair_granted=True, cancelled=lambda: False, task=task, runner=env.turn.runner,
                message=child['goal'], framing=child['framing'], delivery=NS(manifest=lambda: []),
-               verifications=NS(records=[]), store=env.controller.store, owner='system_ai', episode_id=None)
+               verifications=NS(records=[]), store=env.controller.store, owner='system_ai', episode_id=None,
+               evaluation_enabled=False)
         pending = journal.defer(c, '적용 예약', env.repo)
         assert pending['task_scope'] == child['task_scope']
+        assert pending['framing']['independent_review'] is False
         assert journal.read(child['task_id'])['child_task_id'] == task != child['task_id']
         journal.save({**pending, 'status': 'completed', 'response': '수리 완료'})
         return {'response': '수리 완료'}

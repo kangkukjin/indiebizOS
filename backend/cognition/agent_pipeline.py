@@ -430,6 +430,8 @@ class CognitivePipelineMixin:
         is_system_ai = bool(self.config.get("_is_system_ai"))
         history = history or []
         agent_name = agent_name or self.config.get("name", "")
+        from thread_context import clear_goal_eval_outcome
+        clear_goal_eval_outcome()  # 후속 구간·재사용 스레드가 앞 응답의 승인을 이어받지 않는다.
 
         # 0. 실행 축 기어 동기화는 래퍼(cognitive_stream)가 **스코프 밖에서** 끝냈다 —
         # 상주 러너의 바탕 모델 교체이므로 턴 사본에 적으면 안 된다. force_role
@@ -859,7 +861,7 @@ class CognitivePipelineMixin:
                 except Exception:
                     pass
 
-            # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
+            # 7. 독립 검토는 의식이 선택한 경우만. 완료 기준은 실행자도 사용한다.
             _eval_ran = False  # 기준 없는 생략을 평가 실행으로 기록하지 않는다.
             if _evaluation_enabled and _supervisor and _supervisor.enabled and final_content:
                 _eval_ran = _supervisor.evaluation_enabled
@@ -867,7 +869,8 @@ class CognitivePipelineMixin:
                     record_trajectory_event("cognition.evaluation", {"path": "goal_eval", "supervised": True})
                 final_content = yield from defer_final(_supervisor.finalize(
                     final_content, history, _collect, cancel_check, tool_calls=eval_tool_calls))
-            elif _evaluation_enabled and final_content:
+            elif (_evaluation_enabled and final_content
+                  and consciousness_output.get("independent_review") is True):
                 criteria = self._extract_achievement_criteria(consciousness_output)
                 if criteria:
                     from world_pulse import _load_config as _load_wp_config
@@ -909,12 +912,12 @@ class CognitivePipelineMixin:
             if final_content and _response_completed:
                 from thread_context import get_goal_eval_outcome, set_goal_eval_outcome
                 from research_context import current as research_current, finish_review
-                if not _eval_ran:
+                if not _eval_ran and not get_goal_eval_outcome():
                     set_goal_eval_outcome(status='NOT_RUN', review_status='NOT_RUN', reason='명시 목표 평가 미실행')
-                    if research_current():
-                        from final_evaluator import prepare_standalone
-                        prepare_standalone(self, final_content, message, consciousness_output,
-                                           eval_tool_calls, history, cancel_check)
+                if not _eval_ran and research_current():
+                    from final_evaluator import prepare_standalone
+                    prepare_standalone(self, final_content, message, consciousness_output,
+                                       eval_tool_calls, history, cancel_check)
                 outcome = get_goal_eval_outcome() or {}
                 finish_review(final_content, outcome, outcome.get('citation_uses', []))
                 _response_completed = not (cancel_check and cancel_check())

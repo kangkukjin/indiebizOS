@@ -38,7 +38,7 @@ REPEAT_KEEP = 40                      # 자아별 문장 기록 보존 수
 PATCHABLE_TEXT = ("task_framing", "achievement_criteria", "expert_choice", "clarification_question")
 PATCHABLE_LIST = ("assumptions", "guide_files", "criteria")
 PATCHABLE_DICT = ("capability_focus",)
-PATCHABLE_BOOL = ("needs_clarification", "deep_research")
+PATCHABLE_BOOL = ("needs_clarification", "deep_research", "independent_review")
 PATCHABLE = set(PATCHABLE_TEXT) | set(PATCHABLE_LIST) | set(PATCHABLE_DICT) | set(PATCHABLE_BOOL)
 # 저장본에서 벗기는 키 — 권한·턴 전용 표식
 STRIP_ALWAYS = ("needs_repair", "_repair_policy", "_framing_source", "_inherited_from",

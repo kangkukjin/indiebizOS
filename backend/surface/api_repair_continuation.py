@@ -311,7 +311,10 @@ def process_pending(base, generation, execute=_execute):
             if current.get("status") in {"waiting_review", "waiting_execution"}:
                 # 저장한 단계(남은 개발 또는 검수)를 다음 스캔에서 재개한다.
                 continue
-            status = "completed" if evaluation.get("goal_status") == "ACHIEVED" else "blocked"
+            # 실행 종료와 독립 검토의 목표 판정은 별개다. 검토를 선택하지 않은
+            # 정상 종료를 심사 결과가 없다는 이유로 차단하지 않는다.
+            status = ("completed" if evaluation.get("goal_status") == "ACHIEVED"
+                      or evaluation.get("status") == "NOT_RUN" else "blocked")
             if answer.get("cancelled"):
                 status = "cancelled"
             response = answer.get("response", "")

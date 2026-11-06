@@ -47,7 +47,7 @@ def evaluation(controller, criterion=None):
 def test_partial_repair_continues_whole_goal_across_execution_rounds(supervisor, tmp_path, monkeypatch, consumer):
     from supervision_store import TurnStore
     authorize(supervisor, tmp_path, monkeypatch)
-    supervisor.configure({"achievement_criteria": ["UI 연결", "실행자 실제 동작", "정본 적용"]}, repair=True)
+    supervisor.configure({"independent_review": True, "achievement_criteria": ["UI 연결", "실행자 실제 동작", "정본 적용"]}, repair=True)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: evaluation(c, "C1"))
     finish(supervisor, "UI 미완료")
     original_task = supervisor.task

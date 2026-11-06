@@ -595,7 +595,7 @@ def _assemble_evaluator(sample: str) -> Dict[str, Any]:
     return {"model": model, "sections": sections, "assembled": {},
             "entry": "final_evaluator.prepare/invoke → cognitive_eval.CognitiveEvalMixin._evaluate_achievement "
                      "→ consciousness_agent.system_ai_call(role='evaluate')",
-            "output_keys": ["ACHIEVED", "NOT_ACHIEVED (SEVERITY·REPAIR_SCOPE·DEFECTS)", "UNKNOWN"]}
+            "output_keys": ["ACHIEVED", "NOT_ACHIEVED (자연어 보완 의견)", "UNKNOWN"]}
 
 
 def _assemble_distill(sample: str) -> Dict[str, Any]:

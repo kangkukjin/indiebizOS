@@ -111,6 +111,9 @@ def inherited_framing(message):
     framing = copy.deepcopy(row.get("framing"))
     if not isinstance(framing, dict) or not (framing.get("criteria") or framing.get("achievement_criteria")):
         raise ValueError("보존된 수리 완료 기준이 없습니다. 기준 없는 실행은 시작하지 않습니다")
+    # 선택 필드 도입 전 접수된 수리는 당시 예정한 검토를 마친다. 새 예약은
+    # defer에서 false도 명시하므로 재개가 독립 검토를 새로 켜지 않는다.
+    framing.setdefault("independent_review", True)
     framing["_framing_source"] = "repair_continuation"
     # 초안은 이미 실행된 계획이다. 재개할 때 다시 실행할 지시로 공급하지 않는다.
     framing.pop("imagined_ibl", None)
@@ -157,7 +160,8 @@ def defer(controller, response, base=None):
            "failures": previous.get("failures", []), "status": "waiting_apply",
            "job_path": str(job_path), "scheduled_at": job["scheduled_at"],
            "goal": previous.get("goal", controller.message),
-           "framing": {**controller.framing, "_repair_policy": session.get("repair_policy", 1)},
+           "framing": {**controller.framing, "independent_review": controller.evaluation_enabled,
+                       "_repair_policy": session.get("repair_policy", 1)},
            "repair_policy": session.get("repair_policy", 1),
            "pending_delivery": bool(controller.delivery.manifest()),
            "completion_review_required": bool(previous.get("completion_review_required")

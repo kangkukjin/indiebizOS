@@ -27,7 +27,6 @@ def test_final_review_owns_failures_and_only_defects_open_execution(supervisor, 
         context = supervisor._evaluation_packet['context']
         assert context['recovery_incidents'] == supervisor.recovery.view()
         assert context['recovery_incidents'] and 'focus missing' in prompt
-        assert '후속 결과가 같은 대상·조건의 실패를 해소했는지' in kwargs['system_prompt']
         if state == 'missing_evidence':
             return 'UNKNOWN\nUNKNOWN_REASON: evidence — C1 실제 대상 상태가 없음'
         if state == 'unresolved' and len(evaluations) == 1:
@@ -72,36 +71,19 @@ def test_only_explicit_submissions_receive_submission_priority(supervisor, tmp_p
     assert str(source) not in roles
 
 
-@pytest.mark.parametrize('reference,blocked', [
-    ('', True),
-    ('{"id":"user_request","quote":"재기동 전에는 물어봐"}', False),
-    ('{"id":"user_request","quote":"새 승인 조건"}', True),
-    ('{"id":"e0","quote":"Permission denied"}', False),
-    ('{"id":"missing","quote":"Permission denied"}', True),
-    ('[]', True),
+@pytest.mark.parametrize('feedback', [
+    'UNKNOWN\nUNKNOWN_REASON: blocked\n현재 요청은 공개 전 승인을 기다리라는 내용입니다.',
+    'UNKNOWN\nUNKNOWN_REASON: blocked\n별도 승인이 필요합니다.',
 ])
-def test_authority_stop_requires_existing_evidence(reference, blocked):
-    from final_evaluator import unsupported_authority_block
-    packet = {'context': {'authority_evidence': [
-        {'id': 'user_request', 'result': '업데이트하되 재기동 전에는 물어봐'},
-        {'id': 'e0', 'result': 'Permission denied'},
-    ]}}
-    feedback = 'UNKNOWN\nUNKNOWN_REASON: blocked\nBLOCKER_KIND: authority\nAUTHORITY_EVIDENCE: ' + reference
-    assert unsupported_authority_block(feedback, packet) is blocked
-    assert not unsupported_authority_block('UNKNOWN\nUNKNOWN_REASON: evidence', packet)
-    assert not unsupported_authority_block('UNKNOWN\nUNKNOWN_REASON: blocked\n외부 기기가 오프라인', packet)
-
-
-def test_evaluator_cannot_turn_invented_approval_into_terminal_stop(supervisor, monkeypatch):
+def test_authority_judgment_is_not_rewritten_by_keyword_or_receipt_format(supervisor, monkeypatch, feedback):
     from final_evaluator import prepare, invoke
-    supervisor.store.put_response('중앙 코드 수리는 별도 승인이 필요합니다.')
+    supervisor.store.put_response('현재 상태를 보고합니다.')
     prepare(supervisor, [])
-    monkeypatch.setattr('final_evaluator.Evaluator._evaluate_achievement', lambda *a, **kw:
-                        (None, 'UNKNOWN\nUNKNOWN_REASON: blocked\n별도 승인이 필요합니다.\nREPAIR_SCOPE: local', None))
+    monkeypatch.setattr('final_evaluator.Evaluator._evaluate_achievement',
+                        lambda *a, **kw: (None, feedback, 0))
     result = json.loads(invoke(supervisor))
-    assert result['status'] == 'REWORK' and result['repair_scope'] == 'research'
-    assert '원문 근거가 없습니다' in result['instruction']
-    assert result['goal_status'] == 'UNKNOWN'
+    assert result['status'] == 'UNKNOWN' and result['reason'] == feedback
+    assert not result['instruction']
 
 
 def test_prior_user_limit_can_ground_authority_stop(supervisor, monkeypatch):
@@ -432,22 +414,22 @@ def test_tool_capable_supervisor_rejects_final_phase(supervisor):
 
 
 @pytest.mark.parametrize("feedback", [
-    'NOT_ACHIEVED\nSEVERITY: 2\n더 깊게 조사하라',
-    'NOT_ACHIEVED\nDEFECTS: [{"criterion_id":"C99","evidence":"더 할 수 있다","repair":"추가 조사"}]',
-    'NOT_ACHIEVED\nDEFECTS: [{"criterion_id":"C1","evidence":"","repair":"추가 조사"}]',
-    'NOT_ACHIEVED\nDEFECTS: []',
+    'NOT_ACHIEVED\n합계가 원문과 다릅니다. 30을 20으로 바로잡으세요.',
+    'NOT_ACHIEVED\nREPAIR_SCOPE: local\n표의 합계 30은 입력 12+8과 맞지 않습니다.',
 ])
-def test_unlinked_feedback_never_launches_repair(supervisor, monkeypatch, feedback):
-    calls = []
-    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: calls.append(1) or feedback)
-    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("기준 없는 재작업")
-    result = finish(supervisor, "기존 응답")[-1]["content"]
-    assert result.startswith("기존 응답") and len(calls) == 1
-    assert tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
+def test_natural_language_feedback_reaches_executor_without_defect_form(supervisor, monkeypatch, feedback):
+    from final_evaluator import prepare, invoke
+    supervisor.store.put_response('합계는 30입니다.')
+    prepare(supervisor, [])
+    monkeypatch.setattr('consciousness_agent.system_ai_call', lambda *a, **kw: feedback)
+    result = json.loads(invoke(supervisor))
+    assert result['status'] == 'REWORK'
+    assert feedback in result['instruction']
+    assert result['reason'] == feedback
 
 
 def test_eval_input_does_not_promote_planning_advice_to_requirements(supervisor, monkeypatch):
-    supervisor.configure({"task_framing": "깊이 더 조사하라", "achievement_criteria": "입력 가격 두 개를 비교",
+    supervisor.configure({"independent_review": True, "task_framing": "깊이 더 조사하라", "achievement_criteria": "입력 가격 두 개를 비교",
                           "capability_focus": {"highlight_actions": ["추천도구"], "hint": "일곱 곳 검색"}})
     def evaluate(prompt, **kwargs):
         assert "입력 가격 두 개를 비교" in prompt and '"id": "C1"' in prompt
@@ -460,7 +442,7 @@ def test_eval_input_does_not_promote_planning_advice_to_requirements(supervisor,
 
 def test_request_criteria_conflict_is_deferred_not_learned_as_success(supervisor, monkeypatch):
     supervisor.message = '제주 유입 정책이 지속되는 이유를 설명해줘'
-    supervisor.configure({'task_framing': '무관한 과제 범위',
+    supervisor.configure({'independent_review': True, 'task_framing': '무관한 과제 범위',
                           'achievement_criteria': '과제 범위 밖이므로 답하지 않는다'})
     def evaluate(prompt, **kwargs):
         assert supervisor.message in prompt
@@ -503,7 +485,7 @@ def test_empty_criteria_have_no_evaluation_or_pending_delivery(supervisor, tmp_p
     monkeypatch.setattr("final_evaluator.invoke", lambda *a, **kw: pytest.fail("기준 없는 평가"))
     assert finish(supervisor, "확인 완료")[-1]["content"] == "확인 완료"
     assert target.read_text() == "new reviewed bytes" and len(sent) == 1
-    assert tc.get_goal_eval_outcome() is None
+    assert tc.get_goal_eval_outcome()["review_status"] == "NOT_RUN"
     assert not (supervisor.store.directory / "review_status.json").exists()
 
 
@@ -513,7 +495,7 @@ def test_tool_metadata_cannot_supply_missing_consciousness_criteria():
     assert CognitiveEvalMixin()._extract_achievement_criteria({}, marker) is None
 
 
-def test_unlinked_free_prose_is_not_passed_as_repair_instructions(supervisor, monkeypatch):
+def test_repair_keeps_model_feedback_and_original_criteria_for_executor_judgment(supervisor, monkeypatch):
     from final_evaluator import invoke, prepare
     supervisor.store.put_response("보고서")
     prepare(supervisor)
@@ -523,7 +505,8 @@ def test_unlinked_free_prose_is_not_passed_as_repair_instructions(supervisor, mo
     monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: feedback)
     decision = json.loads(invoke(supervisor))
     assert decision["status"] == "REWORK"
-    assert "원문 수치로 수정" in decision["instruction"] and "미래 전망" not in decision["instruction"]
+    assert feedback in decision["instruction"]
+    assert "새 개선 목표를 추가하지" in decision["instruction"]
 
 @pytest.mark.parametrize('goal', ['ACHIEVED', 'NOT_ACHIEVED'])
 def test_approved_response_preserves_independent_goal_to_final_store(supervisor, monkeypatch, goal):
@@ -742,10 +725,12 @@ def test_saved_completion_review_cannot_take_receipt_shortcut(supervisor, monkey
 
 
 @pytest.mark.parametrize('outcome', ['ACHIEVED', 'UNKNOWN'])
-def test_definition_only_repair_uses_goal_evaluation(supervisor, monkeypatch, outcome):
+@pytest.mark.parametrize('independent_review', [False, True])
+def test_definition_only_repair_leaves_review_to_ai_choice(supervisor, monkeypatch, outcome, independent_review):
     from function_library import register
     from thread_context import repair_workspace_scope
     supervisor.configure({'_repair_policy': 2, 'task_framing': '관용구 개정',
+                          'independent_review': independent_review,
                           'achievement_criteria': '등록된 함수가 새 결과를 반환한다'}, repair=True)
     monkeypatch.setattr('repair_policy.finalize', lambda *a: pytest.fail('코드 없는 변경에 적용 영수증 요구'))
     with repair_workspace_scope(str(supervisor.store.directory / 'unused-code-workspace')):
@@ -757,8 +742,12 @@ def test_definition_only_repair_uses_goal_evaluation(supervisor, monkeypatch, ou
             "status": outcome, "reason": "실제 결과 검증", "evidence": ["함수 개정"], "remaining": []})
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
     finish(supervisor, '개정 결과')
-    assert len(seen) == 1 and '등록된 함수가 새 결과를 반환한다' in seen[0]
-    assert tc.get_goal_eval_outcome()['goal_status'] == outcome
+    assert len(seen) == int(independent_review)
+    if independent_review:
+        assert '등록된 함수가 새 결과를 반환한다' in seen[0]
+        assert tc.get_goal_eval_outcome()['goal_status'] == outcome
+    else:
+        assert tc.get_goal_eval_outcome()['review_status'] == 'NOT_RUN'
 
 
 def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch, tmp_path):

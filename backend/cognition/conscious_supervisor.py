@@ -1,4 +1,4 @@
-"""의식의 계획·조건부 감독과 도구 없는 최종 평가를 연결하는 턴 제어기."""
+"""의식의 계획·조건부 감독과 선택한 독립 검토를 연결하는 턴 제어기."""
 import json
 import threading
 import time
@@ -308,7 +308,7 @@ class Supervisor:
         framing = project_framing(framing)
         self.framing = framing
         self._final_criteria_contract = None
-        # 의식이 규정한 턴만 감독·평가한다. 관찰/도구 실패가 이 선택을 바꾸지 않는다.
+        # 작업 규정은 실행 맥락이다. 기준의 존재만으로 독립 검토를 켜지 않는다.
         self.enabled = bool(framing)
         self.phase = "execute"
         self.executor_paused = False
@@ -335,7 +335,10 @@ class Supervisor:
         criteria = getattr(self, "_final_criteria_contract", None)
         if criteria is None:
             criteria = criteria_contract(self.message, self.framing)
-        return self.enabled and bool(criteria["criteria"])
+        requested = ((self.framing or {}).get("independent_review") is True
+                     or getattr(self, "_resume_evaluation", False)
+                     or self.completion_review_required)
+        return self.enabled and requested and bool(criteria["criteria"])
 
     def reframe(self, payload):
         from reframe import TurnChannel, _revise, render_for_executor
@@ -934,16 +937,23 @@ class Supervisor:
             yield {"type": "final", "content": final}
             return final
         if not self.evaluation_enabled:
-            # 의식이 실행 중 기준을 거둔 경우에도 이미 대기 중인 전달을 남겨 두지 않는다.
+            # 실행자가 확인한 결과를 전달한다. 독립 검토 미실행을 승인으로 기록하지 않는다.
+            self.store.put_response(response)
+            set_goal_eval_outcome(status="NOT_RUN", review_status="NOT_RUN",
+                                  reason="실행 AI의 응답으로 종료; 독립 검토 미선택",
+                                  response_hash=self.store.manifest()["hash"])
             if not self.cancelled():
                 try:
                     delivery = self.delivery.manifest()
                     self.delivery.deliver(delivery["hash"] if delivery else None, self.cancelled)
                 except Exception as exc:
                     reason = f"산출물·알림을 전달하지 못했습니다: {exc}"
-                    set_goal_eval_outcome(False, 0, status="UNKNOWN", reason=reason)
                     response += "\n\n" + reason
-            self.log("evaluation.skipped", role="harness", reason="의식의 달성 기준 없음")
+                    self.store.put_response(response, replace=True)
+                    set_goal_eval_outcome(False, 0, status="UNKNOWN", review_status="NOT_RUN",
+                                          reason=reason, response_hash=self.store.manifest()["hash"],
+                                          delivery={"status": "UNKNOWN", "reason": str(exc)})
+            self.log("evaluation.skipped", role="harness", reason="독립 검토 미선택")
             yield {"type": "text", "content": response}
             yield {"type": "final", "content": response}
             return response

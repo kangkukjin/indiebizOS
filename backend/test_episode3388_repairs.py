@@ -18,7 +18,7 @@ from supervision_store import TurnStore, digest
 
 ROOT = Path(__file__).resolve().parents[1]
 DRAFT = '#!ibl edition=2\nreturn [table:take]{items:[{k:1},{k:2}],n:2}'
-FRAMING = {'task_framing': '자료 확인', 'achievement_criteria': '수치 검증', 'imagined_ibl': DRAFT}
+FRAMING = {'independent_review': True, 'task_framing': '자료 확인', 'achievement_criteria': '수치 검증', 'imagined_ibl': DRAFT}
 
 
 def load_package(name):

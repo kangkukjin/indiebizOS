@@ -237,7 +237,8 @@ class ConsciousnessAgent:
             {
                 "history_summary": str,    # 관련 맥락으로 원본 대체. 빈 문자열이면 실행 이력 비움
                 "task_framing": str,       # 지금 풀어야 할 문제 정의
-                "achievement_criteria": str, # 달성 기준 (비어있으면 평가 루프 안 탐)
+                "achievement_criteria": str, # 실행자가 확인할 완료 기준
+                "independent_review": bool, # 별도 검토가 필요하다고 판단한 경우만 True
                 "expert_choice": str,      # 전문가의 선택 — 실행자 명령의 제 이름 섹션(한 문장)
                 "capability_focus": {
                     "hint": str                # 입력·출력·의존 관계·불확실성

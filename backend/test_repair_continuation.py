@@ -171,6 +171,35 @@ def test_unknown_after_recovery_is_explicitly_blocked_not_completed(tmp_path, co
     assert settled == ["blocked"] and deliveries[0]["reason"] == "접근 불가"
 
 
+@pytest.mark.parametrize('status,expected', [('NOT_RUN', 'completed'), ('UNKNOWN', 'blocked')])
+def test_execution_completion_without_review_is_not_a_false_goal_verdict(tmp_path, consumer, status, expected):
+    module, deliveries, settled = consumer
+    row = record(tmp_path)
+    receipt(tmp_path)
+    outcome = {'status': status, 'review_status': 'NOT_RUN', 'goal_status': 'UNKNOWN',
+               'reason': '실행자의 결과' if status == 'NOT_RUN' else '실제 전달 실패'}
+    module.process_pending(tmp_path, 'g2', lambda row: {'response': '현재 결과', 'evaluation': outcome})
+    assert settled == [expected]
+    saved = journal.read(row['task_id'], tmp_path)
+    assert saved['evaluation'] == outcome
+    assert bool(deliveries) == (expected == 'blocked')
+
+
+def test_new_apply_continuation_preserves_no_review_choice(supervisor, tmp_path, monkeypatch):
+    monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(tmp_path))
+    supervisor.configure({'task_framing': '수정', 'achievement_criteria': '결과 확인'}, repair=True)
+    scheduled(tmp_path, supervisor.task)
+    tc = __import__('thread_context')
+    tc.set_task_origin('user')
+    supervisor.runner.config = {'id': supervisor.owner, '_project_id': 'project'}
+    row = journal.defer(supervisor, '적용 예약', tmp_path)
+    assert row['framing']['independent_review'] is False
+    row['resume_task_id'] = supervisor.task
+    with journal.resuming(row):
+        framing = journal.inherited_framing(row['goal'])
+    assert framing['independent_review'] is False
+
+
 def test_repeated_same_apply_failure_does_not_spin_models(tmp_path):
     result = {"outcome": "rolled_back", "post_verify": {"exit_code": 1, "stdout": "broken"}}
     first = journal.claim(record(tmp_path), "g", result, tmp_path)

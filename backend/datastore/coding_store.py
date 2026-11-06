@@ -1,6 +1,7 @@
 """코딩 앱의 작업 상태와 재구독 사건."""
 import hashlib
 import json
+import os
 import sqlite3
 import threading
 import time
@@ -27,7 +28,9 @@ def fingerprint(value):
 
 class CodingStore:
     def __init__(self, root=None):
-        self.root = Path(root or Path(get_base_path()) / "data/coding").resolve()
+        state = os.environ.get("INDIEBIZ_RUNTIME_STATE_DIR")
+        default = Path(state) / "coding" if state else Path(get_base_path()) / "data/coding"
+        self.root = Path(root or default).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.db = self.root / "state.db"
         with self.connect() as conn:

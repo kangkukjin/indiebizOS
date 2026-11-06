@@ -103,7 +103,8 @@ def delegate(params, project_path):
               'deadline': time.time() + ledger['deadline'] - time.monotonic() if ledger.get('deadline') else None}
     payload = {'limits': limits, 'controller': binding.session_id, 'principal': asdict(principal.current()),
                'actor': actor, 'agent_id': (prior or {}).get('agent_id', actor), 'owner': owner,
-               'project_path': str(project_path), 'envelope': env, 'workspace': workspace}
+               'project_path': str(project_path), 'envelope': env, 'workspace': workspace,
+               'effect_binding': asdict(sessions.effect_current())}
     row = store.accept(binding.db_path, parent, request_id, message, payload, session_id=sid)
     tree = _tree(binding.db_path, row['worker_root'], payload)
     if _turn_token_ledger.get() is not None:
@@ -193,7 +194,8 @@ def _run(path, row):
                                               'worker:' + payload['controller'], create_legacy=False)
         binding = session_store.begin(sid)
         from task_tree_budget import scope as tree_scope
-        with tree_scope(_tree(path, row['worker_root'], payload)), sessions.scope(binding), principal.narrow(principal.Principal(**payload['principal']), 'task delegation'), \
+        origin = sessions.Binding(**payload['effect_binding']) if payload.get('effect_binding') else binding
+        with tree_scope(_tree(path, row['worker_root'], payload)), sessions.scope(binding), sessions.effect_scope(origin), principal.narrow(principal.Principal(**payload['principal']), 'task delegation'), \
                 received(payload['envelope']), actor_context(agent_id=payload['agent_id'], task_id=task):
             sessions.bind_task(task)
             set_current_project_id(payload['owner'])

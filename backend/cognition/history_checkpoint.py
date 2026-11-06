@@ -246,17 +246,25 @@ def _system_db_path() -> str:
     return str(MEMORY_DB_PATH)
 
 
+def _revision_key(conn, sid, owner):
+    from turn_checkpoints import revision
+    key = owner if sid.startswith('legacy-') else 'session:' + sid
+    rev = revision(conn, sid)
+    return key + (':revision:' + str(rev) if rev else '')
+
+
 def _selection(db_path, table, owner):
     with sessions.connection(db_path) as conn:
         sessions.ensure_schema(conn, table)
         sid = sessions.resolve(conn, db_path, owner, table)
-    return sid, owner if sid.startswith("legacy-") else "session:" + sid
+        key = _revision_key(conn, sid, owner)
+    return sid, key
 
 
 def _fetch_system(thread: str, sid=None) -> Callable:
     sid = sid or _selection(_system_db_path(), "conversations", thread)[0]
     def fetch(conn):
-        key = thread if sid.startswith("legacy-") else "session:" + sid
+        key = _revision_key(conn, sid, thread)
         covered = _read_ckpt(conn, key)["covered_until_id"]
         where, args = "session_id=?", [sid]
         if sid.startswith("legacy-"):
@@ -264,7 +272,7 @@ def _fetch_system(thread: str, sid=None) -> Callable:
             where = f"({where} OR (session_id IS NULL AND {predicate}))"
             args.extend(owner_args)
         rows = conn.execute(f"""SELECT id,role,content FROM conversations
-            WHERE {where} AND role IN ('user','assistant') AND id>? ORDER BY id LIMIT ?""",
+            WHERE {where} AND {__import__('turn_checkpoints').visible('conversations')} AND role IN ('user','assistant') AND id>? ORDER BY id LIMIT ?""",
             [*args, covered, MAX_ROWS_PER_UPDATE + KEEP_RECENT_SYSTEM]).fetchall()
         return [(r[0], "사용자" if r[1] == "user" else "AI", r[2] or "") for r in rows]
     return fetch
@@ -288,9 +296,9 @@ def _fetch_pair(a: int, b: int, sid=None) -> Callable:
     def fetch(conn):
         names = dict(conn.execute("SELECT id,name FROM agents WHERE id IN (?,?)", (a,b)))
         if sid:
-            key = _pair_key(a,b) if sid.startswith("legacy-") else "session:" + sid
+            key = _revision_key(conn, sid, _pair_key(a,b))
             covered = _read_ckpt(conn, key)["covered_until_id"]
-            rows = conn.execute("SELECT id,from_agent_id,content FROM messages WHERE session_id=? AND id>? ORDER BY id LIMIT ?",
+            rows = conn.execute(f"SELECT id,from_agent_id,content FROM messages WHERE session_id=? AND {__import__('turn_checkpoints').visible('messages')} AND id>? ORDER BY id LIMIT ?",
                                 (sid, covered, MAX_ROWS_PER_UPDATE + KEEP_RECENT_PAIR)).fetchall()
         else:
             rows = conn.execute("""SELECT id,from_agent_id,content FROM messages

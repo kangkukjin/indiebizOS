@@ -121,14 +121,20 @@ def transfer_path(src, dest, *, move=False, if_exists="rename", guard=None):
 
     def copy_file(a, b):
         requested = b
-        _, receipt = publish_file(b, lambda temp: shutil.copy2(a, temp), if_exists=policy, guard=guard)
+        from conversation_sessions import current
+        tracked = current() is not None
+        if tracked:
+            from file_changes import transfer_file
+            receipt = transfer_file(a, b, move=move, if_exists=policy, guard=guard)
+        else:
+            _, receipt = publish_file(b, lambda temp: shutil.copy2(a, temp), if_exists=policy, guard=guard)
         b = Path(receipt['path'])
         saved.append(str(b))
         if receipt['renamed']:
             renamed.append({"requested": str(requested), "path": str(b)})
         if receipt['replaced_existing']:
             replaced.append(str(b))
-        if move:
+        if move and not tracked:
             a.unlink()
         return b
 

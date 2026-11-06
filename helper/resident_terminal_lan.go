@@ -28,7 +28,7 @@ func streamURL(base, id, channel string) (string, error) {
 	if channel == "" {
 		channel = "terminal"
 	}
-	if channel != "terminal" && channel != "screen" && channel != "media" && channel != "transfer" {
+	if channel != "process" && channel != "terminal" && channel != "screen" && channel != "media" && channel != "transfer" {
 		return "", fmt.Errorf("invalid stream channel")
 	}
 	u, err := url.Parse(base)

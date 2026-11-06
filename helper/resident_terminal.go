@@ -20,12 +20,15 @@ type terminalProcess interface {
 	Wait() int
 }
 type terminalSpec struct {
-	Channel string      `json:"-"`
-	Config  Config      `json:"config"`
-	ID      string      `json:"terminal_id"`
-	Cols    int         `json:"cols"`
-	Rows    int         `json:"rows"`
-	LAN     terminalLAN `json:"lan"`
+	ProcessSession bool        `json:"process_session"`
+	Command        string      `json:"cmd"`
+	Cwd            string      `json:"cwd"`
+	Channel        string      `json:"-"`
+	Config         Config      `json:"config"`
+	ID             string      `json:"terminal_id"`
+	Cols           int         `json:"cols"`
+	Rows           int         `json:"rows"`
+	LAN            terminalLAN `json:"lan"`
 }
 
 // The bridge runs in a separate process. A worker crash closes its stdin lease;
@@ -81,7 +84,11 @@ func residentTerminalMain(path string) int {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { _, _ = io.Copy(io.Discard, os.Stdin); cancel() }()
-	if err = terminalBridge(ctx, spec); err != nil {
+	bridge := terminalBridge
+	if spec.ProcessSession {
+		bridge = processSessionBridge
+	}
+	if err = bridge(ctx, spec); err != nil {
 		return 1
 	}
 	return 0

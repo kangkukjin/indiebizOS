@@ -707,6 +707,12 @@ app.include_router(member_router, tags=["member"])  # /m/* 외부 서비스 앱 
 app.include_router(xray_router, tags=["xray"])
 app.include_router(prompt_composition_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (프롬프트·기억 본문)
 app.include_router(coding_router)
+from api_process_sessions import router as process_sessions_router
+app.include_router(process_sessions_router)
+from api_remote_process import router as remote_process_router
+app.include_router(remote_process_router)
+from api_conversation_rewind import router as conversation_rewind_router
+app.include_router(conversation_rewind_router)
 from api_code_analysis import router as code_analysis_router
 app.include_router(code_analysis_router)
 app.include_router(documents_router)

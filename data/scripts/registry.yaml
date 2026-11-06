@@ -1684,3 +1684,15 @@ python_libraries:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
+프로세스실행:
+  description: '실행을 시작하고 kind:process 접수증 반환. args: command, cwd(작업 폴더), io(pipe|pty), request_id, yield_ms, lifetime(task|session). 출력은 self:task status, 입력·EOF·인터럽트·크기 변경은 control(action,text|base64,newline,generation,request_id), 종료는 cancel. macOS 쓰기 샌드박스 안에서 실행하며 입력 전달은 프로그램의 처리 완료와 다르다.'
+  file: process_control.py
+  interpreter: python
+  registered_at: '2026-11-06T18:00:00'
+  timeout: 40
+대화복구:
+  description: '현재 대화의 시점별 복구. args op:list|preview|apply|status. preview는 checkpoint와 mode(files|conversation|both), apply는 preview ID, status는 rewind ID. 미리보기의 외부 변경 충돌은 덮어쓰지 않는다. apply는 비동기 rewind 접수증을 반환하고 현재 턴을 중단한다. 네트워크·DB 효과는 되돌리지 않는다.'
+  file: conversation_restore.py
+  interpreter: python
+  registered_at: '2026-11-06T18:00:00'
+  timeout: 40

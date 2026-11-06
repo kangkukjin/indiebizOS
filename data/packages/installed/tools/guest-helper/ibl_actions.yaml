@@ -1,4 +1,5 @@
 task_kinds:
+  remote_process: "guest_process_receipts:status"
   guestpc: "handler:task_status"   # ③ 접수증 어댑터 — [self:task] 가 적재(cancel = task_status_cancel)
 
 nodes:
@@ -11,6 +12,7 @@ nodes:
           code: string      # op=ibl 또는 python
           inputs: object    # op=python 입력 객체 또는 op=control 검증된 제어 계획
           mode: string
+          io: string
           env: object
           elevate: boolean
           request_id: string
@@ -175,9 +177,10 @@ tool_json:
         cwd:
           type: string
           description: 셸 작업 디렉토리 (op=shell, 선택)
+        io: {type: string, enum: [pty], description: session의 터미널 입출력}
         mode:
           type: string
-          description: 상주 실행 모드 background/interactive/observe. observe는 짧은 확인 셸 전용이며 timeout 1~10초를 명시한다(별도 동시 자리 1개, 읽기 전용 강제 아님).
+          description: 상주 실행 모드 background/interactive/observe/session. session은 process_session:1 헬퍼에서 PTY를 열어 remote_process 접수증·generation을 반환한다. self:task control로 입력·EOF·인터럽트·resize하고 cancel로 종료한다. observe는 짧은 확인 셸 전용이며 timeout 1~10초를 명시한다(별도 동시 자리 1개, 읽기 전용 강제 아님).
         timeout:
           type: integer
           description: 실행 제한 초 (폰 shell/python 기본120·최대3600; PC 상주형 기본 1800; 휴대형 동기 120·background 1800)

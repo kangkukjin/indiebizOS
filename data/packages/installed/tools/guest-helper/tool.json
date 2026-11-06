@@ -52,9 +52,16 @@
             "type": "string",
             "description": "셸 작업 디렉토리 (op=shell, 선택)"
           },
+          "io": {
+            "type": "string",
+            "enum": [
+              "pty"
+            ],
+            "description": "session의 터미널 입출력"
+          },
           "mode": {
             "type": "string",
-            "description": "상주 실행 모드 background/interactive/observe. observe는 짧은 확인 셸 전용이며 timeout 1~10초를 명시한다(별도 동시 자리 1개, 읽기 전용 강제 아님)."
+            "description": "상주 실행 모드 background/interactive/observe/session. session은 process_session:1 헬퍼에서 PTY를 열어 remote_process 접수증·generation을 반환한다. self:task control로 입력·EOF·인터럽트·resize하고 cancel로 종료한다. observe는 짧은 확인 셸 전용이며 timeout 1~10초를 명시한다(별도 동시 자리 1개, 읽기 전용 강제 아님)."
           },
           "timeout": {
             "type": "integer",

@@ -417,6 +417,11 @@ def _op_shell(tool_input: dict) -> dict:
     device_id, alias, err = _guestpc_begin(tool_input)
     if err:
         return err
+    if tool_input.get('mode') == 'session':
+        from remote_process_sessions import start
+        return start(device_id, tool_input.get('cmd') or '', cwd=tool_input.get('cwd'),
+                     request_id=tool_input.get('request_id'), io=tool_input.get('io', 'pty'),
+                     elevate=tool_input.get('elevate'), stdin=tool_input.get('stdin'), reset=tool_input.get('reset'))
     envelope = {"op": "shell"}
     cmd = tool_input.get("cmd") or ""
     if not cmd.strip():

@@ -41,6 +41,18 @@ def key(binding):
 def attach(run, binding):
     run.session_binding = binding
     _running[key(binding)] = run
+    import threading
+    def watch_rewind():
+        while _running.get(key(binding)) is run and not run.cancelled.wait(.25):
+            try:
+                with sessions.connection(binding.db_path) as conn:
+                    pending = conn.execute("SELECT 1 FROM conversation_rewinds WHERE session_id=? AND json_extract(body,'$.state')='quiescing'", (binding.session_id,)).fetchone()
+                if pending:
+                    run.cancelled.set()
+                    return
+            except Exception:
+                return
+    threading.Thread(target=watch_rewind, daemon=True).start()
 
 
 def detach(run):
@@ -111,6 +123,13 @@ def snapshot(store, sid, before=None):
     result = store.history(sid, before)
     with sessions.connection(store.path) as conn:
         turn = conn.execute("SELECT * FROM conversation_turns WHERE session_id=? ORDER BY started_at DESC,id DESC LIMIT 1", (sid,)).fetchone()
+        from turn_checkpoints import revision
+        result['revision'] = revision(conn, sid)
+        if result['revision'] and turn:
+            cut = conn.execute("SELECT MAX(json_extract(body,'$.completed_at')) FROM conversation_rewinds WHERE session_id=? AND json_extract(body,'$.mode')!='files' AND json_extract(body,'$.state')='completed'", (sid,)).fetchone()[0]
+            from datetime import datetime
+            if cut and datetime.fromisoformat(turn['started_at']).timestamp() < cut:
+                turn = None
         result["turn"] = dict(turn) if turn else None
         if result["turn"] is not None:
             result["turn"]["progress"] = _progress_view(result["turn"].get("progress"))
@@ -122,7 +141,7 @@ def snapshot(store, sid, before=None):
     from conversation_sessions import Binding, state_directory
     import json
     state_dir = state_directory(Binding(store.path, sid, store.owner))
-    result["steering"] = steering_history(store, sid)
+    result["steering"] = steering_history(store, sid) if not result.get("revision") else []
     result["panels"] = {}
     for name in ("todo", "question", "plan_mode"):
         try:

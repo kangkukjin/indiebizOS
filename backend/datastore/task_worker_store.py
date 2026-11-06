@@ -92,7 +92,7 @@ def accept(path, parent, request_id, message, payload, *, session_id=None):
                                                       'scope': 'task', 'mode': 'async'})
         conn.execute('UPDATE tasks SET pending_delegations=COALESCE(pending_delegations,0)+1,delegation_context=? WHERE task_id=?',
                      (json.dumps(context, ensure_ascii=False), parent))
-        conn.execute('INSERT INTO conversation_task_links VALUES (?,?,?)', (task, session_id, ''))
+        conn.execute('INSERT INTO conversation_task_links(task_id,session_id,turn_id) VALUES (?,?,?)', (task, session_id, ''))
         event(conn, session_id, 'worker.dispatch_pending', {'task_id': task, 'parent_task_id': parent})
         return dict(conn.execute('SELECT * FROM tasks WHERE task_id=?', (task,)).fetchone())
 

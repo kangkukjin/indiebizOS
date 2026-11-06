@@ -38,7 +38,7 @@ def handle_session_reset() -> str:
         from conversation_sessions import current
         binding = current()
         if binding:
-            key += "@session:" + binding.session_id
+            key += "@session:" + binding.session_id + __import__("conversation_sessions").revision_suffix(binding)
         result = clear_cli_sessions_for_agent(key)
         return result["message"] if result["ok"] else "세션 초기화 실패: " + result["error"]
     except Exception as e:

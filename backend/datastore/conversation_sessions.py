@@ -17,14 +17,29 @@ class Binding:
     session_id: str
     owner: str
     turn_id: str = ""
+    revision: int = 0
 
 
 _UNBOUND = object()
 _current = ContextVar("conversation_session", default=_UNBOUND)
+_effect = ContextVar("conversation_effect_origin", default=None)
 _PROCESS = uuid.uuid4().hex
 _task_bindings = {}
 _task_lock = threading.RLock()
 _loaded_paths = set()
+
+
+def effect_current():
+    return _effect.get() or current()
+
+
+@contextmanager
+def effect_scope(binding):
+    token = _effect.set(binding)
+    try:
+        yield
+    finally:
+        _effect.reset(token)
 
 
 def current():
@@ -43,7 +58,7 @@ def bind_task(task):
     if not b:
         return
     with connection(b.db_path) as conn:
-        conn.execute("INSERT INTO conversation_task_links VALUES (?,?,?) ON CONFLICT(task_id) DO UPDATE SET turn_id=excluded.turn_id WHERE conversation_task_links.session_id=excluded.session_id", (task, b.session_id, b.turn_id))
+        conn.execute("INSERT INTO conversation_task_links(task_id,session_id,turn_id,revision) VALUES (?,?,?,?) ON CONFLICT(task_id) DO UPDATE SET turn_id=excluded.turn_id,revision=excluded.revision WHERE conversation_task_links.session_id=excluded.session_id", (task, b.session_id, b.turn_id, b.revision))
     with _task_lock:
         _task_bindings[task] = b
 
@@ -124,6 +139,9 @@ def connection(path):
 
 
 def ensure_schema(conn, table):
+    import turn_checkpoints
+    turn_checkpoints.schema(conn)
+    conn.execute('''CREATE TABLE IF NOT EXISTS conversation_owned_receipts (session_id TEXT NOT NULL, kind TEXT NOT NULL, task_id TEXT NOT NULL, ref TEXT NOT NULL, turn_id TEXT NOT NULL, PRIMARY KEY(session_id,kind,task_id))''')
     if table not in ("messages", "conversations"):
         raise ValueError("잘못된 대화 테이블")
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_sessions (
@@ -161,6 +179,8 @@ def ensure_schema(conn, table):
     conn.execute("CREATE INDEX IF NOT EXISTS conversation_events_session ON conversation_events(session_id,id)")
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_task_links (
         task_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, turn_id TEXT NOT NULL)""")
+    if 'revision' not in {r[1] for r in conn.execute('PRAGMA table_info(conversation_task_links)')}:
+        conn.execute('ALTER TABLE conversation_task_links ADD COLUMN revision INTEGER NOT NULL DEFAULT 0')
 
 
 def _predicate(owner, table):
@@ -195,6 +215,9 @@ def resolve(conn, path, owner, table):
         row = conn.execute("SELECT owner FROM conversation_sessions WHERE id=?", (b.session_id,)).fetchone()
         if not row or row[0] != owner:
             raise ValueError("세션 소유자가 일치하지 않습니다")
+        from turn_checkpoints import revision
+        if revision(conn, b.session_id) != b.revision:
+            raise ValueError("대화 판본이 변경돼 이전 턴의 메시지를 추가하지 않습니다")
         return b.session_id
     return legacy(conn, owner, table)
 
@@ -207,7 +230,7 @@ def touch(conn, sid, content=None):
 
 
 class SessionStore:
-    def __init__(self, path, table, owner, *, create_legacy=True):
+    def __init__(self, path, table, owner, *, create_legacy=True, recover_turns=True):
         self.path, self.table, self.owner = str(path), table, owner
         with connection(path) as conn:
             ensure_schema(conn, table)
@@ -215,11 +238,12 @@ class SessionStore:
                 legacy(conn, owner, table)
             with _task_lock:
                 if self.path not in _loaded_paths:
-                    for row in conn.execute("""SELECT t.task_id,t.session_id,t.turn_id,s.owner FROM conversation_task_links t
+                    for row in conn.execute("""SELECT t.task_id,t.session_id,t.turn_id,s.owner,t.revision FROM conversation_task_links t
                         JOIN conversation_sessions s ON s.id=t.session_id"""):
-                        _task_bindings[row[0]] = Binding(self.path, row[1], row[3], row[2])
+                        _task_bindings[row[0]] = Binding(self.path, row[1], row[3], row[2], row[4])
                     _loaded_paths.add(self.path)
-            conn.execute("""UPDATE conversation_turns SET state='interrupted',finished_at=?
+            if recover_turns:
+                conn.execute("""UPDATE conversation_turns SET state='interrupted',finished_at=?
                 WHERE state='running' AND process!=?""", (now(), _PROCESS))
 
     def require(self, conn, sid):
@@ -270,7 +294,7 @@ class SessionStore:
             raise ValueError("대화 조회 개수는 1~100이어야 합니다")
         with connection(self.path) as conn:
             self.require(conn, sid)
-            rows = conn.execute(f"SELECT * FROM {self.table} WHERE session_id=? AND id<? ORDER BY id DESC LIMIT ?",
+            rows = conn.execute(f"SELECT * FROM {self.table} WHERE session_id=? AND {__import__('turn_checkpoints').visible(self.table)} AND id<? ORDER BY id DESC LIMIT ?",
                                 (sid, before or 9223372036854775807, limit + 1)).fetchall()
             messages = []
             human = None
@@ -300,13 +324,18 @@ class SessionStore:
     def begin(self, sid):
         tid = uuid.uuid4().hex
         with connection(self.path) as conn:
+            conn.execute("BEGIN IMMEDIATE")
             self.require(conn, sid)
+            import turn_checkpoints
+            turn_checkpoints.assert_unlocked(conn, sid)
             try:
                 conn.execute("INSERT INTO conversation_turns(id,session_id,state,process,started_at,finished_at,error) VALUES (?,?,?,?,?,?,?)",
                              (tid, sid, "running", _PROCESS, now(), None, None))
             except sqlite3.IntegrityError as exc:
                 raise ValueError("이 세션에는 이미 실행 중인 작업이 있습니다") from exc
-        return Binding(self.path, sid, self.owner, tid)
+            turn_checkpoints.capture(conn, self.table, sid, tid)
+            revision = turn_checkpoints.revision(conn, sid)
+        return Binding(self.path, sid, self.owner, tid, revision)
 
     def finish(self, binding, state="completed", error=None):
         with connection(self.path) as conn:
@@ -394,3 +423,27 @@ def bounded_history(history, max_chars=60000):
         remaining -= len(content)
         result.append(item)
     return list(reversed(result))
+
+
+def revision_suffix(binding):
+    if not binding:
+        return ''
+    import turn_checkpoints
+    with connection(binding.db_path) as conn:
+        value = turn_checkpoints.revision(conn, binding.session_id)
+    return '@revision:' + str(value) if value else ''
+
+
+def record_receipt(value):
+    binding = effect_current()
+    if not binding:
+        return
+    ref = value['task_ref']
+    with connection(binding.db_path) as conn:
+        conn.execute('INSERT OR IGNORE INTO conversation_owned_receipts VALUES (?,?,?,?,?)',
+                     (binding.session_id, ref['kind'], ref['task_id'], json.dumps(ref), binding.turn_id))
+
+
+import task_receipts
+# Inversion: base declares the observation hook; the owning datastore supplies it.
+task_receipts.register_receipt_sink(record_receipt)

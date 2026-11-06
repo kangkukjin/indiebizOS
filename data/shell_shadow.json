@@ -62,6 +62,13 @@
       },
       "params": [
         "path",
+        "patch",
+        "patch_ref",
+        "resource",
+        "format",
+        "expected",
+        "request_id",
+        "preview",
         "replace_all",
         "start_line",
         "end_line"

@@ -562,6 +562,7 @@ class ConversationDB:
                   AND (COALESCE(contact_type, 'gui') = 'rehearsal') = ?
                   AND COALESCE(contact_type, 'gui') != 'research'
                   AND session_id IS ?
+                  AND NOT EXISTS (SELECT 1 FROM conversation_hidden_messages hidden WHERE hidden.session_id=messages.session_id AND hidden.message_id=messages.id)
                 ORDER BY id DESC
                 LIMIT ?
             """, (agent_id, user_id, user_id, agent_id, int(rehearsal), sid, limit))

@@ -45,7 +45,9 @@ _LOCK = threading.Lock()
 _RESOLVE_LOCK = threading.Lock()   # 패키지 어댑터 첫 적재의 직렬화(_LOCK 과 따로 — 적재 중 register 가 _LOCK 을 잡는다)
 _STATUS: dict = {}     # kind -> fn(ref) -> view
 _STEER: dict = {}
+_CONTROL: dict = {}
 _CANCEL: dict = {}     # kind -> fn(ref) -> view
+_RECEIPT_SINK = None
 _RESOLVED: set = set()
 
 
@@ -121,6 +123,8 @@ def view(r: dict, state: str, *, progress=None, result=None, error: Optional[str
 
 
 def _observe(value):
+    if value.get("accepted") and _RECEIPT_SINK:
+        _RECEIPT_SINK(value)
     from execution_situation import emit
     emit({'kind': 'task', 'ref': value['task_ref']}, 'receipt',
          {key: value[key] for key in ('state', 'terminal', 'accepted', 'timed_out', 'failure') if key in value},
@@ -133,9 +137,13 @@ def _observe(value):
              source='task_receipts', observed_at=time.time(), source_ref={'task_ref': value['task_ref']})
 
 
-def register(kind: str, status_fn: Callable[[dict], dict], cancel_fn: Optional[Callable[[dict], dict]] = None, *, steer_fn=None) -> None:
+def register(kind: str, status_fn: Callable[[dict], dict], cancel_fn: Optional[Callable[[dict], dict]] = None, *, steer_fn=None, control_fn=None) -> None:
     with _LOCK:
         _STATUS[str(kind)] = status_fn
+        if control_fn:
+            _CONTROL[str(kind)] = control_fn
+        else:
+            _CONTROL.pop(str(kind), None)
         if steer_fn:
             _STEER[str(kind)] = steer_fn
         else:
@@ -223,7 +231,8 @@ def _resolve_from_packages(kind: str) -> bool:
         except Exception:
             return False
         cancel = getattr(mod, f"{func_name}_cancel", None)
-        register(kind, fn, cancel if callable(cancel) else None)
+        register(kind, fn, cancel if callable(cancel) else None,
+                 control_fn=getattr(mod, f"{func_name}_control", None))
         return True
     return False
 
@@ -252,13 +261,16 @@ def _adapter(kind: str, table: dict):
 
 # ── 관찰·제어 ──────────────────────────────────────────────────────────────────
 
-def status(r: dict, *, cursor=None) -> dict:
+def status(r: dict, *, cursor=None, limit_bytes=None, wait_ms=None) -> dict:
     """현재 투영. 모르는 kind 면 unknown(실패로 꾸미지 않는다)."""
     fn = _adapter(r["kind"], _STATUS)
     if fn is None:
         return view(r, UNKNOWN, error=f"이 몸이 모르는 작업 종류 '{r['kind']}' — 어댑터 미등록(잠든 패키지이거나 다른 몸의 작업)")
     try:
-        out = fn(r if cursor is None else {**r, "_history_cursor": cursor})
+        observation = {**r}
+        for key, value in (("_history_cursor", cursor), ("_limit_bytes", limit_bytes), ("_wait_ms", wait_ms)):
+            if value is not None: observation[key] = value
+        out = fn(observation)
     except Exception as exc:  # noqa: BLE001 — 어댑터 예외는 unknown 으로 정직하게(작업이 실패한 것이 아니다)
         return view(r, UNKNOWN, error=f"상태 조회 실패({type(exc).__name__}): {exc}")
     if not isinstance(out, dict) or out.get("state") not in STATES:
@@ -369,3 +381,16 @@ def steer(r, message, request_id):
         return fn(r, message, request_id)
     except ValueError as exc:
         return {'success': False, 'error': str(exc), 'task_ref': r}
+
+
+def control(r, params):
+    """Input and terminal control use a dedicated adapter, never agent steering."""
+    fn = _adapter(r['kind'], _CONTROL)
+    if fn is None:
+        return {'success': False, 'error': '이 작업은 프로세스 제어를 지원하지 않습니다'}
+    return fn(r, params)
+
+
+def register_receipt_sink(callback):
+    global _RECEIPT_SINK
+    _RECEIPT_SINK = callback

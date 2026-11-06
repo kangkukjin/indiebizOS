@@ -194,3 +194,45 @@ Union/Callable/ForeignRef인 함수는 제외한다. 교체 본문(최대 65,536
 아니다. 실행 실패는 원래 작업의 실패로 전달한다. 동일 실행의 resume와 종료 후 repair는
 원래 정의·입력·조건의 의존성 증명이 유지될 때만 적용 본문을 재계산하고 완료된 외부 효과는
 기존 영수증으로 재사용한다. 이미 적용한 본문을 새 코드로 소급 교체하지 않는다.
+
+## 실행 중인 프로그램 제어
+
+`run_command`의 `mode:"session"` 또는 등록 Script `프로세스실행`이 프로세스를 시작한다.
+후자는 `{command,cwd,io:"pipe"|"pty",request_id,yield_ms,lifetime}`를 받는다.
+기본 수명은 현재 task이며, 개발 서버처럼 대화 턴 뒤에도 남길 실행은 `lifetime:"session"`을 명시한다.
+로컬 실행은 macOS 작업 폴더 쓰기 샌드박스를 사용한다. 지원하지 않는 몸에서는 능력을 꾸미지 않고 거절한다.
+원격 PC는 `[limbs:guestpc]{op:"shell",mode:"session",cmd,limb,cwd,request_id}`이며,
+헬퍼의 `process_session:1`이 필요하다. 원격은 PTY이며 pipe를 지원한다고 보고하지 않는다.
+
+```ibl
+$r = [self:script]{op:"run",id:"프로세스실행",args:{command:"python3 -u ask.py",cwd:"/작업/폴더",io:"pipe",request_id:"ask-1"}}
+$s = [self:task]{op:"status",ref:$r.task_ref,cursor:0,limit_bytes:65536,wait_ms:1000}
+[self:task]{op:"control",ref:$r.task_ref,generation:get($s.progress,"generation"),request_id:"answer-1",action:"input",text:"대답",newline:true}
+[self:task]{op:"control",ref:$r.task_ref,generation:get($s.progress,"generation"),request_id:"eof-1",action:"eof"}
+[self:task]{op:"wait",ref:$r.task_ref,timeout:10}
+```
+
+- IBL에서 프로세스 상세는 `status.progress`로 읽는다. `progress.output`은 바이트 offset과 stdout/stderr(PTY는 combined)를 제공한다. 원본은 base64다.
+  다음 조회는 `history_cursor`를 전달한다. UTF-8 문자의 중간에서 청크가 갈릴 수 있으므로 무손실 결합은 base64를 쓴다.
+- `control`은 `input`, `eof`, `interrupt`, `resize`를 받는다. `resize`는 cols·rows가 필요하다.
+  `steer`는 에이전트 지시용이며 프로세스 stdin과 다르다.
+- 입력은 generation과 request_id로 중복을 막는다. 동일 ID의 내용 변경은 거절한다.
+  `delivered`는 OS에 전달됐다는 뜻이며 프로그램이 읽거나 처리했다는 증거는 아니다.
+  `partial`은 bytes_written만 전달됐다는 뜻이다. `delivery_unknown`은 자동 재전송하지 않는다.
+- 출력 보존 한도는 1MiB다. `gap`이면 이전 바이트가 유실된 구간이다.
+- `cancel`은 실행 트리를 종료한다. `interrupt`는 프로그램에 Ctrl+C를 전달한다.
+- 로컬 실행 소유자와 원격 헬퍼가 프로세스를 소유한다. 허브 재기동은 명령 재실행이 아니다.
+  소유자가 죽으면 interrupted/유실로 취급하며 저장된 PID에 새로 붙지 않는다.
+- GUI와 AI의 입력 소유권은 30초 임대로 충돌을 거절한다.
+
+## 대화 시점 복구
+
+등록 Script `대화복구`는 현재 대화의 `list`, `preview`, `apply`, `status`를 제공한다.
+`preview`에는 checkpoint·mode(files/conversation/both), `apply`에는 미리보기의 id를 preview로 전달한다.
+적용은 kind:rewind 접수증을 반환하고 독립 실행자가 기존 턴과 그 작업을 중단한 뒤 진행한다.
+파일 적용을 시작한 뒤에는 중단 대신 같은 복구 ID로 재시도한다.
+
+대화 화면의 **되돌리기**에서 요청 직전 시점·파일만·대화만·둘 다를 선택할 수 있다.
+현재 상태를 별도 복구점으로 보존하고 원문은 삭제하지 않는다. 충돌과 만료된 미리보기는 재조회한다.
+복구 범위는 `tracked_changes`다. 공통 적용기를 거친 파일 쓰기·텍스트 편집·파일 복사/이동/삭제·패치·LSP 편집을 추적한다.
+임의 셸 쓰기, DB 트랜잭션, 네트워크 요청을 복구했다고 주장하지 않는다.

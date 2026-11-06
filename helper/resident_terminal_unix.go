@@ -19,11 +19,17 @@ type unixTerminal struct {
 
 func terminalAvailable() bool { return true }
 func startTerminal(dir string, cols, rows int) (terminalProcess, error) {
+	return startTerminalCommand(dir, cols, rows, "")
+}
+func startTerminalCommand(dir string, cols, rows int, command string) (terminalProcess, error) {
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "/bin/sh"
 	}
 	cmd := exec.Command(shell, "-i")
+	if command != "" {
+		cmd = exec.Command("/bin/sh", "-c", command)
+	}
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 	file, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})

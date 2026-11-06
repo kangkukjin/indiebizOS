@@ -20,7 +20,7 @@ from pathlib import Path
 from office_sessions import DocumentConflict, DocumentUnsupported
 from office_store import digest, identifier
 
-KINDS = ("document", "sheet", "code")
+KINDS = ("document", "sheet", "code", "files")
 SHEET_SUFFIXES = {".xlsx", ".xlsm", ".xlsb", ".xls", ".ods", ".fods", ".csv", ".tsv", ".xltx", ".xltm", ".ots", ".numbers", ".cell", ".nxl"}
 SNAPSHOT_WAIT_MAX = 30
 WRITE_OPS = {"apply", "save", "export", "restore", "close"}
@@ -70,6 +70,10 @@ class Workspace:
             self._code = CodeAdapter(self._coding_store)
         return self._code
 
+    def files(self):
+        from file_workspace import FileWorkspace
+        return FileWorkspace(self._coding_store)
+
     def collaborate(self, resource, phase, request_id=None, workers=2, collaboration=None, checks=None):
         kind, app, row = self.resolve(resource)
         if kind != 'code':
@@ -83,6 +87,8 @@ class Workspace:
         """자료 ID → (kind, 어댑터, 행). 종류는 저장소가 안다 — 호출자가 kind 를 들고 다니지 않는다."""
         if not isinstance(resource, str) or not resource:
             raise ValueError("resource(자료 ID)가 필요합니다 — open 의 반환값")
+        if resource.startswith("files_"):
+            return "files", self.files(), self.files().project(resource)
         if resource.startswith(("coding_", "codeview_")):
             return "code", self.code(), self.code().project(resource)
         store = self.documents().store
@@ -117,7 +123,10 @@ class Workspace:
         kind = kind or kind_of_path(target)
         if kind not in KINDS:
             raise ValueError("kind 는 document/sheet/code 입니다")
-        if kind == "code":
+        if kind == "files":
+            row = self.files().open(target, mode=mode)
+            return self.head(kind, row, capabilities=self.files().capabilities(row))
+        if kind in ("code", "files"):
             task = self.code().open(target, goal, mode)
             return self.head("code", task, capabilities=self.code().capabilities(task))
         app = self.sheets() if kind == "sheet" else self.documents()
@@ -135,7 +144,7 @@ class Workspace:
 
     def capabilities(self, resource):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return app.capabilities(row)
         caps = dict(app.capabilities(resource))
         caps["read_projection"] = True            # 저장본·초안 바이트를 기존 읽기 어휘로 투영(편집 주소 아님)
@@ -165,7 +174,7 @@ class Workspace:
     # ── snapshot ────────────────────────────────────────────────────────────
     def snapshot(self, resource, client=None, wait=None):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, snapshot=app.snapshot(row))
         if kind == "sheet":
             return self._sheet_snapshot(app, row, wait)
@@ -255,7 +264,7 @@ class Workspace:
                 return {"kind": "code", "items": self.code().projects_api.projects(root)}
             raise ValueError("resource(자료 ID)가 필요합니다 — kind:\"code\" 와 selector{projects:true} 만 자료 없이 읽습니다")
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, **app.read(row, {**selector, **({"view": snapshot} if snapshot else {})}))
         if kind == "sheet":
             snap = app.store.get("sheet_snapshot", snapshot) if snapshot else self._latest_sheet_snapshot(app, row)
@@ -308,7 +317,7 @@ class Workspace:
     def propose(self, resource, selector=None, replacement=None, values=None, kind=None, snapshot=None):
         selector = selector or {}
         rkind, app, row = self.resolve(resource)
-        if rkind == "code":
+        if rkind in ("code", "files"):
             return self.head(rkind, row, **app.propose(row, selector, replacement))
         if rkind == "sheet":
             snap = app.store.get("sheet_snapshot", snapshot) if snapshot else self._latest_sheet_snapshot(app, row)
@@ -335,7 +344,7 @@ class Workspace:
     # ── apply ───────────────────────────────────────────────────────────────
     def apply(self, resource, proposal, client=None):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, **app.apply(row, proposal, client))
         args = self._session_args(kind, app, row, client, "apply")
         done = self._applied(app, row, proposal)
@@ -400,7 +409,7 @@ class Workspace:
     # ── save / export ───────────────────────────────────────────────────────
     def save(self, resource, client=None, message=None, verify=None):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, **app.save(row, message, verify))
         if kind == "sheet":
             key = operation_key("save", row["id"], {"revision": row["revision_id"]})
@@ -415,7 +424,7 @@ class Workspace:
 
     def export(self, resource, filename, client=None):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             raise DocumentUnsupported("코딩 프로젝트의 사본 내보내기는 없습니다 — save(기록)와 versions/restore 를 사용하세요")
         args = self._session_args(kind, app, row, client, "export")
         key = operation_key("export", row["id"], {"filename": filename, "expected": args["expected"]})
@@ -425,7 +434,7 @@ class Workspace:
     # ── versions / restore / close ──────────────────────────────────────────
     def versions(self, resource):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, items=app.versions(row))
         items = [{"id": v["id"], "created_at": v.get("created_at"), "label": v.get("label") or "저장 버전",
                   "parent": v.get("parent_revision_id"), "recovery": bool(v.get("is_recovery"))}
@@ -434,7 +443,7 @@ class Workspace:
 
     def restore(self, resource, revision, client=None, path=None):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, **app.restore(row, revision, path))
         args = self._session_args(kind, app, row, client, "restore")
         key = operation_key("restore", row["id"], {"revision": revision, "expected": args["expected"]})
@@ -450,14 +459,14 @@ class Workspace:
                 raise DocumentUnsupported("등록 해제는 코딩 프로젝트에만 지원합니다")
             app.writable(row)
             return self.head(kind, row, **app.projects_api.unregister(row))
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, **app.close(row))
         args = self._session_args(kind, app, row, client, "close")
         return self.head(kind, row, **app.close(row["id"], **args))
 
     def recover(self, resource):
         kind, app, row = self.resolve(resource)
-        if kind == "code":
+        if kind in ("code", "files"):
             return self.head(kind, row, **app.recover(row))
         return self.head(kind, row, **app.recover(resource))
 

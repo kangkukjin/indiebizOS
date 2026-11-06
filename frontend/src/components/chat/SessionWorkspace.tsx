@@ -4,6 +4,8 @@ import { Plus, X, History } from 'lucide-react';
 import { ChatPane, type ChatViewProps } from './ChatView';
 import { sessionCall, sessionQuery, useConversationSession, type SavedSession, type SessionTarget } from './useConversationSession';
 import { SessionHistory } from './SessionHistory';
+import { RewindDialog } from './RewindDialog';
+import { ProcessSessionsPanel } from './ProcessSessionsPanel';
 function SessionPane({ item,target,active,initialMessage,...props }: ChatViewProps & {item:SavedSession;target:SessionTarget}) {
  const session = useConversationSession(item.id,target,active !== false); const sent = useRef<string | undefined>(undefined);
  useEffect(() => {
@@ -19,6 +21,7 @@ export function SessionWorkspace(props:ChatViewProps) {
  const query = sessionQuery(target), stableTarget = useMemo(() => target,[query]);
  const [items,setItems] = useState<SavedSession[]>([]), [selected,setSelected] = useState(''), [visited,setVisited] = useState<string[]>([]);
  const [showHistory,setShowHistory] = useState(false);
+ const [rewind,setRewind] = useState(false), [processes,setProcesses] = useState(false);
  const [error,setError] = useState(''), [busy,setBusy] = useState(false);
  const initialRecipient = useRef<{message?:string;id:string}>({id:''});
  if (props.initialMessage !== initialRecipient.current.message) initialRecipient.current = {message:props.initialMessage,id:''};
@@ -49,14 +52,18 @@ export function SessionWorkspace(props:ChatViewProps) {
  };
  const sessionMenu = <div className="flex items-center gap-1 shrink-0 whitespace-nowrap" aria-label="대화 세션 메뉴">
    <ConversationActions items={sessionItems}/>
+   <button disabled={!selected} onClick={()=>setRewind(true)} className="text-xs px-2 py-1.5">되돌리기</button>
+   <button disabled={!selected} onClick={()=>setProcesses(true)} className="text-xs px-2 py-1.5">프로세스</button>
   </div>;
  const content = <div className="flex flex-col flex-1 min-w-0 min-h-0 h-full overflow-hidden">
 
   {!selected && <div className="flex justify-end p-2">{sessionMenu}</div>}
   <div className="flex flex-col flex-1 min-w-0 min-h-0">{error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
-   {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} headerActions={props.headerActions} headerItems={sessionItems} datedHistory item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
+   {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} headerActions={<>{props.headerActions}<button onClick={()=>setRewind(true)} className="text-xs px-2 py-1.5">되돌리기</button><button onClick={()=>setProcesses(true)} className="text-xs px-2 py-1.5">프로세스</button></>} headerItems={sessionItems} datedHistory item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
    {!selected && <div className="m-auto text-[#8B7355]">새 세션을 시작하거나 히스토리에서 대화를 선택하세요.</div>}
   </div>
+  {rewind && selected && <RewindDialog sid={selected} target={stableTarget} onClose={()=>setRewind(false)}/>}
+  {processes && selected && <ProcessSessionsPanel sid={selected} target={stableTarget} onClose={()=>setProcesses(false)}/>}
   {showHistory && <SessionHistory items={items} selected={selected} onClose={() => setShowHistory(false)} onSelect={item => {select(item.id);setShowHistory(false);}}/>}
  </div>;
  return props.layout === 'dialog' ? <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center"><div className="w-[1000px] max-w-[95vw] h-[85vh] bg-[#F5F1EB] shadow-xl rounded-xl overflow-hidden flex flex-col"><div className="flex justify-end p-2"><button onClick={props.onClose} aria-label="닫기"><X size={20}/></button></div>{content}</div></div> : content;

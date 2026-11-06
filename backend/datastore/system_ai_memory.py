@@ -443,6 +443,7 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
         SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations
         WHERE role IN ('user', 'assistant') AND session_id=?
+        AND {__import__('turn_checkpoints').visible('conversations')}
         {src_clause}
         ORDER BY id DESC
         LIMIT ?

@@ -226,4 +226,4 @@ indiebizOS/
 ```
 <!-- CODEBASE_MAP:END -->
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 171 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 22)·51 도구 패키지 + 5 extensions·backend .py 691(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 171 액션(sense 39·self 58·limbs 13·others 20·engines 19·table 22)·51 도구 패키지 + 5 extensions·backend .py 702(test 제외)**<!-- SELF_IMAGE:END -->

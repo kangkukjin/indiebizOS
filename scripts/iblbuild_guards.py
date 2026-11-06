@@ -100,6 +100,8 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 # 주의력이 아니라 실패하는 빌드로 막는다 — IBL --check 삼각검증과 같은 철학).
 # 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
 OS_SEAM_ALLOWLIST = {
+    "backend/base/process_session_worker.py",  # pipe/PTY·OS 신호를 소유하는 프로세스 실행 이음매
+    "backend/services/process_sessions.py",  # OS 셸/PTY 선택과 기존 샌드박스 호출 이음매
     "backend/base/code_analysis_channel.py",  # 작업별 로컬 IPC의 Unix socket/Windows named pipe 선택 이음매
     "backend/test_generation_store.py",  # Windows 무권한 junction 실검사와 다른 OS의 동일 계약 모사
     "backend/test_pc_control.py",  # Windows UIAutomation 실제 컴파일·판정 회귀. 다른 OS에서는 순수 허브 계약 검사만 실행

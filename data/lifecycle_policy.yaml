@@ -56,5 +56,14 @@ webcrawl_cache:
 # 여기 선언된 것만 그 계산에서 뺀다(영수증 adopted 에 기록, 재기동 때 죽이지도 않는다).
 # 일치 = 실행 파일 이름 + argv 의 연속 인자열. 넓게 잡지 말 것 — 선언 밖 자손은 계속 센다.
 adopted_daemons:
+  # 인증 채널·대화 귀속·TTL을 소유한 프로세스/복구 워커. backend 재기동의 정지 대상에서 분리한다.
+  - name: python3
+    argv: [--indiebiz-owned-session]
+  - name: python
+    argv: [--indiebiz-owned-session]
+  - name: python3.13
+    argv: [--indiebiz-owned-session]
+  - name: Python
+    argv: [--indiebiz-owned-session]
   - name: adb
     argv: [fork-server, server]   # adb 클라이언트가 처음 불릴 때 fork 하는 서버(`adb -L tcp:5037 fork-server server …`)

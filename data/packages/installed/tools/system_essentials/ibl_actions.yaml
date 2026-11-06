@@ -1,5 +1,7 @@
 # ③ 작업 접수증 어댑터(task_receipts) — kind: "모듈:함수". [self:task] 가 모르는 kind 를 만나면 여기서 적재한다.
 task_kinds:
+  process: "essentials_process:status"
+  rewind: "essentials_process:rewind_status"
   script: "script_ops:task_status"
   sheet_op: "essentials_workspace:sheet_task_status"
   coding_run: "essentials_workspace:coding_run_status"
@@ -138,7 +140,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-11-06", impl: "62b758023f9cdd21"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
+        path_audited: {at: "2026-11-06", impl: "8c1f123d6b70b428"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -151,7 +153,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-11-06", impl: "62b758023f9cdd21"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
+        path_audited: {at: "2026-11-06", impl: "8c1f123d6b70b428"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -231,7 +233,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-11-06", impl: "62b758023f9cdd21"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
+        path_audited: {at: "2026-11-06", impl: "8c1f123d6b70b428"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         target_key: path
       list:
         callable_contract:
@@ -431,7 +433,14 @@ nodes:
             replace_all: Bool
             start_line: Number
             end_line: Number
-          result: {message: Text}
+            patch: Text
+            patch_ref: Text
+            resource: Text
+            format: Text
+            expected: Record
+            request_id: Text
+            preview: Bool
+          result: Record
           effects:
           - write_external
           adapter:
@@ -439,12 +448,19 @@ nodes:
             value_path: ''
             text_success_prefix: 'Successfully edited '
             text_error_prefixes: ['Error:']
-          required:
-          - path
-          - new_string
+          required: []
           required_any:
-          - - old_string
-            - start_line
+          - [path, patch, patch_ref]
+          - [new_string, patch, patch_ref]
+          - [old_string, start_line, patch, patch_ref]
+          exclusive:
+          - [patch, patch_ref]
+          - [patch, old_string]
+          - [patch, new_string]
+          - [patch, start_line]
+          - [patch_ref, old_string]
+          - [patch_ref, new_string]
+          - [patch_ref, start_line]
           aliases:
             file_path: path
           integers:
@@ -458,6 +474,13 @@ nodes:
           write_resources:
             file: path
         params:
+          patch: string
+          patch_ref: string
+          resource: string
+          format: string
+          expected: object
+          request_id: string
+          preview: boolean
           replace_all: boolean   # true 면 old_string 이 여러 곳이어도 전부 교체(2026-09-05, ep2836 — 모델이 이미 쓰던 인자). 기본 false = 고유해야 함
           start_line: integer    # 줄 범위 편집(1-기반 양끝 포함) — old_string 없이 [start_line, end_line] 을 new_string 으로 교체, new_string "" 이면 삭제 (2026-09-05, ep2862: 127줄 블록을 되타이핑 못 해 /tmp 파이썬으로 갔던 자리)
           end_line: integer
@@ -472,7 +495,7 @@ nodes:
         returns: effect
         description: 파일 부분 편집 — old_string → new_string 교체(replace_all:true 면 전부) 또는 start_line/end_line 줄 범위를 new_string 으로 교체(""=삭제, old_string 불요). 전체 덮어쓰기는 write.
         group: file
-        target_description: 편집할 파일 경로. ①문자열 치환 — old_string/new_string(old_string 이 여러 곳이면 기본은 거절, 전부 바꾸려면 replace_all:true). ②줄 범위 — start_line/end_line(1-기반 양끝 포함, grep 줄번호·read numbered 와 같은 자)의 줄들을 new_string 으로 교체, new_string "" 이면 그 줄들을 삭제. old_string 을 함께 주면 그 범위 안에 있어야 한다(자리 확인). 긴 블록 제거·교체는 되타이핑 대신 이 줄 범위로.
+        target_description: '다중 파일은 patch 또는 patch_ref(UTF-8 파일 경로)로 Begin/End Patch·Add/Update/Delete File·Move to·@@ 문맥 패치를 전달한다. 형식은 indiebiz-patch/1 또는 codex-patch. resource는 workspace open(kind:files)의 ID이며 생략하면 현재 프로젝트. 삭제와 기존 목적지를 덮어쓰는 이동에는 expected{상대경로:sha256} 필수. preview:true면 proposal 반환 후 workspace apply로 적용한다. request_id는 동일 패치 재전송에만 재사용한다. 기존 단일 파일 편집: 편집할 파일 경로. ①문자열 치환 — old_string/new_string(old_string 이 여러 곳이면 기본은 거절, 전부 바꾸려면 replace_all:true). ②줄 범위 — start_line/end_line(1-기반 양끝 포함, grep 줄번호·read numbered 와 같은 자)의 줄들을 new_string 으로 교체, new_string "" 이면 그 줄들을 삭제. old_string 을 함께 주면 그 범위 안에 있어야 한다(자리 확인). 긴 블록 제거·교체는 되타이핑 대신 이 줄 범위로.'
         router: handler
         tool: edit_file
         implementation: Python 문자열 치환으로 파일 부분 편집
@@ -787,7 +810,7 @@ nodes:
       workspace:
         per_run: true  # 코드·초안·환경 판본은 새 실행마다 관측한다. 같은 실행 resume은 영수증을 보존한다.
         description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(프로젝트 폴더)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
-        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init; code+mode:inspect는 Git·목표 문서를 만들지 않는 읽기 전용 분석 뷰)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: code selector.analysis로 정의·참조·타입·심볼·진단·완성·계층 조회(행/열은 1부터), selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement 또는 selector.analysis(rename/new_name, code_action/ref, completion/ref, format/path) → 다중 파일 proposal. 코드 read 분석의 행·열은 1부터 유니코드 문자 수, target·ref는 판본 결속. resource 없는 kind:code+analysis는 현재 실행 사본. 상세는 workspace 가이드. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. Pages open은 원본을 보존하고 DOCX 작업 사본으로 자동 변환해 resource를 반환하며 같은 원본 재열기는 사본·초안을 이어 쓴다. conversion:auto(기본)/source(원본 등록만)/refresh(새 사본, request_id 필수), working_resource는 원본에서 변환한 기존 사본 선택. 원본 변경은 conversion.source_changed로 알리고 저장은 DOCX에만 한다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다. collaborate: resource·phase. prepare(request_id·workers 2~8)는 독립 사본 workspace 참조를 반환해 scope:task에 전달한다. merge(collaboration)는 충돌 없는 고정 후보, validate(checks=[[명령, 인자]])는 후보 검사, apply는 검증된 동일 바이트만 원본 지문 대조 후 반영한다. status/recover는 부분 적용 조회·조건부 복구. 협업 사본은 원본 Git 메타데이터를 공유하지 않으며 ignored 파일은 제외한다.'
+        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init; code+mode:inspect는 Git·목표 문서를 만들지 않는 읽기 전용 분석 뷰)·encoding?·kind?(document/sheet/code/files 자동; files는 Git 생성 없는 일반 폴더)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: code selector.analysis로 정의·참조·타입·심볼·진단·완성·계층 조회(행/열은 1부터), selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement 또는 selector.analysis(rename/new_name, code_action/ref, completion/ref, format/path) → 다중 파일 proposal. 코드 read 분석의 행·열은 1부터 유니코드 문자 수, target·ref는 판본 결속. resource 없는 kind:code+analysis는 현재 실행 사본. 상세는 workspace 가이드. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. Pages open은 원본을 보존하고 DOCX 작업 사본으로 자동 변환해 resource를 반환하며 같은 원본 재열기는 사본·초안을 이어 쓴다. conversion:auto(기본)/source(원본 등록만)/refresh(새 사본, request_id 필수), working_resource는 원본에서 변환한 기존 사본 선택. 원본 변경은 conversion.source_changed로 알리고 저장은 DOCX에만 한다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다. collaborate: resource·phase. prepare(request_id·workers 2~8)는 독립 사본 workspace 참조를 반환해 scope:task에 전달한다. merge(collaboration)는 충돌 없는 고정 후보, validate(checks=[[명령, 인자]])는 후보 검사, apply는 검증된 동일 바이트만 원본 지문 대조 후 반영한다. status/recover는 부분 적용 조회·조건부 복구. 협업 사본은 원본 Git 메타데이터를 공유하지 않으며 ignored 파일은 제외한다.'
         returns: items
         side_effect: true
         exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
@@ -984,7 +1007,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-11-06", impl: "62b758023f9cdd21"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
+        path_audited: {at: "2026-11-06", impl: "8c1f123d6b70b428"}  # 회원 선행 분기·경로 권한 유지. 소유자 수리의 검사 이력 관문 제거. 회원 실행 분기·경로 권한·격리·게시 권한은 유지.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1302,11 +1325,16 @@ tool_json:
       - prompt
   # 산 배관(2026-07-03 감사): agent_cognitive._build_ibl_tools·system_ai_tools·api_xray가 tool.json에서 스키마 로드, system_tools→load_tool_handler로 실행 (최상위 도구)
   - name: run_command
-    description: "쉘 명령어를 실행합니다. 폰에서는 runtime:python을 지정하면 command를 별도 Chaquopy 프로세스에서 실행합니다. inputs 객체를 읽고 result에 JSON 값을 넣습니다. from indiebiz_android import context, call 및 java.jclass로 Android API를 사용합니다. 폰 shell은 /system/bin/sh, 두 실행 모두 앱 UID이며 timeout 기본120·최대3600초입니다. 등록 없이 폰 로컬 AI도 사용합니다. execute_ibl과 함께 에이전트의 두 가지 실행 경로 중 하나.\n\n주의사항 - 반드시 읽으세요:\n1. 파일/디렉토리 작업은 IBL 액션을 우선 사용:\n   - 디렉토리 목록: execute_ibl [self:list] (ls 대신)\n   - 파일 검색: execute_ibl [self:file_find] (find 대신)\n   - 내용 검색: execute_ibl [self:grep] (grep/rg 대신)\n   - 파일 읽기: execute_ibl [self:read] (cat/head/tail 대신)\n   - 파일 쓰기: execute_ibl [self:write] (echo > 대신)\n   - 파일 수정: execute_ibl [self:edit] (sed/awk 대신)\n\n2. Python/Node.js 코드 실행 — write→run 패턴:\n   - 멀티라인: [self:write]로 /tmp/*.py 파일 생성 후 run_command 'python3 /tmp/x.py'\n   - 한 줄: run_command 'python3 -c \"...\"' 또는 'node -e \"...\"'\n   - 별도의 execute_python/execute_node 도구는 없음 (이스케이프·traceback 손실 회피)\n\n3. 금지된 명령어 (대용량 출력 위험):\n   - ls -R, ls -la -R (재귀 목록)\n   - find / (루트 검색)\n   - cat 대용량파일\n   - 출력 제한 없는 검색 명령\n\n4. 위험 명령은 approved=true 필요:\n   - rm, rmdir (삭제)\n   - sudo (권한 상승)\n   - chmod, chown (권한 변경)\n\nrun_command가 어울리는 경우:\n- git 명령어 (git status, git log --oneline -10)\n- 패키지 관리 (npm install, pip install)\n\
+    description: "mode:session은 macOS 작업 폴더 쓰기 샌드박스에서 시작해 task_ref·generation·output·cursor를 반환합니다. 이후 self:task status/control/cancel로 이어받습니다. control은 generation·request_id 필수이며 input(text 또는 base64,newline), eof, interrupt, resize(cols,rows)를 지원합니다. 기본 sync는 종전 동작입니다. 쉘 명령어를 실행합니다. 폰에서는 runtime:python을 지정하면 command를 별도 Chaquopy 프로세스에서 실행합니다. inputs 객체를 읽고 result에 JSON 값을 넣습니다. from indiebiz_android import context, call 및 java.jclass로 Android API를 사용합니다. 폰 shell은 /system/bin/sh, 두 실행 모두 앱 UID이며 timeout 기본120·최대3600초입니다. 등록 없이 폰 로컬 AI도 사용합니다. execute_ibl과 함께 에이전트의 두 가지 실행 경로 중 하나.\n\n주의사항 - 반드시 읽으세요:\n1. 파일/디렉토리 작업은 IBL 액션을 우선 사용:\n   - 디렉토리 목록: execute_ibl [self:list] (ls 대신)\n   - 파일 검색: execute_ibl [self:file_find] (find 대신)\n   - 내용 검색: execute_ibl [self:grep] (grep/rg 대신)\n   - 파일 읽기: execute_ibl [self:read] (cat/head/tail 대신)\n   - 파일 쓰기: execute_ibl [self:write] (echo > 대신)\n   - 파일 수정: execute_ibl [self:edit] (sed/awk 대신)\n\n2. Python/Node.js 코드 실행 — write→run 패턴:\n   - 멀티라인: [self:write]로 /tmp/*.py 파일 생성 후 run_command 'python3 /tmp/x.py'\n   - 한 줄: run_command 'python3 -c \"...\"' 또는 'node -e \"...\"'\n   - 별도의 execute_python/execute_node 도구는 없음 (이스케이프·traceback 손실 회피)\n\n3. 금지된 명령어 (대용량 출력 위험):\n   - ls -R, ls -la -R (재귀 목록)\n   - find / (루트 검색)\n   - cat 대용량파일\n   - 출력 제한 없는 검색 명령\n\n4. 위험 명령은 approved=true 필요:\n   - rm, rmdir (삭제)\n   - sudo (권한 상승)\n   - chmod, chown (권한 변경)\n\nrun_command가 어울리는 경우:\n- git 명령어 (git status, git log --oneline -10)\n- 패키지 관리 (npm install, pip install)\n\
       - 빌드/테스트 (npm run build, pytest)\n- 프로세스 관리 (ps, kill)\n- write→run 패턴의 실행 단계 (python3/node 스크립트 실행)\n- IBL 액션에 해당하지 않는 시스템 명령"
     input_schema:
       type: object
       properties:
+        mode: {type: string, enum: [sync, session], description: session은 출력·입력·중단 가능한 process 작업 접수증 반환}
+        io: {type: string, enum: [pipe, pty]}
+        yield_ms: {type: integer, minimum: 0, maximum: 30000}
+        request_id: {type: string}
+        lifetime: {type: string, enum: [task, session]}
         runtime:
           type: string
           enum: [shell, python]
@@ -1432,6 +1460,13 @@ tool_json:
     input_schema:
       type: object
       properties:
+        patch: {type: string, description: indiebiz-patch/1 다중 파일 패치}
+        patch_ref: {type: string, description: 패치가 담긴 UTF-8 파일 경로}
+        resource: {type: string, description: workspace open(kind=files/code)의 ID}
+        format: {type: string, description: '패치 입력 형식: indiebiz-patch/1 또는 codex-patch. 파서가 미지원 형식을 거절합니다.'}
+        expected: {type: object, description: 삭제·덮어쓸 이동의 상대경로별 SHA256}
+        request_id: {type: string}
+        preview: {type: boolean}
         file_path:
           type: string
           description: 파일 경로
@@ -1450,9 +1485,7 @@ tool_json:
         end_line:
           type: integer
           description: '줄 범위 편집 끝(생략 시 start_line 한 줄)'
-      required:
-      - file_path
-      - new_string
+      required: []
   # 산 배관(2026-07-03 감사): 최상위 인지 도구 — agent_cognitive·system_ai_tools·api_xray가 tool.json에서 스키마 로드
   - name: todo_write
     description: '작업 목록을 생성하고 관리합니다. 진행 상황을 추적하고 복잡한 작업을 체계적으로 관리합니다.
@@ -2020,7 +2053,7 @@ tool_json:
           description: open — 파일 또는 git 폴더 경로
         mode:
           type: string
-          enum: [inspect, edit]
+          enum: [inspect, edit, repair]
           description: open(kind=code) — inspect는 Git·목표문서 생성 없는 읽기 전용 분석 뷰. 기본 edit.
         conversion:
           type: string

@@ -81,7 +81,7 @@ def agent_key(runner) -> str:
         key = config.get("id") or ("system_ai" if config.get("_is_system_ai") else "")
     from conversation_sessions import current
     binding = current()
-    return str(key or "") + ("@session:" + binding.session_id if binding else "")
+    return str(key or "") + ("@session:" + binding.session_id + __import__("conversation_sessions").revision_suffix(binding) if binding else "")
 
 
 def _store_path(key: str) -> Path:

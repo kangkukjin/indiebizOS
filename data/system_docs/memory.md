@@ -1100,3 +1100,13 @@ system_ai_state/memory_system_ai.db, 프로그램은 scripts/registry.yaml에 �
 ### 검색 결과 식별자와 범위 (2026-09-15)
 
 `[self:memory]{op:"search"}`의 장기기억 항목은 `memory_id`, 대화 항목은 `conversation_id`를 반환한다. `read/delete/move`에는 장기기억의 `memory_id`만 전달한다. 대화 ID는 장기기억 ID와 별개의 공간이다. `node/category`를 지정하면 대화는 섞지 않고 조건에 맞는 장기기억 후보 안에서 `top_k`를 적용한다. 벡터 검색과 키워드 검색이 같은 가지 경계를 사용한다.
+
+### 대화 복구점과 활성 판본 (2026-11-06)
+
+`conversation_sessions.begin`은 사용자 턴과 그 직전 복구점을 같은 SQLite 트랜잭션에 기록한다.
+원문은 보존하고 `conversation_hidden_messages`·`conversation_revisions`로 현재 대화의 읽기 뷰를 정한다.
+AI 히스토리·요약 키·CLI 세션 키는 활성 판본을 따른다. 이전 턴의 늦은 파일 쓰기는 판본 검사로 거절한다.
+파일 복구는 `file_changes` 저널의 before/after와 현재 파일을 대조하며, 복구 작업은 독립 실행자가
+quiescing→applying_files→files_applied→conversation_switched→completed 상태로 진행한다.
+파일 적용을 마치기 전에는 대화 뷰를 전환하지 않는다. 중단 시 같은 복구 ID를 재시도한다.
+세부 사용법은 `data/guides/task_receipts.md`의 대화 시점 복구를 따른다.

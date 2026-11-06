@@ -878,7 +878,7 @@ def _task_op(params: dict) -> dict:
         return {"success": False, "error": "cursor는 같은 작업의 history_cursor(0 이상 정수)입니다."}
     observation = {} if cursor is None else {"cursor": cursor}
     if op == "status":
-        v = T.status(r, **observation)
+        v = T.status(r, limit_bytes=params.get("limit_bytes"), wait_ms=params.get("wait_ms"), **observation)
         # 상태를 물었으면 failed·cancelled 도 답이다(값) — 모르는 작업만 이 호출의 실패(26회차: failure 칸 분리).
         if v["state"] == T.UNKNOWN:
             return {"success": False, **v, "error": v.get("failure") or "이 몸이 모르는 작업입니다."}
@@ -887,9 +887,11 @@ def _task_op(params: dict) -> dict:
         return T.wait(r, params.get("timeout", 0 if params.get('suspend') else 60), suspend=params.get('suspend') is True, **observation)
     if op == "cancel":
         return T.cancel(r)
+    if op == "control":
+        return T.control(r, {k: params[k] for k in ("action", "text", "base64", "newline", "cols", "rows", "generation", "request_id") if k in params})
     if op == "steer":
         return T.steer(r, params.get("message"), params.get("request_id"))
-    return {"success": False, "error": f"알 수 없는 op: {op} (status/wait/cancel/steer)"}
+    return {"success": False, "error": f"알 수 없는 op: {op} (status/wait/cancel/steer/control)"}
 
 
 def _package_op(params: dict) -> dict:

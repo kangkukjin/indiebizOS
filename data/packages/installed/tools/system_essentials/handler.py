@@ -21,6 +21,7 @@ def _load_sibling(module_name):
     return load_sibling(module_name, _CURRENT_DIR)
 
 _file_io = _load_sibling("essentials_file_io")
+_command = _load_sibling("essentials_command")
 _fs_find = _load_sibling("fs_find")
 _FIND_DEADLINE_S = _fs_find.FIND_DEADLINE_S
 _bounded_find = _fs_find.bounded_find
@@ -1056,6 +1057,9 @@ def _execute(tool_input: dict, context, *, prepared=False) -> str:
                                "truncated": False, "text": hint}, ensure_ascii=False)  # truncation-scope: bounded — 파일 범위 선택과 자원 상한을 truncations로 구분; 전체 목록은 false
 
         elif tool_name == "edit_file":
+            if "patch" in tool_input or "patch_ref" in tool_input:
+                return json.dumps(_load_sibling("essentials_patch").edit(
+                    tool_input, project_path, _validate_path_in_scope, _red_stage), ensure_ascii=False)
             file_path = os.path.join(project_path, _get_path(tool_input))
             scope_err = _validate_path_in_scope(file_path, project_path)
             if scope_err:
@@ -1136,67 +1140,8 @@ def _execute(tool_input: dict, context, *, prepared=False) -> str:
                         + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "run_command":
-            command = tool_input.get("command", "").strip()
-            timeout = min(tool_input.get("timeout", 60), 300)  # 최대 300초
-            approved = tool_input.get("approved", False)
-
-            if not command:
-                return "Error: 명령어가 비어있습니다."
-
-            runtime = tool_input.get("runtime", "shell")
-            from phone_remote_execution import capabilities, run_local
-            native_execution = capabilities().get("execution_contract") == 1
-            if runtime != "shell" or native_execution:
-                if not native_execution:
-                    return json.dumps({"success": False, "error": "embedded_runtime_requires_phone"})
-                if runtime == "shell" and not approved and is_dangerous_command(command):
-                    return f"__REQUIRES_APPROVAL__:{command}"
-                return json.dumps(run_local(tool_input), ensure_ascii=False)
-
-            # 리로드 강제 금지 — touch/kill 로 자기 몸을 재기동하면 그 리로드가 **이 턴을
-            # 실행 중인 워커를 죽인다**(에피소드 미종료·화면 작업표시 영구 정지, 08-18 실측).
-            # 반영은 [self:patch]{op:"apply"}, 판정은 워치독이 다음 턴에. 로직=repair_staging.
-            try:
-                _rf = _staging_mod().reload_forcing_violation(
-                    command, str(_REPO_ROOT) if _REPO_ROOT is not None else "")
-            except Exception:
-                _rf = None
-            if _rf:
-                return json.dumps({"success": False, "error": _rf}, ensure_ascii=False)
-
-            # 위험한 명령어 감지 - 승인되지 않았으면 승인 요청
-            if not approved and is_dangerous_command(command):
-                return f"__REQUIRES_APPROVAL__:{command}"
-
-            # 명령어 실행
-            try:
-                if _red_grant_active():
-                    return json.dumps(_load_sibling("repair_tool_scope").run_shell(
-                        __import__("types").SimpleNamespace(**globals()), command, timeout), ensure_ascii=False)
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    cwd=project_path
-                )
-
-                output = ""
-                if result.stdout:
-                    output += result.stdout
-                if result.stderr:
-                    output += f"\n[stderr]\n{result.stderr}" if output else result.stderr
-
-                if result.returncode != 0:
-                    output += f"\n[exit code: {result.returncode}]"
-
-                return output.strip() if output else "(명령어가 출력 없이 완료됨)"
-
-            except subprocess.TimeoutExpired:
-                return f"Error: 명령어 실행 시간 초과 ({timeout}초)"
-            except Exception as e:
-                return f"Error: 명령어 실행 실패: {e}"
+            return _command.execute_command(
+                __import__("types").SimpleNamespace(**globals()), tool_input, project_path)
 
         elif tool_name == "copy_path":
             _src = tool_input.get("src") or tool_input.get("source")  # src 우선(코퍼스/자연어), source 별칭
@@ -1357,7 +1302,12 @@ def _execute(tool_input: dict, context, *, prepared=False) -> str:
                 shutil.rmtree(target)
                 return text_result(f"폴더를 삭제했습니다: {abs_target} ({count}개 파일 포함)")
             else:
-                os.remove(target)
+                from conversation_sessions import current
+                if current():
+                    from file_changes import delete_file
+                    delete_file(target)
+                else:
+                    os.remove(target)
                 return text_result(f"파일을 삭제했습니다: {abs_target}")
 
         elif tool_name == "make_directory":

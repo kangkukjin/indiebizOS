@@ -346,15 +346,15 @@
     "implementation": "11bd2c55aa6e",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
-    "params": "4025984c7e1a",
+    "params": "8edfb51d35d5",
     "aliases": "39c390016025",
     "ops": "bca9f4879ed7",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "9c98c80a5fd1"
    },
-   "reviewed": "2026-10-25",
-   "examples": 94
+   "reviewed": "2026-11-06",
+   "examples": 61
   },
   "limbs:launch": {
    "fields": {
@@ -922,16 +922,16 @@
   "self:edit": {
    "fields": {
     "description": "e68144e49c0e",
-    "target_description": "e4e373423702",
+    "target_description": "52a12b3a31df",
     "implementation": "acff02c28362",
     "returns": "9a5e13f69efc",
     "target_key": "d070c7ecb482",
-    "params": "088af496d89e",
+    "params": "c07aae314eec",
     "router": "ebbb1532efbc",
     "tool": "3ff361827675"
    },
-   "reviewed": "2026-09-18",
-   "examples": 13
+   "reviewed": "2026-11-06",
+   "examples": 5
   },
   "self:file_find": {
    "fields": {
@@ -1545,16 +1545,16 @@
   "self:task": {
    "fields": {
     "description": "bf2555d203cf",
-    "target_description": "0f5c571aa4cb",
+    "target_description": "4cfbb5e8ac24",
     "implementation": "22e22b80a762",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
-    "params": "bc7a8204c8bf",
-    "ops": "1ef77a9d7bc6",
+    "params": "8c921742829e",
+    "ops": "c020347d87ac",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-11-03",
+   "reviewed": "2026-11-06",
    "examples": 15
   },
   "self:time": {
@@ -1649,7 +1649,7 @@
   "self:workspace": {
    "fields": {
     "description": "3938c71ad8ad",
-    "target_description": "d59dbfc4b8da",
+    "target_description": "d4f1689960c2",
     "implementation": "ab4ef699ef80",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",

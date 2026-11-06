@@ -104,6 +104,18 @@ def _child_env(mode):
     전경으로 받을지는 스크립트가 제일 잘 안다 — 그래서 실행 방식을 알려 주고, 거절은 스크립트가 자기 말로 한다(시험.py)."""
     env = dict(_review_environment() or os.environ)
     env[SCRIPT_MODE_ENV] = mode
+    from conversation_sessions import current, effect_current
+    from dataclasses import asdict
+    binding = current()
+    if binding:
+        env['INDIEBIZ_CONVERSATION_BINDING'] = json.dumps(asdict(binding))
+    else:
+        env.pop('INDIEBIZ_CONVERSATION_BINDING', None)
+    origin = effect_current()
+    if origin:
+        env['INDIEBIZ_EFFECT_BINDING'] = json.dumps(asdict(origin))
+    else:
+        env.pop('INDIEBIZ_EFFECT_BINDING', None)
     # Read-only definition discovery in a child keeps the management owner's
     # scope; writes still go through the parent IBL management operation.
     import function_store

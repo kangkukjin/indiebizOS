@@ -45,6 +45,13 @@ def file_lock(path):
 
 def atomic_write_text(path, content):
     """호출자가 file_lock을 보유해야 한다. 쓰기·flush 실패는 기존 바이트를 건드리지 않는다."""
+    from conversation_sessions import current
+    if current():
+        from file_changes import write_text
+        write_text(path, content)
+        from situation_evidence import file_written
+        file_written(Path(path), content.encode('utf-8'))
+        return
     target = Path(os.path.realpath(path))  # 심볼릭 링크 자체 대신 기존 대상에 쓴다.
     target.parent.mkdir(parents=True, exist_ok=True)
     mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else None

@@ -87,6 +87,9 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 		caps["desktop_stream"] = 0
 	}
 	caps["terminal"] = terminalAvailable()
+	if terminalAvailable() {
+		caps["process_session"] = 1
+	}
 	caps["terminal_lan"] = true
 	caps["media_session"] = r.mediaSessionCapabilities()
 	caps["media_components"] = media // ffmpeg·ffplay·mpv paths, missing and how to add them
@@ -94,6 +97,7 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 		caps["media"] = false
 		caps["media_session"] = false
 		caps["terminal"] = false
+		delete(caps, "process_session")
 		caps["terminal_lan"] = false
 	}
 	caps["installation_warnings"] = residentInstallWarnings(r.cfg.DataDir)

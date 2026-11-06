@@ -11,6 +11,7 @@ interface Event { type: string; id?: string; name?: string; input?: Record<strin
 interface Steering { id: string; instruction: string; timestamp: string; request_id: string; turn_id: string }
 interface SteeringRequest { message: string; turn_id: string; request_id: string }
 interface Snapshot {
+ revision?: number;
  steering?: Steering[];
  messages: { id: string; role: string; content: string; timestamp: string; images: string[]; evaluation?: ChatMessage['evaluation'] }[];
  panels?: { todo?: {todos?: TodoItem[]}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
@@ -28,6 +29,7 @@ export function useConversationSession(id: string, target: SessionTarget, active
  const pending = useRef(false), mounted = useRef(true), loaded = useRef(false);
  const [sendError, setSendError] = useState('');
  const retrySteer = useRef<SteeringRequest | null>(null);
+ const revision = useRef(0);
  const targetRef = useRef(target); targetRef.current = target;
  const query = sessionQuery(target);
  const load = useCallback(async (before?: string) => {
@@ -38,7 +40,9 @@ export function useConversationSession(id: string, target: SessionTarget, active
    images: m.images.map(path => targetRef.current.target === 'agent'
     ? `${BACKEND_ORIGIN}/conversations/${encodeURIComponent(targetRef.current.project_id!)}/image?path=${encodeURIComponent(path)}`
     : `${BACKEND_ORIGIN}/system-ai/image?path=${encodeURIComponent(path)}`) }));
-  setMessages(prev => { const map = new Map(prev.map(m => [m.id,m])); rows.forEach(m => map.set(m.id,m)); return [...map.values()].sort((a,b) => Number(a.id)-Number(b.id)); });
+  const changed = revision.current !== (result.revision || 0); revision.current = result.revision || 0;
+  if (changed) {retrySteer.current=null;setHasOlder(result.has_older);}
+  setMessages(prev => { const map = new Map((changed ? [] : prev).map(m => [m.id,m])); rows.forEach(m => map.set(m.id,m)); return [...map.values()].sort((a,b) => Number(a.id)-Number(b.id)); });
   if (before || !loaded.current) setHasOlder(result.has_older);
   loaded.current = true;
   if (!before) setSnapshot(result);

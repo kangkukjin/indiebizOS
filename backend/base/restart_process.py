@@ -100,7 +100,10 @@ class ProcessAdapter:
         return alive(ident)
 
     def tree(self, ident):
-        return tree(ident)
+        if not ident or not alive(ident):
+            return []
+        # Declared owners and their children outlive a backend generation.
+        return _tool_descendants(ident, adopted_daemons(self.base), {}) + [ident]
 
     def port_free(self):
         with socket.socket() as sock:

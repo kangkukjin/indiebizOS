@@ -129,3 +129,32 @@ inspect 뷰는 제안을 확인할 수 있지만 원본 적용 권한은 없다.
 `{"op":"propose","selector":…}` / `{"op":"apply","proposal":…}`를 전달한다.
 접속 정보는 실행자가 환경으로 전달한다. 일반 호스트 HTTP·모델 제공 LSP 도구는 사용하지 않는다.
 자기수리는 현재 수리 후보의 resource를 해소하며 검사·정본 반영은 기존 수리 경로가 소유한다.
+
+## Git 없는 일반 파일과 다중 파일 패치
+
+`[self:workspace]{op:"open",kind:"files",path:"/작업/폴더"}`는 Git이나 목표 문서를 만들지 않는다.
+반환 resource로 read, propose, apply, recover, close를 사용한다. 파일은 apply 때 저장된다.
+코딩 기록(커밋)이 필요한 폴더는 기존 kind:code를 사용한다.
+
+```text
+*** Begin Patch
+*** Update File: src/a.py
+@@
+-old_value = 1
++old_value = 2
+*** Add File: notes.txt
++새 파일 내용
+*** End Patch
+```
+
+이 문자열을 `[self:edit]{resource,patch,request_id}`로 전달하거나 UTF-8 파일의 경로를 patch_ref로 전달한다.
+두 입력과 기존 old_string/start_line 방식은 섞지 않는다. preview:true는 proposal을 만들며
+`[self:workspace]{op:"apply",resource,proposal}`로 확정한다. 기본은 한 호출 안에서 제안·적용한다.
+형식은 indiebiz-patch/1 또는 codex-patch이며 OpenAI API V4A 형식과 동일하지 않다.
+
+Update File 뒤 `*** Move to: 목적지`는 이동을 뜻한다. Delete File과 기존 목적지를 덮어쓰는 이동에는
+expected의 상대 경로별 SHA256이 필요하다. 문맥은 공백까지 정확히 한 곳이어야 한다.
+BOM·기존 줄바꿈·실행 권한을 유지하며 바이너리 패치는 거절한다.
+전체 파일을 먼저 검사하지만 OS 수준의 다중 파일 원자 교체는 아니다.
+중도 실패는 recovery_required로 남으며 recover는 이미 적용된 파일을 건너뛰고 원본 그대로인 파일만 이어간다.
+외부 수정은 덮어쓰지 않는다. 수리 후보의 effect_scope:candidate는 라이브 반영이 아니다.

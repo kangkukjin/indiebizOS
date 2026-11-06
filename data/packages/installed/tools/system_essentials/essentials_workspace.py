@@ -15,7 +15,7 @@ def service():
 
 _ALLOWED = {
     "collaborate": ("resource", "phase", "request_id", "workers", "collaboration", "checks"),
-    "open": ("path", "encoding", "kind", "goal", "conversion", "request_id", "working_resource"),
+    "open": ("path", "encoding", "kind", "goal", "mode", "conversion", "request_id", "working_resource"),
     "snapshot": ("resource", "client", "wait"),
     "read": ("resource", "selector", "snapshot", "kind"),
     "propose": ("resource", "selector", "replacement", "values", "kind", "snapshot"),

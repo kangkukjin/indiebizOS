@@ -45,6 +45,10 @@ DECLARATIONS: List[tuple] = [
     # 백업 규약 정거장 (README 가 규약 정본)
     ("data/_backups/**",            "백업 규약(data/_backups/README.md)",       "backup"),
 
+    # 코드 분석 서버 선언과 관리된 설치 산출물
+    ("data/code_analysis/node_modules/**", "코드 분석 서버 고정 의존성(npm ci)", "derived"),
+    ("data/code_analysis/**", "코드 분석 서버·도구 환경 선언", "source"),
+
     # 저술 정본 (source)
     ("data/ibl_nodes_src/**",       "IBL 코어 어휘 src(build_ibl_nodes)",       "source"),
     ("data/packages/**",            "패키지 시스템(코드+어휘 자기완결)",         "source"),

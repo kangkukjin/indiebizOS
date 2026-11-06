@@ -976,6 +976,14 @@
             "type": "string",
             "description": "open — 파일 또는 git 폴더 경로"
           },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "inspect",
+              "edit"
+            ],
+            "description": "open(kind=code) — inspect는 Git·목표문서 생성 없는 읽기 전용 분석 뷰. 기본 edit."
+          },
           "conversion": {
             "type": "string",
             "enum": [
@@ -999,7 +1007,7 @@
           },
           "selector": {
             "type": "object",
-            "description": "read/propose — 문서 {start,end,selected_sha256?} · 사무 {offset,limit,pages,tables} · 시트 {sheet,range} · 코딩 {path,start_line,end_line}|{diff:true}|{files:true}"
+            "description": "read/propose — 문서 {start,end,selected_sha256?} · 사무 {offset,limit,pages,tables} · 시트 {sheet,range} · 코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{analysis,path,line,column,view?}. analysis 읽기=symbols/definition/declaration/type_definition/implementation/references/hover/signature/calls/types/diagnostics/completion/actions/batch. 제안=rename(new_name)/code_action(ref)/completion(ref)/format. 행·열 1부터 유니코드 문자 수."
           },
           "replacement": {
             "type": "string",

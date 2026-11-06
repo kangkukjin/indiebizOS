@@ -37,7 +37,7 @@ BACKEND = os.path.join(ROOT, "backend")
 
 ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
-ASSEMBLY = {"api", "boot_common", "file_script_cli"}
+ASSEMBLY = {"api", "boot_common", "file_script_cli", "code_analysis_cli"}
 #: 층 배정 밖 — 시험과 **원장 일회성 유지보수 스크립트**(migrate_/retire_). 폰 번들의
 #: _force_exclude_glob 과 같은 부류를 가리킨다(data/bodies/android.json) — 두 자리가 갈리면
 #: 한쪽만 통과하는 모듈이 생긴다. 부류는 파일별로 전개하지 않는다(2026-09-07 retire_ 추가).

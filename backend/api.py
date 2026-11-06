@@ -397,6 +397,8 @@ async def lifespan(app: FastAPI):
     finally:
         from tv_transport import shutdown as stop_tv_transport
         from asyncio import to_thread
+        from code_analysis import shutdown as stop_code_analysis
+        await to_thread(stop_code_analysis)
         await to_thread(stop_tv_transport)
         stop_records()
 
@@ -705,6 +707,8 @@ app.include_router(member_router, tags=["member"])  # /m/* 외부 서비스 앱 
 app.include_router(xray_router, tags=["xray"])
 app.include_router(prompt_composition_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (프롬프트·기억 본문)
 app.include_router(coding_router)
+from api_code_analysis import router as code_analysis_router
+app.include_router(code_analysis_router)
 app.include_router(documents_router)
 app.include_router(spreadsheets_router)
 app.include_router(guides_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (가이드 본문·편집)

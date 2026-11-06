@@ -71,3 +71,61 @@ $fix = [table:ai]{items:[{text:$r.text}], instruction:"문장의 뜻을 유지�
 같은 원본을 다시 열면 작업 사본과 초안을 이어 쓴다. `conversion.source_changed`가 true이면 Pages 원본이 바뀐 것이며 기존 DOCX 편집은 유지된다. 변경된 원본으로 새 사본을 만들려면 `conversion:"refresh", request_id:"고유한 재시도 식별자"`를 지정한다. 같은 request_id의 재시도는 같은 사본을 반환한다. `conversion:"source"`는 원본만 등록하고 편집하지 않는다. 기존 변환 사본이 여러 개면 원본 정보의 후보에서 `working_resource`를 선택한다.
 
 문서 앱에서는 파일 선택 한 번으로 변환하며 “DOCX 저장”으로 작업 사본을 확정한다. Pages 원본과 사본 경로는 도구 패널에 표시한다. `.pages` 출력은 제공하지 않는다. 로컬 ONLYOFFICE가 필요하며 엔진 중단·암호·손상·지원하지 않는 판본은 실패 원인을 표시한다. 단일 파일과 디렉터리형 Pages 패키지를 처리한다. 채팅·노트북 첨부의 `textutil` 읽기는 별도 경로다.
+
+
+## 코드의 의미 기반 분석
+
+`open kind:"code", mode:"inspect"`는 Git 초기화·목표 문서 생성 없이 코드를 읽는다.
+일반 코딩 프로젝트는 기존 `open`을 사용한다. 서버는 모델 공급자와 무관하게 백엔드가 소유하고,
+코드 분석을 처음 요청할 때 시작한다. `capabilities`의 `analysis`에서 설치·서버 능력·환경을 확인한다.
+
+```ibl
+$w = [self:workspace]{op:"open",kind:"code",mode:"inspect",path:"~workspace"}
+$d = [self:workspace]{op:"read",resource:$w.resource,selector:{analysis:"definition",path:"backend/services/coding_projects.py",line:29,column:9}}
+[self:workspace]{op:"read",resource:$w.resource,selector:{analysis:"references",target:$d.items[0].target,include_declaration:true}}
+```
+
+행·열은 **1부터 세는 유니코드 문자 수**, 범위 끝은 제외한다. 결과 `target`은 원문 지문을 포함하며
+다시 조회할 때 원문이 바뀌었으면 거절한다. 미지원 기능은 빈 성공 목록으로 바꾸지 않는다.
+
+| selector.analysis | 추가 입력 |
+|---|---|
+| symbols | path(파일) 또는 server·query(프로젝트), ref로 resolve |
+| definition/declaration/type_definition/implementation/references/hover/signature | path·line·column 또는 앞선 target |
+| calls/types | 처음에는 위치, 이후 ref·direction(incoming/outgoing 또는 supertypes/subtypes) |
+| diagnostics | path 또는 paths, scope:files/workspace, wait(최대 10초) |
+| completion | 위치 또는 resolve할 ref |
+| actions | path·range, 또는 resolve할 ref |
+| batch | requests:[읽기 selector,…] (최대 50), 각 요청의 path/server로 언어 선택 |
+
+`limit`(기본 200, 최대 1000)·`offset`으로 결과를 줄일 수 있다. 잘린 결과는 `truncated`와 기존
+스필 계약의 `full_result`를 반환한다. 서버 원문 후보의 `ref`는 작업 공간·뷰·서버 세대·원문에 결속된다.
+`analysis.project_graph_confirmed:false`는 프로젝트 전체 인덱스 완료를 증명하지 못했다는 뜻이다.
+진단의 `pending`·`stale`·`version_unconfirmed`는 오류 0건 확정이 아니다. 전체 합격은 기존 타입 검사·빌드로 확인한다.
+
+변경 가능한 코딩 작업 공간에서 다음처럼 여러 파일의 심볼 이름을 바꾼다.
+
+```ibl
+$p = [self:workspace]{op:"propose",resource:$코딩공간,selector:{analysis:"rename",target:$정의위치,new_name:"새이름"}}
+[self:workspace]{op:"apply",resource:$코딩공간,proposal:$p.proposal}
+```
+
+제안은 `rename`·`code_action(ref)`·`completion(ref)`·`format(path, range?)`를 지원한다.
+inspect 뷰는 제안을 확인할 수 있지만 원본 적용 권한은 없다. 같은 제안의 apply는 기존 영수증을 반환한다.
+복수 파일의 원본·파일 권한을 적용 전에 대조하고 중단되면 `recover`로 원장을 복구한다.
+외부 편집과 충돌한 파일은 덮어쓰지 않는다. 코드 `snapshot`은 고정 소스 뷰를 반환하고 read의 `snapshot`으로 읽는다.
+스냅샷의 외부 의존 환경은 공유되므로 원문 고정과 의존성 전체 고정은 구별한다.
+
+코딩 화면의 **코드 분석**에서 정의·참조·타입·진단·완성·계층을 조회하고 변경을 적용한다.
+편집 중 분석은 해당 창의 별도 초안 뷰를 사용하며, 저장할 때 원래 파일과 충돌을 검사한다.
+파일을 옮겨 열어도 초안을 유지하며 **초안 전체 저장**은 여러 파일의 변경을 함께 저장한다.
+언어 서버 설정의 **고정 버전 설치·복구**는 관리된 package-lock으로 설치한다.
+터미널 설치는 저장소에서 `npm ci --ignore-scripts --prefix data/code_analysis` (Node.js 20 이상).
+서버 선언은 `data/code_analysis/servers.yaml`, Python은 Pyright, JS/TS/TSX/JSX는 TypeScript LSP 어댑터다.
+
+협업 실행자는 API·Claude Code·Codex 모두 같은 읽기 IBL과 격리된 `run_command`를 사용한다.
+`read kind:"code"`에 resource를 생략하면 발행된 현재 사본을 분석한다.
+의미 기반 편집은 실행자가 알려준 `backend/code_analysis_cli.py`에 JSON stdin으로
+`{"op":"propose","selector":…}` / `{"op":"apply","proposal":…}`를 전달한다.
+접속 정보는 실행자가 환경으로 전달한다. 일반 호스트 HTTP·모델 제공 LSP 도구는 사용하지 않는다.
+자기수리는 현재 수리 후보의 resource를 해소하며 검사·정본 반영은 기존 수리 경로가 소유한다.

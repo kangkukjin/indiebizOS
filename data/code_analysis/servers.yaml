@@ -1,0 +1,18 @@
+version: 1
+policy:
+  idle_seconds: 900
+  max_servers: 8
+  memory_mb: 2048
+servers:
+  python:
+    extensions: {'.py': python, '.pyi': python}
+    command: [node, '{toolchain}/node_modules/pyright/dist/pyright-langserver.js', --stdio]
+    package: pyright
+    driver: pyright
+    markers: [pyrightconfig.json, pyproject.toml]
+  typescript:
+    extensions: {'.ts': typescript, '.tsx': typescriptreact, '.js': javascript, '.jsx': javascriptreact, '.mjs': javascript, '.cjs': javascript}
+    command: [node, '{toolchain}/node_modules/typescript-language-server/lib/cli.mjs', --stdio]
+    package: typescript-language-server
+    driver: typescript
+    markers: [tsconfig.json, jsconfig.json, package.json]

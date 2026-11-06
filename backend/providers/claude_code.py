@@ -502,6 +502,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         왕복이 ToolSearch 였다. `--tools EAGER_BUILTIN_TOOLS` 로 내장을 좁히면(2026-09-04) ToolSearch
         가 사라지고 MCP 도구가 init 부터 뜬다. 그래서 TOOL_POLICY 는 "곧장 호출"이라고 말한다.
         """
+        if getattr(self, 'execution_profile', '') == 'coding':
+            from .coding_profile import claude_command
+            return claude_command(self, stream, system_prompt_file)
         cmd = [
             self._binary_path,
             "--print",

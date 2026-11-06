@@ -13,10 +13,16 @@ def configure_worker(runner, workspace, task_id, cancelled):
     provider = runner.ai._provider
     from providers.cli_provider import CliSubprocessProvider
     native = isinstance(provider, CliSubprocessProvider)
-    if native and provider.__class__.__name__ != 'CodexProvider':
-        raise ValueError('협업 사본의 네이티브 실행은 현재 Codex에서 지원합니다. API 실행자는 격리 명령 도구를 사용합니다')
     runtime = Path(workspace).parent / ('runtime-' + Path(workspace).name)
     processes = CodingProcesses(workspace, runtime, own_sandbox=native)
+    from code_analysis_bridge import Bridge
+    bridge = processes.analysis_bridge = Bridge(workspace, runtime, cancelled)
+    runner.ai.system_prompt = (getattr(runner.ai, 'system_prompt', '') or '') + (
+        '\n코드 분석은 [self:workspace]{op:"read",kind:"code",selector:{analysis:"definition",path:"파일",line:1,column:1}}. '
+        '행·열은 1부터. 변경·빌드는 run_command의 OS 격리에서 실행한다. '
+        '의미 기반 변경은 Python으로 backend/code_analysis_cli.py에 JSON stdin을 전달한다. '
+        + 'CLI 경로: ' + str(Path(__file__).resolve().parents[1] / 'code_analysis_cli.py'))
+    provider.system_prompt = runner.ai.system_prompt
     if native:
         from providers.coding_profile import configure
         configure(provider, {'id': task_id, 'workspace': str(workspace)}, processes)
@@ -34,21 +40,11 @@ def configure_worker(runner, workspace, task_id, cancelled):
             if name == 'execute_ibl':
                 from tool_batch import checked_read_program
                 from system_tools import execute_tool
-                with checked_read_program(args, str(workspace), agent_id):
+                from code_analysis_scope import bind
+                with bind(workspace, generation=bridge.resource), checked_read_program(args, str(workspace), agent_id):
                     return execute_tool(name, args, str(workspace), agent_id)
             if name != 'run_command' or not isinstance(args.get('command'), str):
                 raise ValueError('이 작업 사본은 execute_ibl 읽기와 run_command만 지원합니다')
-            proc = processes.spawn(['/bin/sh', '-c', args['command']], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            started = time.monotonic()
-            while True:
-                try:
-                    output, _ = proc.communicate(timeout=.2)
-                    break
-                except subprocess.TimeoutExpired:
-                    if cancelled() or time.monotonic() - started > 240:
-                        processes.terminate(proc)
-                        raise ValueError('작업 사본 명령이 취소되었거나 시간 한도를 넘었습니다')
-            return json.dumps({'success': proc.returncode == 0, 'exit_code': proc.returncode,
-                               'output': output.decode(errors='replace')[-50000:]}, ensure_ascii=False)
+            return json.dumps(bridge.command(args['command']), ensure_ascii=False)
         runner.ai._custom_execute_tool = execute
     return processes

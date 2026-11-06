@@ -12,7 +12,7 @@ def available():
     return sys.platform == "darwin" and Path("/usr/bin/sandbox-exec").is_file()
 
 
-def sandbox_command(command, workspace, runtime, *, local_network=False, external_network=False, write_scopes=()):
+def sandbox_command(command, workspace, runtime, *, local_network=False, external_network=False, write_scopes=(), ipc_path=None):
     if not available():
         raise RuntimeError("이 몸의 코딩 쓰기 샌드박스는 미지원입니다(macOS 필요)")
     workspace, runtime = Path(workspace).resolve(), Path(runtime).resolve()
@@ -30,6 +30,9 @@ def sandbox_command(command, workspace, runtime, *, local_network=False, externa
         policy.append(f"(deny file-write* (require-not (require-any {choices})))")
     if not external_network:
         policy.append("(deny network*)")
+    if ipc_path:
+        policy.append(f'(allow file-write* (literal {quote(ipc_path)}))')
+        policy.append(f'(allow network* (local unix-socket (literal {quote(ipc_path)})) (remote unix-socket (literal {quote(ipc_path)})))')
     if local_network:
         # 사본의 임시 서버·문서 엔진 연결. 운영 API 적용은 호스트 제어자가 소유한다.
         policy += ['(allow file-write-data (literal "/dev/null"))', '(deny appleevent-send)', '(deny signal)', '(allow signal (target self) (target children) (target same-sandbox))',
@@ -53,6 +56,9 @@ class CodingProcesses:
         self.local_network = local_network   # 프로젝트 실행(개발 서버)은 포트를 연다
         self.on_spawn = on_spawn
         self.processes = []
+        self.environment = {}
+        self.ipc_path = None
+        self.analysis_bridge = None
         self.lock = threading.RLock()
         self.cancelled = threading.Event()
 
@@ -63,9 +69,10 @@ class CodingProcesses:
             clean = {k: v for k, v in (env or os.environ).items()
                      if not any(word in k.upper() for word in ("TOKEN", "API_KEY", "SECRET", "PASSWORD"))
                      and not k.startswith("INDIEBIZOS_") and not k.startswith("GIT_")}
+            clean.update(self.environment)
             clean.update({"TMPDIR": self.runtime, "PYTHONDONTWRITEBYTECODE": "1"})
             if not self.own_sandbox:
-                command = sandbox_command(command, self.workspace, self.runtime, local_network=self.local_network)
+                command = sandbox_command(command, self.workspace, self.runtime, local_network=self.local_network, ipc_path=self.ipc_path)
             kwargs.pop("cwd", None)
             proc = subprocess.Popen(command, cwd=self.workspace, env=clean,
                                     start_new_session=True, **kwargs)
@@ -87,6 +94,10 @@ class CodingProcesses:
             self.cancelled.set()
             for proc in self.processes:
                 self.terminate(proc)
+
+        if self.analysis_bridge:
+            bridge, self.analysis_bridge = self.analysis_bridge, None
+            bridge.close()
 
     def cancel(self):
         self.close()

@@ -74,6 +74,7 @@ class Workspace:
         kind, app, row = self.resolve(resource)
         if kind != 'code':
             raise ValueError('collaborate는 코딩 프로젝트 전용입니다')
+        app.writable(row)
         from coding_collaboration import Collaboration
         return Collaboration(app.store).run(row, phase, request_id=request_id, workers=workers,
                                              collaboration=collaboration, checks=checks)
@@ -82,7 +83,7 @@ class Workspace:
         """자료 ID → (kind, 어댑터, 행). 종류는 저장소가 안다 — 호출자가 kind 를 들고 다니지 않는다."""
         if not isinstance(resource, str) or not resource:
             raise ValueError("resource(자료 ID)가 필요합니다 — open 의 반환값")
-        if resource.startswith("coding_"):
+        if resource.startswith(("coding_", "codeview_")):
             return "code", self.code(), self.code().project(resource)
         store = self.documents().store
         try:
@@ -111,13 +112,13 @@ class Workspace:
         return out
 
     # ── open ────────────────────────────────────────────────────────────────
-    def open(self, path, encoding=None, kind=None, goal=None, conversion="auto", request_id=None, working_resource=None):
+    def open(self, path, encoding=None, kind=None, goal=None, conversion="auto", request_id=None, working_resource=None, mode=None):
         target = Path(path).expanduser()
         kind = kind or kind_of_path(target)
         if kind not in KINDS:
             raise ValueError("kind 는 document/sheet/code 입니다")
         if kind == "code":
-            task = self.code().open(target, goal)
+            task = self.code().open(target, goal, mode)
             return self.head("code", task, capabilities=self.code().capabilities(task))
         app = self.sheets() if kind == "sheet" else self.documents()
         detail = app.open(target) if kind == "sheet" else app.open(target, encoding, conversion=conversion, request_id=request_id, working_resource=working_resource)
@@ -237,6 +238,17 @@ class Workspace:
     # ── read ────────────────────────────────────────────────────────────────
     def read(self, resource=None, selector=None, snapshot=None, kind=None, root=None):
         selector = selector or {}
+        if resource is None and kind == 'code' and selector.get('analysis') and root:
+            from thread_context import get_repair_workspace
+            from repair_context import active
+            candidate = get_repair_workspace(create=False)
+            from code_analysis_scope import current_scope
+            scope = current_scope() or {}
+            if str(scope.get('generation', '')).startswith('coding_'):
+                row = self.code().project(scope['generation'])
+            else:
+                row = self.code().open(candidate, mode='inspect') if candidate and active() else self.code().analysis.inspect(root)
+            return self.head('code', row, **self.code().read(row, selector))
         if resource is None:
             # 자료 없는 읽기는 하나뿐 — 코딩 프로젝트 목록(kind:"code" + selector{projects:true}). root = 기본 폴더의 기준.
             if kind == "code" and selector.get("projects"):
@@ -244,7 +256,7 @@ class Workspace:
             raise ValueError("resource(자료 ID)가 필요합니다 — kind:\"code\" 와 selector{projects:true} 만 자료 없이 읽습니다")
         kind, app, row = self.resolve(resource)
         if kind == "code":
-            return self.head(kind, row, **app.read(row, selector))
+            return self.head(kind, row, **app.read(row, {**selector, **({"view": snapshot} if snapshot else {})}))
         if kind == "sheet":
             snap = app.store.get("sheet_snapshot", snapshot) if snapshot else self._latest_sheet_snapshot(app, row)
             sheet_id = self._sheet_id(app, snap["blob"], selector.get("sheet", 0))
@@ -324,7 +336,7 @@ class Workspace:
     def apply(self, resource, proposal, client=None):
         kind, app, row = self.resolve(resource)
         if kind == "code":
-            return self.head(kind, row, **app.apply(row, proposal))
+            return self.head(kind, row, **app.apply(row, proposal, client))
         args = self._session_args(kind, app, row, client, "apply")
         done = self._applied(app, row, proposal)
         if done is not None:
@@ -436,6 +448,7 @@ class Workspace:
         if unregister:
             if kind != "code":
                 raise DocumentUnsupported("등록 해제는 코딩 프로젝트에만 지원합니다")
+            app.writable(row)
             return self.head(kind, row, **app.projects_api.unregister(row))
         if kind == "code":
             return self.head(kind, row, **app.close(row))
@@ -445,11 +458,14 @@ class Workspace:
     def recover(self, resource):
         kind, app, row = self.resolve(resource)
         if kind == "code":
-            raise DocumentUnsupported("코딩 프로젝트는 복구할 미완료 저장이 없습니다 — 기록은 전부 git 에 있다")
+            return self.head(kind, row, **app.recover(row))
         return self.head(kind, row, **app.recover(resource))
 
 
-class CodeAdapter:
+from code_analysis_workspace import AnalysisWorkspace
+
+
+class CodeAdapter(AnalysisWorkspace):
     """코딩 프로젝트(폴더 하나)를 작업 공간 계약에 맞춘다 — 자료=프로젝트, 스냅샷=트리 지문, 저장=기록(커밋), 복구=기록으로 되돌리기.
 
     몸은 coding_projects.CodingProjects. 옛 과제별 worktree·검토 묶음·승인 흐름은 2026-10-07 에 은퇴했다
@@ -461,37 +477,26 @@ class CodeAdapter:
         self.projects_api = CodingProjects(store)
         self.store = self.projects_api.store
 
-    def project(self, resource):
-        return self.projects_api.project(resource)
-
     # Workspace.read(kind="code", selector={projects: true}) 가 부른다 — 자료 없는 유일한 읽기
     @property
     def projects(self):
         return self.projects_api
 
-    def open(self, path, goal=None):
-        return self.projects_api.open(path, goal)
-
     def capabilities(self, row):
         from coding_process import available
-        return {"engine": "git", "edit_native": True, "save": True, "export_copy": False, "restore": True,
-                "close": True, "read_projection": True, "propose": True, "run": available(), "collaborate": available(),
+        writable = row.get("mode") != "inspect"
+        return {"engine": "git" if writable else "code", "edit_native": writable, "save": writable, "analysis": self.analysis.capabilities(row), "export_copy": False, "restore": writable,
+                "close": True, "read_projection": True, "propose": True, "run": available() and writable, "collaborate": available() and writable,
                 "reason": "코딩 프로젝트 — 저장은 기록(커밋), 복구는 기록으로 되돌리기, 실행은 샌드박스 프로세스"}
 
     def snapshot(self, row):
-        from coding_git import current_tree
-        return current_tree(row["path"])
-
-    def read(self, row, selector):
-        return self.projects_api.read(row, selector or {})
-
-    def propose(self, row, selector, replacement):
-        return self.projects_api.propose(row, selector or {}, replacement)
-
-    def apply(self, row, proposal):
-        return self.projects_api.apply(row, proposal)
+        from code_analysis_views import snapshot
+        return snapshot(self.store, row)
 
     def save(self, row, message, verify=None):
+        self.writable(row)
+        if row.get("mode") == "repair":
+            raise PermissionError("수리 후보의 검증·반영은 기존 수리 적용 경로를 사용하세요")
         if verify:
             raise ValueError("코딩 프로젝트의 save 는 기록(커밋)만 한다 — 검증·실행은 실행 탭(엔진 I/O)의 몫이다")
         return self.projects_api.save(row, message)
@@ -500,7 +505,5 @@ class CodeAdapter:
         return self.projects_api.versions(row)
 
     def restore(self, row, revision, path=None):
+        self.writable(row)
         return self.projects_api.restore(row, revision, path)
-
-    def close(self, row):
-        return {"closed": True}

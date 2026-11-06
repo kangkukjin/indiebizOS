@@ -5995,7 +5995,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-11-06'
-          impl: cb3e077b288fadbf
+          impl: 62b758023f9cdd21
         target_key: path
         aliases:
           offset:
@@ -6013,7 +6013,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-11-06'
-          impl: cb3e077b288fadbf
+          impl: 62b758023f9cdd21
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6092,7 +6092,7 @@ nodes:
         member_transform: member_documents:write
         path_audited:
           at: '2026-11-06'
-          impl: cb3e077b288fadbf
+          impl: 62b758023f9cdd21
         target_key: path
       list:
         callable_contract:
@@ -6731,8 +6731,9 @@ nodes:
         guides:
         - document_edit.md
       workspace:
+        per_run: true
         description: 범용 작업 공간 — 문서(TXT/MD/HTML/DOCX/PDF/HWP)·스프레드시트·코딩(프로젝트 폴더)을 같은 계약으로 열기·스냅샷·읽기·제안·적용·저장·버전·복구. 종류는 자료가 정하고(resource 하나), 세션 배관은 몸이 숨긴다. 접수(queued)는 완료가 아니다.
-        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement → proposal. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. Pages open은 원본을 보존하고 DOCX 작업 사본으로 자동 변환해 resource를 반환하며 같은 원본 재열기는 사본·초안을 이어 쓴다. conversion:auto(기본)/source(원본 등록만)/refresh(새 사본, request_id 필수), working_resource는 원본에서 변환한 기존 사본 선택. 원본 변경은 conversion.source_changed로 알리고 저장은 DOCX에만 한다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다. collaborate: resource·phase. prepare(request_id·workers 2~8)는 독립 사본 workspace 참조를 반환해 scope:task에 전달한다. merge(collaboration)는 충돌 없는 고정 후보, validate(checks=[[명령, 인자]])는 후보 검사, apply는 검증된 동일 바이트만 원본 지문 대조 후 반영한다. status/recover는 부분 적용 조회·조건부 복구. 협업 사본은 원본 Git 메타데이터를 공유하지 않으며 ignored 파일은 제외한다.'
+        target_description: 'op — open: path(파일 또는 프로젝트 폴더 — git 이 없으면 조용히 init; code+mode:inspect는 Git·목표 문서를 만들지 않는 읽기 전용 분석 뷰)·encoding?·kind?(document/sheet/code 자동)·goal?(코딩: 목표 문서가 없으면 실행법·설명 자동 추론, goal은 설명에 우선) → resource(자료 ID)·capabilities·session(쥔 창). 이후 op 는 resource 로. snapshot: 현재 초안(세션 blob)이나 저장본의 고정 스냅샷 — 시트는 편집창 엔진 응답을 wait(≤30초) 기다리며 미완료면 state=queued. read: code selector.analysis로 정의·참조·타입·심볼·진단·완성·계층 조회(행/열은 1부터), selector 로 읽기 — 문서 {start,end}(문자 범위, selected_sha256 반환)·사무/PDF/한글은 {offset,limit,pages,tables} 읽기 투영(편집 주소 아님)·시트 {sheet,range}·코딩 {path,start_line,end_line}|{diff:true}|{files:true}|{project:true}(목표 문서 경로·요약·실행 방법·변경 요약·활성 위임); resource 없이 kind:"code"+selector{projects:true} 는 프로젝트 목록(등록 + outputs/coding 하위 폴더); snapshot 생략 시 지금 상태. propose: 문서 selector{start,end,selected_sha256?}+replacement / 시트 selector{sheet,range}+values(같은 행·열 2차원)+kind(set_values|set_formulas) / 코딩 selector{path,start_line?,end_line?}+replacement 또는 selector.analysis(rename/new_name, code_action/ref, completion/ref, format/path) → 다중 파일 proposal. 코드 read 분석의 행·열은 1부터 유니코드 문자 수, target·ref는 판본 결속. resource 없는 kind:code+analysis는 현재 실행 사본. 상세는 workspace 가이드. apply: resource·proposal — 작성 창이 쥔 세션은 그 창의 client 만, 없으면 행위자 신원으로 세션을 얻는다; 시트는 편집기에 접수. save: 문서/시트는 기대 원본 버전 확인 뒤 원본 저장(시트는 접수), 코딩은 message 필수의 기록(폴더의 모든 변경을 한 커밋으로, 바뀐 것이 없으면 state=clean). export: filename 같은 형식 사본. versions/restore(revision — 코딩은 되돌리기 전 상태를 먼저 기록하고 path 로 파일 하나만 되돌릴 수도)/close/capabilities/recover. close에 unregister:true를 주면 코딩 프로젝트 등록만 해제(폴더·파일·기록·실행 보존), 목록과 기본 폴더 자동 발견에서 제외하며 같은 폴더를 open하면 재등록된다. 다른 종류에는 unregister:true를 지원하지 않는다. Pages open은 원본을 보존하고 DOCX 작업 사본으로 자동 변환해 resource를 반환하며 같은 원본 재열기는 사본·초안을 이어 쓴다. conversion:auto(기본)/source(원본 등록만)/refresh(새 사본, request_id 필수), working_resource는 원본에서 변환한 기존 사본 선택. 원본 변경은 conversion.source_changed로 알리고 저장은 DOCX에만 한다. 사무 문서의 선택 수정은 앱의 편집 표면에서(엔진 bookmark). AI 제안은 read → [table:ai]/위임 → propose 로 조합한다. collaborate: resource·phase. prepare(request_id·workers 2~8)는 독립 사본 workspace 참조를 반환해 scope:task에 전달한다. merge(collaboration)는 충돌 없는 고정 후보, validate(checks=[[명령, 인자]])는 후보 검사, apply는 검증된 동일 바이트만 원본 지문 대조 후 반영한다. status/recover는 부분 적용 조회·조건부 복구. 협업 사본은 원본 Git 메타데이터를 공유하지 않으며 ignored 파일은 제외한다.'
         returns: items
         side_effect: true
         exempt: 실제 파일·저장소 경로 필요 — 임시 작업 공간 회귀(test_workspace_sessions)로 검증
@@ -6752,6 +6753,7 @@ nodes:
           encoding: string
           kind: string
           goal: string
+          mode: string
           conversion: string
           request_id: string
           working_resource: string
@@ -6783,10 +6785,10 @@ nodes:
             snapshot: false
           values:
             collaborate: 같은 프로젝트 병렬 편집의 사본·통합·검사·조건부 반영(phase)
-            open: 파일·git 폴더를 작업 공간에 등록(종류 자동) — resource·capabilities·세션 상태
+            open: 파일·폴더 등록 → resource·capabilities. code+mode:inspect는 원본 무변경 분석 뷰
             snapshot: 지금 초안·저장본의 고정 스냅샷(시트는 편집창 엔진 응답 대기, queued 가능)
-            read: selector 로 읽기 — 문자·시트 범위, 파일 줄·diff·목록·프로젝트(kind:code+projects=목록), 사무는 투영
-            propose: 스냅샷에 고정한 변경 제안(문서 교체문·시트 값/수식·코딩 파일 본문)
+            read: selector로 문자·시트·파일·목록·사무 투영. code의 analysis는 의미 기반 코드 분석
+            propose: 원문 판본에 고정한 문서·시트·코드 변경 제안. code의 analysis는 다중 파일 의미 기반 편집
             apply: 제안을 초안에 적용(작성 창 세션 보호, 시트는 편집기 접수)
             save: 기대 버전 확인 뒤 원본 저장 / 코딩은 기록 — 모든 변경을 한 커밋으로(message 필수)
             export: 같은 형식의 새 사본 저장
@@ -6794,7 +6796,7 @@ nodes:
             restore: 선택 버전을 초안으로 복구(코딩은 그 기록으로 되돌리기 — path 로 파일 하나만도)
             close: 저장 완료된 작성 세션 닫기 — 코딩은 unregister:true로 폴더를 보존하고 등록 해제
             capabilities: 자료의 실제 지원·엔진·미지원 사유
-            recover: 끊긴 원본 저장 결과를 재쓰기 없이 회수
+            recover: 끊긴 원본 저장·코드 다중 파일 적용의 원장을 회수(외부 편집 충돌은 보존)
         keywords:
         - 작업공간
         - 문서편집
@@ -6971,7 +6973,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-11-06'
-          impl: cb3e077b288fadbf
+          impl: 62b758023f9cdd21
         pipe_in: true
         lands_on: body
         limb_op:

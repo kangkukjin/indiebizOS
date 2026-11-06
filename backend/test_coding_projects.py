@@ -139,8 +139,7 @@ def test_edit_record_versions_and_restore(projects, folder):
     p = projects.propose(row, {"path": "app.py", "start_line": 1, "end_line": 1}, "print('bye')")
     applied = projects.apply(row, p["proposal"])
     assert applied["applied"] and projects.read(row, {"path": "app.py"})["text"] == "print('bye')"
-    with pytest.raises(CodingConflict):
-        projects.apply(row, p["proposal"])          # 지문이 바뀐 뒤의 재적용은 거절
+    assert projects.apply(row, p["proposal"])["cached"]  # durable proposal receipts are idempotent
     diff = projects.diff(row)
     assert diff["paths"] == ["app.py"] and "+print('bye')" in diff["patch"]
     second = projects.save(row, "인사 바꿈")

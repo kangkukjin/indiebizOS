@@ -54,26 +54,26 @@ class CodingStore:
     @contextmanager
     def lock(self, key):
         """스레드와 프로세스 모두 직렬화한다. 외부 Git 도구는 지문 대조로 감지한다."""
-        import fcntl
+        from filelock import FileLock
         name = str(self.root) + ":" + key
         with _LOCKS_GUARD:
             lock = _LOCKS.setdefault(name, threading.RLock())
         with lock:
             folder = self.root / "locks"
             folder.mkdir(exist_ok=True)
-            with (folder / fingerprint(name)).open("a") as stream:
-                fcntl.flock(stream, fcntl.LOCK_EX)
-                try:
-                    yield
-                finally:
-                    fcntl.flock(stream, fcntl.LOCK_UN)
+            with FileLock(str(folder / fingerprint(name)), is_singleton=True):
+                yield
 
     def save(self, kind, row):
-        with self.connect() as conn:
-            conn.execute("INSERT INTO objects VALUES (?, ?, ?) ON CONFLICT(id) "
-                         "DO UPDATE SET body=excluded.body",
-                         (row["id"], kind, json.dumps(row, ensure_ascii=False)))
+        self.save_many([(kind, row)])
         return row
+
+    def save_many(self, rows):
+        """Commit related objects together, including draft edits and their receipts."""
+        with self.connect() as conn:
+            conn.executemany("INSERT INTO objects VALUES (?, ?, ?) ON CONFLICT(id) "
+                             "DO UPDATE SET body=excluded.body",
+                             [(row["id"], kind, json.dumps(row, ensure_ascii=False)) for kind, row in rows])
 
     def get(self, kind, key):
         with self.connect() as conn:

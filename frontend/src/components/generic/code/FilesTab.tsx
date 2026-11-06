@@ -1,6 +1,7 @@
 /* 코드 파일 탭 — 왼쪽 트리(AI 가 방금 고친 파일은 ●), 오른쪽 원문(줄 번호·읽기 전용). 편집 → 저장 = 파일 쓰기 + 기록.
  * 이전 기록 보기 = 그 파일만 기록으로 되돌리기. 기본적으로 코드를 읽지 않는 사람의 화면이라 트리·원문 둘뿐이다. */
 import { useEffect, useMemo, useState } from 'react';
+import { CodeAnalysis, useCodeDraft } from './CodeAnalysis';
 import type { codeIBL, FileItem, ProjectDetail, Version } from './ibl';
 
 const btn = 'px-2.5 py-1 rounded-md text-xs border border-stone-200 bg-white text-stone-700 hover:border-stone-400 disabled:opacity-40';
@@ -35,24 +36,35 @@ export function FilesTab({ ibl, detail, locked, onChanged }: { ibl: ReturnType<t
   const [draft, setDraft] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [analysisBusy, setAnalysisBusy] = useState(false);
   const [history, setHistory] = useState<Version[] | null>(null);
+  const analysisDraft = useCodeDraft(ibl.resource, file?.path || '', draft, editing);
   const nodes = useMemo(() => tree(items || []), [items]);
   useEffect(() => {
     let dead = false;
     ibl.files().then((f) => { if (!dead) setItems(f); }, (e) => { if (!dead) setMessage('⚠️ ' + (e instanceof Error ? e.message : String(e))); });
     return () => { dead = true; };
   }, [ibl]);
-  const pick = async (path: string) => {
-    setPicked(path); setEditing(false); setHistory(null); setMessage('');
-    try { const f = await ibl.file(path); setFile({ path, text: f.text, binary: f.binary, lines: f.lines }); setDraft(f.text); }
+  const pick = async (path: string, syncBefore = true) => {
+    try {
+      if (syncBefore) await analysisDraft.sync();
+      setPicked(path); setHistory(null); setMessage('');
+      const f = await ibl.file(path);
+      const unsaved = analysisDraft.text(path);
+      setFile({ path, text: f.text, binary: f.binary, lines: f.lines });
+      setEditing(typeof unsaved === 'string'); setDraft(typeof unsaved === 'string' ? unsaved : f.text);
+    }
     catch (e) { setFile(null); setMessage('⚠️ ' + (e instanceof Error ? e.message : String(e))); }
   };
   const save = async () => {
-    if (!file || busy) return;
+    if (!file || busy || analysisBusy) return;
     setBusy(true);
     try {
-      await ibl.write(file.path, draft, `직접 편집: ${file.path}`);
-      await pick(file.path);
+      await analysisDraft.save();
+      await ibl.save(`직접 편집: ${file.path}`);
+      setEditing(false);
+      await analysisDraft.close();
+      await pick(file.path, false);
       setItems(await ibl.files());
       setMessage('저장·기록됨');
       onChanged();
@@ -75,7 +87,7 @@ export function FilesTab({ ibl, detail, locked, onChanged }: { ibl: ReturnType<t
       {(open[n.path] ?? true) && render(n.children, depth + 1)}
     </div>
   ) : (
-    <button key={n.path} onClick={() => void pick(n.path)} title={n.path}
+    <button key={n.path} disabled={busy || analysisBusy} onClick={() => void pick(n.path)} title={n.path}
       className={`w-full text-left px-2 py-1 text-xs font-mono rounded truncate ${picked === n.path ? 'bg-teal-50 text-teal-800' : 'text-stone-700 hover:bg-stone-100'}`}
       style={{ paddingLeft: 8 + depth * 14 }}>
       {n.name}{n.file?.changed && <span className="ml-1 text-teal-600" title={n.file.changed === '?' ? '새 파일' : '바뀜'}>●</span>}
@@ -93,8 +105,8 @@ export function FilesTab({ ibl, detail, locked, onChanged }: { ibl: ReturnType<t
           {file ? <><span className="font-semibold">{file.path}</span><span className="text-stone-400">· {file.lines}줄</span></> : <span className="text-stone-400">왼쪽에서 파일을 고르세요</span>}
           <span className="text-stone-500 font-sans truncate">{message}</span>
           <div className="flex-1" />
-          {file && !file.binary && !editing && <button className={btn} disabled={locked} onClick={() => { setEditing(true); setDraft(file.text); }}>편집</button>}
-          {file && editing && <><button className={btn} onClick={() => { setEditing(false); setDraft(file.text); }}>취소</button><button className={`${btn} border-teal-600 text-teal-800 bg-teal-50`} disabled={busy || draft === file.text} onClick={() => void save()}>저장</button></>}
+          {file && !file.binary && !editing && <button className={btn} disabled={locked || busy || analysisBusy} onClick={() => { setEditing(true); setDraft(file.text); }}>편집</button>}
+          {file && (editing || analysisDraft.dirty) && <><button className={btn} disabled={busy || analysisBusy} onClick={() => { void analysisDraft.close(); setEditing(false); setDraft(file.text); }}>초안 취소</button><button className={`${btn} border-teal-600 text-teal-800 bg-teal-50`} disabled={busy || analysisBusy || locked || (!analysisDraft.dirty && draft === file.text)} onClick={() => void save()}>초안 전체 저장</button></>}
           {file && <button className={btn} disabled={busy} onClick={() => void showHistory()}>이전 기록 보기</button>}
         </div>
         {history && (
@@ -112,10 +124,12 @@ export function FilesTab({ ibl, detail, locked, onChanged }: { ibl: ReturnType<t
           </pre>
         )}
         {file && editing && (
-          <textarea aria-label="파일 내용" spellCheck={false} value={draft} onChange={(e) => setDraft(e.target.value)}
+          <textarea aria-label="파일 내용" disabled={busy} spellCheck={false} value={draft} onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); void save(); } }}
             className="flex-1 m-0 p-4 text-[12.5px] leading-[1.6] font-mono text-stone-800 outline-none resize-none" />
         )}
+        {file && !file.binary && <CodeAnalysis key={file.path} ibl={ibl} path={file.path} draft={analysisDraft} editing={editing} locked={locked || busy}
+          onBusy={setAnalysisBusy} onChanged={text => { setDraft(text); setEditing(true); }} onPick={path => { void pick(path); }} />}
       </div>
     </div>
   );

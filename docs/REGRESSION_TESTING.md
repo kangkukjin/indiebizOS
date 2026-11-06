@@ -306,6 +306,9 @@ Seatbelt를 사용하고, 문서 변환 회귀에는 macOS의 textutil 경로가
 브라우저·PDF·차트 회귀에는 Playwright와 Chromium, matplotlib·plotly·kaleido를 설치한다.
 브라우저는 설치·실행 모두 저장소의 ms-playwright를 쓰며 전체 검사 전 실제 PNG 렌더로
 확인한다. 문서·시트 인수 검사를 위해 npm 의존성과 프론트엔드 빌드도 먼저 준비한다.
+코드 분석 회귀는 실제 Pyright·TypeScript 서버를 사용한다. 새 checkout에서는
+`npm ci --ignore-scripts --no-audit --no-fund --prefix data/code_analysis`로 잠금 파일의
+서버를 설치한다. CI도 같은 명령을 실행하며 서버 선언·잠금 파일 변경을 검사 입력에 포함한다.
 
 새 checkout에는 개인 프로젝트의 outputs, 반환 모양 관측, 관용구 DB가 없다. 회귀는
 필요한 디렉터리와 관측을 fixture로 만들고, 관용구는 추적된 시드를 격리 DB에 넣는다.

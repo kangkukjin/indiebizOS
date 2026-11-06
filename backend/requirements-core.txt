@@ -60,5 +60,7 @@ ddgs
 beautifulsoup4
 feedparser
 requests
-filelock  # 파일 듣기 결과 캐시의 프로세스 간 중복 호출 방지
+filelock>=3.13  # 파일 듣기 결과 캐시의 프로세스 간 중복 호출 방지
 nest-asyncio
+
+watchfiles>=1.0,<2  # persistent code analysis document observation

@@ -336,6 +336,9 @@ class CodingProjects:
         if selector.get("files") or not selector.get("path"):
             return {"selector": {"files": True}, "items": self.files(row)}
         opened = self.read_file(row, selector["path"])
+        if selector.get('verbatim'):
+            return {'selector': {'path': selector['path'], 'verbatim': True}, **opened,
+                    'lines': len(opened['text'].splitlines())}
         lines = opened["text"].splitlines()
         start = int(selector.get("start_line", 1)); end = int(selector.get("end_line", len(lines)))
         if not 1 <= start <= max(end, 1):
@@ -361,30 +364,30 @@ class CodingProjects:
             content = "\n".join(lines[:start - 1] + replacement.splitlines() + lines[end:]) + ("\n" if opened["text"].endswith("\n") else "")
         else:
             content = replacement
-        p = {"id": identifier("proposal"), "project": row["id"], "path": path, "expected": opened["fingerprint"],
-             "content": content, "selector": selector, "created_at": time.time()}
-        self.store.save("workspace_proposal", p)
-        return {"proposal": p["id"], "selector": {"path": path}, "expected": opened["fingerprint"], "delete": content is None}
+        from code_analysis_changes import prepare, state, encoded
+        before = state(target)
+        after = {'bytes': encoded(content.encode('utf-8')) if content is not None else None, 'mode': before['mode']}
+        result = prepare(self.store, row, [{'path': path, 'before': before, 'after': after}], selector=selector)
+        return {**result, 'selector': {'path': path}, 'expected': opened['fingerprint'], 'delete': content is None}
 
     def apply(self, row: dict, proposal: str) -> dict:
-        p = self.store.get("workspace_proposal", proposal)
-        if p.get("project") != row["id"]:
-            raise PermissionError("다른 프로젝트의 제안입니다")
-        target = safe_path(row["path"], p["path"])
-        actual = fingerprint(target.read_bytes()) if target.is_file() else None
-        if actual != p["expected"]:
-            raise CodingConflict("파일이 그 사이 바뀌었습니다. 다시 읽고 제안하세요")
-        if p["content"] is None:
-            if target.is_file():
-                target.unlink()
-            return {"proposal": proposal, "applied": True, "path": p["path"], "deleted": True}
-        target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(target.name + ".coding-save")
-        tmp.write_text(p["content"], encoding="utf-8")
-        if target.exists():
-            tmp.chmod(target.stat().st_mode & 0o777)
-        os.replace(tmp, target)
-        return {"proposal": proposal, "applied": True, "path": p["path"], "fingerprint": fingerprint(target.read_bytes())}
+        from code_analysis_changes import apply, prepare, state, encoded
+        p = self.store.get('workspace_proposal', proposal)
+        # Old persisted single-file proposals remain recoverable through the same journal.
+        if 'edits' not in p:
+            if p.get('project') != row['id']:
+                raise PermissionError('다른 프로젝트의 제안입니다')
+            target = safe_path(row['path'], p['path'])
+            before = state(target)
+            actual = fingerprint(target.read_bytes()) if target.is_file() else None
+            if actual != p['expected']:
+                raise CodingConflict('파일이 그 사이 바뀌었습니다. 다시 읽고 제안하세요')
+            from code_analysis_changes import identity
+            p.update(edits=[{'path': p['path'], 'before': before, 'after': {
+                'bytes': encoded(p['content'].encode('utf-8')) if p['content'] is not None else None,
+                'mode': before['mode']}}], state='prepared', root_identity=identity(row['path']))
+            self.store.save('workspace_proposal', p)
+        return apply(self.store, row, proposal)
 
     # ── 기록(커밋)·버전·되돌리기 ─────────────────────────────────────────────
     def save(self, row: dict, message: str) -> dict:

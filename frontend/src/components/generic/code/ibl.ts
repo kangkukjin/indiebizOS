@@ -21,9 +21,13 @@ export type Version = { id: string; short: string; created_at: number; label: st
 export type RunRecord = { id: string; command: string; state: string; exit_code: number | null; started_at: number; finished_at: number | null; serve: boolean; stdin?: boolean };
 
 const T = {
+  analysis: '[self:workspace]{op:"read",resource:$resource,selector:$selector}',
+  analysisPropose: '[self:workspace]{op:"propose",resource:$resource,selector:$selector}',
+  analysisApply: '[self:workspace]{op:"apply",resource:$resource,proposal:$proposal,client:$client}',
+  capabilities: '[self:workspace]{op:"capabilities",resource:$resource}',
   detail: '[self:workspace]{op: "read", resource: $resource, selector: {project: true}}',
   files: '[self:workspace]{op: "read", resource: $resource, selector: {files: true}}',
-  file: '[self:workspace]{op: "read", resource: $resource, selector: {path: $path}}',
+  file: '[self:workspace]{op: "read", resource: $resource, selector: {path: $path, verbatim: true}}',
   propose: '[self:workspace]{op: "propose", resource: $resource, selector: {path: $path}, replacement: $content}',
   apply: '[self:workspace]{op: "apply", resource: $resource, proposal: $proposal}',
   save: '[self:workspace]{op: "save", resource: $resource, message: $message}',
@@ -46,6 +50,11 @@ async function call(block: AppMode | undefined, template: string, inputs: Record
 export function codeIBL(block: AppMode | undefined, resource: string) {
   const c = (t: string, inputs: Record<string, unknown> = {}) => call(block, t, { resource, ...inputs });
   return {
+    resource,
+    analysis: (selector: Record<string, unknown>) => c(T.analysis, {selector}),
+    analysisPropose: (selector: Record<string, unknown>) => c(T.analysisPropose, {selector}),
+    analysisApply: (proposal: string, client: string) => c(T.analysisApply, {proposal, client}),
+    capabilities: () => c(T.capabilities),
     detail: () => c(T.detail) as Promise<Json & ProjectDetail>,
     files: async () => ((await c(T.files)).items as FileItem[]) || [],
     file: (path: string) => c(T.file, { path }) as Promise<Json & FileText>,
@@ -99,3 +108,10 @@ export function elapsed(since: number): string {
   const s = Math.max(0, Math.round((Date.now() - since) / 1000));
   return s < 60 ? `${s}초` : `${Math.floor(s / 60)}분 ${s % 60}초`;
 }
+
+export type CodeDraft = {view: string; revision: number; files: Record<string, string | null>};
+export const analysisIO = {
+  draft: (resource: string, body: Record<string, unknown>) => codingRequest<CodeDraft>(`/analysis/${encodeURIComponent(resource)}/draft`, 'POST', body),
+  servers: () => codingRequest<{items: {server: string; version?: string; installed: boolean}[]}>('/analysis/servers'),
+  install: () => codingRequest('/analysis/servers/install', 'POST'),
+};

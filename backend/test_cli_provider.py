@@ -126,3 +126,45 @@ def test_codex_attaches_pixels_to_initial_and_resumed_input(monkeypatch, resume,
     command = p._build_command(mcp_config_path=None, tools_mode='read', resume_session_id=resume)
     assert command[-5:] == ['--image', *p._input_image_paths[:1], '--image', p._input_image_paths[1], '-']
     assert '도구' not in p._image_prompt_prefix(p._input_image_paths)
+
+
+@pytest.mark.parametrize('provider_name', ['codex', 'claude_code'])
+@pytest.mark.parametrize('current_failure', [False, True])
+@pytest.mark.parametrize('padding', [1, 600])
+def test_result_log_does_not_reclassify_situation_history(provider_name, current_failure, padding):
+    from importlib import import_module
+    from types import SimpleNamespace
+    from situation_delivery import render
+    from providers.codex import CodexProvider
+    from vocab_crystallization import _CC_RESULT_FAIL_RE
+    cls = getattr(import_module('providers.' + provider_name),
+                  'CodexProvider' if provider_name == 'codex' else 'ClaudeCodeProvider')
+    result = {'success': not current_failure, 'value': {'text': '정상 결과' * padding}}
+    if current_failure:
+        result['error'] = 'current failure'
+    situation = render({'mode': 'delta', 'observations': [
+        {'latest': {'value': {'success': False, 'error': 'previous FIELD_TYPE rejection'}}}]})
+    raw = {'content': [{'type': 'text', 'text': json.dumps(result, ensure_ascii=False)},
+                       {'type': 'text', 'text': situation}], 'isError': current_failure}
+    text, is_error = CodexProvider._unwrap_mcp_content(raw)
+    logs, observed = [], []
+    provider = SimpleNamespace(_log=logs.append, _seam=SimpleNamespace(on_tool_result=observed.append),
+                               _pending_map_tags=[])
+    cls._log_tool_result(provider, text, is_error)
+    assert observed == [text] and 'previous FIELD_TYPE rejection' in observed[0]
+    assert 'previous FIELD_TYPE rejection' not in logs[0]
+    assert bool(_CC_RESULT_FAIL_RE.search(logs[0])) is current_failure
+    assert (' (error)' in logs[0]) is current_failure
+    assert ('⚠signals' in logs[0]) is (current_failure and padding == 600)
+
+
+def test_current_nested_honesty_survives_situation_separation_and_log_truncation():
+    from situation_delivery import render, PREFIX
+    result = {'success': True, 'value': {'text': 'x' * 400 + '\n' + PREFIX,
+                                       'items': [], 'error_count': 2, 'truncated': True}}
+    text = json.dumps(result) + '\n' + render({'mode': 'delta', 'observations': [
+        {'latest': {'value': {'success': False, 'error': 'historical error'}}}]})
+    preview = cli._preview_with_signals(text, 300)
+    assert '"error_count": 2' in preview and '"truncated": true' in preview
+    assert '"success": false' not in preview and 'historical error' not in preview
+    assert preview.endswith(f'…(+{len(json.dumps(result)) - 300}자)')

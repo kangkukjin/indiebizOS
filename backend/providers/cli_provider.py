@@ -126,7 +126,10 @@ def _preview_with_signals(flat: str, cap: int) -> str:
 
     요약을 절단 경계에 끼우고 폭을 요약 길이만큼만 늘려 자르므로, 표식의 N 은 원문
     숨김량 그대로이고 표식은 문자열 끝에 남는다 — truncate_for_log 의 읽는 쪽 계약
-    (TRUNC_MARK_RE 가 끝에 걸림 = 절단분)이 깨지지 않는다."""
+    (TRUNC_MARK_RE 가 끝에 걸림 = 절단분)이 깨지지 않는다.
+    MCP가 덧붙인 실행 상황은 과거 관측이므로 현재 결과의 미리보기·신호에서 제외한다."""
+    from situation_delivery import PREFIX
+    flat = flat.partition("\n" + PREFIX)[0].replace("\n", " ")
     digest = _failure_digest(flat) if len(flat) > cap else ""
     return truncate_for_log(flat[:cap] + digest + flat[cap:], cap + len(digest))
 
@@ -1231,7 +1234,7 @@ class CliSubprocessProvider(BaseProvider):
         except Exception:
             pass
         _cap = _TOOLRESULT_CAP_ERROR if is_error else _TOOLRESULT_CAP
-        result_preview = _preview_with_signals(result_text.replace("\n", " "), _cap)
+        result_preview = _preview_with_signals(result_text, _cap)
         err_tag = " (error)" if is_error else ""
         self._log(f"tool_result{err_tag} {result_preview}")
         # 지도 봉투(route_map/location_map)를 캡처해 최종 응답 끝에 재주입 예약.

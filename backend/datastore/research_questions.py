@@ -7,6 +7,8 @@ import unicodedata
 from research_evidence import validate_reference
 from research_store import ResearchConflict, identifier, now
 
+ANSWER_MAX_CHARS = 12_000
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS research_questions(
@@ -212,7 +214,7 @@ class ResearchQuestions:
         body.update({k: v for k, v in change.items() if k in fields})
         body['text'] = text(body['text'], '질문', 1000, True)
         body['scope'] = text(body['scope'], '범위', 1000)
-        body['provisional_answer'] = text(body['provisional_answer'], '잠정 답변')
+        body['provisional_answer'] = text(body['provisional_answer'], '잠정 답변', ANSWER_MAX_CHARS)
         for name in ('gaps', 'next_probes'):
             body[name] = strings(body[name], name)
         retained = {ref['evidence_id']: ref for name in ('supporting', 'contradicting') for ref in (current or {}).get(name, [])}

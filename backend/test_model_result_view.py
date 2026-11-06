@@ -189,6 +189,61 @@ def test_describe_driver_briefs_preserve_permission_and_local_shadowing(monkeypa
     assert selected[-1] == ['limbs:browser'] and result['control_briefs']
 
 
+def test_function_description_keeps_contract_and_recovers_internal_graph(tmp_path, monkeypatch):
+    import ibl_v2_store
+    from ibl_result_transport import provider_tool_result
+    store = TurnStore(tmp_path / 'descriptions')
+    monkeypatch.setattr(view, 'evidence_store', lambda: store)
+    contract = {'required': ['input'], 'params': {'input': 'Text'}, 'result': 'Text',
+                'effects': ['write'], 'requirements': [{'input': 'nonempty'}]}
+    definition = {'callable_contract': contract, 'component_contract': {'completion': 'verify effect'},
+                  'source_hash': 'a' * 64, 'function_ref': {'revision': 'r1'},
+                  'warnings': ['verification required'], 'components': {'inner': 'graph ' * 8000},
+                  'guards': [{'test': 'pending'}], 'guards_total': 1,
+                  'semantic_interface': {'formula': 'symbolic ' * 1000}}
+    original = deepcopy(definition)
+    monkeypatch.setattr(ibl_v2_store, 'describe', lambda *a: definition)
+    monkeypatch.setattr(view, 'observed_returns_of_alias', lambda name: None)
+    result = view.describe_actions(['fn:sample'], None)
+    shown = result['actions'][0]['definition']
+    assert definition == original
+    for field in ('callable_contract', 'component_contract', 'warnings', 'source_hash', 'function_ref'):
+        assert shown[field] == original[field]
+    assert len(json.dumps(result)) < len(json.dumps(original)) / 4
+    delivered = json.loads(provider_tool_result(json.dumps(result, ensure_ascii=False)))
+    assert delivered['actions'][0]['definition'] == shown
+    for key in shown['detail_fields']:
+        page = view.read_result({'id': shown['result_ref']['id'], 'path': [key], 'limit': 60000})
+        assert page['read_scope']['complete']
+        assert json.loads(page['text']) == original[key]
+    # The same presentation applies when a local definition shadows a saved one.
+    monkeypatch.setattr(ibl_v2_store, 'program_functions', lambda *a: {'sample': definition})
+    local = view.describe_actions(['fn:sample'], None, program='local')['actions'][0]['definition']
+    assert local['callable_contract'] == contract and local['detail_fields'] == shown['detail_fields']
+
+
+def test_oversize_descriptions_use_scoped_result_reader_instead_of_file_spill(tmp_path, monkeypatch):
+    import ibl_v2_store
+    from ibl_result_transport import provider_tool_result
+    store = TurnStore(tmp_path / 'oversize-descriptions')
+    monkeypatch.setattr(view, 'evidence_store', lambda: store)
+    monkeypatch.setattr(ibl_v2_store, 'describe', lambda name, allowed: {
+        'callable_contract': {'params': {name: 'Text'}, 'result': 'Text', 'note': 'contract ' * 8000}})
+    monkeypatch.setattr(view, 'observed_returns_of_alias', lambda name: None)
+    result = view.describe_actions(['fn:first', 'fn:second'], None)
+    delivered = json.loads(provider_tool_result(json.dumps(result, ensure_ascii=False)))
+    ref = delivered['result_ref']
+    assert ref['scope'] == 'tool_result' and 'path' not in ref
+    assert [r['action'] for r in ref['paths']] == ['fn:first', 'fn:second']
+    text = []
+    request = {**ref['read_args'], 'path': ['actions', 1]}
+    while request:
+        page = view.read_result(request)
+        text.append(page['text'])
+        request = page['next_read']
+    assert json.loads(''.join(text)) == result['actions'][1]
+
+
 def test_certified_reference_avoids_rehashing_trace_and_keeps_status(tmp_path, monkeypatch):
     import ibl_v2_ir
     store = TurnStore(tmp_path / "evidence")

@@ -144,6 +144,31 @@ def test_context_bounded_and_identity_survives_wording(world):
     assert ResearchQuestions(store, other).context()['total'] == 0
 
 
+def test_long_answer_storage_preserves_versions_without_expanding_context(world):
+    _, _, questions = world
+    from research_questions import ANSWER_MAX_CHARS
+    original = ('조건과 반론을 보존한다. ' * 400).strip()
+    q = create(questions, provisional_answer=original, gaps=['외부 검증 필요'])
+    final = original + '추가 판단. ' * 200
+    final = final + '가' * (ANSWER_MAX_CHARS - len(final))
+    updated = update(questions, q, provisional_answer=final)
+    assert len(final) == ANSWER_MAX_CHARS
+    assert questions.read(question_id=q['question_id'])['items'][0]['provisional_answer'] == final
+    assert questions.revision(q['question_id'], 1)['provisional_answer'] == original
+    context = questions.context(question_ids=[q['question_id']])
+    assert context['projection_chars'] <= context['budget']
+    shown = context['items'][0]
+    assert shown['provisional_answer'] == final[:600]
+    assert shown['omitted_fields']['provisional_answer_chars'] == len(final) - 600
+    assert shown['gaps'] == ['외부 검증 필요']
+    with pytest.raises(ValueError, match=str(ANSWER_MAX_CHARS)):
+        questions.apply([{'expected_revision': 0, 'text': '함께 취소될 질문'},
+                         {'question_id': q['question_id'], 'expected_revision': updated['revision'],
+                          'provisional_answer': final + '초과'}])
+    assert len(questions.read()['items']) == 1
+    assert questions.read()['items'][0]['revision'] == updated['revision']
+
+
 def test_public_operations_and_context_isolation(world, monkeypatch):
     import research_threads
     store, tid, questions = world

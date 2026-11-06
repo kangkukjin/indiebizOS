@@ -926,8 +926,9 @@ def guide_map_text() -> str:
     return "\n".join(f"- {t}: {links[t]['guide']}" for t in sorted(links, key=lambda s: (s.count("/"), s)))
 
 
-EXPAND_HINT = ("본문은 요청할 때만 — expand:\"이름\"(함수 정의) · expand:\"#id\"(용례 한 건) · expand:\"주행\"(주행 절) · "
-               "expand:\"all\"(문서 전문). 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄로 부른다.")
+EXPAND_HINT = ("본문은 요청할 때만 — expand:\"이름\"(현재 함수 정의, node 생략 가능) · "
+               "expand:\"#id\"(용례 한 건, node 생략 가능) · expand:\"주행\"(node 필수) · "
+               "expand:\"all\"(node 문서 전문). 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄로 부른다.")
 
 
 def _runs_count(text: str) -> int:
@@ -1102,6 +1103,36 @@ def _current_names(groups, db_path):
     return out
 
 
+def recall_named(expand: str, db_path: Optional[str] = None, *, synchronize: bool = True) -> Dict[str, Any]:
+    """명시 이름은 현재 함수 원장, #id는 역사 용례에서 직접 해소한다. 지도는 대체 결과가 아니다."""
+    exp = expand.strip()
+    if not exp or exp in ("all", "전문", "주행"):
+        return {"success": False, "error": "가지 전체나 주행을 펼치려면 node를 지정하세요.", "expand": exp}
+    if exp.startswith('#'):
+        match = re.fullmatch(r'#(\d+)', exp)
+        with _conn(db_path) as conn:
+            row = conn.execute("SELECT COALESCE(topic,'') AS topic FROM ibl_examples WHERE id=?",
+                               (int(match[1]),)).fetchone() if match else None
+        if row is None:
+            return {"success": False, "error": f"용례 {exp}를 찾을 수 없습니다.", "expand": exp}
+        return recall(row['topic'], db_path, expand=exp, synchronize=synchronize)
+    import function_store
+    view = function_store.snapshot()
+    try:
+        with function_store.using(view):
+            row = function_store.memory_reference(exp)
+        if row is None:
+            raise ValueError(f"현재 활성 함수 '{exp}'를 찾을 수 없습니다.")
+        row = function_store.project_memory(row, view=view)
+        if row.get('function_problem'):
+            raise ValueError(row['function_problem'])
+    except ValueError as exc:
+        return {"success": False, "error": str(exc), "expand": exp}
+    ref = row['function_ref']
+    return {"success": True, "expand": exp, "text": phrase_expand_card(row),
+            "function_ref": ref, "items": [_hide_body(row)], "count": 1, "expand_hint": EXPAND_HINT}
+
+
 def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = None,
            *, synchronize: bool = True) -> Dict[str, Any]:
     topic = norm_topic(topic)
@@ -1145,6 +1176,18 @@ def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = No
     exp = (expand or "").strip()
     if exp not in ("all", "전문", "주행") and not exp.startswith("#"):
         rows, phrases, inherited = _current_names([rows, phrases, inherited], db_path)
+    # 한 정의를 요청했으면 이웃 용례 목록을 함께 싣지 않는다. 없는 선택도 명시 실패다.
+    if exp and exp not in ("all", "전문", "주행"):
+        def matches(row):
+            return (str(row.get('id')) == exp[1:] if exp.startswith('#')
+                    else (row.get('alias') or '').strip() == exp)
+        rows, phrases, inherited = [[row for row in group if matches(row)]
+                                    for group in (rows, phrases, inherited)]
+        if not rows and not phrases and not inherited:
+            error = f"'{exp}'의 정의·용례가 '{topic}' 가지에 없습니다. node를 생략하면 이름·ID로 직접 조회합니다."
+            return {"success": False, "topic": topic, "expand": exp, "error": error, "text": error}
+    elif exp == "주행":
+        rows, phrases, inherited = [], [], []
     text = render_names_first(topic, rows, phrases + inherited, full, exp)
     opened = exp in ("all", "전문")
     visible = rows + phrases + inherited

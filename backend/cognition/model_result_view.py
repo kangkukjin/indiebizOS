@@ -1065,6 +1065,19 @@ def current_action_definition(spec, runtime_contract):
             "operations": (spec.get("ops") or {}).get("values", {})}
 
 
+def _function_description(definition):
+    """호출 계약·완료 조건은 그대로, 내부 분석 그래프는 같은 판본의 원문 참조로 연다."""
+    fields = [key for key in ('components', 'guards', 'semantic_interface') if definition.get(key)]
+    if not fields:
+        return definition
+    ref = evidence_store().evidence(json.dumps(definition, ensure_ascii=False))
+    shown = {key: value for key, value in definition.items() if key not in fields}
+    shown['detail_fields'] = fields
+    shown['runtime_checks'] = definition.get('guards_total', len(definition.get('guards', [])))
+    shown['result_ref'] = _read_reference(ref, {key: definition[key] for key in fields})
+    return shown
+
+
 def describe_actions(names, allowed_nodes, edition=None, program=None):
     from ibl_access import load_nodes_raw, resolve_allowed_nodes
     from ibl_registry import self_can_run
@@ -1088,7 +1101,7 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
                 # 함께 온 코드의 지역 정의가 저장 함수보다 먼저 — 실행기의 이름 해소 순서와 같다.
                 local = program_functions(program, allowed) if program else {}
             if action in local:
-                answer.append({"action": name, "definition": local[action]})
+                answer.append({"action": name, "definition": _function_description(local[action])})
                 continue
             definition = describe(action, allowed)
             if definition.get("error"):
@@ -1098,15 +1111,7 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
             if observed:
                 definition = {**definition, "observed_returns": observed,
                               "observed_note": "실행이 실제로 돌려준 최상위 필드(선언 아님). runs=관측 횟수."}
-            guards = definition.get("guards")
-            if guards:
-                # Callers need the contract; per-expression diagnostics belong to
-                # explicit inspection, not every invocation's model context.
-                ref = evidence_store().evidence(json.dumps(definition, ensure_ascii=False))
-                definition = {k: v for k, v in definition.items() if k != "guards"}
-                definition["runtime_checks"] = definition.get("guards_total", len(guards))
-                definition["result_ref"] = _read_reference(ref, {"guards": guards})
-            answer.append({"action": name, "definition": definition})
+            answer.append({"action": name, "definition": _function_description(definition)})
             continue
         spec = nodes.get(node, {}).get("actions", {}).get(action)
         if not isinstance(spec, dict) or (allowed is not None and node not in allowed) or not self_can_run(node, action, spec):
@@ -1134,4 +1139,15 @@ def describe_actions(names, allowed_nodes, edition=None, program=None):
              and not (row["action"].startswith("fn:") and row["action"][3:] in (local or {}))]
     if briefs := callable_control_briefs(known):
         result["control_briefs"] = briefs
+    # 여러 계약의 명시 조회도 원문 페이지와 같은 전송 계약을 쓴다.
+    # 여전히 큰 묶음은 파일 경로 대신 기존 read_result로 각 계약을 선택한다.
+    chars = len(json.dumps(result, ensure_ascii=False))
+    if chars <= MAX_LIMIT:
+        result['_display'] = {'max_chars': chars}
+    else:
+        ref = evidence_store().evidence(json.dumps(result, ensure_ascii=False))
+        paths = [{'action': row['action'], 'path': ['actions', index],
+                  'chars': len(page_json(row))} for index, row in enumerate(answer)]
+        result['result_ref'] = {**_read_reference(ref, result), 'scope': 'tool_result', 'paths': paths}
+        result['result_ref']['read_args']['path'] = ['actions', 0]
     return result

@@ -186,6 +186,9 @@ research_questions는 이 대화에서 이어가는 연구 질문의 작은 목�
 questions_only:true,question_id:"질문 ID"}로 수정할 질문의 전체 기록을 먼저 읽는다.
 저장은 같은 self:project의 op:"thread_update",questions:[{question_id:"ID",expected_revision:현재판본,
 provisional_answer:"잠정 답",gaps:["남은 확인"],next_probes:["다음 조사"]}]를 쓴다.
+잠정 답은 현재의 종합 판단이다. 약 4000자 안팎의 간결함을 권장하되 저장은 12000자까지 허용한다.
+길이에 맞추려고 중요한 조건·반론을 버리지 않는다. 과거 경과를 매번 덧붙이지 말고 판본 이력·자료에서 회수한다.
+저장 한도와 자동 문맥 예산은 별개이며, 배경에서 생략된 상세는 필요한 질문만 읽는다.
 생성은 question_id를 생략하고 expected_revision:0,text:"질문",scope:"범위"를 지정한다.
 지지 supporting과 반박 contradicting은 각각 [{version_ref,extraction_revision,locator,quote}] 목록이다.
 새 근거는 self:notebook search/read로 현재 실행에서 읽은 보존 원문 구간만 정확히 인용한다.

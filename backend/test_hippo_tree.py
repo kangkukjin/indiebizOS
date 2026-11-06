@@ -144,6 +144,54 @@ def test_recall_children_move_and_unfiled(env):
     assert "(뿌리 — 아직 가지가 없는 용례) (1)" in HT.map_text(db)
 
 
+def test_explicit_recall_returns_only_selected_example_and_missing_is_failure(env):
+    HT, db = env
+    selected = _add(db, '선택한 원문', '[self:time]{}', '연구')
+    _add(db, '무관한 원문', '[self:time]{format:"%Y"}', '연구')
+    result = HT.recall('연구', db, expand=f'#{selected}')
+    assert result['count'] == 1 and [r['id'] for r in result['items']] == [selected]
+    assert '무관한 원문' not in json.dumps(result, ensure_ascii=False)
+    assert not HT.recall('연구', db, expand='#999999')['success']
+    assert not HT.recall('연구', db, expand='없는함수')['success']
+    assert HT.recall_named(f'#{selected}', db)['text'] == result['text']
+    assert not HT.recall_named('all', db)['success']
+    with sqlite3.connect(db) as conn:
+        conn.execute('UPDATE ibl_examples SET executable=0 WHERE id=?', (selected,))
+    historical = HT.recall_named(f'#{selected}', db)
+    assert historical['historical'] and not historical['executable']
+    assert historical['items'][0]['id'] == selected
+
+
+@pytest.mark.parametrize('repair', [False, True])
+def test_handler_named_recall_uses_current_catalog_without_topic_or_map(env, monkeypatch, repair):
+    import importlib.util
+    from pathlib import Path
+    from types import SimpleNamespace
+    from function_library import register, retire
+    HT, db = env
+    package = Path(__file__).resolve().parents[1] / 'data/packages/installed/tools/memory'
+    monkeypatch.syspath_prepend(str(package))
+    spec = importlib.util.spec_from_file_location('_test_recall_handler', package / 'handler.py')
+    handler = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(handler)
+    monkeypatch.setattr('repair_context.active', lambda: repair)
+    monkeypatch.setattr(HT, 'sync_all', lambda *a: pytest.fail('명시 선택은 전체 지도 동기화를 하지 않는다'))
+    monkeypatch.setattr(HT, 'map_text', lambda *a: pytest.fail('명시 선택은 지도를 반환하지 않는다'))
+    first = register('직접조회', '#!ibl edition=2\n[def:직접조회](){return 1}')
+    def read(name):
+        return json.loads(handler._op_recall({'store': '실행', 'expand': name}, SimpleNamespace()))
+    result = read('직접조회')
+    assert result['success'] and result['count'] == 1 and result['function_ref'] == first
+    assert 'return 1' in result['text'] and 'map' not in result
+    second = register('직접조회', '#!ibl edition=2\n[def:직접조회](){return 2}', expected_revision=first['revision'])
+    assert read('직접조회')['function_ref'] == second
+    assert 'return 2' in read('직접조회')['text']
+    retire('직접조회')
+    assert not read('직접조회')['success']
+    assert not read('없는함수')['success']
+    assert not read('주행')['success']
+
+
 def test_file_unfiled_places_by_model_verdict(env):
     HT, db = env
     _add(db, "기존", '[sense:realty]{source: "molit"}', "부동산")

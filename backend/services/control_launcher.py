@@ -1,7 +1,7 @@
 """`api.py start|serve` 런처 — 승인된 제어 기반(control_base)에서 제어자를 기동한다(G6).
 
 런처 자체는 정본 checkout 의 코드다(사람이 앱을 실행하는 자리). 그래서 작게 둔다: 정본의 제어 파일을
-봉인·검증해 기반을 고르고, 그 기반의 restart_controller 를 exec 한다. 기반을 하나도 승인하지 못하면
+봉인·검증해 기반을 고르고, 그 기반의 restart_controller 를 실행한다(Windows는 자식 종료까지 대기). 기반을 하나도 승인하지 못하면
 정본에서 직접 돈다(초기 도입·기반 저장소 손상의 비상 경로). status/restart/shutdown/wait 같은 CLI
 요청은 기반이 필요 없어 정본에서 처리한다.
 """
@@ -43,8 +43,8 @@ def launch(code_root, argv=None):
 
 
 def _exec_controller(executable, args, env):
-    # Windows CRT exec는 argv를 공백으로 잇는다. subprocess용 인용을 각 인수에
-    # 적용해야 공백·빈 인수·따옴표·마지막 역슬래시가 자식 Python에 그대로 도달한다.
     if os.name == "nt":
-        args = [subprocess.list2cmdline([arg]) for arg in args]
+        # Node/Electron의 파이프를 상속한 CRT exec는 접근 위반으로 종료될 수 있다.
+        # CreateProcess로 원래 argv·환경·표준입출력을 넘기고 자식 종료를 기다린다.
+        raise SystemExit(subprocess.call(args, executable=executable, env=env))
     os.execve(executable, args, env)

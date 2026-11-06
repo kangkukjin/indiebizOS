@@ -20,6 +20,28 @@ test('provider outage stops queued batches and cannot pass the build boundary', 
   assert.doesNotThrow(() => requireCompleteTranslations({failed:0}));
 });
 
+test('installation uses shipped translations without modifying memory or requesting a provider', async () => {
+  const messages = {save:{source:'저장'}, particle:{source:'을'}};
+  const memory = {en:{save:{source:'저장',text:'Save'}, particle:{source:'을',text:'',reviewed:true}}};
+  const before = structuredClone(memory);
+  const stats = await refresh(messages, memory, {ko:'한국어',en:'English'}, null);
+  assert.deepEqual(stats, {requested:0,translated:0,reused:2,failed:0});
+  requireCompleteTranslations(stats, {bundled:true});
+  assert.deepEqual(memory, before);
+});
+
+test('missing, stale and invalid shipped translations return their failure without generating replacements', async () => {
+  const messages = {new:{source:'새 문구'}, stale:{source:'수정 문구'}, invalid:{source:'보기 {name}'}};
+  const memory = {en:{stale:{source:'옛 문구',text:'Old'}, invalid:{source:'보기 {name}',text:'View {wrong}'}}};
+  const before = structuredClone(memory);
+  const stats = await refresh(messages, memory, {ko:'한국어',en:'English'}, null);
+  assert.deepEqual(stats, {requested:0,translated:0,reused:0,failed:3});
+  assert.throws(() => requireCompleteTranslations(stats, {bundled:true}), error =>
+    error.code === 'UI_TRANSLATION_INCOMPLETE' && /missing or invalid/.test(error.message) &&
+    /no translation was attempted/.test(error.message));
+  assert.deepEqual(memory, before);
+});
+
 test('API help translation preserves executable examples and named template variables', () => {
   const source = '날씨 조회 [sense:weather]{city:"서울"} · {name} 안내';
   const masked = maskSource(source);

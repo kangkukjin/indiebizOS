@@ -122,6 +122,7 @@ export async function refresh(messages, memory, languages, translate = translate
       if (previous?.source === entry.source && validTranslation(entry.source, previous.text, previous.reviewed === true, entry.context)) { stats.reused++; continue; }
       pending.push([id, entry]);
     }
+    if (!translate) { stats.failed += pending.length; continue; }
     // Bound provider traffic; static source UI only. Failures are not cached as successful translations.
     let cursor = 0, providerFailed = false;
     await Promise.all(Array.from({ length: 3 }, async () => {
@@ -208,9 +209,11 @@ export async function buildCatalog({ translate = translateBatch } = {}) {
     writeJSON(path.join(i18n, 'translations.json'), memory);
     observed = structuredClone(memory);
   };
+  // Installing/building a checkout only consumes its shipped translations.
+  // Only development/the existing generator accesses the provider and writes memory.
   const stats = await refresh(catalog.messages, memory, languages, translate, saveMemory);
-  saveMemory();
-  requireCompleteTranslations(stats);
+  if (translate) saveMemory();
+  requireCompleteTranslations(stats, { bundled: !translate });
   for (const [id, entry] of Object.entries(catalog.messages)) {
     entry.translations = {};
     for (const lang of Object.keys(languages)) {
@@ -259,13 +262,14 @@ export function reloadUICatalog(server) {
   server.ws.send({ type: 'full-reload' });
 }
 export function uiCatalogPlugin() {
-  let running, dirty = false;
+  let running, dirty = false, translate = null;
   const build = () => {
     dirty = true;
-    return running ||= (async () => { while (dirty) { dirty = false; await buildCatalog(); } })().finally(() => { running = undefined; });
+    return running ||= (async () => { while (dirty) { dirty = false; await buildCatalog({ translate }); } })().finally(() => { running = undefined; });
   };
   return {
     name: 'indiebiz-ui-catalog', enforce: 'pre',
+    configResolved(config) { translate = config.command === 'serve' ? translateBatch : null; },
     async buildStart() { await build(); },
     transform(source, id) {
       const file = reactFile(id.split('?')[0]);
@@ -292,9 +296,12 @@ export function uiCatalogPlugin() {
     },
   };
 }
-export function requireCompleteTranslations(stats) {
+export function requireCompleteTranslations(stats, { bundled = false } = {}) {
   if (!stats.failed) return;
-  const error = new Error(`[ui-i18n] build failed: ${stats.failed} untranslated messages; last successful bundles preserved. Check translation provider access and retry.`);
+  const help = bundled
+    ? 'Prepared translations are missing or invalid in this checkout; no translation was attempted here.'
+    : 'Check translation provider access and retry.';
+  const error = new Error(`[ui-i18n] build failed: ${stats.failed} untranslated messages; last successful bundles preserved. ${help}`);
   error.code = 'UI_TRANSLATION_INCOMPLETE'; error.stats = stats;
   throw error;
 }

@@ -4,15 +4,15 @@
 
 ## 일본어
 
-언어 선택의 `日本語`는 `ja`로 저장되며 React·원격 런처·X-Ray가 같은 레지스트리와 번역 메모리를 사용한다. 일본어 문구도 빌드 시 생성되어 오프라인 표시되며, 자리표시자·코드 예시와 사용자 콘텐츠는 보존한다. `ui-japanese.test.mjs`는 등록 문구 전체와 저장·전파 계약을, `test_japanese_ui.py`는 실제 빌드의 언어 선택·재열기·한국어/영어 복귀와 X-Ray 7개 탭을 검사한다. 브라우저 검사의 API 데이터는 격리된 합성 데이터다.
+언어 선택의 `日本語`는 `ja`로 저장되며 React·원격 런처·X-Ray가 같은 레지스트리와 번역 메모리를 사용한다. 일본어 문구도 개발 환경에서 생성해 배포하고 오프라인 표시하며, 자리표시자·코드 예시와 사용자 콘텐츠는 보존한다. `ui-japanese.test.mjs`는 등록 문구 전체와 저장·전파 계약을, `test_japanese_ui.py`는 실제 빌드의 언어 선택·재열기·한국어/영어 복귀와 X-Ray 7개 탭을 검사한다. 브라우저 검사의 API 데이터는 격리된 합성 데이터다.
 
 ## 개발과 자동 갱신
 
-기존 `npm run dev`와 `npm run build`에 Vite `uiCatalogPlugin`이 연결되어 있다. 시작/빌드 시, dev 소스 추가·변경·삭제 시 문구를 다시 수집한다. 문맥과 원문으로 메시지 ID를 만들고 `translations.json`에 동일 ID·원문인 번역이 있으면 그대로 재사용한다. 변경된 원문은 새 ID가 되므로 낡은 번역을 적용하지 않는다. 실패는 성공 번역으로 기록하지 않고 다음 실행에서 다시 시도하며 화면은 한국어로 사용할 수 있다.
+기존 `npm run dev`와 `npm run build`에 Vite `uiCatalogPlugin`이 연결되어 있다. 시작/빌드 시, dev 소스 추가·변경·삭제 시 문구를 다시 수집한다. 문맥과 원문으로 메시지 ID를 만들고 `translations.json`에 동일 ID·원문인 번역이 있으면 그대로 재사용한다. 변경된 원문은 새 ID가 되므로 낡은 번역을 적용하지 않는다. 개발 서버는 빠진 번역을 기존 방식으로 생성한다. 설치·업데이트·배포의 build는 포함된 번역만 읽고 AI 호출이나 translations.json 쓰기를 하지 않는다. 번역 누락·불일치는 기존 빌드 오류로 돌려주며 마지막 정상 번들을 보존한다. 실패 원문을 받은 실행자가 필요한 조치를 판단한다.
 
 개발 서버는 카탈로그 재생성이나 외부 빌드의 교체를 감지하면 Vite의 JSON 모듈 캐시부터 무효화하고 열린 창을 갱신한다. 새 컴포넌트가 오래된 카탈로그보다 먼저 도착하는 경우에는 컴파일러가 함께 넣은 한국어 원문으로 표시하여 내부 번역 ID가 화면에 노출되지 않게 한다. 이미 존재하는 번역은 덮어쓰지 않으며 사용자 대화·이름 등 런타임 데이터는 원문 등록 대상이 아니다.
 
-번역은 `ui-translate.py`가 기존 `oneshot_ai_call(role="background")`을 이용한다. 모델과 키는 몸의 설정을 그대로 따른다. Python은 `scripts/build-python.mjs`에서 공통 선택한다. `INDIEBIZ_PYTHON`을 우선하고, 저장소 가상환경(Windows: `.venv/Scripts/python.exe`, macOS/Linux: `.venv/bin/python3`), PATH의 Python 3 순으로 찾는다. Windows에서는 `python`, `py -3`, `python3`를 차례로 확인한다. npm의 HWP·배포 준비 명령도 같은 선택기를 쓰며 자식 Python은 UTF-8 모드로 실행한다. Git 체크아웃은 `.gitattributes`로 LF를 유지하고, UI 수집·변환은 경로 구분자와 CRLF를 정규화해 같은 번역 ID를 유지한다. 격리 개발에서 설정이 다른 디렉터리에 있다면 기존 `INDIEBIZ_BASE_PATH` 설정을 이용한다. 선택적으로 `INDIEBIZ_TRANSLATE_URL`에 기존 texts/target → translations HTTP 프록시를 지정할 수 있다. 키·설정·사용자 데이터는 카탈로그에 복제하지 않는다.
+개발 서버와 기존 `node scripts/ui-catalog.mjs`의 번역 생성은 `ui-translate.py`가 기존 `oneshot_ai_call(role="background")`을 이용한다. 모델과 키는 몸의 설정을 그대로 따른다. Python은 `scripts/build-python.mjs`에서 공통 선택한다. `INDIEBIZ_PYTHON`을 우선하고, 저장소 가상환경(Windows: `.venv/Scripts/python.exe`, macOS/Linux: `.venv/bin/python3`), PATH의 Python 3 순으로 찾는다. Windows에서는 `python`, `py -3`, `python3`를 차례로 확인한다. npm의 HWP·배포 준비 명령도 같은 선택기를 쓰며 자식 Python은 UTF-8 모드로 실행한다. Git 체크아웃은 `.gitattributes`로 LF를 유지하고, UI 수집·변환은 경로 구분자와 CRLF를 정규화해 같은 번역 ID를 유지한다. 격리 개발에서 설정이 다른 디렉터리에 있다면 기존 `INDIEBIZ_BASE_PATH` 설정을 이용한다. 선택적으로 `INDIEBIZ_TRANSLATE_URL`에 기존 texts/target → translations HTTP 프록시를 지정할 수 있다. 키·설정·사용자 데이터는 카탈로그에 복제하지 않는다.
 
 ## 번역 대상 선언과 안전 경계
 
@@ -42,7 +42,7 @@ IBL 사전의 description/target_description/ops/implementation은 소스 정의
 
 ## 교정과 언어 추가
 
-번역 공급자 오류가 나면 진행 중인 최대 3개 요청까지만 회수하고 남은 배치를 중단한다.
+개발 중 번역 공급자 오류가 나면 진행 중인 최대 3개 요청까지만 회수하고 남은 배치를 중단한다.
 유효한 부분 번역은 메모리에 보존하지만 미번역이 하나라도 있으면 빌드는 종료 코드 1로
 실패하며 마지막 정상 `catalog.json`·`remote.json`·`xray.json`은 덮어쓰지 않는다.
 개발 서버의 재빌드 실패도 콘솔에 남기며 성공으로 새로고침하지 않는다.
@@ -56,7 +56,7 @@ IBL 사전의 description/target_description/ops/implementation은 소스 정의
 
 `translations.json`의 해당 언어·ID 레코드에서 text만 교정한다. source를 바꾸지 않으면 이후 빌드가 유효한 교정을 보존한다. 자리표시자 개수·번호와 원문의 코드 마커는 원문과 같아야 한다. 번역 배치 실행 도중 디스크에서 수정된 레코드도 체크포인트에서 병합하여 수동 교정을 보존한다. 조사가 다른 언어에서 생략되어야 하는 등 사람이 확인한 빈 번역은 text를 빈 문자열로 두고 reviewed:true를 지정하면 보존한다. 번역 실패·한국어 잔여·마크업은 검증에서 거절한다. 생성물 `catalog.json`, `remote.json`은 직접 고치지 않는다. 번역 메모리를 포함한 세 JSON은 배포와 함께 버전 관리한다.
 
-`languages.json`에 `"ja":"日本語"` 또는 `"zh-CN":"简体中文"`을 추가하면 다음 dev/build에서 같은 경로로 해당 언어 번역을 생성하고 두 표면의 선택기에 자동 추가한다. 화면별 구현은 필요 없다. 신규 언어의 번역 품질 검토는 별도다.
+`languages.json`에 `"ja":"日本語"` 또는 `"zh-CN":"简体中文"`을 추가하면 개발 서버가 같은 경로로 해당 언어 번역을 생성하고 두 표면의 선택기에 자동 추가한다. 화면별 구현은 필요 없다. 신규 언어의 번역 품질 검토는 별도다.
 
 ## 공통 표시 경계와 확장
 

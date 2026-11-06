@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 import { uiCatalogPlugin, compileRemote, reloadUICatalog, root } from './ui-catalog.mjs';
 import { collector } from './ui-compiler.mjs';
 
@@ -47,4 +48,27 @@ test('catalog reload invalidates every cached JSON module before reloading open 
     getModuleById(id){assert.equal(id,'\0owner-display');return {id:'owner baseline'};},
     invalidateModule(module){calls.push(module.id);}},ws:{send(event){calls.push(event.type);}}});
   assert.deepEqual(calls,['catalog','catalog?import','owner baseline','full-reload']);
+});
+
+test('Vite build with missing shipped translations never calls a provider or writes memory', async t => {
+  let requests = 0, writes = 0;
+  const server = http.createServer((_req, res) => { requests++; res.writeHead(503); res.end(); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const previous = process.env.INDIEBIZ_TRANSLATE_URL;
+  process.env.INDIEBIZ_TRANSLATE_URL = `http://127.0.0.1:${server.address().port}`;
+  t.after(() => {
+    server.close();
+    if (previous === undefined) delete process.env.INDIEBIZ_TRANSLATE_URL;
+    else process.env.INDIEBIZ_TRANSLATE_URL = previous;
+  });
+  const read = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', function(file, ...args) {
+    if (String(file) === path.join(root, 'frontend/i18n/translations.json')) return '{}';
+    return read.call(this, file, ...args);
+  });
+  t.mock.method(fs, 'writeFileSync', () => { writes++; throw Error('Build must not write incomplete bundles or memory'); });
+  await assert.rejects(uiCatalogPlugin().buildStart(), error =>
+    error.code === 'UI_TRANSLATION_INCOMPLETE' && /no translation was attempted/.test(error.message));
+  assert.equal(requests, 0);
+  assert.equal(writes, 0);
 });

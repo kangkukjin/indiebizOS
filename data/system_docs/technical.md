@@ -574,7 +574,9 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 
 제어 기반(G6): `api.py start` 는 `control_launcher` 가 정본의 제어 파일(`control_base.CONTROL_FILES`)을
 `data/restart_control/control_base/<id>/` 로 봉인·자기검사(별도 프로세스 import)한 뒤 그 사본의
-`restart_controller.py` 를 exec 한다. 기반 밖 모듈은 현역 세대(없으면 정본)에서 읽는다(`install_support_path`).
+`restart_controller.py` 를 실행한다. POSIX는 exec, Windows는 subprocess로 원래 인수·환경·
+표준입출력을 넘기고 종료까지 기다린다(Node/Electron 파이프를 물린 CRT exec 오류 방지).
+기반 밖 모듈은 현역 세대(없으면 정본)에서 읽는다(`install_support_path`).
 제어 파일이 바뀌면 현역 제어자가 새 기반을 봉인·검증하고 `--takeover` 인계(토큰·상태 사본 `state.pre-<id>.json`)를
 한다. 인수 실패는 이전 기반이 잠금을 되찾아 계속 소유하며 그 기반은 `current.json.failed` 에 남는다.
 자동 워커 후보는 현재 제어자가 인수한 기반의 파일과 정본이 일치할 때만 게시한다. 승인 사본만 만들었거나

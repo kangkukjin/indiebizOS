@@ -113,7 +113,7 @@ def _watch_situation(rec, jid):
         if result is not None and situation.on_result:
             if summary.get('op') == 'shell' and isinstance(result, dict):
                 from preflight_feedback import publish
-                report = result.get('preflight') or {
+                report = result.get('diagnostics') or result.get('preflight') or {
                     'phase': 'preflight', 'status': 'unsupported', 'language': 'unknown',
                     'source_hash': jid, 'executed': None, 'items': [], 'total': 0,
                     'coverage': {'syntax': 'helper_did_not_report'}}

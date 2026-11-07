@@ -16,6 +16,8 @@ def execute_command(h, tool_input, project_path):
     runtime = tool_input.get("runtime", "shell")
     from phone_remote_execution import capabilities, run_local
     native_execution = capabilities().get("execution_contract") == 1
+    if native_execution and tool_input.get('shell') not in (None, 'sh'):
+        return json.dumps({'success': False, 'error': '폰 shell은 sh만 지원합니다'})
     if tool_input.get('mode') == 'session' and (runtime != 'shell' or native_execution):
         return json.dumps({'success': False, 'error': '이 몸의 process session은 미지원입니다', 'capabilities': {'process_session': False}})
     if runtime != "shell" or native_execution:
@@ -46,15 +48,15 @@ def execute_command(h, tool_input, project_path):
             return json.dumps({"success": False, "error": "수리 실행 범위의 세션은 현재 지원하지 않습니다"})
         if h._red_grant_active():
             return json.dumps(h._load_sibling("repair_tool_scope").run_shell(
-                h, command, timeout), ensure_ascii=False)
+                h, command, timeout, **({'shell': tool_input['shell']} if tool_input.get('shell') else {})), ensure_ascii=False)
         if tool_input.get("mode") == "session":
             from process_sessions import start
             return json.dumps(start(command, project_path, io=tool_input.get("io", "pipe"),
                                     request_id=tool_input.get("request_id"),
                                     yield_ms=tool_input.get("yield_ms", 1000),
-                                    lifetime=tool_input.get("lifetime", "task")), ensure_ascii=False)
+                                    lifetime=tool_input.get("lifetime", "task"), shell=tool_input.get('shell')), ensure_ascii=False)
         from command_preflight import check, default_argv, blocked, rejection
-        argv = default_argv(command)
+        argv = default_argv(command, tool_input.get('shell'))
         preflight = check(argv, cwd=project_path)
         if blocked(preflight):
             return json.dumps(rejection(preflight), ensure_ascii=False)
@@ -63,7 +65,8 @@ def execute_command(h, tool_input, project_path):
             capture_output=True,
             text=True,
             timeout=timeout,
-            cwd=project_path
+            cwd=project_path,
+            **({'encoding': 'utf-8', 'errors': 'replace'} if preflight['language'] in ('powershell', 'pwsh') else {})
         )
 
         output = ""
@@ -75,11 +78,14 @@ def execute_command(h, tool_input, project_path):
         if result.returncode != 0:
             output += f"\n[exit code: {result.returncode}]"
 
+        from preflight_feedback import execution_result
+        diagnostic = execution_result(preflight, result.returncode, output)
+
         # Preserve the successful text contract; unsupported coverage is explicit.
         if preflight['status'] == 'unsupported':
             return json.dumps({'success': result.returncode == 0, 'executed': True,
                                'exit_code': result.returncode, 'output': output.strip(),
-                               'preflight': preflight}, ensure_ascii=False)
+                               'preflight': preflight, 'diagnostics': diagnostic}, ensure_ascii=False)
         return output.strip() if output else "(명령어가 출력 없이 완료됨)"
 
     except subprocess.TimeoutExpired:

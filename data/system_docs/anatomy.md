@@ -235,7 +235,8 @@ inspect 조회·저장본 감시·독립 초안·고정 소스 스냅샷·다중
 셸의 실제 실행 방언별 사전 검사와 기존 IBL 컴파일 진단의 우선 피드백은
 [셸·IBL 수리 설계](../../docs/SHELL_IBL_PREFLIGHT_FEEDBACK_DESIGN_2026_11_07.md)를 따른다.
 앱 소유 PC 명령과 새 원격 helper는 실행 전 구문 검사, IBL은 기존 컴파일 결과의 우선 전달을 사용한다.
-cmd·구형 helper·Codex 네이티브 셸 등의 미지원 경계와 실제 AI 검증 범위는 해당 문서에 기록한다.
+Windows 새 명령은 기본 PowerShell이며 기존 배치는 cmd를 명시한다. cmd는 실행 후 진단을 전달한다.
+cmd 사전 구문 검사·구형 helper·Codex 네이티브 셸 등의 경계와 실제 AI 검증은 해당 문서에 기록한다.
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

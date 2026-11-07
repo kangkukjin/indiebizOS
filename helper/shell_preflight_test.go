@@ -55,3 +55,65 @@ func TestCmdPreflightUnsupported(t *testing.T) {
 		t.Fatal(report)
 	}
 }
+
+func TestWindowsCommandContract(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("actual Windows execution")
+	}
+	for kind, want := range map[string]string{"": "powershell", "powershell": "powershell", "pwsh": "pwsh", "cmd": "cmd"} {
+		bin, _ := shellFor(kind, "echo test")
+		if bin != want {
+			t.Fatalf("%s resolved to %s", kind, bin)
+		}
+	}
+	if bin, _ := shellFor("unknown", "echo test"); bin != "" {
+		t.Fatal("unknown shell fell back")
+	}
+	r := residentTestRuntime(t)
+	dir := t.TempDir()
+	bad := "Add-Content -LiteralPath 'marker.txt' -Value 'once'\nif ($true) {\n Write-Output '한글_OK'\n"
+	rejected := r.execute(context.Background(), residentTestJob(t, map[string]interface{}{"op": "shell", "cwd": dir, "cmd": bad}))
+	if rejected["executed"] != false || rejected["error"] != "shell_preflight" {
+		t.Fatal(rejected)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "marker.txt")); !os.IsNotExist(err) {
+		t.Fatal("first effect ran")
+	}
+	fixed := r.execute(context.Background(), residentTestJob(t, map[string]interface{}{"op": "shell", "cwd": dir, "cmd": bad + "}"}))
+	if fixed["exit"] != 0 {
+		t.Fatal(fixed)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "marker.txt"))
+	if err != nil || string(data) != "once\r\n" {
+		t.Fatalf("marker %q: %v", data, err)
+	}
+	legacy := r.execute(context.Background(), residentTestJob(t, map[string]interface{}{"op": "shell", "shell": "cmd", "cmd": "echo %INDIEBIZ_BATCH_TEST% & exit /b 7", "env": map[string]string{"INDIEBIZ_BATCH_TEST": "BATCH_OK"}}))
+	if legacy["exit"] != 7 {
+		t.Fatal(legacy)
+	}
+	report := legacy["diagnostics"].(map[string]interface{})
+	if report["phase"] != "execution" || report["status"] != "failed" {
+		t.Fatal(report)
+	}
+	if report["coverage"].(map[string]interface{})["syntax"] != "unsupported" {
+		t.Fatal(report)
+	}
+	resetSession()
+	defer resetSession()
+	portable := doShell(Command{Cmd: "Get-Item -LiteralPath 'Z:/indiebiz-no-such-file-12345'", Cwd: dir})
+	if portable["exit"] == 0 {
+		t.Fatal("PowerShell error swallowed", portable)
+	}
+}
+
+func TestShellExecutionFeedbackKeepsUnsupportedCoverage(t *testing.T) {
+	report := shellPreflight(context.Background(), &exec.Cmd{Path: "cmd.exe", Args: []string{"cmd.exe", "/c", "missing"}})
+	result := shellExecutionFeedback(report, map[string]interface{}{"exit": 9009, "executed": true, "output": "missing is not recognized"})
+	diagnosis := result["diagnostics"].(map[string]interface{})
+	if diagnosis["status"] != "failed" || diagnosis["phase"] != "execution" || diagnosis["exit_code"] != 9009 {
+		t.Fatal(diagnosis)
+	}
+	if report["status"] != "unsupported" {
+		t.Fatal("mutated preflight receipt")
+	}
+}

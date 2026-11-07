@@ -44,6 +44,16 @@ def test_input_is_data_and_does_not_enter_shell_command():
     assert len(plan["source_sha256"]) == 64
 
 
+def test_windows_bridge_keeps_nested_variables_out_of_outer_shell():
+    import base64
+    plan = pc.prepare({'platform': 'windows', 'source': 'Write-Output $PcRequest.action',
+                       'request': {'action': 'status'}})
+    assert '-EncodedCommand ' in plan['command'] and '$' not in plan['command']
+    bootstrap = base64.b64decode(plan['command'].rsplit(' ', 1)[1]).decode('utf-16le')
+    assert '$s=[Console]::In.ReadToEnd()' in bootstrap and 'ScriptBlock]::Create($s)' in bootstrap
+    assert 'Write-Output $PcRequest.action' in plan['stdin']
+
+
 @pytest.mark.parametrize("url", [
     "https://www.youtube.com/watch?v=T7tCIDC84EE",
     "https://youtu.be/T7tCIDC84EE?t=30",

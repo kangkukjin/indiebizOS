@@ -9,6 +9,45 @@ from command_preflight import check, blocked
 from test_situation_evidence import active, module  # noqa: F401
 
 
+def test_windows_default_and_explicit_dialect_selection(monkeypatch):
+    import command_preflight as cp
+    monkeypatch.setattr(cp, 'os', SimpleNamespace(name='nt', environ={'COMSPEC': r'C:\Windows\cmd.exe'}))
+    source = "Write-Output '한글'"
+    assert cp.default_argv(source)[0] == 'powershell'
+    assert cp.default_argv(source)[-1].endswith(source)
+    assert cp.default_argv(source, 'pwsh')[0] == 'pwsh'
+    assert cp.default_argv('echo %TEMP%', 'cmd') == [r'C:\Windows\cmd.exe', '/d', '/s', '/c', 'echo %TEMP%']
+    with pytest.raises(ValueError):
+        cp.default_argv(source, 'unknown')
+    with pytest.raises(ValueError):
+        cp.default_argv(source, 'sh')
+
+
+def test_cmd_actual_failure_reaches_protected_context(active):
+    from preflight_feedback import execution_result
+    from api_supervision import situation_context
+    report = check(['cmd.exe', '/c', 'missing-command'])
+    result = execution_result(report, 9009, "'missing-command' is not recognized")
+    assert result['phase'] == 'execution' and result['executed'] is True
+    assert result['coverage']['syntax'] == 'unsupported'
+    context = situation_context('executor', 'situation-test')['context']
+    assert 'SHELL_EXIT_NONZERO' in context and '9009' in context and 'missing-command' in context
+
+
+def test_sync_command_passes_explicit_shell_and_publishes_actual_failure(active, tmp_path, monkeypatch):
+    command = module('essentials_command')
+    import command_preflight as cp
+    seen = []
+    monkeypatch.setattr(cp, 'default_argv', lambda source, shell: seen.append(shell) or ['/bin/sh', '-c', source])
+    h = SimpleNamespace(_staging_mod=lambda: SimpleNamespace(reload_forcing_violation=lambda *a: None),
+                        _REPO_ROOT=None, is_dangerous_command=lambda _: False, _red_grant_active=lambda: False)
+    result = command.execute_command(h, {'command': 'echo useful-error >&2; exit 7', 'shell': 'sh'}, str(tmp_path))
+    assert seen == ['sh'] and '[exit code: 7]' in result
+    from api_supervision import situation_context
+    context = situation_context('executor', 'situation-test')['context']
+    assert 'SHELL_EXIT_NONZERO' in context and 'useful-error' in context
+
+
 @pytest.mark.parametrize('shell', ['/bin/sh', '/bin/bash', '/bin/zsh'])
 def test_complete_parse_prevents_first_effect(tmp_path, shell):
     from pathlib import Path

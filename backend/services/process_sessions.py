@@ -24,7 +24,7 @@ def directory(task_id, db=None):
     return (db or store()).root / 'processes' / task_id
 
 
-def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='task', db=None, sandbox=True):
+def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='task', db=None, sandbox=True, shell=None):
     from runtime_utils import expand_body_path
     cwd = str(Path(expand_body_path(cwd)).resolve(strict=True))
     check(cwd, write=True)
@@ -36,7 +36,8 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
     owner = attribution()
     validate_attribution({'attribution': owner})
     db = db or store()
-    signature = fingerprint({'command': command, 'cwd': cwd, 'io': io, 'lifetime': lifetime, 'owner': owner})
+    signature = fingerprint({'command': command, 'cwd': cwd, 'io': io, 'lifetime': lifetime, 'owner': owner,
+                             **({'shell': shell} if shell is not None else {})})
     with db.lock('process-start'):
         if request_id:
             for row in db.list('process_session'):
@@ -44,7 +45,7 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
                     if row['signature'] != signature: raise ValueError('request_id 충돌')
                     return receipt(row, db, yield_ms)
         from command_preflight import check as precheck, default_argv, blocked, rejection
-        argv = default_argv(command)
+        argv = default_argv(command, shell)
         with tempfile.TemporaryDirectory(prefix='indiebiz-preflight-') as scratch:
             def inspect(parser, **kwargs):
                 from command_preflight import run_parser
@@ -106,7 +107,7 @@ def query(task_id, *, db=None, op='status', **params):
             conn.sendall(json.dumps({**params, 'op': op, 'generation': generation, 'token': meta['token']}).encode() + b'\n')
             result = json.loads(conn.makefile('rb').readline(2 * 1024 * 1024))
             if not result.get('success'): raise ValueError(result.get('error'))
-            return result
+            return _execution_feedback(meta, result)
     except (OSError, KeyError):
         if op != 'status':
             raise RuntimeError('delivery_unknown: 실행 소유자 연결 실패. 입력을 새 request_id로 자동 재전송하지 마세요')
@@ -114,8 +115,16 @@ def query(task_id, *, db=None, op='status', **params):
             meta = {**meta, 'state': 'interrupted'}
         path = folder / 'output.json'
         output = json.loads(path.read_text()) if path.exists() else {'events': [], 'end': 0}
-        return snapshot(meta, output['events'], output['end'], int(params.get('cursor') or 0),
-                        min(int(params.get('limit_bytes') or 65536), 262144))
+        return _execution_feedback(meta, snapshot(meta, output['events'], output['end'], int(params.get('cursor') or 0),
+                        min(int(params.get('limit_bytes') or 65536), 262144)))
+
+
+def _execution_feedback(meta, result):
+    if meta.get('preflight') and result.get('exit_code') is not None:
+        from preflight_feedback import execution_result
+        result['diagnostics'] = execution_result(meta['preflight'], result['exit_code'],
+            ''.join(row.get('text', '') for row in result.get('output', [])))
+    return result
 
 
 def task_status(ref):

@@ -311,8 +311,10 @@ def prepare(args):
         command = "python3 -"
     else:
         prefix = f"$PcRequest = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{encoded}')) | ConvertFrom-Json\n"
-        command = ('powershell.exe -STA -NoProfile -NonInteractive -Command '
-                   '"[Console]::InputEncoding=[Text.Encoding]::UTF8; $s=[Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($s))"')
+        bootstrap = "$ProgressPreference='SilentlyContinue'; [Console]::InputEncoding=[Text.Encoding]::UTF8; $s=[Console]::In.ReadToEnd(); & ([ScriptBlock]::Create($s))"
+        # This argv is embedded in either cmd or PowerShell. Keep $s literal in both.
+        command = ('powershell.exe -STA -NoProfile -NonInteractive -OutputFormat Text -EncodedCommand '
+                   + base64.b64encode(bootstrap.encode('utf-16le')).decode())
     return {"success": True, "platform": system, "request": request,
             "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
             "command": command, "stdin": prefix + source + "\n", "helper_sha256": helper_hash()}

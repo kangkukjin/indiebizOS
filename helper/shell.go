@@ -7,7 +7,7 @@
 //     원인 모를 실패가 쌓인다. 이제 명령이 끝난 자리의 PWD 를 받아 다음 명령에 물려준다
 //     (진짜 상주 셸 대신 이 방식인 이유: 명령들이 고루틴으로 **병렬** 실행돼서,
 //     상주 셸 하나를 공유하면 출력이 섞이고 긴 명령이 다른 명령을 막는다).
-//  2. 셸 선택 — 윈도우에서 cmd 는 빈약하다. shell:"powershell" 로 갈아탈 수 있다.
+//  2. 셸 선택 — Windows 기본 PowerShell, 기존 배치는 shell:"cmd"로 명시한다.
 //  3. 결과에 cwd 를 실어 보냄 — AI 가 "지금 어디에 있는지" 매번 확인 없이 알 수 있다.
 package main
 
@@ -203,27 +203,27 @@ func exportPrefix(kind string, env map[string]string) string {
 
 func isPowerShell(kind string) bool {
 	k := strings.ToLower(kind)
-	return k == "powershell" || k == "pwsh" || k == "ps"
+	return k == "powershell" || k == "pwsh" || k == "ps" || (k == "" && runtime.GOOS == "windows")
 }
 
-// shellFor — (실행파일, 인자들). 윈도우는 cmd(기본)/powershell 선택.
+// shellFor — Windows defaults to PS5.1; explicit pwsh never falls back to another dialect.
 // 반환된 인자 마지막 원소가 실행할 스크립트다.
 func shellFor(kind, script string) (string, []string) {
 	if runtime.GOOS != "windows" {
 		return "sh", []string{"-c", script}
 	}
 	switch strings.ToLower(kind) {
-	case "powershell", "pwsh", "ps":
-		if _, err := exec.LookPath("pwsh"); err == nil {
-			return "pwsh", []string{"-NoProfile", "-NonInteractive", "-Command", script}
-		}
+	case "", "powershell", "ps":
 		return "powershell", []string{"-NoProfile", "-NonInteractive", "-Command", script}
-	default:
+	case "pwsh":
+		return "pwsh", []string{"-NoProfile", "-NonInteractive", "-Command", script}
+	case "cmd":
 		// 한국어 윈도우 cmd 는 CP949 로 출력해 JSON(UTF-8) 통화에서 한글이 U+FFFD 로
 		// 뭉개진다 — 이 인스턴스만 UTF-8 코드페이지로 전환(best-effort).
 		// /v:on = 지연 확장(!CD!) — 이게 없으면 cd 이후의 위치를 못 읽는다.
 		return "cmd", []string{"/s", "/v:on", "/c", "chcp 65001>nul & " + script}
 	}
+	return "", nil
 }
 
 // wrapScript — 사용자 명령을 감싸 (a) 기억한 디렉토리에서 시작하고 (b) 끝난 자리의
@@ -238,7 +238,7 @@ func wrapScript(kind, cmd, startDir string, env map[string]string) string {
 				pre += fmt.Sprintf("Set-Location -LiteralPath %s -ErrorAction SilentlyContinue; ", psQuote(startDir))
 			}
 			return pre + "$global:LASTEXITCODE = 0; " + cmd +
-				"; $__ibrc = $LASTEXITCODE; if ($null -eq $__ibrc) { $__ibrc = 0 }; " +
+				"; $__ibok = $?; $__ibrc = $LASTEXITCODE; if (-not $__ibok -and $__ibrc -eq 0) { $__ibrc = 1 }; " +
 				"Write-Output \"" + envMarker + "\"; " +
 				"Get-ChildItem Env: | ForEach-Object { \"$($_.Name)=$($_.Value)\" }; " +
 				"Write-Output (\"" + cwdMarker + "\" + $PWD.Path); exit $__ibrc"
@@ -317,6 +317,9 @@ func doShell(c Command) map[string]interface{} {
 	defer cancel()
 
 	bin, args := shellFor(c.Shell, wrapScript(c.Shell, c.Cmd, startDir, getSessionEnv()))
+	if bin == "" {
+		return errResult("unsupported_shell", c.Shell)
+	}
 	cmd := backgroundCommandContext(ctx, bin, args...)
 	preflight := shellPreflight(ctx, cmd)
 	if rejected := preflightRejected(preflight); rejected != nil {
@@ -351,6 +354,7 @@ func doShell(c Command) map[string]interface{} {
 
 	res := map[string]interface{}{
 		"preflight": preflight,
+		"executed":  cmd.ProcessState != nil,
 		"op":        "shell",
 		"stdout":    clip(cleaned),
 		"stderr":    clip(stderr.String()),
@@ -360,13 +364,11 @@ func doShell(c Command) map[string]interface{} {
 	if n := len(getSessionEnv()); n > 0 {
 		res["session_env"] = n // 몇 개의 환경변수가 이어지고 있는지(디버깅 단서)
 	}
-	if c.Shell != "" {
-		res["shell"] = bin
-	}
+	res["shell"] = bin
 	if ctx.Err() == context.DeadlineExceeded {
 		res["timeout"] = true
 	}
-	return res
+	return shellExecutionFeedback(preflight, res)
 }
 
 // doInfo — 그 PC 의 신상. **낯선 PC 에서 AI 가 명령 문법을 추측하지 않게** 하는 게 목적이다.
@@ -381,6 +383,7 @@ func doInfo() map[string]interface{} {
 
 	info := map[string]interface{}{
 		"preflight_contract": 1,
+		"shell_contract":     2,
 		"op":                 "info", "os": runtime.GOOS, "arch": runtime.GOARCH,
 		"hostname": host, "cwd": cwd,
 		"user": osUser(), "home": userHome(),
@@ -392,6 +395,7 @@ func doInfo() map[string]interface{} {
 		"gui":              guiCapabilities(),
 		"path":             os.Getenv("PATH"),
 	}
+	info["default_shell"], _ = shellFor("", "")
 	if n := len(getSessionEnv()); n > 0 {
 		info["session_env"] = getSessionEnv() // 지금 이어지고 있는 환경(venv 등)
 	}

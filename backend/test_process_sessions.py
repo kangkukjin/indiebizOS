@@ -6,6 +6,7 @@ import shlex
 import pytest
 from coding_store import CodingStore
 from process_sessions import start, query
+from test_situation_evidence import active  # noqa: F401
 
 
 def test_pipe_reconnect_input_eof_and_output(tmp_path):
@@ -134,3 +135,18 @@ time.sleep(60)
         if ref:
             try:query(ref['task_ref']['task_id'],db=db,op='control',action='cancel',request_id='cleanup')
             except ValueError:pass
+
+
+def test_session_shell_identity_and_execution_diagnostics(active, tmp_path):
+    from api_supervision import situation_context
+    db = CodingStore(tmp_path / 'store')
+    r = start('echo session-error >&2; exit 7', tmp_path, db=db, shell='sh', request_id='dialect', yield_ms=1000)
+    tid = r['task_ref']['task_id']
+    deadline = time.time() + 5
+    while r['state'] in ('queued', 'running') and time.time() < deadline:
+        r = query(tid, db=db, wait_ms=100)
+    assert r['exit_code'] == 7
+    assert r['diagnostics']['phase'] == 'execution'
+    assert 'SHELL_EXIT_NONZERO' in situation_context('executor', 'situation-test')['context']
+    with pytest.raises(ValueError, match='request_id'):
+        start('echo session-error >&2; exit 7', tmp_path, db=db, shell='bash', request_id='dialect')

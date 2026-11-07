@@ -15,7 +15,7 @@ def publish(report, subject=None, *, situation=None):
     subject = subject or {'kind': 'command', 'source_hash': report['source_hash'],
                           'runtime': report.get('runtime_fingerprint')}
     ref = situation.evidence(report)
-    inline = {k: report[k] for k in ('status', 'executed', 'language', 'phase', 'total', 'coverage') if k in report}
+    inline = {k: report[k] for k in ('status', 'executed', 'language', 'phase', 'total', 'coverage', 'exit_code') if k in report}
     inline['items'] = []
     for item in report.get('items', [])[:8]:
         small = {k: item[k] for k in ('code', 'severity', 'location', 'message') if k in item}
@@ -29,8 +29,22 @@ def publish(report, subject=None, *, situation=None):
             inline['items'].pop()
             break
     inline['omitted'] = max(0, report.get('total', len(report.get('items', []))) - len(inline['items']))
-    situation.observe(subject, 'diagnostics', inline, source='preflight', source_ref=ref,
+    situation.observe(subject, 'diagnostics', inline,
+                      source='shell_execution' if report.get('phase') == 'execution' else 'preflight', source_ref=ref,
                       subject_revision=report['source_hash'], observed_at=time.time())
+
+
+def execution_result(preflight, exit_code, output, *, subject=None, situation=None, executed=True):
+    """Actual exit feedback, including cmd. Never claims unsupported syntax was checked."""
+    report = {**preflight, 'phase': 'execution', 'executed': executed,
+              'status': 'succeeded' if exit_code == 0 else 'failed', 'exit_code': exit_code,
+              'items': [], 'total': 0}
+    if exit_code != 0:
+        report['items'] = [{'code': 'SHELL_EXIT_NONZERO', 'severity': 'error',
+                            'message': f'exit {exit_code}: {output[-2000:]}'}]
+        report['total'] = 1
+    publish(report, subject, situation=situation)
+    return report
 
 
 def blocked(report):

@@ -205,16 +205,18 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 	case "terminal":
 		return r.terminal(ctx, j)
 	case "shell":
-		var cmd *exec.Cmd
-		if runtime.GOOS == "windows" {
-			if c.Shell == "powershell" || c.Shell == "pwsh" || c.Shell == "ps" {
-				cmd = exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); "+c.Cmd)
-			} else {
-				cmd = exec.CommandContext(ctx, "cmd", "/D", "/S", "/C", "chcp 65001>nul & "+c.Cmd)
-			}
-		} else {
-			cmd = exec.CommandContext(ctx, "/bin/sh", "-c", c.Cmd)
+		bin, args := shellFor(c.Shell, c.Cmd)
+		if bin == "" {
+			return errResult("unsupported_shell", c.Shell)
 		}
+		if runtime.GOOS == "windows" {
+			if isPowerShell(c.Shell) {
+				args[len(args)-1] = "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); " + c.Cmd
+			} else {
+				args = []string{"/D", "/S", "/C", "chcp 65001>nul & " + c.Cmd}
+			}
+		}
+		cmd := exec.CommandContext(ctx, bin, args...)
 		cmd.Dir = dir
 		cmd.Env = os.Environ()
 		if runtime.GOOS == "windows" {
@@ -234,11 +236,11 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		if extra.Elevate && !residentMachineActive(r.cfg) {
 			result := r.elevated(ctx, j.ID, cmd)
 			result["preflight"] = preflight
-			return result
+			return shellExecutionFeedback(preflight, result)
 		}
 		result := r.process(ctx, j.ID, cmd)
 		result["preflight"] = preflight
-		return result
+		return shellExecutionFeedback(preflight, result)
 	case "info":
 		info := doInfo()
 		info["resident"] = r.capabilities()
@@ -340,7 +342,7 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 }
 func (r *residentRuntime) process(ctx context.Context, jid string, cmd *exec.Cmd) map[string]interface{} {
 	workingDir := cmd.Dir
-	if !strings.HasSuffix(os.Args[0], ".test") {
+	if !strings.HasSuffix(strings.TrimSuffix(os.Args[0], ".exe"), ".test") {
 		supervised, release, e := residentSupervise(ctx, cmd, r.cfg.DataDir, jid)
 		if e != nil {
 			return errResult("process_supervisor", e.Error())
@@ -357,7 +359,8 @@ func (r *residentRuntime) process(ctx context.Context, jid string, cmd *exec.Cmd
 	e := cmd.Run()
 	stdout.Flush()
 	stderr.Flush()
-	result := map[string]interface{}{"exit": exitCode(e), "output": string(log.tail), "log_truncated": log.gap, "cwd": workingDir}
+	result := map[string]interface{}{"exit": exitCode(e), "output": string(log.tail), "log_truncated": log.gap, "cwd": workingDir,
+		"executed": cmd.ProcessState != nil}
 	// ErrWaitDelay means the command exited successfully, but inherited output
 	// pipes never closed. Re-running it could duplicate an already running server.
 	if errors.Is(e, exec.ErrWaitDelay) && cmd.ProcessState != nil && cmd.ProcessState.Success() {

@@ -69,7 +69,7 @@
           },
           "shell": {
             "type": "string",
-            "description": "윈도우 셸 선택 cmd/powershell (op=shell, 기본 cmd — mac·linux 는 항상 sh)"
+            "description": "윈도우 셸 powershell(기본 5.1)/pwsh(7)/cmd(기존 배치 명시). 새 helper shell_contract:2 기준; 미설치 셸을 대체하지 않음. mac·linux는 sh."
           },
           "stdin": {
             "type": "string",

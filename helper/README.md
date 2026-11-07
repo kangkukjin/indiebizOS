@@ -34,6 +34,8 @@ cd helper && ./build.sh
 | 하행 | `POST {base}/limb/poll` | `{key, wait}` 롱폴 → 셸 봉투 jobs |
 | 상행 | `POST {base}/limb/result` | `{key, job_id, result}` |
 
+Windows `shell_contract:2`의 기본 셸은 Windows PowerShell 5.1이다. `shell:"pwsh"`는 PowerShell 7, 기존 CMD/배치는 `shell:"cmd"`로 명시한다. 요청한 실행기가 없으면 다른 셸로 바꾸지 않는다. PowerShell은 실행 전 구문 검사, cmd는 실행 후 종료 코드·오류 진단을 반환한다.
+
 셸 봉투 op: `shell`(cmd/cwd/timeout) · `read`(path) · `write`(path/content) · `list`(path) · `info`.
 휴대 모드는 화면 캡처·입력도 지원한다. 상주 모드의 화면 작업은 `mode:interactive`가 필요하다.
 

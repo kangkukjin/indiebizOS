@@ -1,6 +1,6 @@
 # 셸과 IBL 실행 전 진단 연결 수리 설계
 
-상태: 아래 §10에 운영 구현·검증 범위를 기록한다. §1~9는 설계 당시의 기준과 시제품 기록이다.
+상태: 아래 §10에 첫 운영 구현, §11에 Windows 기본 경로 공백 보완을 기록한다. §1~9는 설계 당시의 기준과 시제품 기록이다.
 설계 기준 코드는 `24b5b08a`이며, 시제품 검증 도구는
 [`probe_shell_preflight_feedback.py`](../scripts/probe_shell_preflight_feedback.py)다.
 
@@ -376,3 +376,76 @@ read_result를 사용하지 않았다. IBL의 최초 실패 사건은 수정 성
 Go 전수와 race 검사, Windows resident 교차 빌드, backend 층·Windows 이식성 정적 검사,
 IBL 파생 정합 검사와 Android 번들 생성도 통과했다. 최종 운영 상태는 ACTIVE/healthy이며
 변경한 운영 Python 모듈 모두 활성 세대와 바이트 일치를 확인했다. 프런트 코드는 바꾸지 않았다.
+
+## 11 Windows 기본 셸과 실행 후 진단 공백 보완
+
+Windows 기본 실행기가 cmd여서 PowerShell 사전 검사가 명시 선택 때만 작동하던 공백을
+보완한다. PC run_command의 동기/세션·수리 셸과 새 helper의 상주/휴대형 Windows
+기본은 Windows PowerShell 5.1이다. macOS/Linux 기본 sh는 유지한다. run_command에
+선택 인자 shell을 공개했다. powershell과 pwsh는 실제 실행파일을 구분하며 미설치 때
+다른 셸로 대체하지 않는다. 기존 CMD 문법·배치는 shell:cmd로 명시하고 원문을 그대로
+실행한다. 기존 스크립트를 자동 번역하거나 내용을 보고 다른 방언으로 추측하지 않는다.
+
+새 helper는 shell_contract:2와 default_shell을 신고한다. 구형 helper는 종전 계약이며
+업그레이드한 기기부터 새 기본값이 적용된다. 명시하지 않은 셸의 기본값을 바꾸는 계약
+변경이므로 기존 CMD 호출자는 shell:cmd로 이행해야 한다. 이미 시작한 프로세스는
+교체하지 않는다. 세션의 request_id 동일성에는 명시 shell을 포함하며 기존 접수증을
+다른 방언으로 다시 실행하지 않는다.
+
+cmd를 파싱했다고 주장하지 않는다. 실제 명령 종료 뒤 phase:execution, exit_code,
+SHELL_EXIT_NONZERO와 오류 본문을 기존 보호 진단에 발행한다. preflight의
+coverage.syntax:unsupported는 그대로 남긴다. 로컬 동기·세션 관측·수리와 원격
+상주/휴대형 결과가 같은 피드백을 사용한다. 오류 본문 원문은 근거에, 요약은 기존
+900바이트 예산에 남긴다. 실행 후 피드백이므로 cmd의 선행 효과를 되돌리거나 방지하지
+않으며, AI는 실제 영수증을 보고 필요한 부분만 수정해야 한다.
+
+휴대형 PowerShell 래퍼가 명령 실패 뒤 환경/cwd 표식을 출력하면서 성공으로 끝나던
+경로도 수정했다. 명령 직후의 $?와 LASTEXITCODE를 보존해 cmdlet 실패와 외부 프로그램
+비정상 종료를 전달한다. 명시 pwsh 요청을 powershell로 실행하던 상주형 선택과
+powershell 요청을 pwsh로 바꾸던 휴대형 선택을 공통 선택 함수로 맞췄다.
+
+### 실제 Windows와 AI 검증
+
+KHJoffice(`guestpc-7da97e970821`)의 helper를 SHA-256
+`52488a94b220474553ad1ca5292041cf90ee73b2e3567bdc3d20cf2288bf4c59`로 갱신했다.
+재접속 판본 일치와 shell_contract:2·default_shell:powershell을 확인했다.
+Windows PowerShell 5.1.26100.9711에서 Windows용 Go 계약 검사를 실제 실행했다:
+기본 호출의 오류 후보 미실행·수정 후 append1회, cmd 환경변수/비정상 종료,
+powershell/pwsh 선택 분리, 휴대형 cmdlet 오류의 비정상 종료가 통과했다.
+
+운영 `/system-ai/chat`, 기존 Codex gpt-6-astra:high,
+`task_sysai_2769d554`는 다음 두 과제를 실제로 수행하고 succeeded로 종료했다.
+
+| 최초 호출과 직접 진단 | AI의 수정과 결과 |
+|---|---|
+| shell 생략, PowerShell 닫는 중괄호 누락. MissingEndCurlyBrace·2행12열·executed:false | shell 생략 유지, `}`만 추가. DEFAULT_PS_FIRST·DEFAULT_PS_OK 출력·exit0 |
+| shell:cmd, 존재하지 않는 명령. 실행 뒤 exit1·SHELL_EXIT_NONZERO·영문 오류 원문 | cmd 유지, 없는 명령만 echo CMD_OK로 교체. CMD_FIRST·CMD_OK 출력·exit0 |
+
+진단 사건36→수정 호출40, 진단 사건68→수정 호출72로 직접 피드백을 확인했다.
+원 과제 호출4회 뒤 과거 원격 실패 기록 때문에 read_result1회가 추가됐으며 재실행은 없었다.
+원격 job 실패를 새 job의 성공으로 자동 해소하는 범용 계보 기능은 이번 변경에 포함하지 않았다.
+전체 턴110.595초이며 모델·환경이 다른 과거 시험과 성능 비교하지 않는다.
+증거는 [evidence.json](../outputs/diagnostics/2026-11-07-windows-shell/evidence.json),
+원 사건은 `data/spill/supervision/c2fd939932a74695932a6a181bc53603`이다.
+
+직접 관련64통과, Go 전수/race 통과, Windows 교차 빌드와 실제 Windows 계약 검사 통과,
+프런트 TypeScript 검사 통과.
+
+첫 전수는12817통과·24건너뜀·용례 재검토 원장1실패였다. 61건의 관련 용례를 재검토해
+기존 CMD 연결 구문/중첩 인용을 쓰는 #5061·#5074의 네 호출에 shell:cmd를 명시했다.
+공식 replace_example 경로로 같은 ID·의도·통계를 보존하고 인덱스도 재생성했다.
+원본 두 행은 data/_backups/2026-11-07_windows_shell_examples에 보존했다.
+새 용례를 임의 추가하거나 과거 관측 성공률을 변경하지 않았다.
+
+PC제어 부품의 중첩 powershell.exe -Command 문자열도 기본 PowerShell이 $s를 먼저
+확장하지 않도록 UTF-16LE EncodedCommand로 바꿨다. 요청과 실행 원문은 종전처럼
+stdin에만 싣는다. 진행 표시의 CLIXML이 결과에 섞이지 않도록 부트스트랩에서 진행
+출력만 억제하며 오류는 보존한다. Windows 기본 셸과 명시 cmd에서 실제 stdin 전달을
+검사했다. OS 선택은 command_preflight 이음매에 모아 cognition의 직접 OS 분기를
+제거했다. 최종 관련184통과·1건너뜀, IBL 원장·OS 경계 검사를 다시 확인했다.
+최종 system 포함 전수는 **12819통과·24건너뜀·실패0**, 418.59초이며 명령도0으로
+정상 종료했다(`pytest-verified.log`). 첫 전수 실행 중 문서 편집도 live-store 관문에
+감지됐으므로 최종 전수는 모든 변경 경로가 확정된 상태에서 다시 실행했다.
+운영 ACTIVE/healthy, 변경한 운영 Python9개 파일의 활성 세대 바이트 일치,
+Windows helper 판본 일치를 확인했다. Windows 시험용 임시 실행 파일 삭제도 확인했다.
+PowerShell 7 실기와 Codex 네이티브 셸 전수 사전 차단은 이 검증에 포함하지 않는다.

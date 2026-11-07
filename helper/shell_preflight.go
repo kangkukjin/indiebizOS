@@ -131,3 +131,34 @@ func preflightRejected(report map[string]interface{}) map[string]interface{} {
 	}
 	return map[string]interface{}{"success": false, "executed": false, "error": "shell_preflight", "preflight": report}
 }
+
+// Preserve syntax coverage while reporting actual command failure, including cmd.
+func shellExecutionFeedback(preflight, result map[string]interface{}) map[string]interface{} {
+	code, ok := result["exit"]
+	if !ok {
+		return result
+	}
+	report := map[string]interface{}{}
+	for k, v := range preflight {
+		report[k] = v
+	}
+	report["phase"], report["executed"], report["exit_code"] = "execution", result["executed"], code
+	report["status"], report["items"], report["total"] = "succeeded", []interface{}{}, 0
+	if fmt.Sprint(code) != "0" {
+		parts := []string{}
+		for _, key := range []string{"output", "stdout", "stderr", "error"} {
+			if value, ok := result[key].(string); ok && value != "" {
+				parts = append(parts, value)
+			}
+		}
+		output := strings.Join(parts, "\n")
+		if len(output) > 2000 {
+			output = output[len(output)-2000:]
+		}
+		report["status"], report["total"] = "failed", 1
+		report["items"] = []interface{}{map[string]interface{}{"code": "SHELL_EXIT_NONZERO", "severity": "error",
+			"message": fmt.Sprintf("exit %v: %s", code, output)}}
+	}
+	result["diagnostics"] = report
+	return result
+}

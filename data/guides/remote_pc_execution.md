@@ -177,7 +177,10 @@ PC 가 10분 안에 끌어가지 않은 명령(꺼짐·끊김)은 `failed` 에 `
 [limbs:guestpc]{op:"history",limb:"사무실PC"}
 ```
 
-셸은 Windows cmd(선택 powershell), macOS/Linux `/bin/sh`다. read는 200KB 상한이 있으므로
+새 helper(`shell_contract:2`)의 기본 셸은 Windows PowerShell 5.1, macOS/Linux `/bin/sh`다.
+기존 배치/CMD 문법은 `shell:"cmd"`, PowerShell 7은 `shell:"pwsh"`를 명시한다.
+선택한 셸이 없으면 실패하며 다른 방언으로 바꾸지 않는다. PowerShell은 실행 전 구문 검사,
+cmd는 실행 후 종료 코드·오류 진단을 AI에게 전달한다. 구형 helper의 기본값은 info의 능력으로 확인한다. read는 200KB 상한이 있으므로
 바이너리·큰 파일은 transfer를 쓴다. `history`는 상주형 중앙 원장의 tasks/events이며
 `job`으로 특정 작업, `cursor`로 이벤트 다음 페이지를 읽는다. 응답은 페이지 단위다.
 일반 조회는 대기 결과를 바로 돌려주지만, 지연 가능성이 있으면 `background:true`로 접수증을 받는다.

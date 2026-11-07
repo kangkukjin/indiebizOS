@@ -144,14 +144,15 @@ def prepare(self_module, name, payload, project):
     return result, str(wt)
 
 
-def run_shell(handler, command, timeout):
+def run_shell(handler, command, timeout, shell=None):
     from supervision_bus import current
     from repair_check_runner import execute
     st, repo, key = handler._staging_mod(), str(handler._REPO_ROOT), handler._staging_key()
     sess = st.ensure_session(repo, key)
     if not sess:
         raise PermissionError("수리 사본이 없습니다")
-    record = execute(repo, sess, st._candidate, command, current(), timeout)
+    record = execute(repo, sess, st._candidate, command, current(), timeout,
+                     **({'shell_kind': shell} if shell is not None else {}))
     st._save_session(repo, sess)
     return shell_result({"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
             "output": record["output"], "verification": {k: v for k, v in record.items() if k != "output"},

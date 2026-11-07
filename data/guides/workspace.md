@@ -164,8 +164,10 @@ IBL은 기존 컴파일 결과를 같은 통로로 전달하며 별도 `check:tr
 진단을 수정한 뒤 원래 실행 도구로 다시 제출하고 실제 종료 코드·결과를 확인한다.
 
 macOS 일반 명령의 셸은 로그인 zsh가 아니라 `/bin/sh`다. 원격 PC는
-`preflight_contract:1` helper가 대상의 실제 sh/PowerShell로 검사한다. cmd·구형 helper는
-미지원으로 표시하며 다른 셸로 바꾸지 않는다. 문법 통과는 프로그램 존재·권한·실행 성공을
+`preflight_contract:1` helper가 대상의 실제 sh/PowerShell로 검사한다. 새 helper(`shell_contract:2`)와 PC run_command의 Windows 기본은 PowerShell 5.1이다.
+기존 배치 문법은 `shell:"cmd"`, PowerShell 7은 `shell:"pwsh"`로 명시한다. 선택한 실행기를
+다른 셸로 대체하지 않는다. cmd는 사전 구문 검사 미지원이며 실행 후 종료 코드·오류를
+같은 보호 진단 통로로 전달한다. 구형 helper는 info에서 능력을 확인한다. 문법 통과는 프로그램 존재·권한·실행 성공을
 보장하지 않는다. 동적 eval·호출한 다른 스크립트·대화형 입력 조각은 검사 범위 밖이다.
 Codex 네이티브 shell 전수 사전 차단은 미지원이다. Claude PreToolUse는 명시적으로 선택한
 `CLAUDE_CODE_SHELL`이 있을 때 변경된 입력을 검사하며 기본 셸을 추측하지 않는다.

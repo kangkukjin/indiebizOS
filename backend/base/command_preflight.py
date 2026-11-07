@@ -29,9 +29,26 @@ location=@{line=$_.Extent.StartLineNumber; column=$_.Extent.StartColumnNumber; e
 """
 
 
-def default_argv(source):
-    return ([os.environ.get('COMSPEC', 'cmd.exe'), '/c', source] if os.name == 'nt'
-            else ['/bin/sh', '-c', source])
+def default_argv(source, shell=None):
+    """New Windows commands use PS5.1; legacy batch callers explicitly select cmd."""
+    kind = (shell or ('powershell' if os.name == 'nt' else 'sh')).lower()
+    if kind in ('powershell', 'pwsh'):
+        return [kind, '-NoProfile', '-NonInteractive', '-Command',
+                "$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); " + source]
+    if kind == 'cmd' and os.name == 'nt':
+        return [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/s', '/c', source]
+    if kind in ('sh', 'bash', 'zsh') and os.name != 'nt':
+        return ['/bin/sh' if kind == 'sh' else shutil.which(kind) or '/bin/' + kind, '-c', source]
+    raise ValueError('이 OS에서 지원하지 않는 shell: ' + kind)
+
+
+def repair_argv(source, shell=None):
+    """Preserve POSIX repair pipefail semantics; select Windows through the OS seam."""
+    if shell or os.name == 'nt':
+        return default_argv(source, shell)
+    bash = shutil.which('bash')
+    return ([bash, '-e', '-o', 'pipefail', '-c', source] if bash
+            else ['/bin/sh', '-e', '-c', source])
 
 
 def run_parser(argv, *, cwd, env, input, timeout, cancelled=None):

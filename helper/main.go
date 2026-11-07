@@ -87,7 +87,7 @@ type Command struct {
 	Path    string `json:"path,omitempty"` // read | write | list
 	Content string `json:"content,omitempty"`
 	Cwd     string `json:"cwd,omitempty"`   // shell 작업 디렉토리(생략 시 직전 명령이 끝난 자리)
-	Shell   string `json:"shell,omitempty"` // 윈도우 전용: cmd(기본) | powershell
+	Shell   string `json:"shell,omitempty"` // Windows: powershell(default) | pwsh | cmd(explicit batch)
 	Stdin   string `json:"stdin,omitempty"` // shell 표준입력 — 프롬프트를 기다리는 명령용
 	Reset   bool   `json:"reset,omitempty"` // shell 실행 전 세션(디렉토리·환경) 초기화
 	Timeout int    `json:"timeout,omitempty"`

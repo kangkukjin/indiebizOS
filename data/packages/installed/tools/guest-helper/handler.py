@@ -317,6 +317,11 @@ def _job_result(tool_input: dict) -> dict:
 def _execution_response(result, **metadata):
     """회신 수신과 원격 명령 성공을 구분하고 실패 원문·재관측 참조를 보존한다."""
     import task_receipts
+    report = result.get('diagnostics') or result.get('preflight')
+    if isinstance(report, dict) and metadata.get('job_id') and metadata.get('helper_mode') != 'resident':
+        from preflight_feedback import publish
+        publish(report, {'kind': 'remote_command', 'device': metadata.get('limb'),
+                         'id': metadata['job_id']})
     failed = bool(result.get("success") is False or result.get("exit_code") not in (None, 0) or result.get("error") or result.get("timeout") or result.get("cancelled")
                   or result.get("unknown") or result.get("exit", 0) != 0)
     out = {**metadata, "success": not failed, "result": result}
@@ -441,7 +446,7 @@ def _op_shell(tool_input: dict) -> dict:
     if shell_kind:
         if shell_kind not in ("cmd", "powershell", "pwsh", "ps", "sh"):
             return {"success": False,
-                    "error": f"shell 은 cmd/powershell 중 하나여야 합니다(받은 값: {shell_kind}). "
+                    "error": f"shell 은 cmd/powershell/pwsh/ps/sh 중 하나여야 합니다(받은 값: {shell_kind}). "
                              "윈도우에서만 의미가 있습니다."}
         envelope["shell"] = shell_kind
     # 헬퍼가 이 시간에 명령을 죽인다. 백그라운드 모드의 기본은 넉넉히(30분) —

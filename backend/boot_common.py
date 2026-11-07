@@ -144,6 +144,9 @@ def wire_local_subsystems(profile: str = None) -> dict:
         from ibl_routing import register_system_capabilities
         from coding_collaboration import resolve_workspace
         from coding_worker_tools import configure_worker
+        from execution_situation import set_feedback
+        from code_diagnostics import observe as code_feedback
+        set_feedback(code_feedback)
         register_system_capabilities({'collaboration_workspace': resolve_workspace,
                                       'collaboration_executor': configure_worker})
         from launcher_ops import project_op, folder_op, trash_op, switch_manage_op

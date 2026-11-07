@@ -60,7 +60,7 @@ async def boundary(req: Request):
     return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload, True)
 
 
-def situation_context(agent_id, task_id, channel='mcp', boundary_id=None):
+def situation_context(agent_id, task_id, channel='mcp', boundary_id=None, edited_file=None):
     """Read only; caller principal is preserved. No supervisor or remote polling required."""
     from thread_context import actor_context
     from execution_situation import current
@@ -71,6 +71,8 @@ def situation_context(agent_id, task_id, channel='mcp', boundary_id=None):
             return {'active': False}
         # Opaque clients receive a small standalone state, never a guessed delta/ack.
         channel = channel if channel in {'mcp', 'claude_hook'} else 'mcp'
+        if channel == 'claude_hook' and isinstance(edited_file, str):
+            situation.feedback('file_committed', path=edited_file)
         payload = situation.prepare(channel + ':' + agent_id, baseline=True, compact=True)
         context = render(payload) if payload else ''
         if payload:
@@ -86,7 +88,8 @@ def situation_context(agent_id, task_id, channel='mcp', boundary_id=None):
 @router.post('/situation')
 async def situation(req: Request):
     return await asyncio.to_thread(situation_context, req.agent_id, req.task_id,
-                                   req.payload.get('channel', 'mcp'), req.payload.get('boundary_id'))
+                                   req.payload.get('channel', 'mcp'), req.payload.get('boundary_id'),
+                                   req.payload.get('edited_file'))
 
 
 @router.post("/repair/command")

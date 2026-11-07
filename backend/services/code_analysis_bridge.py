@@ -24,6 +24,8 @@ class Bridge:
                'mode': 'worker', 'root_identity': __import__('code_analysis_changes').identity(self.root)}
         self.workspace.code().store.save('project', row)
         self.resource = row['id']
+        from code_diagnostics import Feedback
+        self.feedback = Feedback(store=self.workspace.code().store)
         self.processes = CodingProcesses(self.root, Path(runtime) / 'commands')
         self.channel = Channel(runtime, self.dispatch)
         self.processes.ipc_path = self.channel.address
@@ -55,6 +57,15 @@ class Bridge:
             return getattr(self.workspace, op)(resource=resource, **args)
 
     def command(self, command):
+        from code_diagnostics import command_changes
+        with bind(self.root, writable=True, generation=self.resource), command_changes(self.root, self.feedback):
+            result = self._command(command)
+        diagnostics = self.feedback.flush()
+        if diagnostics:
+            result['code_diagnostics'] = diagnostics
+        return result
+
+    def _command(self, command):
         if not isinstance(command, str) or not command or len(command) > 100000:
             raise ValueError('실행할 command 문자열이 필요합니다')
         proc = self.processes.spawn(['/bin/sh', '-c', command], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -70,6 +81,7 @@ class Bridge:
         return {'success': proc.returncode == 0, 'exit_code': proc.returncode, 'output': output.decode(errors='replace')[-50000:]}
 
     def close(self):
+        self.feedback.close()
         self.processes.close()
         self.channel.close()
         self.workspace.code().analysis.close_view(self.resource)

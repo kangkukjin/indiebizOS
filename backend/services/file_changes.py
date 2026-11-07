@@ -102,6 +102,10 @@ def apply(store, row, proposal, *, recover=False, writer=None):
                 (writer or _replace)(target, e['after'])
                 if state(target) != e['after']:
                     raise CodingConflict('교체 직후 외부 변경: ' + e['path'])
+                from situation_evidence import file_committed
+                data = decoded(e['after']['bytes'])
+                file_committed(target, fingerprint(data) if data is not None else None,
+                               len(data) if data is not None else None)
             result = {'proposal': proposal, 'applied': True, 'paths': [e['path'] for e in p['edits']]}
             if len(p['edits']) == 1:
                 e = p['edits'][0]

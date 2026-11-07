@@ -108,3 +108,14 @@ def test_invalid_input_stops_before_unprotected_execution(monkeypatch, capsys, p
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_post_edit_diagnostics_never_rechecks_permission_or_rewrites_input(monkeypatch, capsys):
+    monkeypatch.setattr(sys, 'argv', ['hook', '--post'])
+    monkeypatch.setattr(sys, 'stdin', io.StringIO(json.dumps({'hook_event_name': 'PostToolUse',
+                         'tool_name': 'Edit', 'tool_input': {'file_path': '/tmp/a.py'}})))
+    monkeypatch.setattr(hook, 'check', lambda: pytest.fail('completed edits must not be blocked'))
+    monkeypatch.setattr(hook, 'situation_context', lambda tool: 'observed diagnostics')
+    assert hook.main() == 0
+    out = json.loads(capsys.readouterr().out)['hookSpecificOutput']
+    assert out == {'hookEventName': 'PostToolUse', 'additionalContext': 'observed diagnostics'}

@@ -40,8 +40,10 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
         child_env = {**os.environ, **spec["env"], **spec.get("observer_env", {})} if spec else None
         shell = ([shutil.which("bash"), "-e", "-o", "pipefail", "-c", command]
                  if shutil.which("bash") else ["/bin/sh", "-e", "-c", command])
-        result = run(spec["argv"] if spec else shell, wt,
-                     cwd=spec["cwd"] if spec else str(wt), timeout=timeout, check=cancelled, env=child_env)
+        from execution_situation import command_feedback
+        with command_feedback(wt):
+            result = run(spec["argv"] if spec else shell, wt,
+                         cwd=spec["cwd"] if spec else str(wt), timeout=timeout, check=cancelled, env=child_env)
         output = result.stdout + result.stderr
         exit_code = result.returncode
     except (subprocess.TimeoutExpired, OSError) as exc:

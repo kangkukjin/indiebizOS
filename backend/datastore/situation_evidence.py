@@ -211,6 +211,7 @@ def file_committed(path, revision, size=None):
     emit({'kind': 'file', 'device': device_identity(), 'address': file_resource_identity(path)},
          'version', {'write': 'committed', 'size': size}, source='file_io',
          subject_revision=revision, observed_at=time.time())
+    current().feedback('file_committed', path=str(path), revision=revision)
 
 
 @optional_observation

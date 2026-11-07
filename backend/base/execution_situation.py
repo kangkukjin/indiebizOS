@@ -13,6 +13,13 @@ from functools import wraps
 
 _call = ContextVar('situation_call', default='')
 logger = logging.getLogger(__name__)
+_feedback = None
+
+
+def set_feedback(callback):
+    """Composition root supplies optional producer feedback without an upward import."""
+    global _feedback
+    _feedback = callback
 
 
 def optional_observation(fn):
@@ -206,6 +213,18 @@ def run_tool(name, payload, execute):
         return result
 
 
+@contextmanager
+def command_feedback(root):
+    """A trusted command producer supplies its exact workspace, not shell text."""
+    situation = current()
+    observation = situation.feedback('command_started', root=str(root)) if situation else None
+    try:
+        yield
+    finally:
+        if situation and observation is not None:
+            situation.feedback('command_finished', root=str(root), observation=observation)
+
+
 class Situation:
     """First + ordered latest per source; concurrent sources remain separate evidence.
 
@@ -242,6 +261,11 @@ class Situation:
         with self.lock:
             if not self.closed:
                 self.refreshers[key] = read
+
+    @optional_observation
+    def feedback(self, event, **data):
+        if _feedback and not self.closed:
+            return _feedback(self, event, **data)
 
     def refresh(self):
         with self.lock:
@@ -368,6 +392,7 @@ class Situation:
 
     @optional_observation
     def tool_started(self, key, name, payload):
+        self.feedback('tool_started', key=key, name=name, payload=payload)
         ref = self.evidence(payload)
         self.call_inputs[key] = (name, payload)
         self.observe({'kind': 'call', 'id': key}, 'execution',
@@ -378,6 +403,7 @@ class Situation:
     def tool_finished(self, key, result, unknown=False, error=False):
         ref = self.evidence(result)
         name, payload = self.call_inputs.pop(key, ('', {}))
+        self.feedback('tool_finished', key=key, name=name, payload=payload, unknown=unknown)
         if self.on_recovery:
             self.on_recovery(key, name, payload, result, ref, error, unknown)
         elif error or unknown:
@@ -446,6 +472,7 @@ class Situation:
 
     def prepare(self, consumer, *, retained=(), baseline=False, budget=None, compact=False):
         """Reserve space for state AND results; acknowledge only facts actually included."""
+        self.feedback('prepare')
         self.refresh()
         with self.lock:
             if self.closed or (self.cancel_check and self.cancel_check()):
@@ -554,6 +581,7 @@ class Situation:
                          meaning='transport_received_response_not_model_understanding')
 
     def close(self):
+        self.feedback('close')
         with self.lock:
             if not self.closed:
                 self.persist('situation.checkpoint', **self.snapshot())

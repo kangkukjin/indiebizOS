@@ -58,3 +58,17 @@ def test_ibl_cli_and_stdio_mcp_share_one_provider_neutral_session(tmp_path, monk
         assert direct['analysis']['generation'] in str(output[2]), output[2]
     finally:
         bridge.close()
+
+
+@pytest.mark.skipif(not available(), reason='macOS process isolation')
+def test_command_response_includes_diagnostics_without_explicit_lsp_call(tmp_path):
+    root = tmp_path / 'source'; root.mkdir()
+    bridge = Bridge(root, tmp_path / 'runtime', lambda: False, CodingStore(tmp_path / 'state'))
+    try:
+        result = request(bridge.channel.config, {'op': 'command',
+            'command': "printf 'answer: int = \"bad\"\\n' > a.py"})
+        assert result['success'] and result['exit_code'] == 0
+        assert result['code_diagnostics'][0]['items'], result
+        assert result['code_diagnostics'][0]['automatic'] is True
+    finally:
+        bridge.close()

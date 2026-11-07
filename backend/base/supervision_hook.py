@@ -27,6 +27,16 @@ def check():
 
 
 def main():
+    if '--post' in sys.argv:
+        try:
+            payload = json.load(sys.stdin)
+            context = situation_context(payload)
+            if context:
+                print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PostToolUse',
+                                                         'additionalContext': context}}, ensure_ascii=False))
+        except Exception:
+            pass  # A completed edit cannot be rejected or retried by a diagnostics hook.
+        return 0
     try:
         instruction = check()
     except Exception as exc:
@@ -53,7 +63,10 @@ def situation_context(tool=None):
         payload = {'agent_id': os.environ.get('INDIEBIZOS_AGENT_ID', ''),
                    'task_id': os.environ.get('INDIEBIZOS_TASK_ID', ''),
                    'payload': {'channel': 'claude_hook',
-                               'boundary_id': (tool or {}).get('tool_use_id')}}
+                               'boundary_id': (tool or {}).get('tool_use_id'),
+                               'edited_file': ((tool or {}).get('tool_input') or {}).get('file_path')
+                                   if (tool or {}).get('hook_event_name') == 'PostToolUse'
+                                   and (tool or {}).get('tool_name') in ('Edit', 'Write', 'MultiEdit') else None}}
         req = urllib.request.Request(SITUATION_URL,
             data=json.dumps(payload).encode(), headers={'Content-Type': 'application/json'})
         with urllib.request.urlopen(req, timeout=10) as response:

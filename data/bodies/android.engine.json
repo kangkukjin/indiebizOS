@@ -431,6 +431,7 @@
     "services/code_analysis_results",
     "services/code_analysis_views",
     "services/code_analysis_workspace",
+    "services/code_diagnostics",
     "services/coding_collaboration",
     "services/coding_git",
     "services/coding_projects",
@@ -648,8 +649,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 637,
-    "engine": 605,
+    "total": 638,
+    "engine": 606,
     "blocklist": 32
   }
 }

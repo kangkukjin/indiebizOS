@@ -40,3 +40,18 @@ def test_pull_unchanged_preserves_previous_diagnostics_and_result_id():
 
 def test_unsolicited_apply_edit_is_rejected():
     assert subject().on_request('workspace/applyEdit', {'edit': {}})['applied'] is False
+
+
+def test_wait_after_edit_waits_for_new_version_instead_of_reusing_old_report():
+    import time
+    s = subject()
+    s.on_notice('textDocument/publishDiagnostics', {'uri': 'file:///a.py', 'version': 2,
+                                                  'diagnostics': [{'message': 'old error'}]})
+    timer = threading.Timer(.05, lambda: s.on_notice('textDocument/publishDiagnostics',
+                            {'uri': 'file:///a.py', 'version': 3, 'diagnostics': []}))
+    timer.start()
+    try:
+        _, report, status = s.diagnostic('a.py', wait=1)
+        assert status == 'received' and report['diagnostics'] == []
+    finally:
+        timer.join()

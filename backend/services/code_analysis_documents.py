@@ -196,10 +196,16 @@ class Session:
             self.diagnostics[uri] = result
         with self.diag_lock:
             deadline = time.monotonic() + min(max(float(wait), 0), 10)
-            while uri not in self.diagnostics and time.monotonic() < deadline:
+            def current_report():
+                value = self.diagnostics.get(uri)
+                return bool(value is not None and not value.get('refresh_pending') and (
+                    value.get('version') == doc['version'] or value.get('version') is None
+                    and value.get('received_at', 0) >= doc.get('observed_at', 0)))
+            while not current_report() and time.monotonic() < deadline:
                 self.diag_lock.wait(timeout=min(.1, max(.001, deadline - time.monotonic())))
             value = copy.deepcopy(self.diagnostics.get(uri))
-        status = 'pending' if value is None else ('version_unconfirmed' if value.get('version') is None else
+        status = 'pending' if value is None else ('stale' if value.get('received_at', 0) < doc.get('observed_at', 0) else
+                 'version_unconfirmed' if value.get('version') is None else
                  'received' if value['version'] == doc['version'] and not value.get('refresh_pending') else 'stale')
         return doc, value or {}, status
 

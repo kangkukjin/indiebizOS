@@ -441,6 +441,10 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             "matcher": "|".join(cls.EAGER_BUILTIN_TOOLS),
             "hooks": [{"type": "command", "command": f'"{sys.executable}" "{root / "backend/base/supervision_hook.py"}"',
                        "timeout": 230}],
+        }], "PostToolUse": [{
+            "matcher": "Edit|Write|MultiEdit",
+            "hooks": [{"type": "command", "command": f'"{sys.executable}" "{root / "backend/base/supervision_hook.py"}" --post',
+                       "timeout": 12}],
         }]}}
 
     # ================= 세션 =================

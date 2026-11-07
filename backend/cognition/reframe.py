@@ -61,6 +61,7 @@ class TurnChannel:
         self.task_id = execution_key()[1]
         self.context = snapshot()
         self.lock = threading.RLock()
+        self.revision_lock = threading.RLock()
         self.runner = runner
         self.message = message
         self.history = list(history or [])
@@ -153,7 +154,8 @@ def _revise(ch: TurnChannel, trigger: str, broken: str, evidence: str, progress:
     previous = snapshot()
     try:
         restore(ch.context)
-        with ch.lock, adopt_turn_token_ledger(ch.key, ch.task_id):
+        # 모델 직렬화와 상태 잠금을 분리한다. 의식의 MCP 재진입은 다른 스레드다.
+        with ch.revision_lock, adopt_turn_token_ledger(ch.key, ch.task_id):
             return _revise_in_context(ch, trigger, broken, evidence, progress, kind)
     finally:
         restore(previous)
@@ -163,26 +165,27 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
     """의식을 다시 깨워 규정을 갱신. 반환 = 결과 봉투(dict). 상한·실패는 봉투로 정직하게."""
     from consciousness_agent import ConsciousnessCallSkipped
 
-    if ch.closed or getattr(ch, "cancel_check", lambda: False)():
-        return {"revised": False, "reason": "이미 종료된 실행입니다"}
-    if ch.revisions >= MAX_REVISIONS:
-        return {"revised": False, "reason": f"이 턴의 재규정 상한({MAX_REVISIONS}회)에 닿았다",
-                "directive": ("더는 재규정하지 않는다. 지금까지 확보한 사실로 가능한 만큼만 마무리하고, "
-                              "무엇이 왜 안 됐는지(깨진 전제·근거)를 최종 보고에 그대로 적어라.")}
-    revision = {
-        "trigger": trigger,
-        "kind": kind or "other",
-        "previous_framing": ch.current.get("task_framing", ""),
-        "previous_assumptions": ch.current.get("assumptions") or [],
-        "previous_criteria": ch.current.get("achievement_criteria", ""),
-        "previous_contract": ch.current,
-        "previous_request_intent": ch.current.get("request_intent", getattr(ch, "request_intent", "task")),
-        "previous_research_plan": ch.current.get("_research_plan"),
-        "broken_assumption": (broken or "").strip()[:2000],
-        "evidence": (evidence or "").strip()[:4000],
-        "progress": (progress or "").strip()[:4000],
-        "revision_no": ch.revisions + 1,
-    }
+    with ch.lock:
+        if ch.closed or getattr(ch, "cancel_check", lambda: False)():
+            return {"revised": False, "reason": "이미 종료된 실행입니다"}
+        if ch.revisions >= MAX_REVISIONS:
+            return {"revised": False, "reason": f"이 턴의 재규정 상한({MAX_REVISIONS}회)에 닿았다",
+                    "directive": ("더는 재규정하지 않는다. 지금까지 확보한 사실로 가능한 만큼만 마무리하고, "
+                                  "무엇이 왜 안 됐는지(깨진 전제·근거)를 최종 보고에 그대로 적어라.")}
+        revision = {
+            "trigger": trigger,
+            "kind": kind or "other",
+            "previous_framing": ch.current.get("task_framing", ""),
+            "previous_assumptions": ch.current.get("assumptions") or [],
+            "previous_criteria": ch.current.get("achievement_criteria", ""),
+            "previous_contract": copy.deepcopy(ch.current),
+            "previous_request_intent": ch.current.get("request_intent", getattr(ch, "request_intent", "task")),
+            "previous_research_plan": ch.current.get("_research_plan"),
+            "broken_assumption": (broken or "").strip()[:2000],
+            "evidence": (evidence or "").strip()[:4000],
+            "progress": (progress or "").strip()[:4000],
+            "revision_no": ch.revisions + 1,
+        }
     runner = ch.runner
     try:
         out = runner._run_consciousness(ch.message, ch.history, ch.execution_memory,
@@ -203,7 +206,10 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
         return {"revised": False, "reason": "의식이 새 규정을 내지 못했다",
                 "directive": "현재 규정으로 가능한 만큼 진행하고 깨진 전제를 최종 보고에 적어라."}
 
-    return accept_revision(ch, out, revision)
+    with ch.lock:
+        if ch.current != revision["previous_contract"] or ch.revisions + 1 != revision["revision_no"]:
+            return {"revised": False, "reason": "의식 호출 중 현재 규정이 변경되어 늦은 판단을 적용하지 않습니다"}
+        return accept_revision(ch, out, revision)
 
 
 # 중간감사는 최초 의식과 같은 필드만 수정한다. 내부 영수증·권한은 하네스 소유다.

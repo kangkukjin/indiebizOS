@@ -206,6 +206,54 @@ def test_manual_learning_uses_recorded_current_call(monkeypatch):
     assert len(captured) == 1
 
 
+def test_reframe_worker_keeps_result_after_http_wait_is_cancelled(monkeypatch):
+    import json
+    import threading
+    from api_ibl import ReframeRequest, reframe_bridge
+    from common.spill import ticket_recover
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
+
+    def execute(*args):
+        started.set()
+        assert release.wait(5)
+        return json.dumps({'revised': True, 'revision_no': 1})
+
+    monkeypatch.setattr('reframe.execute_reframe', execute)
+    import common.spill as spill
+    original = spill.ticket_finish
+    def finish(*args):
+        result = original(*args)
+        finished.set()
+        return result
+    monkeypatch.setattr(spill, 'ticket_finish', finish)
+
+    async def run():
+        task = asyncio.create_task(reframe_bridge(ReframeRequest(
+            broken_assumption='x', evidence='y', ticket='1234abcd5678')))
+        assert await asyncio.to_thread(started.wait, 5)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        release.set()
+        assert await asyncio.to_thread(finished.wait, 5)
+
+    try:
+        asyncio.run(run())
+    finally:
+        release.set()
+    result = ticket_recover('1234abcd5678')
+    assert result['revised'] and result['revision_no'] == 1
+
+
+def test_reframe_rejects_invalid_ticket_without_calling_model(monkeypatch):
+    from api_ibl import ReframeRequest, reframe_bridge
+    from fastapi import HTTPException
+    monkeypatch.setattr('reframe.execute_reframe', lambda *a: pytest.fail('invalid ticket executed'))
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(reframe_bridge(ReframeRequest(broken_assumption='x', evidence='y', ticket='../bad')))
+    assert error.value.status_code == 400
+
+
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

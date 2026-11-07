@@ -212,14 +212,14 @@ def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
 _RPC_WAIT_S = 30
 
 
-def _execute_until_complete(payload, ticket, cancel_check):
+def _execute_until_complete(payload, ticket, cancel_check, *, path="/ibl/execute"):
     import time
     from completion_lease import TRANSPORT_LOSS_S, pulse
     from tool_completion import (DeferredToolResult, CompletionState,
                                  CompletionWaitError, await_completion, observe_wait)
     channel = payload.get("completion_channel", "")
     pulse(channel, ticket)
-    raw = _post_backend("/ibl/execute", payload, _RPC_WAIT_S)
+    raw = _post_backend(path, payload, _RPC_WAIT_S)
     def decode(value):
         try:
             return json.loads(value) if isinstance(value, str) else value
@@ -508,9 +508,25 @@ async def reframe(broken_assumption: str, evidence: str, progress: str = "",
         "agent_id": h_agent or DEFAULT_AGENT_ID or None,
         "task_id": h_task or DEFAULT_TASK_ID or None,
     }
-    return await anyio.to_thread.run_sync(
-        lambda: _post_backend("/ibl/reframe", payload, 240)
-    )
+    # 통신 대기와 의식의 호출 한도는 별개다. 재제출 없이 같은 결과를 회수한다.
+    import threading
+    import uuid
+    from completion_lease import channel_from_context, channel_cancelled, pulse
+    ticket = uuid.uuid4().hex[:12]
+    payload["ticket"] = ticket
+    channel = channel_from_context(ctx)
+    cancelled = threading.Event()
+    if channel:
+        payload["completion_channel"] = channel
+    try:
+        return await anyio.to_thread.run_sync(
+            lambda: _execute_until_complete(payload, ticket,
+                lambda: cancelled.is_set() or channel_cancelled(channel), path="/ibl/reframe"),
+            abandon_on_cancel=True,
+        )
+    finally:
+        cancelled.set()
+        pulse(channel, ticket, active=False)
 
 
 @mcp.tool()

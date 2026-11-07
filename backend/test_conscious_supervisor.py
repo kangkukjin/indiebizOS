@@ -1050,3 +1050,68 @@ def test_requested_reframe_is_not_blocked_by_automatic_review_count(supervisor, 
     monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw: calls.append(kw['phase']) or '{}')
     assert supervisor.plan('관측에 맞춰 수정', '계획', revision='new evidence') == '{}'
     assert calls == ['reframe']
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+@pytest.mark.parametrize('busy', [False, True])
+def test_reframe_allows_http_reentry_without_unlocking_other_execution(supervisor, wrapped, busy):
+    """모델 대기 중 별도 HTTP 스레드의 상태/도구 왕복; 실제 업무가 남으면 실행 거절."""
+    from concurrent.futures import ThreadPoolExecutor
+    from api_supervision import dispatch
+    active = supervisor._start('other_work', {}) if busy else None
+    pool = ThreadPoolExecutor(max_workers=1)
+    seen = []
+
+    def model(*args, **kwargs):
+        supervisor.phase = 'reframe'
+        supervisor.call_deadline = time.monotonic() + 20
+        # 같은 RLock을 다른 스레드가 실제로 얻어야 성공하는 검사다.
+        state = pool.submit(dispatch, supervisor.supervisor_id, supervisor.task,
+                            {'op': 'state'}).result(timeout=2)
+        assert state['success']
+        blocked = pool.submit(dispatch, supervisor.owner, supervisor.task,
+                              {'op': 'execute', 'name': 'inspect'}).result(timeout=2)
+        assert not blocked['success']  # 실행자의 감독 도구 권한은 늘지 않는다.
+        reply = pool.submit(dispatch, supervisor.supervisor_id, supervisor.task,
+                            {'op': 'execute', 'name': 'inspect', 'input': {'read': 'guide'}}).result(timeout=2)
+        seen.append(reply)
+        denied = supervisor.run_tool('new_work', {}, lambda: pytest.fail('동시 업무 시작'))
+        assert json.loads(denied)['not_executed']
+        return {'task_framing': '확인한 근거로 수정'}
+
+    supervisor.runner._run_consciousness = model
+    payload = {'broken_assumption': '자료 존재', 'evidence': '조회 근거'}
+    try:
+        call = lambda: supervisor.reframe(payload)
+        result = json.loads(supervisor.run_tool('reframe', payload, call) if wrapped else call())
+        assert result['revised'] is True
+        assert seen[0]['success'] is (not busy)
+        assert len(supervisor.calls) == (0 if busy else 1)
+        assert supervisor.phase == 'execute' and not supervisor.executor_paused
+        assert not supervisor._reframing
+        assert supervisor.framing['task_framing'] == '확인한 근거로 수정'
+    finally:
+        pool.shutdown(wait=True)
+        if active:
+            supervisor._finish(active, 'done')
+
+
+@pytest.mark.parametrize('outcome', ['error', 'closed', 'changed'])
+def test_reframe_restores_control_and_rejects_late_results(supervisor, outcome):
+    old = dict(supervisor.framing)
+
+    def model(*args, **kwargs):
+        if outcome == 'error':
+            raise RuntimeError('model failed')
+        if outcome == 'closed':
+            supervisor.close()
+        else:
+            supervisor.framing = {**old, 'task_framing': '더 최근 사용자 규정'}
+        return {'task_framing': '늦게 도착한 규정'}
+
+    supervisor.runner._run_consciousness = model
+    result = json.loads(supervisor.reframe({'broken_assumption': 'x', 'evidence': 'y'}))
+    assert not result['revised']
+    assert supervisor.framing['task_framing'] == ('더 최근 사용자 규정' if outcome == 'changed' else old['task_framing'])
+    assert not supervisor.executor_paused and not supervisor._reframing
+    assert supervisor.phase == 'execute'

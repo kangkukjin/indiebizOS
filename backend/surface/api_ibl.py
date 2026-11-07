@@ -123,6 +123,8 @@ class ReframeRequest(BaseModel):
     kind: str = "other"
     agent_id: Optional[str] = None
     task_id: Optional[str] = None
+    ticket: Optional[str] = None
+    completion_channel: str = ""
 
 
 class TranslateRequest(BaseModel):
@@ -450,17 +452,30 @@ async def reframe_bridge(req: ReframeRequest):
     'reframe')와 **동일한 execute_reframe** 를 부른다. 의식 재호출(수십 초)은 스레드로 — 이 서버는
     MCP HTTP 마운트와 같은 루프라 루프를 막으면 자기 교착이다(_post_backend 주석)."""
     import asyncio
-    try:
+    from common.spill import valid_ticket, ticket_begin, ticket_finish
+    if req.ticket is not None and not valid_ticket(req.ticket):
+        raise HTTPException(status_code=400, detail="ticket 형식은 hex 8~32자입니다.")
+
+    def run():
+        # HTTP 대기가 취소돼도 워커가 결말을 남긴다. 모델 실패도 회수 가능한 결말이다.
         from reframe import execute_reframe
-        payload = {"broken_assumption": req.broken_assumption, "evidence": req.evidence,
-                   "progress": req.progress, "kind": req.kind}
-        raw = await asyncio.to_thread(execute_reframe, payload, req.agent_id or "system_ai", req.task_id or "")
+        if req.ticket and not ticket_begin(req.ticket):
+            return {"revised": False, "error": "재규정 결과 티켓을 저장하지 못했습니다"}
         try:
-            return json.loads(raw)
-        except Exception:
-            return {"revised": False, "content": raw}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            payload = {"broken_assumption": req.broken_assumption, "evidence": req.evidence,
+                       "progress": req.progress, "kind": req.kind}
+            raw = execute_reframe(payload, req.agent_id or "system_ai", req.task_id or "")
+            try:
+                result = json.loads(raw)
+            except (TypeError, ValueError):
+                result = {"revised": False, "content": raw}
+        except Exception as exc:
+            result = {"revised": False, "error": str(exc)}
+        if req.ticket:
+            ticket_finish(req.ticket, result)
+        return result
+
+    return await asyncio.to_thread(run)
 
 
 @router.post("/embed")

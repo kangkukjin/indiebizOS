@@ -319,6 +319,7 @@ class Supervisor:
             self._framing_channel.task_id = self.task
             self._framing_channel.context = self.context
             self._framing_channel.lock = self.lock
+            self._framing_channel.revision_lock = self.review_lock
             self._framing_channel.on_change = self._framing_changed
         previous = self._framing_channel.current
         self._framing_channel.current = project_framing(value) or {}
@@ -341,6 +342,7 @@ class Supervisor:
         if channel is not None:
             self._framing_channel = channel
             channel.lock = self.lock
+            channel.revision_lock = self.review_lock
             channel.on_change = self._framing_changed
         self.framing = framing
         self._framing_channel.repair = repair
@@ -384,18 +386,25 @@ class Supervisor:
         try:
             if not payload.get("broken_assumption") or not payload.get("evidence"):
                 raise ValueError("broken_assumption과 evidence가 필요합니다")
-            # 모델 잠금 → 상태 잠금의 순서를 중간감사와 맞춘다. plan은 같은 스레드에서 재진입한다.
-            with self.review_lock, self.lock:
-                if self.cancelled() or (self.finalizing and self.phase != "repair"):
-                    return render_for_executor({"revised": False, "reason": "실행이 종료 중입니다"})
-                env = _revise(self._framing_channel, "executor", payload["broken_assumption"],
-                              payload["evidence"], payload.get("progress", ""), payload.get("kind", "other"))
+            # 모델 직렬화만 호출 동안 유지한다. 상태 잠금은 재진입 도구에도 필요하다.
+            with self.review_lock:
+                with self.lock:
+                    if self.cancelled() or (self.finalizing and self.phase != "repair"):
+                        return render_for_executor({"revised": False, "reason": "실행이 종료 중입니다"})
+                    paused, phase = self.executor_paused, self.phase
+                    self.executor_paused = True
+                    self._reframing = True
+                try:
+                    env = _revise(self._framing_channel, "executor", payload["broken_assumption"],
+                                  payload["evidence"], payload.get("progress", ""), payload.get("kind", "other"))
+                finally:
+                    with self.lock:
+                        self.executor_paused, self.phase = paused, phase
+                        self._reframing = False
             self.log("premise.challenged", role="execution", input=self.store.evidence(payload), result=self.store.evidence(env))
             return render_for_executor(env)
         except Exception as exc:
             return json.dumps({"revised": False, "reason": str(exc)}, ensure_ascii=False)
-        finally:
-            self.phase = "execute"
 
     def _revise_request_intent(self, framing):
         """의식의 명시적 정정을 실행 의도·관측에 반영한다. 도구 권한은 바꾸지 않는다."""
@@ -602,10 +611,16 @@ class Supervisor:
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.
             return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
+        # 재규정은 실행자가 의식에 제어를 넘기는 통로이며 진행 중 업무로 세지 않는다.
+        if name == "reframe":
+            return execute()
         # 대화 분류는 실행 지침이다. 실제 권한·대상 범위는 도구의 실행 경계가
         # 검사하며, 거절도 아래 공통 관측을 지나 복구 가능한 실패로 남긴다.
         # 모델 관찰 잠금은 실행을 막지 않는다. 지시 전달과 실제 작업 등록만 원자적으로 한다.
         with self.lock:
+            if getattr(self, "_reframing", False):
+                return json.dumps({"success": False, "not_executed": True,
+                                   "error": "재규정 결과를 받은 뒤 작업을 이어가세요"}, ensure_ascii=False)
             if self.pending:
                 notice = self._take_pending()
                 if notice:

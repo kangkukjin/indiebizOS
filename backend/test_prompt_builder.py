@@ -13,12 +13,12 @@ def test_generated_count_is_separate_from_original_user_request():
         'task_framing': '명부를 다시 검사한다.',
         'capability_focus': {'hint': '7행 누락과 합계를 대조한다.'},
     })
-    user, plan = command.split('\n\n시스템 실행 지침', 1)
-    assert user == '사용자 명령: ' + original
-    assert '다음 절차에 따라 수행하라' in plan
+    plan, user = command.split('\n\n요청의 근거(사용자 원문): ', 1)
+    assert json.loads(user) == original
+    assert plan.index('현재 수행할 요청:') < plan.index('수행 절차')
     assert '7행 누락과 합계를 대조한다.' in plan
-    assert '사용자 원문 인용이 아니다' in plan
-    assert '입력 데이터' in plan
+    assert '사용자 직접 발화가 아니다' in plan
+    assert '선택적 조언이 아니다' in plan
 
 
 def test_unaugmented_request_remains_unchanged():
@@ -45,7 +45,7 @@ def test_plan_provenance_survives_multiline_content_and_reframing(revised):
         text = json.loads(render_for_executor({'revised': True, 'output': plan}))['content']
     else:
         text = compile_user_command('인계해줘', plan)
-        assert text.split('\n\n시스템 실행 지침', 1)[0] == '사용자 명령: 인계해줘'
+        assert json.loads(text.rsplit('요청의 근거(사용자 원문): ', 1)[1]) == '인계해줘'
     records = []
     for line in text.splitlines():
         start = line.find('{"source": "consciousness"')

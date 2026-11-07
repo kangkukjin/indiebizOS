@@ -801,7 +801,7 @@ class CognitivePipelineMixin:
             if _supervisor:
                 _supervisor.request_intent = "context_update" if context_update else "task"
                 _supervisor.configure(consciousness_output if _evaluation_enabled else None,
-                                      repair=(_repair_granted_task is not None))
+                                      repair=(_repair_granted_task is not None), channel=_reframe_channel)
             if _clarify_text:
                 _initial_stream = iter([{"type": "final", "content": _clarify_text}])
             else:

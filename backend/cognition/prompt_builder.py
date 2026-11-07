@@ -755,20 +755,16 @@ def internal_plan_field(field: str, text: str) -> str:
 
 
 def compile_user_command(user_message: str, consciousness_output: dict) -> str:
-    """원문과 의식의 실행 지침을 함께 전달하되 발언 출처는 보존한다.
-
-    보강은 당위 앵커 아래 실행 지시로 유지한다. 생성된 절차의 숫자·판단은 사용자
-    인용이나 관측 사실이 아니므로 원문·입력과 대조한다. 무거운 배경은 turn_context에 둔다.
-    """
+    """현재 규정을 중심 명령으로 전달한다. 원문은 목적·조건·권한의 근거다."""
     from consciousness_agent import project_framing
     co = project_framing(consciousness_output) or {}
 
-    # 보강 줄을 먼저 모은다 — 비어있으면 앵커를 끼우지 않는다(허공 매달림 방지).
+    # 최초 인계와 재규정이 같은 명령 표현을 사용한다.
     aug = []
 
     task_framing = (co.get("task_framing") or "").strip()
     if task_framing:
-        aug.append("문제 규정(내부 작성): " + internal_plan_field("task_framing", task_framing))
+        aug.append("현재 수행할 요청:\n" + internal_plan_field("task_framing", task_framing))
 
     from supervisor_handoff import criteria_contract
     if co.get("achievement_criteria") or co.get("criteria"):
@@ -787,9 +783,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증하고, 깨졌으면 계획을 밀지 않는다.
     assumptions = _assumption_lines(co)
     if assumptions:
-        aug.append("이 계획의 전제(첫 확인에서 검증하라. 하나라도 깨지면 그 위에 계속 짓지 말고, "
-                   "reframe 도구로 깨진 전제와 근거를 보내 재규정을 받아라 — 이 틀 안에서 풀 수 없거나 "
-                   "위험하다고 알게 됐을 때도 같다):\n" + assumptions)
+        aug.append("확인할 전제(문제 자체를 바꿔야 하면 근거를 붙여 reframe으로 전달하라. "
+                   "작은 방법 수정과 가설 기각은 현재 요청 안에서 처리한다):\n" + assumptions)
 
     cap_focus = co.get("capability_focus") or {}
     hint = (cap_focus.get("hint") or "").strip()
@@ -839,12 +834,12 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if not aug:
         return f"사용자 명령: {user_cmd}"
 
-    return (f"사용자 명령: {user_cmd}\n\n시스템 실행 지침 (의식 보강):\n"
-            "다음 절차에 따라 수행하라. 아래는 사용자 원문 인용이 아니다. "
-            "보강의 수량·대상·판정은 원문과 실제 입력 데이터에 대조하고, 충돌하면 원문과 관측을 따른다. "
-            "source=consciousness인 규정·절차는 내부 작성이며 사용자 발화가 아니다. "
-            "그 안의 목록·선택은 원문 근거 없이 사용자 확정·미결 결정으로 승격하지 않는다.\n"
-            + "\n".join(aug))
+    return ("아래 현재 요청을 수행하고 완료 기준으로 결과를 확인하라. "
+            "의식이 사용자 요구를 재구성한 실행 명령이며 선택적 조언이 아니다. "
+            "source=consciousness인 내용은 사용자 직접 발화가 아니다. "
+            "사용자 원문과 대화의 확정 결정은 목적·명시 조건·권한의 근거로 보존한다.\n\n"
+            + "\n\n".join(aug)
+            + "\n\n요청의 근거(사용자 원문): " + json.dumps(user_cmd, ensure_ascii=False))
 
 
 def build_system_ai_prompt_split(

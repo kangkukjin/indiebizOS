@@ -48,6 +48,99 @@ def verdict(controller, status="APPROVED", **extra):
                        "response_hash": manifest["hash"], **extra})
 
 
+def test_review_reframes_shared_turn_evaluation_and_handoff_without_second_model(supervisor, monkeypatch):
+    import reframe
+    import final_evaluator
+    from supervisor_handoff import handoff_state
+    channel = reframe.open_turn(supervisor.owner, supervisor.runner, supervisor.message,
+        [], "kept execution memory", supervisor.framing, task_id=supervisor.task)
+    try:
+        supervisor.configure(supervisor.framing, channel=channel)
+        supervisor.store.put_response("기존 자료는 보존")
+        final_evaluator.prepare(supervisor, [])
+        old = dict(channel.current)
+        calls = []
+        def review(*args, **kwargs):
+            calls.append(kwargs['phase'])
+            return verdict(supervisor, 'REWORK', task_framing='직종별 차이를 비교하라',
+                achievement_criteria='직종별 변화와 남은 불확실성',
+                criteria=[{'text': '직종별 변화와 남은 불확실성', 'user_quote': '', 'fallback': ''}])
+        monkeypatch.setattr('supervisor_runtime.invoke', review)
+        supervisor.review('milestone', paused=True)
+        assert channel.current == old  # 관찰 스레드는 실행 요청을 즉시 바꾸지 않는다.
+        notice = supervisor.boundary()
+        assert '직종별 차이를 비교하라' in notice['instruction']
+        assert channel.current is supervisor.framing and channel.revisions == 1
+        assert supervisor._final_criteria_contract["task_framing"] == channel.current["task_framing"]
+        assert '완료 기준' in final_evaluator.snapshot_error(supervisor)
+        packet = final_evaluator.prepare(supervisor, [])
+        contract = packet['context']['criteria_contract']
+        assert contract['task_framing'] == channel.current['task_framing']
+        assert contract['criteria'][0]['text'] == '직종별 변화와 남은 불확실성'
+        handoff = handoff_state(supervisor, {'status': 'REWORK'})
+        assert handoff['goal'] == channel.current['task_framing']
+        assert handoff['user_message'] == supervisor.message
+        assert supervisor.store.text == '기존 자료는 보존'
+        assert supervisor.boundary() is None and calls == ['review']
+    finally:
+        reframe.close_turn(channel.key, channel.task_id, expected=channel)
+
+
+@pytest.mark.parametrize('change', ['goal', 'progress', 'closed', 'final', 'unknown', 'invalid_criteria'])
+def test_review_cannot_publish_stale_or_incomplete_framing(supervisor, monkeypatch, change):
+    old = dict(supervisor.framing)
+    update = {'task_framing': '새 요청'}
+    if change == 'invalid_criteria':
+        update['criteria'] = [{'text': '짝이 없는 기준'}]
+    monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw:
+        verdict(supervisor, 'UNKNOWN' if change == 'unknown' else 'REWORK', **update))
+    supervisor.review('milestone', paused=True)
+    if change == 'goal':
+        supervisor.framing = {**old, 'task_framing': '사용자의 더 최근 요청'}
+    elif change == 'progress':
+        supervisor.progress('새 근거로 결과 완성')
+    elif change == 'closed':
+        supervisor.close()
+    elif change == 'final':
+        supervisor.configure({**old, 'independent_review': False})
+        list(supervisor.finalize('정상 완료', [], lambda ev: None))
+    before = dict(supervisor.framing)
+    notice = supervisor.boundary()
+    assert supervisor.framing == before
+    assert supervisor._framing_channel.revisions == 0
+    if change == 'invalid_criteria':
+        assert '적용하지 못했다' in notice['instruction']
+    if change == 'final':
+        assert supervisor.store.text == '정상 완료'
+
+
+def test_executor_and_review_share_revision_memory_and_criteria(supervisor, monkeypatch):
+    from reframe import open_turn, close_turn
+    old = {'task_framing': '현재 범위를 조사하라', 'independent_review': False,
+           'criteria': [{'text': '목표 원문', 'user_quote': '목표 원문', 'fallback': ''}],
+           'achievement_criteria': '목표 원문'}
+    channel = open_turn(supervisor.owner, supervisor.runner, supervisor.message, [], 'saved memory', old,
+                        task_id=supervisor.task)
+    try:
+        supervisor.configure(old, channel=channel)
+        observed = []
+        supervisor.runner._run_consciousness = lambda message, history, memory, **kwargs: (
+            observed.append((memory, kwargs['revision'])) or {'task_framing': '존재 여부부터 조사하라'})
+        result = json.loads(supervisor.reframe({'broken_assumption': '감소가 확정되지 않음', 'evidence': '원 자료'}))
+        assert result['revised'] and observed[0][0] == 'saved memory'
+        assert channel.current is supervisor.framing and channel.revisions == 1
+        assert channel.current['criteria'] == old['criteria']
+        assert not supervisor.evaluation_enabled
+        monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw:
+            verdict(supervisor, 'REWORK', task_framing='분포를 비교하라'))
+        supervisor.review('milestone', paused=True)
+        supervisor.boundary()
+        assert channel.current['task_framing'] == '분포를 비교하라' and channel.revisions == 2
+        assert not supervisor.evaluation_enabled
+    finally:
+        close_turn(channel.key, channel.task_id, expected=channel)
+
+
 def trigger_verdict(controller, instruction):
     ref = controller.store.evidence({'trigger': 'observed failure or stalled call'})['id']
     return verdict(controller, 'REWORK', instruction=instruction, findings=[{

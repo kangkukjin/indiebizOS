@@ -7,6 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from test_conscious_supervisor import supervisor  # noqa: F401
+
 import research_planning as rp
 from consciousness_agent import ConsciousnessAgent, FramingContractError
 from test_conscious_supervisor import supervisor, finish  # noqa: F401
@@ -528,7 +530,7 @@ def test_topic_plan_failure_preserves_current_link_and_library_mode(workspace, m
                      topic=topic, project_path=store.path,
                      supervisor=SimpleNamespace(plan=lambda *a, **k: json.dumps(draft())))
     topic = rp.topic_context(store.path, store.uid, tid, run)
-    monkeypatch.setattr(ResearchPlans, 'bind', lambda *a: (_ for _ in ()).throw(OSError('disk full')))
+    monkeypatch.setattr(ResearchPlans, 'bind', lambda *a, **kw: (_ for _ in ()).throw(OSError('disk full')))
     with pytest.raises(FramingContractError, match='disk full'):
         rp.prepare(agent(), {'research_plan_action': 'revise'}, '범위 변경',
                    topic=topic, project_path=store.path,
@@ -709,3 +711,82 @@ def test_topic_patch_rechecks_body_after_candidate_write(workspace, monkeypatch)
     with pytest.raises(FramingContractError, match='본문이 변경'):
         rp.prepare(agent(), framing, '정정', topic=topic, project_path=store.path)
     assert rp.topic_context(store.path, store.uid, tid, run)['revision'] == 1
+
+
+@pytest.mark.parametrize('topic_mode', [False, True])
+@pytest.mark.parametrize('action', ['keep', 'patch', 'revise'])
+def test_review_publishes_request_and_research_plan_together(workspace, supervisor, monkeypatch, topic_mode, action):
+    from research_plans import ResearchPlans
+    body = '# 전체 변화\n질문 Q1\n근거 A와 진행은 유지\n'
+    if topic_mode:
+        store, tid, run = research_topic(workspace)
+        supervisor.project_path = store.path
+        topic = rp.topic_context(store.path, store.uid, tid, run)
+        receipt = rp.publish_plan(body, '', store.path, topic=topic)
+        supervisor.runner._research_planning_context = lambda: rp.topic_context(store.path, store.uid, tid, run)
+    else:
+        supervisor.project_path = workspace[0]
+        receipt = rp.persist(body, '', supervisor.project_path)
+    supervisor.configure({'task_framing': '변화를 조사하라', '_research_plan': receipt,
+                          'deep_research': True, 'independent_review': False})
+    before = Path(receipt['path']).read_text()
+    calls = []
+    def review(controller, prompt, **kwargs):
+        calls.append(kwargs['phase'])
+        state = json.loads(prompt)
+        current = state['research_topic']['current_plan']
+        assert current['body'] == before
+        result = {'status': 'REWORK', 'reason': '비교 구분을 정교화',
+                  'task_framing': '직종별 변화를 비교하라', 'research_plan_action': action,
+                  'achievement_criteria': '변화와 자료 한계',
+                  'criteria': [{'text': '변화와 자료 한계'}]}
+        if action == 'patch':
+            result['research_plan_patch'] = {'base_sha256': current['sha256'], 'reason': '구분 변경',
+                'edits': [{'old': '전체 변화', 'new': '직종별 변화'}]}
+        elif action == 'revise':
+            result['research_plan'] = body.replace('전체 변화', '직종별 변화')
+        return json.dumps(result)
+    monkeypatch.setattr('supervisor_runtime.invoke', review)
+    supervisor.review('milestone', paused=True)
+    assert supervisor.framing['_research_plan'] == receipt
+    notice = supervisor.boundary()
+    current = supervisor.framing
+    assert current['task_framing'] == '직종별 변화를 비교하라'
+    assert current['criteria'][0]['text'] == '변화와 자료 한계'
+    assert current['_research_plan']['path'] in notice['instruction']
+    assert '근거 A와 진행은 유지' in notice['instruction']
+    assert Path(receipt['path']).read_text() == before
+    assert ('직종별 변화' in rp.read_current(current['_research_plan'], supervisor.project_path)['body']) == (action != 'keep')
+    assert current['_research_plan']['path'] in rp.evaluation_block(current, supervisor.project_path)
+    if topic_mode:
+        persisted = ResearchPlans(store, rp._root(store.path)).current(tid)
+        assert persisted['path'] == current['_research_plan']['path']
+        assert persisted['revision'] == (1 if action == 'keep' else 2)
+    assert calls == ['review'] and not supervisor.evaluation_enabled
+
+
+@pytest.mark.parametrize('failure', ['stale_plan', 'write', 'invalid', 'cancelled'])
+def test_review_plan_failure_keeps_previous_framing_and_plan(workspace, supervisor, monkeypatch, failure):
+    from research_plans import ResearchPlans
+    store, tid, run = research_topic(workspace)
+    supervisor.project_path = store.path
+    receipt = rp.publish_plan('# 기존 계획\n확보한 근거 A', '', store.path,
+                               topic=rp.topic_context(store.path, store.uid, tid, run))
+    supervisor.runner._research_planning_context = lambda: rp.topic_context(store.path, store.uid, tid, run)
+    old = {'task_framing': '원 요청', '_research_plan': receipt, 'deep_research': True}
+    supervisor.configure(old)
+    monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw: json.dumps({
+        'status': 'REWORK', 'reason': '문제 변경', 'task_framing': '새 요청',
+        'research_plan_action': 'revise', 'research_plan': '' if failure == 'invalid' else '# 새 계획'}))
+    supervisor.review('milestone', paused=True)
+    if failure == 'stale_plan':
+        Path(receipt['path']).write_text('# 실행자가 새로 확인한 진행')
+    elif failure == 'write':
+        monkeypatch.setattr(rp, 'persist', lambda *a, **kw: (_ for _ in ()).throw(OSError('disk full')))
+    elif failure == 'cancelled':
+        supervisor.close()
+    notice = supervisor.boundary()
+    assert supervisor.framing == old and not supervisor._framing_channel.revised
+    assert ResearchPlans(store, rp._root(store.path)).current(tid)['path'] == receipt['path']
+    if failure != 'cancelled':
+        assert '적용하지 못했다' in notice['instruction']

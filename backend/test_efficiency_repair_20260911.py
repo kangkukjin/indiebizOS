@@ -219,7 +219,8 @@ def test_bounded_repair_preserves_owner_provider_and_task_resources(supervisor):
         assert [t["name"] for t in ai._provider.tools] == ["supervision"] and not ai._provider.no_tools
         assert provider.tools == ["tool"] and ai._provider.restricted_response_repair
         assert ai._provider.disable_session_persistence and history == []
-        assert state["goal"] == supervisor.message and state["response"]["hash"] == digest("stored")
+        assert state["goal"] == supervisor.framing["task_framing"]
+        assert state["user_message"] == supervisor.message and state["response"]["hash"] == digest("stored")
     assert not provider.disable_session_persistence
 
 

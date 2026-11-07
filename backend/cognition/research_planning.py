@@ -153,6 +153,10 @@ def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
             record_trajectory_event('research.plan_kept', {
                 'revision': previous_plan.get('revision'), 'sha256': current['sha256'], 'model_called': False})
             return framing
+    elif previous_plan and framing.get('research_plan_action') in {'keep', 'patch'}:
+        return apply_revision_plan(framing, framing, {
+            'receipt': previous_plan, 'current_plan': read_current(previous_plan, project_path)},
+            project_path, getattr(supervisor, 'cancelled', lambda: False))
     elif not requested(framing):
         return framing
     from runtime_utils import get_base_path
@@ -170,6 +174,7 @@ def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
         record_trajectory_event("research.guide_supplied", {
             "recipient": "consciousness", "sha256": hashlib.sha256(guide.encode()).hexdigest()})
         planning = """이번 호출은 심층연구로 판단한 과제의 연구계획 작성이다.
+현재 task_framing은 실행자에게 맡길 연구 요청이다. 이 문제를 푸는 계획을 작성하라. 문제를 더 정확히 고치면 관련 기준과 계획도 함께 맞춘다.
 아래 가이드는 의식인 당신만 읽는다. 가이드를 실행자에게 추천·주입하거나 읽으라고 하지 않는다.
 원래 사용자 요청·명시 조건을 유지하여 research_plan 문자열과 이번에 변경할 규정 필드만 JSON으로 반환한다.
 변경하지 않는 task_framing·history_summary·criteria 등은 반복 출력하지 않는다. 생략한 필드는
@@ -232,15 +237,9 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
                 if validate_framing:
                     validate_framing(result)
                 result.pop("research_plan")
-                receipt = persist(body, guide, project_path, previous)
+                receipt = publish_plan(body, guide, project_path, previous, topic,
+                                       getattr(supervisor, "cancelled", lambda: False))
                 if topic is not None:
-                    from research_plans import ResearchPlans
-                    from research_store import ResearchStore
-                    store = ResearchStore(project_path)
-                    if store.uid != topic['project_uid'] or store.epoch != topic['epoch']:
-                        raise RuntimeError('계획 작성 중 연구 프로젝트가 변경됐습니다')
-                    receipt = ResearchPlans(store, _root(project_path)).bind(
-                        topic['thread_id'], topic['run_id'], receipt, topic['revision'])
                     # 계획을 가진다는 사실과 이번 턴의 깊은 조사 여부는 다르다.
                     result['deep_research'] = requested(framing)
                     result['research_plan_action'] = 'revise'
@@ -260,6 +259,86 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
         record_trajectory_event("research.plan_failed", {"error": str(exc)})
         raise FramingContractError("심층연구 계획을 작성·저장하지 못해 조사를 시작하지 않았습니다. "
                                    + str(exc)) from exc
+
+
+def revision_context(framing, runner, project_path):
+    """감사가 판단할 실제 계획 판본. 보관된 초기 본문으로 진행을 덮어쓰지 않는다."""
+    loader = getattr(runner, "_research_planning_context", None)
+    topic = loader() if loader else None
+    if topic is not None:
+        return topic
+    receipt = (framing or {}).get("_research_plan")
+    return {"receipt": receipt, "current_plan": read_current(receipt, project_path)} if receipt else None
+
+
+def publish_plan(body, guide, project_path, previous=None, topic=None, cancelled=lambda: False):
+    """현재 출처를 확인하고 새 파일 판본을 게시한다. 기존 파일은 수정하지 않는다."""
+    if cancelled():
+        raise ValueError("연구계획 게시 전에 실행이 종료됐습니다")
+    if previous and previous.get("sha256"):
+        current = read_current(previous, project_path)
+        if current["sha256"] != previous["sha256"]:
+            raise ValueError("연구계획 본문이 변경됐습니다. 최신 판본으로 판단해야 합니다")
+    receipt = persist(body, guide, project_path, previous)
+    if cancelled():
+        raise ValueError("연구계획 게시 전에 실행이 종료됐습니다")
+    if topic and topic.get("thread_id"):
+        from research_plans import ResearchPlans
+        from research_store import ResearchStore
+        store = ResearchStore(project_path)
+        if store.uid != topic['project_uid'] or store.epoch != topic['epoch']:
+            raise RuntimeError('계획 작성 중 연구 프로젝트가 변경됐습니다')
+        expected = (previous['path'], previous['sha256']) if previous and previous.get('sha256') else None
+        receipt = ResearchPlans(store, _root(project_path)).bind(
+            topic['thread_id'], topic['run_id'], receipt, topic['revision'], expected_source=expected)
+    return receipt
+
+
+def apply_revision_plan(framing, update, topic, project_path, cancelled=lambda: False):
+    """같은 의식 판단의 계획 변경을 저장한다. 재판단 모델 호출은 없다."""
+    previous = (topic or {}).get("receipt")
+    source = (topic or {}).get("current_plan")
+    action = update.get("research_plan_action")
+    if not previous and not requested(framing) and action is None:
+        return framing
+    if action not in {"keep", "patch", "revise"}:
+        raise ValueError("연구 요청 수정에는 research_plan_action(keep/patch/revise)이 필요합니다")
+    if cancelled():
+        raise ValueError("종료된 실행의 연구계획은 변경하지 않습니다")
+    if previous:
+        current = read_current(previous, project_path)
+        if not source or current['sha256'] != source['sha256']:
+            raise ValueError("판단 후 연구계획 본문이 변경됐습니다")
+        if topic.get('thread_id'):
+            from research_plans import ResearchPlans
+            from research_store import ResearchStore
+            store = ResearchStore(project_path)
+            if store.uid != topic['project_uid'] or store.epoch != topic['epoch']:
+                raise ValueError("연구 프로젝트가 변경됐습니다")
+            ResearchPlans(store, _root(project_path)).check_source(
+                topic['thread_id'], topic['run_id'], topic['revision'], source['path'], source['sha256'])
+    if action == "keep":
+        if not previous:
+            raise ValueError("유지할 연구계획이 없습니다")
+        receipt = {**previous, "body": source['body'], "current_sha256": source['sha256']}
+    elif action == "patch":
+        from research_plan_patch import apply_patch, prepare_patch
+        if topic and topic.get('thread_id'):
+            receipt = prepare_patch(update, topic, project_path, cancelled)
+        else:
+            body = apply_patch(update.get("research_plan_patch"), source)
+            receipt = publish_plan(body, "", project_path, source, cancelled=cancelled)
+    else:
+        body = update.get("research_plan")
+        if not isinstance(body, str) or not body.strip() or len(body) > 32000:
+            raise ValueError("research_plan에 32000자 이내의 새 계획 본문이 필요합니다")
+        receipt = publish_plan(body, "", project_path, source, topic, cancelled)
+    result = {**framing, "_research_plan": receipt}
+    result.pop("research_plan", None)
+    result.pop("research_plan_patch", None)
+    if topic and topic.get('thread_id'):
+        result['_research_topic'] = {'mode': topic['mode']}
+    return result
 
 
 def execution_block(framing):

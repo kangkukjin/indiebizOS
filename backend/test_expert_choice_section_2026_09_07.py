@@ -38,7 +38,7 @@ def test_section_carries_sentence(compile_fn):
     line = [l for l in out.split("\n") if l.startswith(LABEL)]
     assert line == [f"{LABEL} {SENT}"], out
     # 당위 앵커 아래 = 명령으로 재분류되는 자리
-    assert out.index("다음 절차에 따라 수행하라") < out.index(LABEL)
+    assert out.index("현재 수행할 요청:") < out.index(LABEL)
 
 
 @pytest.mark.parametrize("value", ["", "   ", None, 0, [SENT], {"a": 1}])

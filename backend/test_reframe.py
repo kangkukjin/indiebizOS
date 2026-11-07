@@ -112,7 +112,7 @@ def test_executor_reframe_revises_and_updates_channel():
     out = json.loads(raw)
     assert out["revised"] is True and out["revision_no"] == 1
     assert "처음부터 다시 시작하지 말고" in out["content"]
-    assert "원장이 없으므로" in out["content"] and "충족 기준(갱신)" in out["content"]
+    assert "원장이 없으므로" in out["content"] and _NEW["achievement_criteria"] in out["content"]
     assert "- 검색이 된다" in out["content"] and "self:write" not in out["content"]
     assert ch.current["capability_focus"] == {"hint": "먼저 원장을 만든다"}
     # 의식은 revision 을 받았다

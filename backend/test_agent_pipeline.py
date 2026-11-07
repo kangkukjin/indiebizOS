@@ -1,5 +1,6 @@
 """도구 관측·실행자 종료·선택된 검수의 책임 경계."""
 from types import SimpleNamespace as NS
+import json
 
 import boot_paths  # noqa: F401
 import pytest
@@ -123,6 +124,67 @@ def test_pipeline_reviews_recovered_task_without_second_execution(turn, supervis
     assert get_goal_eval_outcome()['status'] == 'ACHIEVED'
     assert [e['content'] for e in events if e['type'] == 'final'] == ['초점 복구와 검사 완료']
     assert supervisor.recovery.view() and not turn.followup_reason
+
+
+@pytest.mark.parametrize('origin', ['review', 'executor'])
+def test_reframed_request_reaches_real_pipeline_evaluation_and_next_turn(turn, supervisor, monkeypatch, origin):
+    from agent_pipeline import CognitivePipelineMixin
+    from cognitive_consciousness import CognitiveConsciousnessMixin
+    from cognitive_eval import CognitiveEvalMixin
+    from test_reflex_execution import AI
+    from reframe import current
+
+    original = '한국 청년 채용을 조사해줘'
+    initial = {'task_framing': '전체 감소 원인을 조사하라', 'achievement_criteria': '초기 기준',
+               'criteria': [{'text': '초기 기준'}], 'independent_review': True}
+    update = {'task_framing': '직종별 증가와 감소를 구분해 비교하라',
+              'achievement_criteria': '직종별 변화와 한계', 'criteria': [{'text': '직종별 변화와 한계'}]}
+    class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin, CognitiveEvalMixin):
+        pass
+    class ExecutionAI(AI):
+        def process_message_stream(self, **kwargs):
+            self.calls.append(kwargs)
+            message = kwargs['message_content']
+            assert message.index(initial['task_framing']) < message.index(original)
+            channel = current(supervisor.owner, supervisor.task)
+            assert channel is supervisor._framing_channel
+            if origin == 'review':
+                supervisor.review('milestone', paused=True)
+                notice = supervisor.boundary()['instruction']
+            else:
+                notice = supervisor.reframe({'broken_assumption': '전체 감소라는 가정', 'evidence': '직종별 원자료'})
+            assert update['task_framing'] in notice
+            yield {'type': 'final', 'content': '직종별 변화와 자료 한계를 정리했습니다.'}
+    runner = Runner()
+    runner.config = {'name': 'worker'}
+    runner.ai = ExecutionAI([])
+    runner._associate = lambda *a, **kw: None
+    runner._decide_request_type = lambda *a, **kw: ('THINK', None)
+    runner._run_consciousness_or_reuse = lambda *a, **kw: initial
+    runner._run_consciousness = lambda *a, **kw: update
+    runner._load_role = lambda: 'role'
+    runner._build_system_prompt_split = lambda *a, **kw: ('system', 'execution context')
+    runner._after_response_async = lambda *a, **kw: None
+    supervisor.runner = runner
+    monkeypatch.setattr('supervision_bus.current', lambda: supervisor)
+    monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
+    remembered, evaluated, reviews = [], [], []
+    monkeypatch.setattr('framing_inheritance.remember', lambda r, message, framing, **kw: remembered.append(framing))
+    monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw:
+        reviews.append(kw['phase']) or json.dumps({'status': 'REWORK', 'reason': '관측에 맞게 문제 변경', **update}))
+    def evaluate(prompt, **kwargs):
+        evaluated.append(prompt)
+        assert update['task_framing'] in prompt and update['achievement_criteria'] in prompt
+        assert '초기 기준' not in prompt
+        return 'ACHIEVED'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    events = list(runner._cognitive_stream_body(original, []))
+    assert len(runner.ai.calls) == len(evaluated) == len(remembered) == 1
+    assert remembered[0]['task_framing'] == update['task_framing']
+    assert remembered[0]['criteria'] == update['criteria']
+    assert remembered[0] is supervisor.framing
+    assert reviews == (['review'] if origin == 'review' else [])
+    assert [e['content'] for e in events if e['type'] == 'final'] == ['직종별 변화와 자료 한계를 정리했습니다.']
 
 
 

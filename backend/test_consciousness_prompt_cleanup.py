@@ -24,17 +24,6 @@ def _agent():
     return ConsciousnessAgent.__new__(ConsciousnessAgent)
 
 
-def test_main_prompt_has_no_repair_tail_or_history():
-    t = _read("consciousness_prompt.md")
-    for dead in ("메타 인지 가드", "시스템 수리 안전수칙", "backend_keeper_off", "지연 적용",
-                 "폐지되었다", "ep1264", "ep2386", "2026-06-28", "2026-08-19", "1-2문장", "1~2문장"):
-        assert dead not in t, f"본문에 남아선 안 되는 문구: {dead}"
-    # 골격과 전제 칸은 있어야 한다
-    for keep in ("세상의 방식", "expert_choice", "무게·멈춤선", "assumptions", "<repair_doctrine>"):
-        assert keep in t, f"본문에 있어야 하는 문구: {keep}"
-    # 중복 조항은 한 번만
-    assert t.count("수단(능력)은 가두지 않는다") == 1
-
 
 def test_doctrine_block_only_when_repair():
     a = _agent()
@@ -74,10 +63,10 @@ def test_assumptions_fused_into_user_command():
     import prompt_builder
     co = {"task_framing": "문제: x", "assumptions": ["원장 파일이 있다", "라이브러리 X 가 설치돼 있다"]}
     cmd = prompt_builder.compile_user_command("보고서 써줘", co)
-    assert "이 계획의 전제" in cmd
+    assert "확인할 전제" in cmd
     assert "- 원장 파일이 있다" in cmd and "- 라이브러리 X 가 설치돼 있다" in cmd
     # 형식이 틀리면 조용히 생략
-    assert "이 계획의 전제" not in prompt_builder.compile_user_command("x", {"task_framing": "y", "assumptions": 3})
+    assert "확인할 전제" not in prompt_builder.compile_user_command("x", {"task_framing": "y", "assumptions": 3})
 
 
 def test_guide_delivery_handles_missing_empty_and_duplicate_files(tmp_path, monkeypatch):

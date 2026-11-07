@@ -1,21 +1,10 @@
-"""reframe.py — 턴 안 재규정 (2026-09-06, 사용자 판정 '한번 해봐')
+"""턴의 현재 실행 요청을 소유하고 의식의 초기·중간 재규정을 연결한다.
 
-의식은 턴 시작에 한 번 문제를 규정한다. 그 규정이 성립하려면 참이어야 하는 전제
-(assumptions)가 실행 중 반증되면 — 그 틀 안에서는 풀 수 없거나, 위험하거나, 문제가
-다른 것이었음이 드러나면 — 실행자가 깨진 전제와 근거를 들고 **의식에게 되묻는다**.
-의식은 이미 확보된 사실을 제약으로 흡수해 처음부터 다시 규정하고, 새 규정이 실행자의
-도구 결과로 같은 대화에 돌아온다. 대화는 끊기지 않는다 — 새 규정이 가장 최근 메시지가
-될 뿐이다(연속 메타인식이 아니라 *놀랐을 때 다시 묻기*).
-
-실행자가 반증된 전제와 근거를 제시하는 도구 `reframe`이 입구다.
-IBL 어휘가 아니다 — 의식↔실행자 이음매 신호는 해마 코퍼스에 섞이지 않는다.
-검수의 실패 횟수·심각도만으로 완료 기준을 자동 교체하지 않는다.
-상한: 한 턴에 MAX_REVISIONS 회 — 의식과 실행자가 서로 떠넘기며 도는 것을 막는다.
-
-두-경로 대칭(read_guide·조향과 같다): 인프로세스 프로바이더는 system_tools 디스패치,
-Claude Code 는 mcp_server.reframe → /ibl/reframe 로 같은 execute_reframe 에 닿는다.
-채널은 (agent_id, task_id)별이다. 별칭·조회·종료는 같은 작업만 가리킨다.
+실행자가 발견한 문제는 reframe으로 의식에 전달하고, 중간감사가 이미 내린 판단은
+같은 채택 경로로 바로 반영한다. 요청·기준·계획을 함께 전달하며 기존 결과를 이어 쓴다.
+IBL 어휘가 아닌 실행자↔의식의 통로이며 채널은 (agent_id, task_id)별이다.
 """
+import copy
 import json
 import threading
 import time
@@ -31,8 +20,8 @@ _lock = threading.Lock()
 TOOL_SCHEMA = {
     "name": "reframe",
     "description": (
-        "규정(현재 태스크·이 계획의 전제)이 실행 중 사실이 아니게 됐을 때 의식에게 재규정을 요청한다. "
-        "전제가 깨졌거나, 이 틀 안에서는 풀 수 없거나, 그대로 하면 위험하다는 것을 알게 됐을 때 부른다. "
+        "실행 근거에 비춰 현재 요청 자체를 고쳐야 할 때 의식에게 재규정을 요청한다. "
+        "전제·범위·질문이 부정확하거나 이 틀로 사용자 목적을 이룰 수 없을 때 근거를 보낸다. "
         "깨진 계획 위에 계속 짓거나 혼자 목표를 바꾸지 말 것 — 이 도구가 새 규정(문제·접근·전제·달성 기준)을 "
         "돌려주고 작업은 그 자리에서 이어진다(처음부터 다시 시작하지 않는다). "
         "사소한 오류·재시도로 풀리는 실패에는 쓰지 않는다. 한 턴에 최대 2회."
@@ -84,6 +73,8 @@ class TurnChannel:
         self.revisions = 0
         self.log: list = []          # [{trigger, broken, kind, ts}]
         self.opened_at = time.time()
+        self.closed = False
+        self.on_change = None
 
     @property
     def revised(self) -> bool:
@@ -148,6 +139,7 @@ def close_turn(key: str, task_id=None, *, expected=None) -> Optional[TurnChannel
         if expected is not None and ch is not expected:
             return None
         if ch is not None:
+            ch.closed = True
             for k in [k for k, v in _channels.items() if v is ch]:
                 _channels.pop(k, None)
     return ch
@@ -171,6 +163,8 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
     """의식을 다시 깨워 규정을 갱신. 반환 = 결과 봉투(dict). 상한·실패는 봉투로 정직하게."""
     from consciousness_agent import ConsciousnessCallSkipped
 
+    if ch.closed or getattr(ch, "cancel_check", lambda: False)():
+        return {"revised": False, "reason": "이미 종료된 실행입니다"}
     if ch.revisions >= MAX_REVISIONS:
         return {"revised": False, "reason": f"이 턴의 재규정 상한({MAX_REVISIONS}회)에 닿았다",
                 "directive": ("더는 재규정하지 않는다. 지금까지 확보한 사실로 가능한 만큼만 마무리하고, "
@@ -181,7 +175,8 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
         "previous_framing": ch.current.get("task_framing", ""),
         "previous_assumptions": ch.current.get("assumptions") or [],
         "previous_criteria": ch.current.get("achievement_criteria", ""),
-        "previous_request_intent": ch.current.get("request_intent", "task"),
+        "previous_contract": ch.current,
+        "previous_request_intent": ch.current.get("request_intent", getattr(ch, "request_intent", "task")),
         "previous_research_plan": ch.current.get("_research_plan"),
         "broken_assumption": (broken or "").strip()[:2000],
         "evidence": (evidence or "").strip()[:4000],
@@ -208,34 +203,79 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
         return {"revised": False, "reason": "의식이 새 규정을 내지 못했다",
                 "directive": "현재 규정으로 가능한 만큼 진행하고 깨진 전제를 최종 보고에 적어라."}
 
-    from consciousness_agent import project_framing
-    out = project_framing(out)
+    return accept_revision(ch, out, revision)
 
-    # 권한은 재규정으로 늘지 않는다 — 수리 승격은 턴 시작의 파이프라인 판단이다.
-    if out.get("needs_repair") and not ch.repair:
-        out["needs_repair"] = False
-        out["_repair_declared_mid_turn"] = True
-    out["_revision"] = {k: revision[k] for k in ("trigger", "kind", "revision_no", "broken_assumption")}
-    out["_framing_origin"] = ch.original.get("task_framing", "")
-    out["_framing_source"] = "fresh_consciousness_revision"
-    ch.current = out
-    ch.revisions += 1
-    ch.log.append({"trigger": trigger, "kind": kind, "broken": revision["broken_assumption"][:200],
-                   "ts": time.time()})
 
-    try:
-        from episode_logger import record_trajectory_event
-        record_trajectory_event("framing.revised", {
-            "trigger": trigger, "kind": kind, "revision_no": ch.revisions,
-            "broken_assumption": revision["broken_assumption"][:1000],
-            "evidence": revision["evidence"][:2000],
-            "new_framing": (out.get("task_framing") or "")[:3000],
-            "new_criteria": (out.get("achievement_criteria") or "")[:2000],
-        })
-    except Exception:
-        pass
-    print(f"[재규정] {trigger} #{ch.revisions} ({kind}): {revision['broken_assumption'][:80]}")
-    return {"revised": True, "output": out}
+# 중간감사는 최초 의식과 같은 필드만 수정한다. 내부 영수증·권한은 하네스 소유다.
+REVISION_FIELDS = frozenset({
+    "task_framing", "achievement_criteria", "criteria", "assumptions", "expert_choice",
+    "capability_focus", "guide_files", "history_summary", "needs_clarification",
+    "clarification_question", "deep_research", "independent_review",
+    "request_intent", "request_intent_reason", "research_plan_action",
+    "research_plan_patch", "research_plan",
+})
+
+
+def merge_revision(current, update):
+    """생략은 계승하고 변경 필드는 교체한다. 의미 판단은 같은 의식이 소유한다."""
+    from consciousness_agent import project_framing, validate_framing_focus
+    update = project_framing(update)
+    result = copy.deepcopy({**(current or {}), **update})
+    validate_framing_focus(result)
+    if not isinstance(result.get("task_framing"), str) or not result["task_framing"].strip():
+        raise ValueError("현재 수행할 요청 task_framing이 필요합니다")
+    if ("criteria" in update or ("achievement_criteria" in update and (current or {}).get("criteria"))):
+        if not {"criteria", "achievement_criteria"} <= update.keys():
+            raise ValueError("criteria와 achievement_criteria는 함께 갱신해야 합니다")
+    for key in ("achievement_criteria", "expert_choice", "history_summary", "clarification_question"):
+        if key in update and not isinstance(update[key], str):
+            raise ValueError(f"{key}는 문자열이어야 합니다")
+    for key in ("criteria", "assumptions", "guide_files"):
+        if key in update and not isinstance(update[key], list):
+            raise ValueError(f"{key}는 목록이어야 합니다")
+    for row in result.get("criteria", []):
+        if not isinstance(row, dict) or not isinstance(row.get("text"), str) or not row["text"].strip():
+            raise ValueError("criteria에 text가 있는 기준 객체가 필요합니다")
+    for key in ("needs_clarification", "deep_research", "independent_review"):
+        if key in update and not isinstance(update[key], bool):
+            raise ValueError(f"{key}는 참/거짓이어야 합니다")
+    return result
+
+
+def accept_revision(ch, update, revision, prepare=None):
+    """이미 내려진 의식 판단을 채택하는 단일 경로. 모델을 다시 호출하지 않는다."""
+    with ch.lock:
+        if ch.closed or getattr(ch, "cancel_check", lambda: False)():
+            return {"revised": False, "reason": "종료된 실행의 규정은 변경하지 않습니다"}
+        out = merge_revision(ch.current, update)
+        if prepare is not None:
+            out = prepare(out)
+        if out.get("needs_repair") and not ch.repair:
+            out["needs_repair"] = False
+            out["_repair_declared_mid_turn"] = True
+        if "_repair_policy" in ch.current:
+            out["_repair_policy"] = ch.current["_repair_policy"]
+        out["_revision"] = {"trigger": revision["trigger"], "kind": revision.get("kind", "wrong_problem"),
+                            "revision_no": ch.revisions + 1,
+                            "broken_assumption": revision.get("broken_assumption", "")}
+        out["_framing_origin"] = ch.original.get("task_framing", "")
+        out["_framing_source"] = "fresh_consciousness_revision"
+        ch.current = out
+        ch.revisions += 1
+        ch.log.append({**out["_revision"], "ts": time.time()})
+        env = {"revised": True, "output": out, "user_message": ch.message}
+        if ch.on_change and ch.on_change(out):
+            env["scope_revision"] = "task"
+        try:
+            from episode_logger import record_trajectory_event
+            record_trajectory_event("framing.revised", {
+                **out["_revision"], "evidence": revision.get("evidence", "")[:2000],
+                "new_framing": out["task_framing"][:3000],
+                "new_criteria": out.get("achievement_criteria", "")[:2000],
+            })
+        except Exception:
+            pass  # 관측 기록 실패가 이미 채택한 규정을 되돌리지 않는다.
+        return env
 
 
 def render_for_executor(env: dict) -> str:
@@ -254,34 +294,8 @@ def render_for_executor(env: dict) -> str:
     if out.get("needs_clarification") and (out.get("clarification_question") or "").strip():
         lines.append("★멈춤: 이 문제는 사용자 확인 없이는 진행할 수 없다. 더 실행하지 말고, 지금까지 확인한 "
                      "사실을 짧게 정리한 뒤 다음 질문으로 응답을 마무리하라:\n" + out["clarification_question"].strip())
-    from prompt_builder import internal_plan_field
-    lines.append("현재 태스크(내부 재규정):\n" + internal_plan_field(
-        "task_framing", (out.get("task_framing") or "").strip()))
-    try:
-        from prompt_builder import _expert_choice_line
-        _ex = _expert_choice_line(out)
-    except Exception:
-        _ex = ""
-    if _ex:
-        lines.append("전문가의 선택: " + _ex)
-    try:
-        from prompt_builder import _assumption_lines
-        a = _assumption_lines(out)
-    except Exception:
-        a = ""
-    if a:
-        lines.append("이 계획의 전제(첫 확인에서 검증하라):\n" + a)
-    cf = out.get("capability_focus") or {}
-    hint = (cf.get("hint") or "").strip()
-    if hint:
-        lines.append("수행 절차(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
-    crit = (out.get("achievement_criteria") or "").strip()
-    if crit:
-        lines.append("충족 기준(갱신): " + crit)
-    from research_planning import execution_block
-    research = execution_block(out)
-    if research:
-        lines.append(research)
+    from prompt_builder import compile_user_command
+    lines.append(compile_user_command(env.get("user_message", ""), out))
     if out.get("_repair_declared_mid_turn"):
         lines.append("재규정은 전역 수리 권한을 발급하지 않는다. 원래 목적을 유지하며 다른 명령·도구·지역 함수·Script로 "
                      "계속하라. 등록된 순수 변환 부품은 현재 사용자 업무의 파일 수정→self:patch apply로 한정 수리할 수 있다. "

@@ -313,9 +313,10 @@ class ConsciousnessAgent:
 
             def validate_initial(value):
                 validate_contract(value)
-                if research_topic is not None:
-                    from research_planning import validate_topic_choice
-                    validate_topic_choice(value, research_topic)
+                if research_topic is not None or (revision and previous_research_plan):
+                    from research_planning import validate_topic_choice, read_current
+                    topic = research_topic or {"current_plan": read_current(previous_research_plan, project_path)}
+                    validate_topic_choice(value, topic)
 
             if result:
                 from episode_logger import record_trajectory_event
@@ -347,6 +348,9 @@ class ConsciousnessAgent:
                             "자동 정정도 실패해 실행을 중단했습니다. 다시 시도해 주세요.") from retry_exc
                     record_trajectory_event("consciousness.contract_corrected", {"corrected": True})
             if result:
+                if revision and revision.get("previous_contract"):
+                    from reframe import merge_revision
+                    result = merge_revision(revision["previous_contract"], result)
                 from research_planning import prepare
                 result = prepare(self, result, base_input, supervisor=supervisor,
                                  project_path=project_path,
@@ -456,11 +460,14 @@ class ConsciousnessAgent:
                 f"{r.get('revision_no', 1)}, 방아쇠={r.get('trigger', '')}, 종류={r.get('kind', '')}). "
                 "실행 에이전트가 아래 규정으로 일하다가 전제가 깨졌음을 알았다. 사용자 메시지는 그대로이고, "
                 "이미 확보된 사실(progress)은 제약으로 흡수하며, 깨진 전제를 다시 세우지 않는 새 규정을 "
-                "처음부터 다시 쓴다. 이 틀 안에서 풀 수 없거나 위험하면 문제 공간을 좁히거나 "
+                "현재 실행 요청으로 다시 쓴다. 바뀐 문제에 맞춰 기준과 계획도 수정한다. 이 틀 안에서 풀 수 없거나 위험하면 "
                 "needs_clarification 으로 멈춘다.\">\n"
                 f"<previous_framing>\n{r.get('previous_framing', '')}\n</previous_framing>\n"
                 f"<previous_assumptions>\n{prev_a_txt}\n</previous_assumptions>\n"
                 f"<previous_criteria>\n{r.get('previous_criteria', '')}\n</previous_criteria>\n"
+                "기존 계획이 있으면 research_plan_action으로 keep/patch/revise를 판단한다. "
+                "기준을 바꾸면 criteria와 achievement_criteria를 함께 반환한다.\n"
+                f"<previous_contract>{json.dumps(r.get('previous_contract', {}), ensure_ascii=False)}</previous_contract>\n"
                 f"<previous_request_intent>{r.get('previous_request_intent', 'task')}</previous_request_intent>\n"
                 "사실 통보(context_update) 분류가 문제라면 사용자 원문과 직전 대화를 대조한다. "
                 "첨부 판독·기록 등 사용자가 요청한 작업 또는 그 후속을 통보로 잘못 분류했다면 "

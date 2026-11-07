@@ -80,12 +80,13 @@ class Supervisor:
         self.delivery = DeliveryQueue(self.store.directory / "delivery", (self.store.directory / "published") if is_member() else get_base_path() / "공유창고", self.log)
         self.history_ref = self.store.evidence(self.history)
         self.lock = threading.RLock()
-        self.review_lock = threading.Lock()
+        self.review_lock = threading.RLock()
         self.stopped = threading.Event()
         self.started = self.last_progress = self.last_review = time.monotonic()
         self.active = {}
         self.recent = deque(maxlen=24)
         self.jobs = {}
+        self._framing_channel = None
         self.framing = None
         self.enabled = False
         self.reviews = self.failures = self.repeats = self.tools_used = self.call_tools = 0
@@ -158,6 +159,7 @@ class Supervisor:
 
     def close(self):
         self.stopped.set()
+        self._framing_channel.closed = True
         unregister(self)
         self.log("turn.closed", role="harness", reviews=self.reviews, tools=self.tools_used)
         # 모델/원격 도구를 기다리느라 사용자 턴 종료를 붙잡지 않는다. 늦은 판정은 폐기된다.
@@ -303,10 +305,47 @@ class Supervisor:
             return invoke(self, prompt, planning_prompt=system_prompt + "\n\n" + PLANNING_TOOL_PROMPT,
                           phase="reframe" if revision else "plan")
 
-    def configure(self, framing, repair=False):
+    @property
+    def framing(self):
+        return self._framing_channel.current
+
+    @framing.setter
+    def framing(self, value):
+        from reframe import TurnChannel
+        from consciousness_agent import project_framing
+        if self._framing_channel is None:
+            self._framing_channel = TurnChannel(self.owner, self.runner, self.message,
+                self.history, "", value, False, self.owner)
+            self._framing_channel.task_id = self.task
+            self._framing_channel.context = self.context
+            self._framing_channel.lock = self.lock
+            self._framing_channel.on_change = self._framing_changed
+        previous = self._framing_channel.current
+        self._framing_channel.current = project_framing(value) or {}
+        if any(previous.get(k) != self.framing.get(k) for k in
+               ("task_framing", "criteria", "achievement_criteria")):
+            self._final_criteria_contract = None
+
+    def _framing_changed(self, framing):
+        from supervisor_handoff import criteria_contract
+        self._final_criteria_contract = criteria_contract(self.message, framing)
+        self.last_decision = None
+        self.enabled = bool(framing)
+        changed = self._revise_request_intent(framing)
+        self._framing_channel.request_intent = self.request_intent
+        return changed
+
+    def configure(self, framing, repair=False, channel=None):
         from consciousness_agent import project_framing
         framing = project_framing(framing)
+        if channel is not None:
+            self._framing_channel = channel
+            channel.lock = self.lock
+            channel.on_change = self._framing_changed
         self.framing = framing
+        self._framing_channel.repair = repair
+        self._framing_channel.request_intent = self.request_intent
+        self._framing_channel.cancel_check = self.cancelled
         self._final_criteria_contract = None
         # 작업 규정은 실행 맥락이다. 기준의 존재만으로 독립 검토를 켜지 않는다.
         self.enabled = bool(framing)
@@ -341,31 +380,21 @@ class Supervisor:
         return self.enabled and requested and bool(criteria["criteria"])
 
     def reframe(self, payload):
-        from reframe import TurnChannel, _revise, render_for_executor
-        from thread_context import snapshot, restore
-        previous = snapshot()
+        from reframe import _revise, render_for_executor
         try:
-            restore(self.context)
             if not payload.get("broken_assumption") or not payload.get("evidence"):
                 raise ValueError("broken_assumption과 evidence가 필요합니다")
-            current_framing = {**(self.framing or {}), "request_intent": self.request_intent}
-            ch = TurnChannel(self.owner, self.runner, self.message, self.history, "",
-                             current_framing, self.repair_granted, self.owner)
-            env = _revise(ch, "executor", payload["broken_assumption"], payload["evidence"],
-                          payload.get("progress", ""), payload.get("kind", "other"))
-            if env.get("revised"):
-                policy = (self.framing or {}).get("_repair_policy")
-                self.framing = ch.current
-                if policy is not None:
-                    self.framing["_repair_policy"] = policy
-                if self._revise_request_intent(ch.current):
-                    env["scope_revision"] = "task"
+            # 모델 잠금 → 상태 잠금의 순서를 중간감사와 맞춘다. plan은 같은 스레드에서 재진입한다.
+            with self.review_lock, self.lock:
+                if self.cancelled() or (self.finalizing and self.phase != "repair"):
+                    return render_for_executor({"revised": False, "reason": "실행이 종료 중입니다"})
+                env = _revise(self._framing_channel, "executor", payload["broken_assumption"],
+                              payload["evidence"], payload.get("progress", ""), payload.get("kind", "other"))
             self.log("premise.challenged", role="execution", input=self.store.evidence(payload), result=self.store.evidence(env))
             return render_for_executor(env)
         except Exception as exc:
             return json.dumps({"revised": False, "reason": str(exc)}, ensure_ascii=False)
         finally:
-            restore(previous)
             self.phase = "execute"
 
     def _revise_request_intent(self, framing):
@@ -672,7 +701,30 @@ class Supervisor:
 
     def _take_pending(self):
         notice, self.pending = self.pending, None
-        if notice:
+        if notice and notice.get("framing_update"):
+            # 이미 내려진 판단만 실행 경계에서 채택한다. 늦은 판단은 새 실행을 열지 않는다.
+            if (self.finalizing or self.cancelled() or not self.conditions_valid(notice["conditions"])
+                    or notice["revision"] != self.exec_revision):
+                self.log("decision.stale", role="harness", notice_id=notice["id"],
+                         reason="framing_or_observations_changed")
+                return None
+            from reframe import accept_revision, render_for_executor
+            from research_planning import apply_revision_plan
+            try:
+                env = accept_revision(self._framing_channel, notice["framing_update"], {
+                    "trigger": "review", "broken_assumption": notice["reason"],
+                    "evidence": json.dumps(notice.get("evidence_ids", [])),
+                }, prepare=lambda framing: apply_revision_plan(
+                    framing, notice["framing_update"], notice.get("research_topic"),
+                    self.project_path, self.cancelled))
+                notice["instruction"] = render_for_executor(env)
+                if notice.get("execution_instruction"):
+                    notice["instruction"] += "\n" + notice["execution_instruction"]
+            except (ValueError, OSError, RuntimeError) as exc:
+                self.log("framing.rejected", role="harness", reason=str(exc))
+                notice["instruction"] = ("의식의 새 요청을 적용하지 못했다: " + str(exc)
+                    + ". 기존 요청과 유효 결과는 유지된다. 적용되지 않은 변경을 완료했다고 보고하지 마라.")
+        elif notice:
             from supervisor_interventions import refresh_notice
             notice = refresh_notice(self, notice)
         if notice:
@@ -782,7 +834,12 @@ class Supervisor:
             revision = self.exec_revision
             conditions = self.review_conditions(reason)
             cursor = self.store.sequence
-            decision = parse_decision(invoke(self, json.dumps({"trigger": reason, **self.state()}, ensure_ascii=False), phase="review"))
+            from research_planning import revision_context
+            research_topic = revision_context(self.framing, self.runner, self.project_path)
+            state = {"trigger": reason, **self.state()}
+            if research_topic:
+                state["research_topic"] = research_topic
+            decision = parse_decision(invoke(self, json.dumps(state, ensure_ascii=False), phase="review"))
             if self.cancelled():
                 return
             self.log("decision", role="consciousness", trigger=reason, decision=decision)
@@ -790,7 +847,9 @@ class Supervisor:
             accepted = assess_recovery(self, decision, conditions['goal'])
             conditions['incidents'].update({k: v for k, v in accepted.items() if k in conditions['incidents']})
             self.review_cursor = cursor
-            if decision["status"] in {"REWORK", "UNKNOWN"} and (decision.get("instruction") or decision.get("findings")):
+            from reframe import REVISION_FIELDS
+            update = {k: v for k, v in decision.items() if k in REVISION_FIELDS} if decision["status"] == "REWORK" else {}
+            if decision["status"] in {"REWORK", "UNKNOWN"} and (update or decision.get("instruction") or decision.get("findings")):
                 with self.lock:
                     from supervisor_interventions import refresh_notice, review_findings
                     notice = {"id": uuid.uuid4().hex, "reason": decision["reason"],
@@ -798,7 +857,13 @@ class Supervisor:
                                     "sequence": self.store.sequence, "expires_at": None,
                                     "findings": review_findings(decision), "review": self.reviews, "revision": revision,
                                     "conditions": conditions}
-                    self.pending = refresh_notice(self, notice)
+                    if update:
+                        notice.update(framing_update=update, research_topic=research_topic,
+                                      evidence_ids=decision.get("evidence_ids", []),
+                                      execution_instruction=decision.get("instruction", ""))
+                        self.pending = notice
+                    else:
+                        self.pending = refresh_notice(self, notice)
                     if self.pending:
                         self.log("instruction.queued", role="harness", instruction=self.pending)
         except Exception as exc:
@@ -913,6 +978,9 @@ class Supervisor:
     def finalize(self, response, history, collect, cancel_check=None, tool_calls=None):
         if not self.enabled:
             return response
+        with self.lock:
+            self.finalizing = True
+            self.pending = None
         from episode_logger import record_trajectory_event
         from supervisor_runtime import parse_decision, repair_message
         from final_evaluator import invoke, prepare, snapshot_error

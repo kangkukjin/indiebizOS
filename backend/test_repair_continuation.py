@@ -64,6 +64,26 @@ def test_defer_preserves_sealed_criteria_when_final_contract_is_not_set(supervis
     assert journal.defer(supervisor, "draft", tmp_path)["criteria_contract"] == contract
 
 
+def test_defer_after_reframing_uses_current_criteria_instead_of_previous_seal(supervisor, tmp_path):
+    from reframe import accept_revision
+    path = scheduled(tmp_path, supervisor.task).with_name(supervisor.task + ".json")
+    old = {"criteria": [{"id": "C1", "text": "옛 기준"}]}
+    atomic_json(path, {"status": "apply_scheduled", "repair_policy": 2,
+                       "readiness": {"criteria": old}})
+    tc.set_task_origin("user")
+    supervisor.repair_granted = True
+    supervisor.runner.config = {"id": "agent", "_project_id": "project"}
+    supervisor._final_criteria_contract = old
+    accept_revision(supervisor._framing_channel, {
+        "task_framing": "변경된 문제를 해결하라", "achievement_criteria": "새 완료 기준",
+        "criteria": [{"text": "새 완료 기준"}],
+    }, {"trigger": "review"})
+    supervisor.framing = {**supervisor.framing, "_repair_policy": 2}
+    row = journal.defer(supervisor, "변경된 작업 적용", tmp_path)
+    assert row['framing']['task_framing'] == '변경된 문제를 해결하라'
+    assert row['criteria_contract']['criteria'][0]['text'] == '새 완료 기준'
+
+
 @pytest.mark.parametrize("origin,granted,cancelled", [("training", True, False), (None, True, False),
                                                      ("user", False, False), ("user", True, True)])
 def test_no_continuation_without_live_user_authorization(supervisor, monkeypatch, tmp_path, origin, granted, cancelled):

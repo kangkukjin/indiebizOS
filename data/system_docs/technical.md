@@ -261,7 +261,7 @@ IBL 쪽은 `self:document`·`self:sheet` 의 세션 op 가 같은 서비스를 �
 
 ### 의식 감독·검수의 실행 조건
 
-- `conscious_supervisor`는 의식이 활성인 턴의 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 명시한 달성 기준을 검수까지 이어가며, 의식 없는 REFLEX·EXECUTE는 도구 실패·쓰기·장시간 실행에도 감독·최종평가로 승격하지 않는다. 관측된 실패 뒤 한 번의 실행자 후속은 별도 `task_continuation` 경로이며 새로운 평가 호출이 아니다.
+- `conscious_supervisor`는 의식이 활성인 턴의 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 명시한 달성 기준을 검수까지 이어가며, 의식 없는 REFLEX·EXECUTE는 도구 실패·쓰기·장시간 실행에도 감독·최종평가로 승격하지 않는다. 실패 기록만으로 종료한 실행자를 다시 호출하지 않는다. `task_continuation`은 명시적 문맥 인계의 호출 근거와 추가 실행 소유권만 맡는다.
 - `supervision_bus`는 agent+task로 구분한 실제 도구 경계다. 의식의 직접 실행은 실행자가 멈춘 경계에서 동일한 기존 도구·권한으로 수행한다. MCP 연결은 `/ibl/supervision`, Claude Code 네이티브는 `supervision_hook.py`를 사용한다. Codex 네이티브의 개입은 다음 MCP IBL 경계까지 지연될 수 있다.
 - 중간 관찰의 모델 잠금은 실행을 막지 않는다. 시작 예고는 진척이 아니며, 확정된 지시만 실행 경계에서 전달한다. Claude Code의 응답 ID별 중간 usage로 예산을 갱신한다. `state`는 변경분, `evidence id=ibl:node:action`은 현재 액션 계약이다. 턴 전체 비용은 작업대 `cost.json`, 응답 이후 기억 후처리는 `postprocess.json`이다.
 - 후보는 `data/spill/supervision/<turn-id>/`에 저장한다. 전체 본문 검수·버전·해시가 맞으면 그대로 전송한다. 보완은 `patch`의 유일한 문자열 치환(`old_string/new_string`, 같은 블록은 `replacements`)이나 블록 교체로 원자적으로 적용한다. 빈 판정/API 오류/누락된 본문은 `UNKNOWN`이며 통과시키지 않는다.

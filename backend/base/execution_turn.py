@@ -41,7 +41,7 @@ def current():
 
 
 def claim_followup(reason):
-    """능력 교정·실패 후속·REFLEX 인계가 한 턴의 추가 실행 한도를 공유한다."""
+    """능력 교정·REFLEX 인계가 한 턴의 추가 실행 한도를 공유한다."""
     binding = current()
     if binding is None:
         return True  # 독립 호출자는 자신의 한도를 소유한다.

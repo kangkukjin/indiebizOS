@@ -392,7 +392,7 @@ def test_child_is_stopped_when_parent_no_longer_authorizes_it(env, monkeypatch, 
         repair.parent_of(child)
 
 
-@pytest.mark.parametrize('stage', ['initial', 'followup', 'adoption'])
+@pytest.mark.parametrize('stage', ['initial', 'adoption'])
 def test_pipeline_yields_pending_instead_of_claiming_original_work_complete(env, monkeypatch, stage):
     from agent_pipeline import CognitivePipelineMixin
     from cognitive_consciousness import CognitiveConsciousnessMixin
@@ -411,8 +411,7 @@ def test_pipeline_yields_pending_instead_of_claiming_original_work_complete(env,
                 propose(env)
             yield from ()
             return '원래 업무까지 완료했습니다'
-        target = 'task_continuation.continue_task' if stage == 'followup' else 'capability_guard.adopt_response'
-        monkeypatch.setattr(target, submit_repair)
+        monkeypatch.setattr('capability_guard.adopt_response', submit_repair)
     r = Runner(); r.config = {'_is_system_ai': True}
     r.ai = AI([[{'type': 'final', 'content': '원래 업무까지 완료했습니다'}]])
     r._associate = lambda *a, **kw: None

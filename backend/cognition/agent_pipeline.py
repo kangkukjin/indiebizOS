@@ -820,11 +820,6 @@ class CognitivePipelineMixin:
                 if event.get("type") == "final":
                     final_content = event.get("content", "")
                     continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.
-                if (event.get("type") == "text"
-                        and not (force_role or _clarify_text or context_update)):
-                    from task_continuation import needs_followup
-                    if needs_followup(eval_tool_calls, supervisor=_supervisor):
-                        continue  # 실패 직후의 종료 초안은 후속 실행/최종 채택까지 보류한다.
                 if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
                     continue  # 저장된 후보만 검수 후 한 번 전달한다.
                 yield event
@@ -832,14 +827,8 @@ class CognitivePipelineMixin:
             if reflex_selected and not reflex_turn.active:
                 history = reflex_turn.full_history
             from task_repair import pending, pending_response
-            from task_continuation import continue_task
-            if not pending():
-                final_content = yield from continue_task(
-                    self, message, final_content, eval_tool_calls, history,
-                    collect=_collect, images=images, supervisor=_supervisor,
-                    cancel_check=cancel_check,
-                    review_pending=_evaluation_enabled,
-                    enabled=not (force_role or _clarify_text or context_update))
+            # 도구 실패는 실행자가 이미 받은 관측이다. 실패 이력을 작업 미완료로
+            # 해석해 종료 응답을 재생성하지 않는다. 선택된 검수만 아래에서 판단한다.
             if final_content and not pending():
                 final_content = yield from adopt_response(
                     _capability_guard, self, message, final_content, eval_tool_calls, history,

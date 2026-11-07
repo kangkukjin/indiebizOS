@@ -13,8 +13,6 @@ from test_supervision_delivery import prepare as stage
 
 @pytest.mark.parametrize('state', ['resolved', 'unresolved', 'missing_evidence'])
 def test_final_review_owns_failures_and_only_defects_open_execution(supervisor, monkeypatch, state):
-    from task_continuation import continue_task
-    from test_capability_guard import drain
     supervisor.run_tool('check_widget', {'target': 'widget'},
                         lambda: {'success': False, 'error': 'focus missing'})
     supervisor.run_tool('check_widget' if state == 'resolved' else 'read_guide', {},
@@ -47,10 +45,7 @@ def test_final_review_owns_failures_and_only_defects_open_execution(supervisor, 
 
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
     supervisor.runner.ai.process_message_stream = repair
-    _, response = drain(continue_task(supervisor.runner, supervisor.message, '결과', [], [],
-                                     collect=lambda event: None, supervisor=supervisor, review_pending=True))
-    assert not evaluations and not repairs and supervisor.recovery.view() == before
-    finish(supervisor, response)
+    finish(supervisor, '결과')
     assert len(evaluations) == (1 if state == 'resolved' else 2)
     assert len(repairs) == (0 if state == 'resolved' else 1)
     assert tc.get_goal_eval_outcome()['status'] == ('UNKNOWN' if state == 'missing_evidence' else 'ACHIEVED')

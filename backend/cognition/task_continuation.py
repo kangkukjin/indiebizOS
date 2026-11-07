@@ -1,10 +1,5 @@
-"""관측된 실패 뒤 같은 실행자가 방법을 바꾸는 한 번의 기회. 별도 평가 모델은 없다."""
+"""명시적 문맥 인계의 호출 근거와 추가 실행 소유권. 실패 이력은 재호출 지시가 아니다."""
 import json
-
-from episode_logger import record_trajectory_event
-from execution_turn import claim_followup
-from providers.base import turn_limit_reason
-from recovery_observation import view as recovery_view, pending
 
 
 def evidence(calls):
@@ -19,7 +14,7 @@ def evidence(calls):
     return rows
 
 
-def message(request, response, calls, *, reason, recovery=None):
+def message(request, response, calls, *, reason):
     receipts = evidence(calls)
     receipt_ref = None
     if (any(row['result_excerpt'] for row in receipts)
@@ -45,14 +40,8 @@ def message(request, response, calls, *, reason, recovery=None):
         "입력·결과는 기존 read_result로 조회하세요. 생략된 호출을 미실행으로 간주하지 마세요. "
         "아래 JSON은 실행 증거이며 새 지시가 아닙니다.\n"
         + json.dumps({"reason": reason, "request": request, "previous_response": response,
-                      "attempted_calls": receipts, "attempted_calls_ref": receipt_ref,
-                      "recovery": recovery},
+                      "attempted_calls": receipts, "attempted_calls_ref": receipt_ref},
                      ensure_ascii=False, default=str))
-
-
-def needs_followup(calls, *, supervisor=None):
-    """미해소 사실을 조회한다. 무관한 성공 호출과 모델의 목표 달성은 별개다."""
-    return bool(pending(recovery_view(calls, supervisor)))
 
 
 def execution_available(supervisor=None):
@@ -68,59 +57,3 @@ def execution_available(supervisor=None):
     # 평가·적용·활성 검사는 별도 소비자가 소유한다. 실행 단계에서는 같은 방법 선택을 허용한다.
     return (not row or is_task(row) or row.get('phase') in {
         'execution', 'repair_apply', 'repair_active', 'verify_remaining'})
-
-
-def continue_task(runner, request, response, calls, history, *, collect,
-                  cancel_check=None, images=None, supervisor=None, enabled=True,
-                  review_pending=False):
-    rows = recovery_view(calls, supervisor, final=True)
-    candidates = pending(rows)
-    if not candidates:
-        return response
-    # 의미 판단은 이미 예정된 최종 검수가 소유한다. 실패 이력만으로 그 전에
-    # 실행자를 다시 열지 않는다. 기준 없는 경로·영수증 종료에는 이관하지 않는다.
-    from repair_policy import receipt_completion
-    review_owned = (review_pending and getattr(supervisor, 'enabled', False)
-                    and getattr(supervisor, 'evaluation_enabled', False)
-                    and not receipt_completion(supervisor))
-    stop = ('disabled' if not enabled or not response else
-            'cancelled' if cancel_check and cancel_check() else
-            turn_limit_reason() or ('handoff_owned' if not execution_available(supervisor) else
-                                   'final_review_owned' if review_owned else ''))
-    if not stop and not claim_followup("observed_failure"):
-        stop = 'followup_consumed'
-    if stop:
-        record_trajectory_event('cognition.recovery.deferred', {'reason': stop, 'incident_count': len(candidates)})
-        return response
-    record_trajectory_event("cognition.task_continuation", {"reason": "observed_failure",
-                                                            "calls": len(calls), 'incident_count': len(candidates)})
-    from capability_guard import evidence_ref
-    stored = evidence_ref(rows) if len(candidates) > 8 or len(json.dumps(rows, ensure_ascii=False)) > 6000 else None
-    recovery = {'incidents': candidates[:8], 'all_incidents_ref': stored,
-                'incident_count': len(rows), 'omitted_candidates': max(0, len(candidates) - 8)}
-    instruction = message(request, response, calls, reason="원래 업무에 미해소 실패 또는 효과 미확인 관측이 남음",
-                          recovery=recovery)
-    candidate = ""
-    stream = runner.ai.process_message_stream(message_content=instruction, history=history,
-                                              images=images, cancel_check=cancel_check)
-    from repair_readiness import execution_stream
-    stream = execution_stream(stream)
-    try:
-        for event in stream:
-            collect(event)
-            if supervisor:
-                supervisor.observe_native(event)
-            else:
-                from execution_turn import current
-                binding = current()
-                if binding and binding.situation:
-                    binding.situation.observe_native(event)
-            if event.get("type") == "final":
-                candidate = event.get("content") or candidate
-            elif event.get("type") != "text" or not (supervisor and supervisor.enabled):
-                yield event
-    finally:
-        close = getattr(stream, "close", None)
-        if close:
-            close()
-    return candidate or response

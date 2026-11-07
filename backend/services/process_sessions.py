@@ -6,6 +6,7 @@ import socket
 import subprocess
 import sys
 import time
+import tempfile
 from pathlib import Path
 
 from coding_store import CodingStore, fingerprint, identifier
@@ -42,13 +43,22 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
                 if row.get('request_id') == request_id and row.get('attribution') == owner:
                     if row['signature'] != signature: raise ValueError('request_id 충돌')
                     return receipt(row, db, yield_ms)
+        from command_preflight import check as precheck, default_argv, blocked, rejection
+        argv = default_argv(command)
+        with tempfile.TemporaryDirectory(prefix='indiebiz-preflight-') as scratch:
+            def inspect(parser, **kwargs):
+                from command_preflight import run_parser
+                from coding_process import sandbox_command
+                return run_parser(sandbox_command(parser, cwd, scratch), **kwargs)
+            preflight = precheck(argv, cwd=cwd, runner=inspect if sandbox else None)
+        if blocked(preflight):
+            return rejection(preflight)
         task_id = identifier('process'); folder = directory(task_id, db)
         folder.mkdir(parents=True, mode=0o700)
-        argv = [os.environ.get('COMSPEC', 'cmd.exe'), '/c', command] if os.name == 'nt' else ['/bin/sh', '-c', command]
         if sandbox:
             from coding_process import sandbox_command
             argv = sandbox_command(argv, cwd, folder)
-        row = {'id': task_id, 'command': command, 'cwd': cwd, 'io': io, 'argv': argv,
+        row = {'id': task_id, 'command': command, 'cwd': cwd, 'io': io, 'argv': argv, 'preflight': preflight,
                'lifetime': lifetime, 'attribution': owner, 'request_id': request_id, 'signature': signature,
                'generation': secrets.token_hex(16), 'token': secrets.token_hex(32), 'created_at': time.time(),
                'state': 'queued', 'capabilities': {'input': True, 'eof': True, 'interrupt': True, 'cancel': True,
@@ -74,7 +84,7 @@ def receipt(row, db, yield_ms):
         if current['state'] != 'queued': break
         time.sleep(.02)
     observed = query(row['id'], db=db, wait_ms=min(max(int(yield_ms), 0), 30000))
-    return {**T.receipt('process', row['id']), **observed,
+    return {**T.receipt('process', row['id']), **observed, 'preflight': row.get('preflight'),
             'task_ref': T.ref('process', row['id']), 'accepted': True}
 
 

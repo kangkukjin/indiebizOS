@@ -74,6 +74,18 @@ class RecoveryProjection:
         self._publish(changed)
         return copy.deepcopy(changed)
 
+    def resolve_calls(self, calls, ref):
+        """A producer proved a corrected program; resolve only its rejected calls."""
+        changed = []
+        with self.lock:
+            for row in self.rows.values():
+                if (row['origin']['call_id'] in calls and row.get('pre_execution')
+                        and row['resolution'] != 'verified'):
+                    row.update(resolution='verified', assessment=None, revision=row['revision'] + 1,
+                               resolution_ref=copy.deepcopy(ref), resolution_scope='preflight_repair')
+                    changed.append(copy.deepcopy(row))
+        self._publish(changed)
+
     def resolve_pre_execution(self, repair_key, ref, *, operation=False):
         if not repair_key:
             return

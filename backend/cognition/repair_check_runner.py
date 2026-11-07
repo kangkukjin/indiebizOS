@@ -22,6 +22,7 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
     cancelled()
     failure_kind = None
     selection = {"command": command, "instrumented": bool(spec)}
+    preflight = None
     try:
         expression = selected_invocation(command, wt)
         if expression:
@@ -40,6 +41,17 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
         child_env = {**os.environ, **spec["env"], **spec.get("observer_env", {})} if spec else None
         shell = ([shutil.which("bash"), "-e", "-o", "pipefail", "-c", command]
                  if shutil.which("bash") else ["/bin/sh", "-e", "-c", command])
+        if not spec:
+            from command_preflight import check as precheck, blocked, rejection
+            preflight = precheck(shell, cwd=str(wt), runner=lambda argv, **kw: run(
+                argv, wt, readonly=True, check=cancelled, **kw))
+            if blocked(preflight):
+                record = {**rejection(preflight), 'id': uuid.uuid4().hex, 'command': command,
+                          'status': 'failed', 'failure_kind': 'preflight', 'exit_code': None,
+                          'output': str(preflight['items']), 'selection': selection, 'workspace': str(wt.resolve()),
+                          'test_report': None}
+                session.setdefault('execution_checks', []).append(record)
+                return record
         from execution_situation import command_feedback
         with command_feedback(wt):
             result = run(spec["argv"] if spec else shell, wt,
@@ -60,6 +72,8 @@ def execute(repo, session, candidate, command, controller=None, timeout=300):
     record = {"id": uuid.uuid4().hex, "command": command, "exit_code": exit_code, "status": status,
               "output": output, "test_report": report, "failure_kind": failure_kind,
               "selection": selection, "workspace": str(wt.resolve())}
+    if preflight is not None:
+        record['preflight'] = preflight
     if controller:
         record["evidence_ref"] = controller.store.evidence(record)
     session.setdefault("execution_checks", []).append(record)

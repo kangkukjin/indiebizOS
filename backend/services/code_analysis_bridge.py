@@ -68,7 +68,21 @@ class Bridge:
     def _command(self, command):
         if not isinstance(command, str) or not command or len(command) > 100000:
             raise ValueError('실행할 command 문자열이 필요합니다')
-        proc = self.processes.spawn(['/bin/sh', '-c', command], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        from command_preflight import check, blocked, rejection
+        def inspect(argv, **kwargs):
+            proc = self.processes.spawn(argv, env=kwargs['env'], stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                out, err = proc.communicate(kwargs['input'].encode(), timeout=kwargs['timeout'])
+                return subprocess.CompletedProcess(argv, proc.returncode, out.decode(errors='replace'), err.decode(errors='replace'))
+            finally:
+                if proc.poll() is None:
+                    self.processes.terminate(proc)
+        argv = ['/bin/sh', '-c', command]
+        preflight = check(argv, cwd=self.root, runner=inspect, cancelled=self.cancelled)
+        if blocked(preflight):
+            return rejection(preflight)
+        proc = self.processes.spawn(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         started = time.monotonic()
         while True:
             try:
@@ -78,7 +92,8 @@ class Bridge:
                 if self.cancelled() or time.monotonic() - started > 240:
                     self.processes.terminate(proc)
                     raise ValueError('작업 사본 명령 취소·시간 초과')
-        return {'success': proc.returncode == 0, 'exit_code': proc.returncode, 'output': output.decode(errors='replace')[-50000:]}
+        return {'success': proc.returncode == 0, 'exit_code': proc.returncode, 'output': output.decode(errors='replace')[-50000:],
+                'preflight': preflight, 'executed': True}
 
     def close(self):
         self.feedback.close()

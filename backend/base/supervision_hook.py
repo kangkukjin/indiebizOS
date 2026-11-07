@@ -48,6 +48,23 @@ def main():
         payload = json.load(sys.stdin)
         context = situation_context(payload)
         output = context_output(payload, context)
+        if payload.get('tool_name') == 'Bash':
+            from command_preflight import check as precheck, blocked, rejection
+            params = (output or {}).get('hookSpecificOutput', {}).get('updatedInput', payload['tool_input'])
+            # Bash is a tool name, not evidence of bash vs zsh. Only an explicit
+            # runtime selection can be checked without guessing the CLI's default.
+            executable = os.environ.get('CLAUDE_CODE_SHELL')
+            from pathlib import Path
+            if (executable and Path(executable).name in ('bash', 'zsh', 'bash.exe', 'zsh.exe')
+                    and Path(executable).is_file() and os.access(executable, os.X_OK)):
+                report = precheck([executable, '-c', params['command']], cwd=payload.get('cwd'))
+                if blocked(report):
+                    sys.stderr.write(json.dumps(rejection(report), ensure_ascii=False) + '\n')
+                    return 2
+            else:
+                output = output or {'hookSpecificOutput': {'hookEventName': 'PreToolUse'}}
+                previous = output['hookSpecificOutput'].get('additionalContext', '')
+                output['hookSpecificOutput']['additionalContext'] = previous + '\nshell preflight: unsupported (CLI runtime not explicitly selected)'
     except (ValueError, TypeError) as exc:
         sys.stderr.write(f"도구 입력을 확인하지 못해 실행하지 않았습니다: {type(exc).__name__}\n")
         return 2

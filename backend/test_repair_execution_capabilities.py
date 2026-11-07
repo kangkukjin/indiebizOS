@@ -149,7 +149,11 @@ def test_dependency_preparation_rejects_parent_link_outside_candidate(tmp_path):
 def test_timeout_preserves_child_diagnostics(monkeypatch, setup):
     from repair_process import run
     root, wt, st, sess = setup
+    # The syntax parser is a separate bounded child now. This test exercises
+    # execution timeout/output retention, not a failed preflight (no execution).
     monkeypatch.setattr("script_process.run_process", lambda *a, **kw:
+                        {"timed_out": False, "exit_code": 0, "stdout": "", "stderr": ""}
+                        if "-n" in a[0] else
                         {"timed_out": True, "stdout": "started", "stderr": "failure before timeout"})
     with pytest.raises(subprocess.TimeoutExpired) as error:
         run(["fixture"], wt)

@@ -44,6 +44,11 @@ def observe(recovery, key, name, payload, result, ref, *, error=False, unknown=F
         if type(count) is int and count > 0:
             facts.append({'signal': 'failure', 'path': ['evidence_summary', field], 'count': count})
     changed = recovery.observe(key, facts, ref, name=name, repair_key=repair_key)
+    from execution_situation import current
+    situation = current()
+    repairs = getattr(situation, 'preflight_repairs', {}).pop(key, [])
+    if repairs:
+        recovery.resolve_calls(repairs, ref)
     if not facts and not pre and raw.get('mode') != 'check' and raw.get('success') is True:
         recovery.resolve_pre_execution(repair_key, ref, operation=True)
     return changed

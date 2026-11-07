@@ -227,10 +227,18 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			cmd.Env = append(cmd.Env, k+"="+v)
 		}
 		cmd.Stdin = strings.NewReader(c.Stdin)
-		if extra.Elevate && !residentMachineActive(r.cfg) {
-			return r.elevated(ctx, j.ID, cmd)
+		preflight := shellPreflight(ctx, cmd)
+		if rejected := preflightRejected(preflight); rejected != nil {
+			return rejected
 		}
-		return r.process(ctx, j.ID, cmd)
+		if extra.Elevate && !residentMachineActive(r.cfg) {
+			result := r.elevated(ctx, j.ID, cmd)
+			result["preflight"] = preflight
+			return result
+		}
+		result := r.process(ctx, j.ID, cmd)
+		result["preflight"] = preflight
+		return result
 	case "info":
 		info := doInfo()
 		info["resident"] = r.capabilities()

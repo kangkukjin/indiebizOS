@@ -318,6 +318,10 @@ func doShell(c Command) map[string]interface{} {
 
 	bin, args := shellFor(c.Shell, wrapScript(c.Shell, c.Cmd, startDir, getSessionEnv()))
 	cmd := backgroundCommandContext(ctx, bin, args...)
+	preflight := shellPreflight(ctx, cmd)
+	if rejected := preflightRejected(preflight); rejected != nil {
+		return rejected
+	}
 	configureShellCommand(cmd)
 	if c.ctx != nil {
 		configureMemberProcess(cmd)
@@ -346,11 +350,12 @@ func doShell(c Command) map[string]interface{} {
 	}
 
 	res := map[string]interface{}{
-		"op":     "shell",
-		"stdout": clip(cleaned),
-		"stderr": clip(stderr.String()),
-		"exit":   exitCode(err),
-		"cwd":    endDir, // ★AI 가 "지금 어디인지"를 매번 되묻지 않게
+		"preflight": preflight,
+		"op":        "shell",
+		"stdout":    clip(cleaned),
+		"stderr":    clip(stderr.String()),
+		"exit":      exitCode(err),
+		"cwd":       endDir, // ★AI 가 "지금 어디인지"를 매번 되묻지 않게
 	}
 	if n := len(getSessionEnv()); n > 0 {
 		res["session_env"] = n // 몇 개의 환경변수가 이어지고 있는지(디버깅 단서)
@@ -375,7 +380,8 @@ func doInfo() map[string]interface{} {
 	host, _ := os.Hostname()
 
 	info := map[string]interface{}{
-		"op": "info", "os": runtime.GOOS, "arch": runtime.GOARCH,
+		"preflight_contract": 1,
+		"op":                 "info", "os": runtime.GOOS, "arch": runtime.GOARCH,
 		"hostname": host, "cwd": cwd,
 		"user": osUser(), "home": userHome(),
 		"os_version":       osVersion(),

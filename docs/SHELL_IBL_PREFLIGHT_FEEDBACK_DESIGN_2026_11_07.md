@@ -1,7 +1,7 @@
 # 셸과 IBL 실행 전 진단 연결 수리 설계
 
-상태: 운영 연결 전 설계와 실제 AI 시제품 검증. 이 문서의 구현 단계는 아직 운영 실행기에
-반영하지 않았다. 기준 코드는 `24b5b08a`이며, 검증 도구는
+상태: 아래 §10에 운영 구현·검증 범위를 기록한다. §1~9는 설계 당시의 기준과 시제품 기록이다.
+설계 기준 코드는 `24b5b08a`이며, 시제품 검증 도구는
 [`probe_shell_preflight_feedback.py`](../scripts/probe_shell_preflight_feedback.py)다.
 
 목표는 AI가 명령을 제출한 자리에서 실행 전 오류와 정확한 위치를 받아 고치게 하는 것이다.
@@ -14,7 +14,7 @@
 
 | 실행 경로 | 현재 실제 실행 방식 | 수리 지점 |
 |---|---|---|
-| 일반 `self:exec` 동기 호출 | `essentials_command.py`의 `subprocess.run(shell=True)` | 실행할 셸을 먼저 해소하고 동일 실행파일의 구문 검사 후 실행 |
+| 일반 `run_command` 동기 호출 | `essentials_command.py`의 `subprocess.run(shell=True)` | 실행할 셸을 먼저 해소하고 동일 실행파일의 구문 검사 후 실행 |
 | 로컬 프로세스 세션 | `process_sessions.start`: POSIX `/bin/sh -c`, Windows `COMSPEC /c` | 세션 생성 전 검사. 이미 접수한 request_id의 재조회에는 재실행 금지 |
 | 코딩 작업자 | `code_analysis_bridge.Bridge._command`: `/bin/sh -c` | 현재 발행 사본에서 검사하고 기존 격리 실행·명령 결과에 연결 |
 | 자기수리 검사 | `repair_check_runner.execute`: 확인한 pytest는 argv, 그 외 bash `-e -o pipefail` 또는 sh | 셸 문자열에만 검사. 직접 argv 호출을 셸 문자열로 바꾸지 않음 |
@@ -222,7 +222,7 @@ Codex 현행 JSON `command_execution` 사건 수신은 이미 실행된 효과�
 
 ## 8 시제품 검증 범위
 
-검증 도구는 명시 실행한 실험만 검사하며 운영 `self:exec`나 네이티브 셸을 교체하지 않는다.
+검증 도구는 명시 실행한 실험만 검사하며 운영 `run_command`나 네이티브 셸을 교체하지 않는다.
 로컬 sh/zsh 후보는 전체 `-n` 통과 뒤 실행하고 Windows 후보는 실제 원격 PowerShell의
 `ParseInput` 통과 뒤 실행한다. Windows 과제는 내장 출력 명령만 사용하므로 일반 native
 프로그램의 종료 코드·파이프 실패 전파까지 검증한 것은 아니다. 린터는 설치하지 않는다.
@@ -285,3 +285,94 @@ Codex 전수 사전 차단은 이번 실기 범위 밖이다. R0~R5 구현·회�
 과제 재검증이 남아 있다. 운영 코드는 바꾸지 않아 전수 backend 회귀는 수행하지 않았다.
 변경 선택기가 고른 `test_lifecycle_vocab_2026_10_05.py`와 `test_program_boundary.py`는
 **60통과**했다. 시제품 Python 구문·설계의 로컬 링크·git 공백 검사도 통과했다.
+
+## 10 운영 구현 (2026-11-07)
+
+공통 OS 파서 어댑터 `backend/base/command_preflight.py`를 추가했다. services뿐 아니라
+자기수리 cognition과 독립 CLI 훅도 쓰므로 상위 서비스 의존이 없는 base에 둔다.
+별도 서버·모델·새 IBL 낱말 없이 `run_command` 동기 실행, 프로세스 세션 생성, 코딩 사본,
+자기수리 셸에 연결했다. 실제 argv에서 셸을 해소하며 기존 권한·승인·사본 경계 이후에
+검사한다. 코드 사본과 세션 검사는 기존 OS 격리를 사용한다. 명시 argv 시험 실행은 유지한다.
+참고로 `self:exec`라는 어휘는 현재 없다. 로컬 일반 셸은 최상위 도구 `run_command`다.
+
+최대 원문64KiB, POSIX 파서2초, PowerShell 파서5초이며 미설치·취소·시간 초과는 검사 실패로
+반환한다. stderr 원문은 한정해 보존한다. 입력은 파싱만 하고 후보 실행은 원래 실행자가 맡는다.
+Windows cmd 및 비셸 argv는 unsupported다. 셸 내부의 동적 호출·파일 내용·대화형 키 입력,
+WSL 내부 환경까지 재귀로 판별하지 않는다. 선택적 ShellCheck/PSScriptAnalyzer는 아직 연결하지
+않았고 검사 범위를 syntax로 표시한다. 시스템 zshenv 등 시작 파일까지 무효화하는 보안 샌드박스는 아니다.
+
+원격 상주형·휴대형 Go helper도 실제 실행 `exec.Cmd`에서 검사하며
+`preflight_contract:1`을 신고한다. PowerShell은 해당 실행파일의 `Parser.ParseInput`을 사용한다.
+후보를 데이터로 전달하고 AST·오류만 읽으며 실행은 하지 않는다. 실제 버전·판본을 결과에
+보존한다. 후보 실행의 exit/출력/원격 request_id·job 계약은 유지한다. 대상 기기·등록 세대·job에
+묶인 원격 영수증에서만 보호 진단을 발행하고 임의 출력 문자열을 검사기 결과로 승격하지 않는다.
+구형 helper 응답은 검사 미지원이다. 새 helper 설치 전에는 원격 사전 검사 지원을 주장하지 않는다.
+
+`ibl_preflight_feedback`은 기존 컴파일 결과의 issues/warnings/위치를 재사용한다.
+`preflight_feedback`은 같은 TurnStore의 diagnostics 영역에 900바이트 이내 본문을 전달하며
+위치의 긴 URI·소스 지문은 원문 근거에 보존한다. 예산을 넘으면 생략 수를 남긴다.
+성공한 다른 프로그램이 과거 실패를 지우지 않는다. 자동 사건 해소는 보수적으로 한정했다:
+기존 AST 전체·입력·호출 인자·반환식을 그대로 보존하면서 UNBOUND였던 이름에 리터럴 정의만
+추가한 경우에만 원 호출의 실행 전 실패를 해소한다. 원 실패 이력은 보존한다. 모든 종류의
+문법/타입 수정이나 원격 실패를 자동으로 같은 수리라고 추정하는 기능은 아니다.
+
+Claude PreToolUse는 pipefail 변환 뒤 명시 `CLAUDE_CODE_SHELL`로 선택한 셸만 검사한다.
+기본 셸은 Bash라는 도구 이름으로 추측하지 않고 unsupported로 알린다. CLI가 외부에서
+추가하는 환경 스냅샷까지 동일하다고 보장하지 않는다. Codex 네이티브 shell의 전수 사전
+차단은 여전히 미지원이다. 앱 소유 명령과 원격/IBL 호출의 지원 범위와 구분한다.
+명시 셸 선택과 잘못된 선택의 자동 폴백은
+[Claude Code 환경 변수 명세](https://code.claude.com/docs/en/env-vars)의 계약을 따른다.
+
+`system_essentials`의 변경은 명령 실행 분기 안에만 있다. 회원 선행 라우팅,
+read/fill/write/script의 목적지·경로 검증·임시 변환·게시 권한은 바뀌지 않았음을 재감사하고
+그 패키지 지문을 갱신했다. 파생 어휘·폰 번들은 빌더로 재생성한다.
+
+### 실제 AI와 운영 배포 확인
+
+시제품을 호출하지 않고 아래 두 경로를 검증했다. 실험용 폴더 외 파일은 쓰지 않았으며
+모델 설정을 바꾸거나 새 API 키를 만들지 않았다.
+
+| 경로 | 실제 모델과 결과 |
+|---|---|
+| IndieBiz `AIAgent` API 실행자 + 운영 `system_tools.execute_tool` | 기존 경량 설정 `deepseek/deepseek-flash`. run_command의 누락된 fi 거절→수정→API_SH_OK, IBL UNBOUND 거절→정의 추가→10. 총4회 도구 호출, 추가 진단 조회0회, 약20.54초. 파일 append는 정확히1회. IBL 실패 사건 verified |
+| `/system-ai/chat`의 기존 시스템 AI | Codex `gpt-6-astra:high`, 에피소드5885, task_sysai_f0b71ffa. 실제 Windows의 MissingEndCurlyBrace(2행12열)→닫는 중괄호 추가→exit0·두 출력 확인. IBL UNBOUND(3행8열)→정의 추가→10·파일 쓰기 확인 |
+
+API 검증은 정상 프로바이더·도구 실행기를 시험용 턴에 연결한 실제 모델 통합시험이다.
+시스템 AI는 운영 HTTP·MCP·원격 helper·기존 감독을 그대로 사용했다. 두 시험은 모델과
+입력이 달라 속도·비용 비교로 사용하지 않는다. macOS sh/bash/zsh 방언과 오류 차단은
+실제 파서를 사용하는 회귀로 확인했고, 이번 자연어 로컬 시험은 sh였다.
+
+Windows KHJoffice 상주 helper는 `preflight_contract:1`을 신고하는 새 판본으로 교체했고
+배포 SHA-256 `44e27ee992b0eaeb1eaaf3ab3b71839d60a6888b60af20f5f22e9d72198b4185`와
+재접속한 실행 판본의 일치를 확인했다. 검사/실행은 Windows PowerShell 5.1.26100.9711이다.
+준비 중 두 교체 시도는 허브 재기동의 503으로 전송 전에 거절됐다. 실패 영수증을 확인하고
+최종 활성 판본 안정화 뒤 접수한 교체만 성공했다. 다른 PC를 일괄 교체하지 않았다.
+
+에피소드5885에서 원격 후보 거절과 수정은 각각 job `9f955069d0b84fe0a4da1b46796811bb`,
+`23211c40a461467882b8d1cf06828ba4`다. 최초 후보의 원격 실행은 false였고, 수정본의
+출력은 `WINDOWS_LIVE_FIRST`, `WINDOWS_LIVE_OK`였다. IBL 호출 자체는 원격 도구까지
+진입했으므로 바깥 `executed:true`와 안쪽 셸 후보의 미실행을 구분한다. `preflight.executed`
+역시 검사 시점의 상태이며, 통과 후 실제 실행 결과는 원래 exit/출력 영수증으로 판단한다.
+
+보호 진단에는 실제 원격 오류 코드와 위치가 도구 반환 직후 실렸다. 이어진 수정 호출 전에
+read_result를 사용하지 않았다. IBL의 최초 실패 사건은 수정 성공 시 verified로 바뀌었고
+과거 UNBOUND 본문도 최신 진단에서 사라졌다. **원격 job 실패 사건은 다른 job의 성공으로
+자동 해소하지 않으므로 추가 read_result1회가 남았다.** 총 호출은 과제4회·파일 확인1회·
+과거 영수증 조회1회였고 후보 실행·파일 쓰기의 추가 반복은 없었다. 범용 원격 수리 계보를
+추가 구현했다고 주장하지 않는다. API 시험의 과거 셸 실패 사건도 자동 해소 범위 밖이다.
+
+원문·최초/수정 호출·파서 진단·원격 영수증·사건 전이는
+[`outputs/diagnostics/2026-11-07-preflight-production/evidence.json`](../outputs/diagnostics/2026-11-07-preflight-production/evidence.json)에
+집계했다. 같은 폴더의 `api-ai/turn`과 시스템 AI의
+`data/spill/supervision/345992e01df4434baf014b48876edd1c`가 원 도구 사건이다.
+
+검증 중 실행파일의 나노초 시각은 IBL JSON 안전 정수 한도를 넘으므로 문자열로 보존하도록
+수리했다. 기존 실행 시간 초과 시험의 대역은 새 파서까지 시간 초과로 만들고 있었으므로,
+파서는 통과시키고 실행 자식만 시간 초과시키는 시험으로 구분했다. 검사 실패를 통과 처리하는
+운영 변경은 하지 않았다.
+
+최종 system 포함 backend 전수는 **12814통과·24건너뜀·실패0**, 432.65초다
+(`pytest-verified.log`). 수정한 시간 초과 대역과 관련 명령/수리 검사는 별도로56통과했다.
+Go 전수와 race 검사, Windows resident 교차 빌드, backend 층·Windows 이식성 정적 검사,
+IBL 파생 정합 검사와 Android 번들 생성도 통과했다. 최종 운영 상태는 ACTIVE/healthy이며
+변경한 운영 Python 모듈 모두 활성 세대와 바이트 일치를 확인했다. 프런트 코드는 바꾸지 않았다.

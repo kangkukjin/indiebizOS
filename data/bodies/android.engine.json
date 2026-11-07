@@ -13,6 +13,7 @@
     "base/code_analysis_scope",
     "base/codex_rollout",
     "base/coding_process",
+    "base/command_preflight",
     "base/completion_lease",
     "base/component_registry",
     "base/component_runtime",
@@ -60,6 +61,7 @@
     "base/output_publish",
     "base/phone_execution_contract",
     "base/phone_jobs",
+    "base/preflight_feedback",
     "base/principal",
     "base/process_session_worker",
     "base/program_boundary",
@@ -340,6 +342,7 @@
     "ibl/ibl_member_library",
     "ibl/ibl_ops",
     "ibl/ibl_param_vocab",
+    "ibl/ibl_preflight_feedback",
     "ibl/ibl_progress",
     "ibl/ibl_quality",
     "ibl/ibl_remote_call",
@@ -649,8 +652,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 638,
-    "engine": 606,
+    "total": 641,
+    "engine": 609,
     "blocklist": 32
   }
 }

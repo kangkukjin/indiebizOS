@@ -19,8 +19,11 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
             from approval_tokens import request_digest
             set_approval(request.get('approval'), request_digest(request.get('code'), request.get('inputs'), request.get('declared_inputs'), request.get('function_refs')))
         with request_scope(project_path, agent_id, resume, stored_scope):
-            return _handle_request(request, project_path, agent_id, cancel_check,
-                                   input_evidence=input_evidence)
+            result = _handle_request(request, project_path, agent_id, cancel_check,
+                                     input_evidence=input_evidence)
+            from ibl_preflight_feedback import observe
+            observe(request, result, project_path)
+            return result
     finally:
         set_approval(*previous)
 

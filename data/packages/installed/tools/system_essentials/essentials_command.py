@@ -53,9 +53,13 @@ def execute_command(h, tool_input, project_path):
                                     request_id=tool_input.get("request_id"),
                                     yield_ms=tool_input.get("yield_ms", 1000),
                                     lifetime=tool_input.get("lifetime", "task")), ensure_ascii=False)
+        from command_preflight import check, default_argv, blocked, rejection
+        argv = default_argv(command)
+        preflight = check(argv, cwd=project_path)
+        if blocked(preflight):
+            return json.dumps(rejection(preflight), ensure_ascii=False)
         result = subprocess.run(
-            command,
-            shell=True,
+            argv,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -71,6 +75,11 @@ def execute_command(h, tool_input, project_path):
         if result.returncode != 0:
             output += f"\n[exit code: {result.returncode}]"
 
+        # Preserve the successful text contract; unsupported coverage is explicit.
+        if preflight['status'] == 'unsupported':
+            return json.dumps({'success': result.returncode == 0, 'executed': True,
+                               'exit_code': result.returncode, 'output': output.strip(),
+                               'preflight': preflight}, ensure_ascii=False)
         return output.strip() if output else "(명령어가 출력 없이 완료됨)"
 
     except subprocess.TimeoutExpired:

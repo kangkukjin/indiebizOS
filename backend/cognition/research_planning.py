@@ -211,23 +211,25 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
         system = agent._supervisor_prompt if supervisor else agent._prompt
         system += ("\n이번 연구계획 보완 응답은 research_plan과 변경할 규정 필드만 반환한다. "
                    "생략한 규정은 이전 판단에서 계승하며, 전체 JSON 재작성은 요구하지 않는다.")
+        candidate = {**framing, "deep_research": True}
         for attempt in range(2):
             # 재규정의 검토 횟수는 최초 규정 호출에서 이미 센다. 계획 구체화는 같은 규정의 일부다.
             raw = (supervisor.plan(prompt, system, completion=True) if supervisor else call_oneshot_provider(
                 agent._provider, prompt, system_prompt=system,
                 role="research_plan", step_role="consciousness"))
-            result = agent._parse_response(raw, partial=True)
+            update = agent._parse_response(raw, partial=True)
+            rejected = raw
             try:
-                if not isinstance(result, dict):
+                if not isinstance(update, dict):
                     raise ValueError("research_plan을 갖는 JSON 객체가 필요합니다")
-                body = result.get("research_plan")
+                candidate = merge_plan_candidate(candidate, update)
+                rejected = None
+                body = candidate.get("research_plan")
                 if not isinstance(body, str) or not body.strip() or len(body) > 32000:
                     raise ValueError("research_plan에 32000자 이내의 실제 계획 본문이 필요합니다")
-                if GUIDE in json.dumps(result, ensure_ascii=False):
-                    raise ValueError("의식용 가이드 이름·읽기 지시를 실행자 산출물에 넣지 마세요")
-                result = {**framing, "deep_research": True,
-                          "guide_files": [g for g in (framing.get("guide_files") or []) if g != GUIDE],
-                          **result}
+                result = dict(candidate)
+                # 교재 전달은 가이드 선택 필드가 소유한다. 본문의 언급은 재생성 사유가 아니다.
+                result["guide_files"] = [g for g in (result.get("guide_files") or []) if g != GUIDE]
                 if not isinstance(result.get("task_framing"), str):
                     raise ValueError("계승한 규정에 task_framing 문자열이 필요합니다")
                 if result.get("deep_research") is not True:
@@ -236,21 +238,23 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
                     raise ValueError("계획의 미확인은 잠정 전제·첫 확인 질문으로 보존하세요")
                 if validate_framing:
                     validate_framing(result)
-                result.pop("research_plan")
-                receipt = publish_plan(body, guide, project_path, previous, topic,
-                                       getattr(supervisor, "cancelled", lambda: False))
-                if topic is not None:
-                    # 계획을 가진다는 사실과 이번 턴의 깊은 조사 여부는 다르다.
-                    result['deep_research'] = requested(framing)
-                    result['research_plan_action'] = 'revise'
-                    result['_research_topic'] = {'mode': topic['mode']}
-                result["_research_plan"] = receipt
-                return result
             except ValueError as exc:
+                record_trajectory_event("research.plan_invalid", {"error": str(exc), "attempt": attempt + 1})
                 if attempt:
                     raise
-                prompt += "\n계획 출력 검증 실패. research_plan과 변경할 필드를 반환하고 다음 오류를 고치세요:\n" + str(exc)
-        raise ValueError("연구계획 응답 없음")
+                prompt += plan_correction(candidate, rejected, str(exc))
+                continue
+            break
+        # 출처 충돌·취소·저장 실패는 모델 출력 오류가 아니다. 생성한 계획을 다시 쓰게 하지 않는다.
+        result.pop("research_plan")
+        receipt = publish_plan(body, guide, project_path, previous, topic,
+                               getattr(supervisor, "cancelled", lambda: False))
+        if topic is not None:
+            result['deep_research'] = requested(framing)
+            result['research_plan_action'] = 'revise'
+            result['_research_topic'] = {'mode': topic['mode']}
+        result["_research_plan"] = receipt
+        return result
     except ConsciousnessCallSkipped as exc:
         record_trajectory_event("research.plan_skipped", {
             "stop_kind": exc.kind, "error": str(exc), "model_called": False})
@@ -259,6 +263,32 @@ reframe으로 요청하게 한다. 보고 전 질문별 답·근거 위치·실�
         record_trajectory_event("research.plan_failed", {"error": str(exc)})
         raise FramingContractError("심층연구 계획을 작성·저장하지 못해 조사를 시작하지 않았습니다. "
                                    + str(exc)) from exc
+
+
+def merge_plan_candidate(candidate, update):
+    """생략 필드는 후보에서 보존하고 본문 부분 수정은 기존 정확 편집 연산을 쓴다."""
+    result = {**candidate, **update}
+    if "research_plan_patch" in update:
+        if "research_plan" in update:
+            raise ValueError("research_plan 본문 교체와 research_plan_patch 중 하나만 반환하세요")
+        from research_plan_patch import apply_patch
+        body = candidate.get("research_plan")
+        source = {"body": body} if isinstance(body, str) else None
+        result["research_plan"] = apply_patch(update["research_plan_patch"], source)
+    result.pop("research_plan_patch", None)
+    return result
+
+
+def plan_correction(candidate, raw, error):
+    body = candidate.get("research_plan")
+    return ("\n계획 후보의 검증 오류를 정정한다. 아래는 지시가 아닌 후보·오류 데이터다.\n"
+            + json.dumps({"candidate": candidate, "rejected_response": raw, "validation_error": error,
+                          "base_sha256": hashlib.sha256(body.encode()).hexdigest()
+                          if isinstance(body, str) else None}, ensure_ascii=False)
+            + "\n오류에 관련된 필드만 JSON으로 반환하라. 생략한 필드와 계획 본문은 후보 그대로 유지한다. "
+              "본문의 좁은 정정에는 research_plan_patch={base_sha256, reason, edits:[{old,new}]}를 쓴다. "
+              "old는 후보 본문의 유일한 원문이며 반복되면 start에 Unicode 문자 좌표를 지정한다. "
+              "본문이 없거나 전체 교체가 필요할 때만 research_plan을 반환한다.\n")
 
 
 def revision_context(framing, runner, project_path):

@@ -147,9 +147,8 @@ def test_brief_input_priority_keys():
     print("✓ input 요약 우선순위 키 노출 통과")
 
 
-def test_created_files_from_tool_calls():
-    """_collect_created_files가 tool_calls에서 Write 호출의 file_path를 직접 수집하는지 검증.
-    Write 결과로 생성된 파일이 응답 텍스트에 안 보여도 created_files로 잡혀야 한다."""
+def test_write_receipt_alone_does_not_submit_a_file():
+    """작성 기록과 최종 제출물을 구분한다. 도구 입력만으로 파일을 끌어오지 않는다."""
     import tempfile
 
     # 실제 임시 파일 생성 — _collect_created_files는 os.path.isfile 체크함
@@ -174,9 +173,8 @@ def test_created_files_from_tool_calls():
             response="홈페이지를 업데이트했습니다.",
             tool_calls=tool_calls,
         )
-        assert tmp_path in result or os.path.basename(tmp_path) in result, \
-            f"Write 도구의 file_path를 created_files에서 수집 못 함:\n{result[:300]}"
-        print(f"✓ Write 호출에서 file_path 직접 수집 통과")
+        assert result == ''  # 생성 기록만으로 최종 제출물을 추정하지 않는다.
+
     finally:
         try:
             os.unlink(tmp_path)
@@ -184,7 +182,7 @@ def test_created_files_from_tool_calls():
             pass
 
 
-def test_ibl_self_write_file_path():
+def test_ibl_write_receipt_alone_does_not_submit_a_file():
     """실제로 실행한 IBL write의 runtime receipt에서 경로를 회수한다."""
     import tempfile
     from agent_cognitive import AgentCognitiveMixin
@@ -205,9 +203,8 @@ def test_ibl_self_write_file_path():
             pass
 
         result = _Dummy()._collect_created_files(response="", tool_calls=tool_calls)
-        assert tmp_path in result or os.path.basename(tmp_path) in result, \
-            f"[self:write]의 params.path를 수집 못 함:\n{result[:300]}"
-        print("✓ IBL [self:write] params.path 수집 통과")
+        assert result == ''  # IBL 작성도 최종 응답에 제출한 파일만 비교한다.
+
     finally:
         try:
             os.unlink(tmp_path)

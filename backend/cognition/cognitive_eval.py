@@ -1,13 +1,7 @@
-"""
-cognitive_eval.py - Goal 평가 루프 믹스인
-IndieBiz OS Core
+"""사용자 목표와 최종 결과를 비교하는 선택적 원샷 평가.
 
-agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 의식 에이전트의
-달성 기준(achievement_criteria) 기반 자동 평가 — 기준 추출, 생성 파일/시각
-산출물 수집, 평가자 호출(_evaluate_achievement), 재실행 루프(_run_goal_evaluation_stream —
-제너레이터: 재실행 이벤트를 그대로 흘린다, 2026-08-22).
-trace 직렬화·액션 원장은 cognitive_trace 모듈 함수를 쓴다.
-★consciousness_output 키 소비처 — scripts/consciousness_schema_check.py CONSUMER_FILES 등록.
+최종 응답·제출물 본문을 전문으로 전달하고 판정을 반환한다.
+실행 기록의 재감사, 증거 회수, 평가 뒤 작업 재실행은 이 경로의 책임이 아니다.
 """
 
 import json
@@ -164,7 +158,7 @@ class CognitiveEvalMixin:
                                 tool_calls: Optional[List[Dict[str, Any]]] = None, *,
                                 exclude_paths=(), snapshots=None, full_content=False,
                                 attachments=None, evidence_store=None) -> str:
-        """Use the shared output collection; a link alone is not a new output."""
+        """Read final submitted files; creation provenance is not a review prerequisite."""
         from types import SimpleNamespace
         from model_result_view import evidence_store as current_store
         from supervisor_content import discover
@@ -392,7 +386,7 @@ class CognitiveEvalMixin:
         try:
             return prompt_path.read_text(encoding='utf-8')
         except FileNotFoundError:
-            return "제공된 달성 기준만 평가하라. 새 요구를 만들지 않는다. 판정 불가면 UNKNOWN."
+            return "사용자 목표와 최종 결과만 비교하라. 새 요구·조사를 만들지 말고, 판정 불가면 UNKNOWN."
 
     def _evaluate_achievement(self, user_message: str, criteria: str,
                                response: str, created_files: str,
@@ -405,9 +399,9 @@ class CognitiveEvalMixin:
                                full_response: bool = False,
                                conversation_history: list = None,
                                evaluation_attachments: list = None) -> tuple:
-        """평가 AI로 달성 기준 충족 여부를 판단한다.
+        """사용자 목표와 최종 결과의 부합성을 한 번 비교한다.
 
-        의식의 명시적 기준만 판정한다. 실행 원장·결과는 증거이며 별도 평가 축이 아니다.
+        실행 원장·인용·내부 계획은 재조사하거나 별도 완료 조건으로 삼지 않는다.
 
         Returns:
             (achieved: bool|None, feedback: str, severity: int). None은 검수 미완료.
@@ -418,120 +412,32 @@ class CognitiveEvalMixin:
         self.evaluation_retryable = False
         self.evaluation_usage = {}
         self.citation_uses = []
-        from evaluation_input import EvaluationPrompt, context_sections, record
-        sections = []
-        try:
-            contract = json.loads(criteria)
-        except (TypeError, ValueError):
-            contract = None
-        if not isinstance(contract, dict) or "criteria" not in contract:
-            from supervisor_handoff import criteria_contract
-            contract = criteria_contract(user_message, {"achievement_criteria": criteria})
-        if not contract["criteria"]:
-            return None, "의식의 달성 기준이 없어 평가하지 않았습니다", 0
-        criteria = json.dumps(contract, ensure_ascii=False)
-        evaluator_system_prompt = self._load_evaluator_prompt()
-        if evaluation_policy:
-            evaluator_system_prompt += "\n\n" + evaluation_policy
-
-        # 메시지에는 평가 대상 데이터만
-        prompt = (
-            f"## 사용자 요청\n{user_message}\n\n"
-            f"## 달성 기준\n{criteria}\n\n"
-        )
-
-        # 지연 적용 예약이 걸린 턴이면 그 사실을 기준 직후에 주입 — 평가자가 "증상 소멸
-        # 미실측"을 미달 사유로 삼아 재실행 루프를 헛돌리지 않게 한다(ep2386 실측).
-        prompt += self._scheduled_repair_note()
-
-        if action_ledger:
-            sections.append(record(action_ledger, subject="실제 실행된 액션 원장"))
-        prompt += ("실행 원장·파일·도구 결과는 선택된 표시다. 생략된 액션·대상의 부재는 "
-                   "미실행의 증거가 아니다. manifest의 존재는 본문 검토가 아니다. "
-                   "핵심 근거가 부족하면 UNKNOWN_REASON: evidence와 필요한 판본·범위를 적는다.\n\n")
-
-        # 규정과 독립된 사용자 정정으로 기준의 의미·충돌을 확인한다.
-        from research_planning import evaluation_block
-        prompt += evaluation_block(consciousness_output,
-                                   getattr(self, "project_path", None)
-                                   or getattr(getattr(self, "ai", None), "project_path", None))
-        # 계승 규정에는 history_summary가 없고, 새 규정의 요약도 정정을 누락할 수 있다.
-        from history_excerpt import conversation_excerpt
-        conversation = conversation_excerpt(conversation_history)
-        if conversation:
-            prompt += ("## 기준 해석용 이전 대화 원문 발췌\n"
-                       "사용자 조건의 변경·철회와 assistant의 제안을 구별하라. "
-                       "생략된 내용은 미확인이며 새 목표를 추측하지 않는다.\n"
-                       f"{conversation}\n\n")
-        elif consciousness_output and consciousness_output.get("history_summary"):
-            prompt += f"## 기준 해석용 이전 대화\n{consciousness_output['history_summary']}\n\n"
-
-        if tool_results_str:
-            sections.append(record(tool_results_str, subject="도구 실행 결과"))
-
-        prompt += f"## 에이전트 응답\n{response if full_response else response[:8000]}\n\n"
-        if evaluation_context:
-            required_context, selected_context = context_sections(evaluation_context)
-            prompt += f"## 하네스가 수집한 평가 맥락\n{required_context}\n\n"
-            sections.extend(selected_context)
-
-        if evaluation_attachments is not None:
-            sections.extend(evaluation_attachments)
-        elif created_files:
-            sections.append(record(created_files, subject="생성된 파일 내용"))
-
-        if visual_artifacts:
-            import os as _os
-            names = ", ".join(_os.path.basename(a.get("_path", "")) for a in visual_artifacts)
-            prompt += (
-                f"## 시각 산출물 검수 ({len(visual_artifacts)}개 첨부: {names})\n"
-                "아래에 **실제 생성된 이미지**가 첨부되어 있다. 텍스트 설명이 아니라 이미지를 "
-                "직접 보고 명시된 달성 기준에 해당하는 부분만 판단하라. 일반적인 미적 개선을 새 조건으로 만들지 않는다.\n\n"
-            )
-
-        # User corrections are mandatory even if the display excerpt omitted them.
-        user_turns = [m for m in (conversation_history or []) if isinstance(m, dict) and m.get('role') == 'user']
+        # Final comparison has one input: the user's goal and the delivered result.
+        # Do not turn internal plans, execution traces, or citations into more work.
+        from final_evaluator import comparison_goal
+        user_turns = comparison_goal(user_message, conversation_history)['user_turns']
+        prompt = "## 사용자 원래 목표\n" + user_message
         if user_turns:
-            prompt += "\n## 사용자 원문·정정 (제공된 이력 전체)\n" + json.dumps(user_turns, ensure_ascii=False)
-        prompt += "위 증거로 명시된 기준의 충족 여부만 판정하세요."
-        store = getattr(self, 'evaluation_store', None)
-        if store is not None:
-            for section in sections:
-                if section['source_ref'] is None:
-                    ref = store.evidence(section['text'])
-                    section.update(text=store.read_evidence(ref['id'], 0, None)['text'],
-                                   source_ref=ref['id'], revision=ref['id'], total=ref['chars'])
-                    if 'structured' in section:
-                        section['structured'] = json.loads(section['text'])
-        if store is not None and evaluation_context:
-            from evaluation_evidence import receipt_sections
-            context_value = json.loads(evaluation_context)
-            receipts = receipt_sections(context_value.get('research_citations') or {}, store)
-            for receipt in receipts:
-                receipt['contexts'] = [c['claim_context'] for c in context_value.get('research_claims', [])
-                                       if c['citation'] == receipt['subject']]
-            sections.extend(receipts)
-        self.evaluation_sources = [{k: r[k] for k in ('source_ref', 'revision', 'total', 'subject', 'criterion_ids')} for r in sections]
-        from evaluation_input import evidence_references
-        try:
-            reference_context = json.loads(evaluation_context) if evaluation_context else {}
-        except (ValueError, TypeError):
-            reference_context = {}
-        self.evaluation_references = evidence_references({'context': reference_context,
-                                                          'selection_sources': self.evaluation_sources})
-        prompt = EvaluationPrompt(prompt, sections, criteria, references=self.evaluation_references)
-
-        # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.
-        # 어제 208번 같은 오판(도구 결과가 평가자에 부족하게 전달되어 "상상 보고" 판정) 검출용.
-        _tool_results_info = f"{len(tool_results_str)}자" if tool_results_str else "없음"
-        _created_files_info = f"{len(created_files)}자" if created_files else "없음"
-        _ledger_info = f"{action_ledger.count(chr(10)) + 1}줄" if action_ledger else "없음"
-        self._log(
-            f"[GoalEval] 평가 입력: prompt={len(prompt)}자, "
-            f"criteria={len(criteria)}자, response={len(response)}자, "
-            f"tool_results={_tool_results_info}, action_ledger={_ledger_info}, "
-            f"created_files={_created_files_info}"
-        )
+            prompt += "\n\n## 사용자가 명시한 이전 요청·정정\n" + json.dumps(user_turns, ensure_ascii=False)
+        prompt += "\n\n## 최종 응답\n" + response
+        if created_files:
+            prompt += "\n\n## 최종 제출물 본문\n" + created_files
+        if evaluation_context:
+            try:
+                context = json.loads(evaluation_context)
+                errors = {k: context[k] for k in ('artifact_errors', 'visual_errors') if context.get(k)}
+                if errors:
+                    prompt += "\n\n## 제출물 읽기 오류\n" + json.dumps(errors, ensure_ascii=False)
+            except (TypeError, ValueError):
+                pass
+        from final_evaluator import POLICY, FINAL_POLICY
+        evaluator_system_prompt = self._load_evaluator_prompt() + "\n\n" + POLICY + FINAL_POLICY
+        self.evaluation_sources = []
+        self.evaluation_metrics = {'scope': 'goal_result', 'chars': len(prompt),
+                                   'submission_chars': len(created_files), 'truncated': False}
+        self._log(f"[GoalEval] 목표–결과 비교: prompt={len(prompt)}자, 제출물={len(created_files)}자")
+        from evaluation_input import CompleteInput
+        prompt = CompleteInput(prompt)
 
         try:
             # 기존 평가 축의 도구 없는 원샷. 별도 모델 호출을 추가하지 않는다.
@@ -550,7 +456,6 @@ class CognitiveEvalMixin:
                 finally:
                     self.evaluation_usage = summarize_usage(usage)
             failure = oneshot_failure_details()
-            self.evaluation_metrics = prompt.metrics
             if failure:
                 self.evaluation_failure = failure
                 return None, "평가 전달 실패 — " + failure['kind'], 0
@@ -564,20 +469,6 @@ class CognitiveEvalMixin:
             # 관용 파서 — 서두 문장·마크다운 장식 뒤로 밀린 판정도 흡수 (모듈 함수 참조)
             self.goal_outcome = parse_goal_outcome(eval_response)
             achieved, severity = parse_eval_verdict(eval_response)
-            if achieved is True and reference_context.get('research_claims'):
-                from research_review import citation_uses
-                try:
-                    self.citation_uses, unresolved = citation_uses(eval_response,
-                        reference_context['research_claims'], reference_context['research_citations']['valid'])
-                except ValueError as exc:
-                    self.evaluation_failure = {'kind': 'protocol', 'message': str(exc)}
-                    self.goal_outcome = parse_goal_outcome('')
-                    return None, str(exc), 0
-                if unresolved:
-                    self.citation_uses = []
-                    self.goal_outcome = parse_goal_outcome('')
-                    return None, ('UNKNOWN\nUNKNOWN_REASON: evidence\n실제 근거로 채택한 인용의 원문이 없습니다: '
-                                  + json.dumps(unresolved, ensure_ascii=False)), 0
             if achieved is None:
                 self.evaluation_retryable = not bool(_VERDICT_WORD_RE.search(eval_response))
                 return None, eval_response if _VERDICT_WORD_RE.search(eval_response) else "평가 응답 형식 오류: " + eval_response, 0
@@ -593,345 +484,62 @@ class CognitiveEvalMixin:
     def _run_goal_evaluation_stream(self, user_message: str, criteria: str,
                                     initial_response: str, history: list,
                                     consciousness_output: dict = None,
-                                    max_rounds: int = 2,
-                                    tool_results: list = None,
-                                    tool_calls: list = None,
-                                    execution_memory: str = "",
+                                    max_rounds: int = 2, tool_results: list = None,
+                                    tool_calls: list = None, execution_memory: str = "",
                                     cancel_check=None):
-        """달성 기준 기반 평가 루프 — **제너레이터**. 최종 응답은 `return` 값.
-
-        호출자는 `evaluated = yield from self._run_goal_evaluation_stream(...)` 로 쓴다.
-
-        ★왜 제너레이터인가 (2026-08-22): 옛 판은 `-> str` 블로킹 함수라 평가자 호출
-        (실측 50~90초)과 **에이전트 전면 재실행**(실측 595,995ms = 9분56초, 도구 30여 회)이
-        전부 스트림 밖이었다. 실행 단계(6번)는 도구마다 이벤트를 흘리는데 같은 에이전트를
-        다시 돌리는 재실행은 한 글자도 안 흘리는 비대칭 — 화면에는 1라운드 응답이 나온 뒤
-        영원히 도는 스피너로 보였고, 그 침묵 구간이 WS 유휴 타임아웃(600초)보다 길어
-        긴 턴은 NOT_ACHIEVED 를 받는 순간 타임아웃이 구조적으로 확정이었다.
-        이제 재실행 이벤트가 그대로 흐르므로 화면도 살고 유휴 타이머도 리셋된다.
-
-        Args:
-            user_message: 사용자 원래 요청
-            criteria: 달성 기준
-            initial_response: 에이전트 첫 응답
-            history: 대화 히스토리
-            consciousness_output: 의식 에이전트 출력 (task_framing, capability_focus 등)
-            max_rounds: 최대 평가 횟수 (기본 2)
-            tool_results: 도구 실행 결과 문자열 리스트 (legacy — 이름·인풋 없음)
-            tool_calls: 도구 호출 구조화 이력 `{name,input,result,is_error}` 리스트.
-                tool_results보다 우선 사용된다. 둘 다 있으면 tool_calls 사용.
-                평가자가 시퀀스 자체(어떤 도구를 어떤 순서로)를 판단 근거로 쓸 수 있다.
-            execution_memory: 실행기억 (도구/사례/implementation)
-            cancel_check: 중단 여부 콜백 — 재실행 구간에도 사용자의 중단이 닿게 한다.
-                옛 판은 이 인자가 없어 평가 루프에 들어간 뒤로는 중단 버튼이 무력했다.
-
-        Yields:
-            평가 진행 상태(`thinking`)와 재실행 에이전트의 스트림 이벤트 그대로
-            (`text`/`tool_start`/`tool_result`/`thinking`). 재실행의 `final` 은
-            여기서 회수해 반환값으로 삼으므로 흘리지 않는다.
-
-        Returns:
-            최종 응답 텍스트 (`yield from` 의 값)
-        """
-        import time as _time
+        """Compare once and preserve the delivered result; never restart execution."""
         from thread_context import set_goal_eval_outcome, clear_goal_eval_outcome, get_goal_eval_outcome
-        # 이번 평가의 판정을 초기화 — 증류 게이트가 직전 메시지의 stale 판정을 보지 않도록.
+        from final_evaluator import prepare_standalone, snapshot_error
+        from supervision_store import digest
+        from model_result_view import evidence_store
         clear_goal_eval_outcome()
-        response = initial_response
-
-        def persist_review(learning):
-            from model_result_view import evidence_store
-            from supervision_store import digest
-            try:
-                store = evidence_store()
-                ref = store.evidence(response)
-                (store.directory / 'review_status.json').write_text(json.dumps({
-                    **get_goal_eval_outcome(), 'original_goal': user_message, 'criteria': criteria,
-                    'response': {'hash': digest(response), **ref}, 'learning': learning,
-                    'validator': 'goal_eval'}, ensure_ascii=False), encoding='utf-8')
-            except OSError as exc:
-                get_goal_eval_outcome()['storage_error'] = str(exc)
-                self._log(f'[GoalEval] 검수 결과 보존 실패: {exc}')
-
-        def unreviewed(reason, *, status="UNKNOWN"):
-            from supervision_store import digest
-            set_goal_eval_outcome(False, 0, status=status, reason=reason, response_hash=digest(response))
-            persist_review('deferred')
-            return response
-
-        def rejected(reason, feedback, severity):
-            from supervision_store import digest
-            set_goal_eval_outcome(False, severity, status='NOT_ACHIEVED', reason=feedback,
-                                  response_hash=digest(response), **self.goal_outcome)
-            persist_review('components_only')
-            return response
-
+        achieved, feedback, severity = None, '평가가 실행되지 않았습니다', 0
+        self.goal_outcome = parse_goal_outcome('')
         if max_rounds < 1:
-            return unreviewed("평가 라운드가 배정되지 않았습니다", status="NOT_RUN")
-
-        # 도구 호출 trace를 직렬화 — 시퀀스 자체는 어떤 경우에도 보존됨.
-        # tool_calls가 우선; 없으면 tool_results(legacy) 사용.
-        trace_source: list = tool_calls if tool_calls else (tool_results or [])
-        tool_results_str = serialize_tool_trace(trace_source)
-        # 검증용 액션 원장 — execute_ibl code에서 [node:action]+대상을 전수 추출.
-        # serialize_tool_trace가 못 보여주던 '실제 호출된 IBL 액션'을 평가자에게 노출한다.
-        action_ledger = build_action_ledger(trace_source)
-        # _collect_created_files용: tool_calls가 있으면 그쪽도 활용.
-        _trace_dicts = tool_calls if tool_calls else None
-
-        # ★거짓 '허위보고' 버그 근본 수정: 재실행 호출을 self.ai.get_last_tool_calls()로만
-        # 읽었는데 gemini provider는 _last_tool_calls를 안 채워 빈 결과 → action_ledger가 초기
-        # 호출에 멈춤 → "재실행했는데 원장에 없으니 조작"이라는 거짓 양성(루프가 영원히 통과 못 함).
-        # thread_context는 실행기(execute_tool/ibl_engine)가 채우므로 provider와 무관하게 모든
-        # 라운드를 담는 진실 소스 → 여기서 델타를 떠 원장에 누적한다.
-        try:
-            from thread_context import get_tool_calls as _get_tc
-        except Exception:
-            _get_tc = None
-
-        def _tc_calls():
-            """thread_context의 execute_tool 레벨 호출만 (ibl_engine 레벨 ibl: 중복 제외)."""
-            if not _get_tc:
-                return []
+            status = 'NOT_RUN'
+        elif cancel_check and cancel_check():
+            status, feedback = 'UNKNOWN', '사용자 중단'
+            self._log('[GoalEval] 사용자 중단 — 최종 결과 보존')
+        else:
+            yield {'type': 'thinking', 'content': '사용자 목표와 최종 결과를 비교하고 있습니다.'}
             try:
-                return [c for c in (_get_tc() or [])
-                        if not str(c.get("tool_name", "")).startswith("ibl:")]
-            except Exception:
-                return []
-
-        # 초기 trace가 비면(예: gemini 비-streaming 경로는 provider 호출이력을 안 줌) thread_context로 시드.
-        if not trace_source:
-            _seed = _tc_calls()
-            if _seed:
-                trace_source = list(_seed)
-                tool_results_str = serialize_tool_trace(trace_source)
-                action_ledger = build_action_ledger(trace_source)
-                _trace_dicts = trace_source
-        _tc_seen = len(_tc_calls())
-
-        prepared = None
-        reuse_packet = False
-        for round_num in range(1, max_rounds + 1):
-            if cancel_check and cancel_check():
-                self._log("[GoalEval] 사용자 중단 — 현재 응답 반환")
-                set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="사용자 중단")
-                return response
-
-            self._log(f"[GoalEval] 라운드 {round_num}/{max_rounds} 평가 시작")
-            # 평가자 호출은 50~90초 블로킹 — 들어가기 전에 상태를 흘려 화면과
-            # WS 유휴 타이머를 함께 살린다(transient: thinking).
-            yield {"type": "thinking",
-                   "content": f"🎯 달성 기준 평가 중 (라운드 {round_num}/{max_rounds})"}
-            eval_start = _time.time()
-
-            self.goal_outcome = parse_goal_outcome("")
-            # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
-            try:
-                from final_evaluator import prepare_standalone, snapshot_error, POLICY, FINAL_POLICY, RESEARCH_POLICY
-                if not reuse_packet:
-                    prepared = prepare_standalone(self, response, user_message,
-                        consciousness_output or {'achievement_criteria': criteria}, _trace_dicts, history, cancel_check,
-                        previous=prepared)
-                reuse_packet = False
+                prepared = prepare_standalone(self, initial_response, user_message,
+                    consciousness_output or {}, history=history, cancel_check=cancel_check)
                 packet = prepared._evaluation_packet
-                supplied_images = {i.get('_evidence_id') for i in packet.get('images', [])}
-                for ref in packet['context'].get('visual_evidence', []):
-                    ref['delivered'] = ref['id'] in supplied_images
                 self.evaluation_store = prepared.store
                 achieved, feedback, severity = self._evaluate_achievement(
-                    user_message, packet['criteria'], response, packet['files'],
-                    consciousness_output=consciousness_output, tool_results_str=tool_results_str,
-                    action_ledger=action_ledger, visual_artifacts=packet['images'], conversation_history=history,
-                    evaluation_context=json.dumps(packet['context'], ensure_ascii=False),
-                    evaluation_policy=POLICY + FINAL_POLICY + (RESEARCH_POLICY if packet['context'].get('research_citations') else ''),
-                    evaluation_attachments=packet['attachments'], full_response=True)
-                packet['selection_sources'] = getattr(self, 'evaluation_sources', [])
-                if achieved and (cancel_check and cancel_check() or snapshot_error(prepared)):
-                    achieved, feedback, severity = None, '검수 중 결과 또는 관련 입력이 변경됐습니다', 0
+                    user_message, packet['criteria'], initial_response, packet['files'],
+                    visual_artifacts=packet['images'], conversation_history=history,
+                    evaluation_context=json.dumps(packet['context'], ensure_ascii=False))
+                if cancel_check and cancel_check():
+                    achieved, feedback = None, '사용자 중단'
+                    self.goal_outcome = parse_goal_outcome('')
+                elif error := snapshot_error(prepared):
+                    achieved, feedback = None, error
+                    self.goal_outcome = parse_goal_outcome('')
+                status = 'ACHIEVED' if achieved is True else 'NOT_ACHIEVED' if achieved is False else 'UNKNOWN'
             except Exception as exc:
-                achieved, feedback, severity = None, f"검수 준비 또는 평가 실패: {exc}", 0
-
-            eval_time = _time.time() - eval_start
-            severity_label = {0: "-", 1: "LOW", 2: "MED", 3: "HIGH"}.get(severity, "?")
-            try:
-                import hashlib as _hashlib
-                from episode_logger import record_trajectory_event
-                # ★피드백 **전문**을 원장에 남긴다(2026-08-31 ep2461: sha256 만 남겨
-                #   NOT_ACHIEVED 사유가 회수 불능이었다 — 로그의 [:200] 은 표시용 절단일
-                #   뿐, 판정 근거의 정본은 여기다). 상한 초과는 표식으로 정직하게.
-                _fb = feedback or ""
-                record_trajectory_event("validation.completed", {
-                    "validator": "goal_eval",
-                    "round": round_num,
-                    "review_status": "APPROVED" if achieved is True else "REWORK" if achieved is False else "UNKNOWN",
-                    **getattr(self, "goal_outcome", parse_goal_outcome("")),
-                    "status": "UNKNOWN" if achieved is None else "ACHIEVED" if achieved else "NOT_ACHIEVED",
-                    "severity": int(severity or 0),
-                    "elapsed_ms": int(eval_time * 1000),
-                    "criteria": (criteria or "")[:2000],
-                    "criteria_sha256": _hashlib.sha256((criteria or "").encode(
-                        "utf-8", "replace")).hexdigest(),
-                    "feedback_text": _fb[:8000],
-                    "feedback_truncated": len(_fb) > 8000,
-                    "feedback_sha256": _hashlib.sha256(_fb.encode(
-                        "utf-8", "replace")).hexdigest(),
-                })
-            except Exception:
-                pass  # 검증 기록은 관측 — 평가 결과를 바꾸지 않는다
-            self._log(
-                f"[GoalEval] 라운드 {round_num}: "
-                f"{'UNKNOWN' if achieved is None else 'ACHIEVED' if achieved else 'NOT_ACHIEVED'} "
-                f"(severity={severity_label}, {eval_time:.1f}초)"
-            )
-
-            if achieved is None:
-                if (prepared and round_num < max_rounds
-                        and re.search(r'UNKNOWN_REASON:\s*evidence\b', feedback or '')):
-                    from evaluation_input import evidence_requests, new_evidence_requests, recover
-                    parsed = evidence_requests(feedback, prepared._evaluation_packet)
-                    requests = new_evidence_requests(parsed['requests'], packet.get('attachments', []))
-                    if parsed['status'] in {'valid', 'normalized'} and requests:
-                        try:
-                            if changed := snapshot_error(prepared):
-                                return unreviewed(changed)
-                            packet['attachments'].extend(recover(prepared, requests))
-                            reuse_packet = True
-                            continue
-                        except (ValueError, OSError) as exc:
-                            return unreviewed(str(exc))
-                return unreviewed(feedback or "판정을 확보하지 못했습니다")
-            if achieved:
-                set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback,
-                                      citation_uses=getattr(self, "citation_uses", []),
-                                      response_hash=__import__("hashlib").sha256(response.encode()).hexdigest(), **self.goal_outcome)
-                persist_review('eligible' if self.goal_outcome.get('goal_status') == 'ACHIEVED' else 'components_only')
-                return response
-
-            # 본문은 보존하고 판정은 별도 상태로 전달한다.
-            if round_num >= max_rounds:
-                self._log('[GoalEval] 라운드 소진, 검수 결과와 본문 보존')
-                return rejected('응답 보완을 위한 재시도 한도에 도달했습니다.', feedback, severity)
-
-            # 원래 완료 기준으로 보완한다. 실패 횟수·심각도로 목표를 바꾸지 않는다.
-            self._log(f"[GoalEval] 재실행 시작 (severity={severity_label}, 피드백 주입)")
-
-            retry_directive = (
-                "원래 전체 완료 기준과 확보한 근거·결과물을 유지하고 지적된 결함을 보완하세요. "
-                "이미 완료한 작업과 외부 효과를 반복하지 마세요."
-            )
-
-            feedback_message = (
-                f"[평가 피드백] 이전 응답이 달성 기준을 충족하지 못했습니다. "
-                f"(심각도: {severity_label})\n\n"
-                f"달성 기준: {criteria}\n\n"
-                f"부족한 점:\n{feedback}\n\n"
-                f"{retry_directive}"
-                # 재실행은 새 컨텍스트 — 자기 세션의 적용 예약분을 모르면 그 파일을
-                # '없다'고 보고 재작성해 지연 적용과 충돌한다(ep2461). 원장 기반 주입.
-                f"{self._scheduled_repair_agent_note()}\n\n"
-                f"⚠️ 중요: 이 재실행은 비대화형 모드입니다. "
-                f"ask_user_question을 사용하지 마세요. 사용자에게 질문할 수 없습니다. "
-                f"현재 가진 정보만으로 최선의 결과를 만드세요."
-            )
-
-            # 피드백을 히스토리에 추가하여 재실행
-            retry_history = history + [
-                {"role": "assistant", "content": response[:8000]},
-                {"role": "user", "content": feedback_message}
-            ]
-
-            # 재실행 표식 — 실행 단계와 같은 어법(`[자기반성]`)으로 화면에 남긴다.
-            yield {"type": "text",
-                   "content": f"\n\n---\n[평가 피드백 반영 재실행 {round_num}/{max_rounds - 1}]\n\n"}
-
-            try:
-                # ★스트리밍 재실행 — 이벤트를 그대로 흘린다. `final` 만 회수해
-                #  응답으로 삼는다(빈 final 이 채워진 final 을 못 덮게: ep1251 규약).
-                #  흘려보내는 김에 tool_start/tool_result 를 구조화 수집한다 — 이게
-                #  재실행 원장의 1차 소스다(아래 누적 주석 참조).
-                retry_response = ""
-                _stream_calls: list = []  # 이번 재실행의 {name,input,result,is_error}
-                _sc_cursor = 0  # id 없는 결과의 도착 순서 페어링 커서 (claude_code.process_message 와 동일 규약)
-                for ev in self.ai.process_message_stream(
-                    message_content=feedback_message,
-                    history=retry_history,
-                    images=None,
-                    cancel_check=cancel_check,
-                ):
-                    _et = ev.get("type")
-                    if _et == "final":
-                        _c = ev.get("content", "")
-                        if _c or not retry_response:
-                            retry_response = _c
-                        continue
-                    if _et == "tool_start":
-                        _stream_calls.append({
-                            "id": ev.get("id", ""),
-                            "name": ev.get("name", ""),
-                            "input": ev.get("input") or {},
-                            "result": "",
-                            "is_error": False,
-                        })
-                    elif _et == "tool_result":
-                        _rid = ev.get("id", "")
-                        _slot = None
-                        if _rid:
-                            _slot = next(
-                                (tc for tc in _stream_calls if tc.get("id") == _rid),
-                                None,
-                            )
-                        if _slot is None and _sc_cursor < len(_stream_calls):
-                            _slot = _stream_calls[_sc_cursor]
-                        _sc_cursor += 1
-                        if _slot is not None:
-                            _slot["result"] = ev.get("result", "")
-                            _slot["is_error"] = bool(ev.get("is_error", False))
-                    yield ev
-
-                # ★재실행이 만든 새 도구 호출을 누적해 ledger·trace 를 갱신한다.
-                # 안 하면 다음 라운드 평가가 라운드 1의 stale 원장으로 새 응답을
-                # 판정 → 실제로 작업해 놓고도 "원장에 없으니 안 했다 = 조작"이라는
-                # 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함).
-                # 1차 소스 = 방금 흘려보낸 스트림의 tool_start/tool_result — 프로바이더
-                # 계약이라 전 프로바이더가 방출하고, 이 스레드에서 직접 관측한 값이다.
-                # thread_context 델타는 폴백 — claude_code 는 도구가 CLI 서브프로세스에서
-                # 돌아 threading.local 에 안 잡히므로 델타가 항상 빈다(2026-08-30 실측:
-                # 재실행의 self:edit·self:patch 가 원장에 누락 → 실제 적용된 수리를
-                # "미수행"으로 뒤집는 거짓 판정). 델타 커서는 소스와 무관하게 전진시켜
-                # 같은 호출이 뒤 라운드에 이중 적재되지 않게 한다.
-                # ★옛 `get_last_tool_calls()` 폴백은 제거했다(2026-08-22): 그 속성은
-                # provider 의 **논스트림** 래퍼만 채우는데 재실행이 스트리밍으로 바뀌어
-                # 영영 안 채워진다 — 남겨 두면 델타가 빈 라운드에서 *이전 논스트림
-                # 호출의 잔여*를 이번 라운드 원장으로 오적재한다(빈손보다 나쁜 거짓 원장).
-                # 누적은 응답이 비어도(503 등) 수행한다 — 도구는 실제로 돌았고 세계는
-                # 이미 바뀌었으므로, 원장은 응답 채택 여부가 아니라 사실을 따른다.
-                _all_tc = _tc_calls()
-                _tc_new = _all_tc[_tc_seen:]
-                _tc_seen = len(_all_tc)
-                _new_calls = _stream_calls if _stream_calls else _tc_new
-                if _new_calls:
-                    if trace_source and isinstance(trace_source[0], dict):
-                        trace_source = list(trace_source) + list(_new_calls)
-                    else:
-                        trace_source = list(_new_calls)
-                    tool_results_str = serialize_tool_trace(trace_source)
-                    action_ledger = build_action_ledger(trace_source)
-                    _trace_dicts = trace_source
-
-                from task_repair import pending_response
-                if notice := pending_response():
-                    return notice
-
-                # 재실행 결과가 비어있으면 (503 등) 이전 응답 유지
-                if retry_response and retry_response.strip():
-                    response = retry_response
-                    self._log(f"[GoalEval] 재실행 완료: {len(response)}자 "
-                              f"(도구 {len(_new_calls)}회 원장 누적)")
-                else:
-                    self._log(f"[GoalEval] 재실행 결과 비어있음, 이전 응답 유지 ({len(response)}자, "
-                              f"도구 {len(_new_calls)}회는 원장에 누적)")
-            except Exception as e:
-                self._log(f"[GoalEval] 재실행 실패: {e}")
-                return rejected('검수 후 보완 실행 중 오류가 발생했습니다.', feedback, severity)
-
-        return response
+                achieved, severity = None, 0
+                status, feedback = 'UNKNOWN', f'최종 결과 비교 실패: {exc}'
+                self.goal_outcome = parse_goal_outcome('')
+        set_goal_eval_outcome(achieved, severity, status=status, reason=feedback,
+                             method='goal_result',
+                             review_status='APPROVED' if achieved is True else 'REWORK' if achieved is False else status,
+                             response_hash=digest(initial_response), **self.goal_outcome)
+        outcome = get_goal_eval_outcome()
+        from episode_logger import record_trajectory_event
+        record_trajectory_event('validation.completed', {'validator': 'goal_eval', 'final': True,
+                                                         'scope': 'goal_result', **outcome})
+        store = evidence_store()
+        try:
+            ref = store.evidence(initial_response)
+            (store.directory / 'review_status.json').write_text(json.dumps({
+                **outcome, 'scope': 'goal_result', 'original_goal': user_message,
+                'response': {'hash': digest(initial_response), **ref}, 'validator': 'goal_eval',
+                'learning': ('eligible' if achieved is True and outcome.get('goal_status') == 'ACHIEVED'
+                             else 'deferred' if achieved is None else 'components_only'),
+            }, ensure_ascii=False), encoding='utf-8')
+        except OSError as exc:
+            outcome['storage_error'] = str(exc)
+            self._log(f'[GoalEval] 비교 결과 보존 실패: {exc}')
+        return initial_response

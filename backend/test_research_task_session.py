@@ -89,7 +89,8 @@ def test_unreviewed_submission_preserves_body_and_diagnostics(workspace):
         prepare_standalone(runner, response, '연구', {}, [{'name': 'Write', 'input': {'path': str(path / 'outputs/report.md')}, 'result': 'saved'}])
         outcome = finish_review(response)
         assert outcome['review_status'] == 'NOT_RUN'
-        assert outcome['unresolved_citations'] and not outcome['citations']
+        assert not outcome['unresolved_citations'] and not outcome['citations']
+        assert outcome['submissions'][0]['text'] == '성공했다 [자료:missing:p1]'
         list(turn.events(iter([{'type': 'final', 'content': response}])))
     store = ResearchStore(path)
     with store.connect() as db:

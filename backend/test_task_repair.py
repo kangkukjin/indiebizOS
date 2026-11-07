@@ -428,7 +428,7 @@ def test_pipeline_yields_pending_instead_of_claiming_original_work_complete(env,
     assert len(r.ai.calls) == 1
 
 
-def test_supervisor_revision_suspends_before_another_evaluation(supervisor, monkeypatch):
+def test_final_comparison_does_not_start_a_repair_request(supervisor, monkeypatch):
     rounds, requested = [], []
 
     def evaluate(controller, *args, **kwargs):
@@ -444,7 +444,7 @@ def test_supervisor_revision_suspends_before_another_evaluation(supervisor, monk
     monkeypatch.setattr(repair, 'pending_response', lambda: repair.NOTICE if requested else None)
     events = finish(supervisor, '첫 방법 실패')
     assert rounds == [1]
-    assert events[-1]['content'] == repair.NOTICE
+    assert events[-1]['content'] == '첫 방법 실패' and not requested
 
 
 @pytest.mark.system

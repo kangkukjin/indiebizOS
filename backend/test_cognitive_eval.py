@@ -149,13 +149,13 @@ def test_retry_failure_does_not_return_the_rejected_completion_claim(evaluation_
     assert len(case.calls) == 1
 
 
-def test_last_retry_preserves_latest_draft_without_publishing_it(evaluation_case):
+def test_extra_round_budget_does_not_rewrite_final_result(evaluation_case):
     case = evaluation_case
     _, result = case.run(rounds=2)
-    assert result == '보완된 응답'
-    assert len(case.calls) == 2 and case.runner.ai.stream_calls == 1, __import__("thread_context").get_goal_eval_outcome()
+    assert result == case.draft
+    assert len(case.calls) == 1 and case.runner.ai.stream_calls == 0
     receipt = json.loads((case.store.directory / 'review_status.json').read_text())
-    assert case.store.read_evidence(receipt['response']['id'])['text'] == '보완된 응답'
+    assert case.store.read_evidence(receipt['response']['id'])['text'] == case.draft
 
 
 def test_evidence_write_failure_still_reports_rejected_state(evaluation_case, monkeypatch):
@@ -205,47 +205,11 @@ if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
 
 
-def test_repeated_repair_preserves_all_original_criteria(evaluation_case, monkeypatch):
+def test_extra_round_budget_keeps_original_goal_without_reframing(evaluation_case, monkeypatch):
     case = evaluation_case
     def forbidden(*a, **kw):
         pytest.fail('검수 횟수나 심각도로 사용자 기준을 교체하면 안 됩니다')
     monkeypatch.setattr('reframe._revise', forbidden)
     case.run(rounds=3)
-    assert len(case.calls) == 3
-    import json
-    contracts = [json.loads(p.context) for p in case.calls]
-    assert all(c == contracts[0] for c in contracts)
-
-
-def test_standalone_recovers_omitted_image_without_repeating_execution(evaluation_case, tmp_path, monkeypatch):
-    from PIL import Image
-    from test_goal_eval_streaming import _drain
-    case = evaluation_case
-    calls = []
-    for i in range(4):
-        path = tmp_path / f'screen-{i}.png'
-        Image.new('RGB', (12, 12), (i * 60, 0, 0)).save(path)
-        calls.append({'name': 'view_image', 'input': {'path': str(path)}, 'result': 'shown'})
-    evaluations = []
-    wanted = []
-    def model(prompt, **kwargs):
-        images = kwargs['images']
-        evaluations.append(images)
-        if len(evaluations) == 1:
-            supplied = {i['base64'] for i in images}
-            ref = next(r for r in prompt.references if r.get('unit') == 'images' and
-                       json.loads(case.store.read_evidence(r['evidence_id'])['text'])['base64'] not in supplied)
-            wanted.append(json.loads(case.store.read_evidence(ref['evidence_id'])['text'])['base64'])
-            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([{
-                'criterion_id': 'C1', 'evidence_id': ref['evidence_id'], 'revision': ref['revision'],
-                'start': 0, 'end': 1}])
-        assert wanted[0] in {i['base64'] for i in images}
-        return 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"원본 이미지 확인","evidence":["이미지"],"remaining":[]}'
-    monkeypatch.setattr('consciousness_agent.system_ai_call', model)
-    _, response = _drain(case.runner._run_goal_evaluation_stream(
-        '첫 번째 화면 상태 확인', '첫 화면 상태를 정확히 보고', '화면 확인 결과', [],
-        tool_calls=calls, max_rounds=2))
-    assert response == '화면 확인 결과' and len(evaluations) == 2
-    assert case.runner.ai.stream_calls == 0
-    saved = json.loads((case.store.directory / 'review_status.json').read_text())
-    assert saved['review_status'] == 'APPROVED' and saved['goal_status'] == 'ACHIEVED'
+    assert len(case.calls) == 1
+    assert 'CSV와 PDF 저장' in case.calls[0] and case.runner.ai.stream_calls == 0

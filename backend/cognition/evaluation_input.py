@@ -12,6 +12,14 @@ from research_review import allocate
 SUPPORT_PREVIEW_CHARS = 60000
 
 
+class CompleteInput(str):
+    """Deliver the final result whole or report transport overflow; never select evidence."""
+
+    def prepare_request(self, provider, images=None):
+        check(provider, serialized(provider, str(self), images), images=images, reserve=8192)
+        return str(self)
+
+
 def dumps(value):
     return json.dumps(value, ensure_ascii=False, default=str, separators=(',', ':'))
 

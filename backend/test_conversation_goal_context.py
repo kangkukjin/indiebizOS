@@ -43,8 +43,8 @@ def test_final_evaluation_gets_raw_conversation_even_with_stale_summary(supervis
     invoke(supervisor)
     assert len(prompts) == 1
     assert CORRECTION in prompts[0]
-    assert 'A는 냄비 고정이고 B는 분리된다.' in prompts[0]
-    assert 'user' in prompts[0] and 'assistant' in prompts[0]
+    assert 'A는 냄비 고정이고 B는 분리된다.' not in prompts[0]
+    assert '타이머가 있는 쿠커를 찾는다.' in prompts[0] and '내장 타이머를 찾는 사용자' not in prompts[0]
 
 
 def test_history_excerpt_preserves_short_middle_corrections_and_roles():

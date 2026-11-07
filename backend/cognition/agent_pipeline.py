@@ -860,7 +860,7 @@ class CognitivePipelineMixin:
                     final_content, history, _collect, cancel_check, tool_calls=eval_tool_calls))
             elif (_evaluation_enabled and final_content
                   and consciousness_output.get("independent_review") is True):
-                criteria = self._extract_achievement_criteria(consciousness_output)
+                criteria = self._extract_achievement_criteria(consciousness_output) or message
                 if criteria:
                     from world_pulse import _load_config as _load_wp_config
                     _goal_cfg = _load_wp_config().get("goal_eval", {})
@@ -868,13 +868,7 @@ class CognitivePipelineMixin:
                         _eval_ran = True
                         record_trajectory_event("cognition.evaluation", {"path": "goal_eval"})
                         print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                        # ★yield from — 평가·재실행 구간의 이벤트를 그대로 흘린다.
-                        # 옛 판은 이 호출이 블로킹 함수라 평가(50~90초)+전면 재실행
-                        # (실측 9분56초)이 전부 스트림 밖이었다. 실행 단계는 도구마다
-                        # 흘리는데 같은 에이전트를 다시 돌리는 재실행은 침묵 —
-                        # 그 비대칭이 화면의 "멈춤"이었고, 침묵이 WS 유휴 타임아웃
-                        # (600초)보다 길어 긴 턴은 재실행에 들어가는 순간 타임아웃이
-                        # 확정이었다(2026-08-22 상상훈련 22회차 턴, ep total 24분41초).
+                        # 진행 상태를 먼저 전달한 뒤 목표–최종 결과를 한 번 비교한다.
                         evaluated = yield from defer_final(self._run_goal_evaluation_stream(
                             user_message=message,
                             criteria=criteria,
@@ -889,7 +883,7 @@ class CognitivePipelineMixin:
                         ))
                         if evaluated and evaluated.strip() and evaluated != final_content:
                             final_content = evaluated
-                            print(f"[GoalEval] 재실행 결과 채택 대기 ({len(evaluated)}자)")
+                            print(f"[GoalEval] 최종 결과 반환 ({len(evaluated)}자)")
 
             if notice := pending_response():
                 yield {'type': 'final', 'content': notice}

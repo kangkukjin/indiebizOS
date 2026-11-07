@@ -114,8 +114,8 @@ def test_pipeline_reviews_recovered_task_without_second_execution(turn, supervis
 
     def evaluate(prompt, **kw):
         evaluations.append(prompt)
-        assert 'recovery_incidents' in prompt and 'focus missing' in prompt
-        assert 'focus restored; 30 checks passed' in prompt
+        assert 'recovery_incidents' not in prompt and 'focus missing' not in prompt
+        assert '초점 복구와 검사 완료' in prompt
         return 'ACHIEVED'
 
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)

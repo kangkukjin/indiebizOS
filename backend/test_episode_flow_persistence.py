@@ -109,7 +109,7 @@ def test_missing_temporary_screenshot_uses_frozen_bytes_but_changed_code_rejects
     code = tmp_path / "implementation.py"
     code.write_text("x = 1")
     encoded = base64.b64encode(image.read_bytes()).decode()
-    supervisor.store.put_response("검사 완료")
+    supervisor.store.put_response(f"![최종 화면]({image})")
     prepare(supervisor, [{"name": "view_image", "input": {"path": str(image)}, "result": "shown"}])
     supervisor._evaluation_snapshot["files"][str(code)] = {
         "mode": "bytes", "hash": hashlib.sha256(code.read_bytes()).hexdigest()}

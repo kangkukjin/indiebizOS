@@ -86,50 +86,23 @@ def result_paths(controller, call, *, submissions=None):
     return list(_receipt_paths(shown, submissions=submissions))
 
 
-def discover(controller, response, tool_calls, *, submitted=()):
-    # Links are references; only actual write/return receipts and declared submissions
-    # establish output candidates. Consumers share this collection. Explicit
-    # submissions select priority; all candidates keep their immutable snapshots.
-    paths = set(submitted)
-    declared = set(submitted)
-    for call in tool_calls or []:
-        if not isinstance(call, dict):
-            continue
-        paths.update(result_paths(controller, call, submissions=declared))
-        # 계산된 경로는 코드 문자열이 아니라 실행 증거에 있다. 부분 실패 전
-        # 저장된 파일도 검사하되, 읽기 대상이나 실행하지 않은 코드는 산출물로 보지 않는다.
-        for invocation in call.get("runtime_calls") or []:
-            if isinstance(invocation, dict) and invocation.get("action") in {"self:write", "self:edit", "self:patch"}:
-                target = (invocation.get("targets") or {}).get("path")
-                if isinstance(target, str):
-                    paths.add(target)
-        if call.get("is_error") or call.get("success") is False:
-            continue
-        name = call.get("name") or call.get("tool_name") or ""
-        inp = call.get("input") or {}
-        if not isinstance(inp, dict):
-            continue
-        from cognitive_trace import _FILE_WRITE_TOOL_NAMES, _FILE_PATH_INPUT_KEYS
-        if name.rsplit("__", 1)[-1].rsplit('/', 1)[-1] in _FILE_WRITE_TOOL_NAMES:
-            paths.update(inp[k] for k in _FILE_PATH_INPUT_KEYS if isinstance(inp.get(k), str))
+def discover(controller, response, tool_calls=None, *, submitted=()):
+    """Snapshot the files explicitly delivered in the answer, not the execution trail.
 
-    def resolve(name):
-        path = Path(name)
-        return (Path(controller.project_path) / path).resolve() if not path.is_absolute() else path.resolve()
-
-    from research_review import submission_paths
-    candidates = {resolve(name) for name in paths}
-    # A response link selects among observed outputs; it never imports an input file.
-    declared = ({resolve(name) for name in declared}
-                | {Path(name) for name in submission_paths(response, controller.project_path)}) & candidates
+    A referenced existing file is a final result too. Creation provenance and
+    links inside the delivered document do not participate in this comparison.
+    """
+    from research_review import local_link_paths, submission_paths
+    root = Path(controller.project_path).resolve()
+    paths = set(submitted) | submission_paths(response, root) | local_link_paths(response, root)
     artifacts, seen = [], set()
     for name in sorted(paths):
-        path = resolve(name)
+        path = (root / name).resolve()
         if path in seen:
             continue
         seen.add(path)
         if path.suffix.lower() not in {".md", ".txt", ".html", ".json", ".csv", ".tsv", ".py", ".js", ".ts", ".tsx", ".jsx",
-                                       ".css", ".yaml", ".yml", ".sh", ".sql", ".toml", ".xml", ".svg"}:
+                                       ".css", ".yaml", ".yml", ".sh", ".sql", ".toml", ".xml", ".svg", ".log"}:
             continue
         try:
             content = path.read_bytes().decode('utf-8')
@@ -137,7 +110,6 @@ def discover(controller, response, tool_calls, *, submitted=()):
             artifacts.append({"path": str(path), "error": str(exc)})
             continue
         ref = controller.store.evidence(content)
-        artifacts.append({"path": str(path.resolve()), "hash": digest(content),
-                          "evidence_id": ref["id"], "chars": len(content),
-                          "role": "submission" if not declared or path in declared else "support"})
+        artifacts.append({"path": str(path), "hash": digest(content),
+                          "evidence_id": ref["id"], "chars": len(content), "role": "submission"})
     return artifacts

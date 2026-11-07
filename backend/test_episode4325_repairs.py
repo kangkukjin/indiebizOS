@@ -7,7 +7,7 @@ import boot_paths  # noqa: F401
 from test_conscious_supervisor import supervisor  # noqa: F401
 
 
-def test_repair_tool_results_reach_the_recheck_in_full(supervisor):
+def test_final_comparison_does_not_reopen_prior_evidence_pages(supervisor):
     from final_evaluator import prepare
     store = supervisor.store
     store.put_response("대조 완료")
@@ -22,9 +22,10 @@ def test_repair_tool_results_reach_the_recheck_in_full(supervisor):
     store.log("tool.finished", role="execution", name="execute_ibl", evidence=failed, is_error=True)
     read = store.evidence("작업대 증거 페이지")
     store.log("response.operation", role="execution", operation="evidence", result=read, is_error=False)
-    recovered = prepare(supervisor, [])["context"]["recovered_evidence"]
-    assert len(recovered) == 2 and recovered[1] == "작업대 증거 페이지"
-    assert '"row": 7' in recovered[0] and "value_wire" not in recovered[0]
+    packet = prepare(supervisor, [])
+    assert 'recovered_evidence' not in packet['context']
+    assert packet['attachments'] == []
+    assert store.read_evidence(read['id'])['text'] == "작업대 증거 페이지"
 
 
 def test_recovered_evidence_budget_prefers_latest(supervisor):

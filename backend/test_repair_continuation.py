@@ -263,7 +263,7 @@ def test_task_database_does_not_complete_pending_apply(tmp_path, monkeypatch):
     assert db.get_task("task-repair")["status"] == "completed"
 
 
-def test_unknown_evidence_returns_to_executor_and_rechecks_raw_proof(supervisor, monkeypatch):
+def test_unknown_evidence_does_not_reopen_executor(supervisor, monkeypatch):
     proof = supervisor.store.evidence("중간 검사 실제 출력: en -> ko -> en PASS")
     calls = []
     def evaluate(prompt, **kw):
@@ -280,7 +280,7 @@ def test_unknown_evidence_returns_to_executor_and_rechecks_raw_proof(supervisor,
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     supervisor.runner.ai.process_message_stream = stream
     assert finish(supervisor, "구현 결과")[-1]["content"] == "구현 결과"
-    assert len(calls) == 2 and tc.get_goal_eval_outcome()["achieved"]
+    assert len(calls) == 1 and tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
 
 
 @pytest.mark.parametrize("reason", ["criteria", "blocked"])
@@ -292,7 +292,7 @@ def test_unknown_non_evidence_does_not_start_blind_repair(supervisor, monkeypatc
     assert tc.get_goal_eval_outcome()["review_status"] == "UNKNOWN"
 
 
-def test_evidence_recovery_does_not_spend_defect_repair(supervisor, monkeypatch):
+def test_final_comparison_does_not_chain_evidence_and_defect_repairs(supervisor, monkeypatch):
     calls, repairs = [], []
     def evaluate(*args, **kwargs):
         calls.append(1)
@@ -307,7 +307,7 @@ def test_evidence_recovery_does_not_spend_defect_repair(supervisor, monkeypatch)
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     supervisor.runner.ai.process_message_stream = stream
     finish(supervisor, "결과")
-    assert len(calls) == 3 and len(repairs) == 2 and tc.get_goal_eval_outcome()["achieved"]
+    assert len(calls) == 1 and repairs == [] and tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
 
 
 def test_file_lock_prevents_duplicate_workers(tmp_path, consumer):

@@ -1,4 +1,4 @@
-"""최종 평가는 증거 기반 원샷이며 중간관리 도구와 공개·기억 계약을 보존한다."""
+"""최종 결과 비교는 한 번으로 끝나며 사용자 목표·공개·기억 계약을 보존한다."""
 import json
 from types import SimpleNamespace
 
@@ -11,46 +11,6 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
-@pytest.mark.parametrize('state', ['resolved', 'unresolved', 'missing_evidence'])
-def test_final_review_owns_failures_and_only_defects_open_execution(supervisor, monkeypatch, state):
-    supervisor.run_tool('check_widget', {'target': 'widget'},
-                        lambda: {'success': False, 'error': 'focus missing'})
-    supervisor.run_tool('check_widget' if state == 'resolved' else 'read_guide', {},
-                        lambda: 'focus restored; 30 checks passed' if state == 'resolved' else 'guide only')
-    before = supervisor.recovery.view()
-    evaluations, repairs = [], []
-
-    def evaluate(prompt, **kwargs):
-        evaluations.append(prompt)
-        context = supervisor._evaluation_packet['context']
-        assert context['recovery_incidents'] == supervisor.recovery.view()
-        assert context['recovery_incidents'] and 'focus missing' in prompt
-        if state == 'missing_evidence':
-            return 'UNKNOWN\nUNKNOWN_REASON: evidence — C1 실제 대상 상태가 없음'
-        if state == 'unresolved' and len(evaluations) == 1:
-            assert 'guide only' in prompt
-            return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: research\n'
-                    'DEFECTS: [{"criterion_id":"C1","evidence":"focus missing; guide only",'
-                    '"repair":"실제 대상의 초점을 복구하고 확인"}]')
-        assert 'focus restored; 30 checks passed' in prompt
-        return 'ACHIEVED'
-
-    def repair(prompt, **kwargs):
-        repairs.append(prompt)
-        supervisor.run_tool('check_widget', {}, lambda: 'focus restored; 30 checks passed')
-        block = supervisor.store.blocks[0]
-        supervisor.store.patch(supervisor.store.version, [
-            {'id': block['id'], 'hash': block['hash'], 'text': '수정 결과'}])
-        yield {'type': 'final', 'content': '보완 결과'}
-
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = repair
-    finish(supervisor, '결과')
-    assert len(evaluations) == (1 if state == 'resolved' else 2)
-    assert len(repairs) == (0 if state == 'resolved' else 1)
-    assert tc.get_goal_eval_outcome()['status'] == ('UNKNOWN' if state == 'missing_evidence' else 'ACHIEVED')
-    # 최종 판단은 과거 실패를 관측 성공/영수증으로 둔갑시키지 않는다.
-    assert supervisor.recovery.view() == before
 
 
 def test_only_explicit_submissions_receive_submission_priority(supervisor, tmp_path):
@@ -94,78 +54,18 @@ def test_prior_user_limit_can_ground_authority_stop(supervisor, monkeypatch):
     assert result['status'] == 'UNKNOWN' and not result.get('recoverable')
 
 
-@pytest.mark.parametrize('phase', ['semantic', 'workspace', 'final'])
-def test_evidence_followup_reaches_every_review_phase_without_supervisor_handoff(supervisor, monkeypatch, phase):
-    from final_evaluator import prepare, invoke
-    from evaluation_input import context_sections
-    prepare(supervisor, [])
-    monkeypatch.setattr('final_evaluator.Evaluator._evaluate_achievement', lambda *a, **kw:
-                        (None, 'UNKNOWN\nUNKNOWN_REASON: evidence — C1 source missing', None))
-    result = json.loads(invoke(supervisor, phase=phase))
-    assert result['recoverable']
-    cursor = supervisor._repair_evidence_since
-    source = 'BEGIN actual candidate implementation ' + 'body ' * 1000 + ' END required behavior'
-    supervisor.run_tool('read_candidate', {}, lambda: source)
-    packet = prepare(supervisor, [])
-    _, sections = context_sections(json.dumps(packet['context']))
-    recovered = [row for row in sections if row['role'] == 'recovered']
-    assert recovered and any(source in row['text'] for row in recovered)
-    # Another insufficient review must not drop the first supplementary read.
-    invoke(supervisor, phase=phase)
-    assert supervisor._repair_evidence_since == cursor
 
 
-def test_research_invalid_citation_is_repaired_before_approval(supervisor, monkeypatch, tmp_path):
-    import research_capture  # installs the service callback
-    from research_context import scope
-    from research_store import ResearchStore
-    from research_library import ResearchLibrary
-    (tmp_path / 'research-project').mkdir()
-    store = ResearchStore(tmp_path / 'research-project', 'research-test')
-    tid = store.create_thread('인용')['id']
-    lib = ResearchLibrary(store, tid)
-    vid = lib.capture('정확한 근거 788', title='원문', paragraphs=[('¶27', '정확한 근거 788')])['version_ref']
-    bad, good = f'[자료:{vid}:¶1]', f'[자료:{vid}:¶27]'
-    evaluations, repairs = [], []
-
-    def evaluate(prompt, **kwargs):
-        evaluations.append(prompt)
-        assert 'research_citations' in prompt
-        if len(evaluations) == 2:
-            assert '정확한 근거 788' in prompt
-        if len(evaluations) == 1:
-            return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: ["0"]\n'
-                    'DEFECTS: [{"criterion_id":"C1","evidence":"없는 위치 ¶1, 원문 위치 ¶27","repair":"실제 위치로 수정"}]')
-        return 'ACHIEVED\nCITATION_USES: [{"index":0,"use":"source"}]\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"근거 확인","evidence":["인용"],"remaining":[]}'
-
-    def repair(prompt, **kwargs):
-        repairs.append(prompt)
-        assert '없는 위치' in prompt and '¶27' in prompt
-        packet = json.loads(prompt.split('작업 인계=', 1)[1])
-        block = packet['target_blocks']['blocks'][0]
-        supervisor.store.patch(packet['response']['version'], [
-            {'id': block['id'], 'hash': block['hash'], 'text': '수요 788 ' + good}])
-        yield {'type': 'final', 'content': '수정 완료'}
-
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = repair
-    with scope(dict(project_uid=store.uid, epoch=store.epoch, path=str(store.path),
-                    thread_id=tid, run_id='run', mode='research')):
-        lib.access(vid, 1, '¶27', '정확한 근거 788')
-        result = finish(supervisor, '수요 788 ' + bad)
-    assert len(evaluations) == 2 and len(repairs) == 1
-    assert result[-1]['content'] == '수요 788 ' + good
-    assert tc.get_goal_eval_outcome()['achieved']
 
 
-def test_unicode_source_text_reaches_final_evaluation(supervisor, monkeypatch):
+def test_unicode_execution_source_is_not_final_result(supervisor, monkeypatch):
     source = "PDF 원문 앞\u2028가운데\u2029끝\u0085다음"
     supervisor.run_tool("read", {"query": source}, lambda: source)
     evaluated = []
 
     def evaluate(prompt, **kwargs):
         evaluated.append(prompt)
-        assert source in prompt
+        assert source not in prompt
         return "ACHIEVED"
 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
@@ -236,42 +136,6 @@ def test_background_compaction_keeps_small_repair_targets_inline(supervisor):
     assert len(json.dumps(packet, ensure_ascii=False)) <= supervisor.config["repair_context_chars"]
 
 
-@pytest.mark.parametrize("scope", ["local", "research"])
-def test_executor_can_apply_the_prompt_batch_example_without_response_reads(supervisor, monkeypatch, scope):
-    from supervision_store import digest
-    supervisor.runner.ai._provider = SimpleNamespace(system_prompt="실행 규칙", tools=[], _last_prompt_usage={})
-    evaluations, packets = [], []
-
-    def evaluate(prompt, **kwargs):
-        evaluations.append(prompt)
-        if len(evaluations) == 1:
-            return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: ' + scope
-                    + '\nREPAIR_BLOCK_IDS: ["0", "1"]\nDEFECTS: [{"criterion_id":"C1","evidence":"시간과 영업 확정이 확보한 근거와 다름","repair":"두 문단을 수정하라"}]')
-        assert "체류 80분" in prompt and "영업 여부 미확인" in prompt and "수정 문구" in prompt
-        return "ACHIEVED"
-
-    def repair(prompt, **kwargs):
-        packet = json.loads(prompt.split("작업 인계=", 1)[1])
-        packets.append(packet)
-        page = packet["target_blocks"]
-        batch = json.loads(next(line for line in prompt.splitlines() if line.startswith('{"op": "patch"')))
-        batch["version"] = page["version"]
-        assert len(batch["patches"]) == len(page["blocks"]) == 2
-        for patch, block in zip(batch["patches"], page["blocks"]):
-            assert block["hash"] == digest(block["text"])
-            patch.update(id=block["id"], hash=block["hash"])
-        result = json.loads(supervisor.tool(batch))
-        assert result["success"], result
-        assert result["result"]["version"] == page["version"] + 1
-        yield {"type": "final", "content": "PATCH_DONE"}
-
-    supervisor.runner.ai.process_message_stream = repair
-    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
-    result = finish(supervisor, "체류 100분, 영업 확정\n\n기존 문구")[-1]["content"]
-    assert result == "체류 80분, 영업 여부 미확인\n\n수정 문구"
-    assert len(evaluations) == 2 and len(packets) == 1
-    events = [json.loads(line) for line in (supervisor.store.directory / "events.jsonl").read_text().splitlines()]
-    assert [e["operation"] for e in events if e["kind"] == "response.operation"] == ["patch"]
 
 
 def test_real_oneshot_cannot_call_tools_or_resume_executor(supervisor, monkeypatch):
@@ -286,7 +150,7 @@ def test_real_oneshot_cannot_call_tools_or_resume_executor(supervisor, monkeypat
             assert self.tools == [] and self.no_tools
             assert self.disable_session_persistence and self.agent_role == "oneshot:evaluate"
             assert kwargs["execute_tool"] is None and kwargs["history"] == []
-            assert "실제 실행된 액션 원장" in kwargs["message"]
+            assert "실제 실행된 액션 원장" not in kwargs["message"]
             assert "조회한 근거" in kwargs["message"]
             calls.append(kwargs)
             return "ACHIEVED"
@@ -315,32 +179,6 @@ def test_repeated_calls_and_changed_results_survive_trace_merge(supervisor):
     assert [c["result"] for c in calls] == ["실패", "복구된 원문"]
 
 
-def test_rework_uses_updated_evidence_and_stops_after_one_repair(supervisor, monkeypatch):
-    supervisor.config["max_repairs"] = 9  # 옛 설정도 무한 보완을 되살리지 않는다.
-    evaluations, repairs = [], []
-
-    def evaluate(prompt, **kwargs):
-        evaluations.append(prompt)
-        if len(evaluations) == 2:
-            assert "보완으로 확보한 출처" in prompt and "수정한 답변" in prompt
-        return 'NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: ["0"]\nDEFECTS: [{"criterion_id":"C1","evidence":"핵심 근거 미반영","repair":"근거를 반영하라"}]'
-
-    def repair(prompt, **kwargs):
-        repairs.append(prompt)
-        key = supervisor._start("execute_ibl", {"code": '[sense:search]{query:"새 근거"}'})
-        supervisor._finish(key, "보완으로 확보한 출처")
-        block = supervisor.store.blocks[0]
-        supervisor.store.patch(supervisor.store.version, [{"id": block["id"], "hash": block["hash"],
-                                                           "text": "수정한 답변"}])
-        yield {"type": "final", "content": "PATCH_DONE"}
-
-    supervisor.runner.ai.process_message_stream = repair
-    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
-    result = finish(supervisor, "기존 답변")[-1]["content"]
-    assert len(evaluations) == 2 and len(repairs) == 1
-    assert result == "수정한 답변"
-    assert tc.get_goal_eval_outcome()["review_status"] == "REWORK"
-    assert tc.get_goal_eval_outcome()["status"] == "NOT_ACHIEVED"
 
 
 def test_staged_body_and_notice_are_supplied_before_publication(supervisor, tmp_path, monkeypatch):
@@ -356,15 +194,13 @@ def test_staged_body_and_notice_are_supplied_before_publication(supervisor, tmp_
     assert target.read_text() == "new reviewed bytes" and len(sent) == 1
 
 
-def test_whole_repair_criteria_are_included_in_review(supervisor, monkeypatch):
+def test_internal_repair_criteria_do_not_replace_user_goal(supervisor, monkeypatch):
     supervisor._final_criteria_contract = {"criteria": [
         {"id": "C1", "text": "전체 보고서 세 편 완성", "source": "user"}]}
 
     def evaluate(prompt, **kwargs):
-        assert "전체 보고서 세 편 완성" in prompt
-        contract = json.loads(prompt.split("## 달성 기준\n", 1)[1].split("\n\n", 1)[0])
-        assert any(row["text"] == "전체 보고서 세 편 완성" for row in contract["criteria"])
-        assert all(row["text"] != "정정 전 목표" for row in contract["criteria"])
+        assert supervisor.message in prompt
+        assert "전체 보고서 세 편 완성" not in prompt
         return 'ACHIEVED\nGOAL_OUTCOME: {"status":"ACHIEVED","reason":"세 편의 원문 확인","evidence":["보고서 세 편"],"remaining":[]}'
 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
@@ -408,19 +244,6 @@ def test_tool_capable_supervisor_rejects_final_phase(supervisor):
 
 
 
-@pytest.mark.parametrize("feedback", [
-    'NOT_ACHIEVED\n합계가 원문과 다릅니다. 30을 20으로 바로잡으세요.',
-    'NOT_ACHIEVED\nREPAIR_SCOPE: local\n표의 합계 30은 입력 12+8과 맞지 않습니다.',
-])
-def test_natural_language_feedback_reaches_executor_without_defect_form(supervisor, monkeypatch, feedback):
-    from final_evaluator import prepare, invoke
-    supervisor.store.put_response('합계는 30입니다.')
-    prepare(supervisor, [])
-    monkeypatch.setattr('consciousness_agent.system_ai_call', lambda *a, **kw: feedback)
-    result = json.loads(invoke(supervisor))
-    assert result['status'] == 'REWORK'
-    assert feedback in result['instruction']
-    assert result['reason'] == feedback
 
 
 def test_eval_input_does_not_promote_planning_advice_to_requirements(supervisor, monkeypatch):
@@ -490,18 +313,6 @@ def test_tool_metadata_cannot_supply_missing_consciousness_criteria():
     assert CognitiveEvalMixin()._extract_achievement_criteria({}, marker) is None
 
 
-def test_repair_keeps_model_feedback_and_original_criteria_for_executor_judgment(supervisor, monkeypatch):
-    from final_evaluator import invoke, prepare
-    supervisor.store.put_response("보고서")
-    prepare(supervisor)
-    feedback = ('NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\n'
-                'DEFECTS: [{"criterion_id":"C1","evidence":"원문 수치와 다름","repair":"원문 수치로 수정"}]'
-                '\n추가로 미래 전망도 조사하라')
-    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: feedback)
-    decision = json.loads(invoke(supervisor))
-    assert decision["status"] == "REWORK"
-    assert feedback in decision["instruction"]
-    assert "새 개선 목표를 추가하지" in decision["instruction"]
 
 @pytest.mark.parametrize('goal', ['ACHIEVED', 'NOT_ACHIEVED'])
 def test_approved_response_preserves_independent_goal_to_final_store(supervisor, monkeypatch, goal):
@@ -635,7 +446,7 @@ def test_computed_written_artifacts_reach_first_evaluation(supervisor, tmp_path)
         {'kind': 'invoke', 'action': 'self:read', 'targets': {'path': str(source)}}]}))
     key = supervisor._start('execute_ibl', {'code': '[self:write]{path:$out+"/근거.json",content:$data}'})
     supervisor._finish(key, json.dumps({'edition': 2, 'executed': True, 'result_ref': raw}))
-    supervisor.store.put_response('요청하신 보고서와 근거표를 저장하고 재독했습니다.')
+    supervisor.store.put_response(f'[보고서](<{report}>) [근거표](<{evidence}>)')
     packet = prepare(supervisor)
     snapshot = supervisor._evaluation_snapshot
     assert report.read_text() in packet['files']
@@ -658,7 +469,7 @@ def test_masked_secret_in_artifact_is_not_a_change_during_evaluation(supervisor,
         {'kind': 'invoke', 'action': 'self:write', 'targets': {'path': str(report)}}]}))
     key = supervisor._start('execute_ibl', {'code': '[self:write]{path:$out+"/보고.md",content:$data}'})
     supervisor._finish(key, json.dumps({'edition': 2, 'executed': True, 'result_ref': raw}))
-    supervisor.store.put_response('보고서를 저장했습니다.')
+    supervisor.store.put_response(f'[보고서]({report})')
     packet = prepare(supervisor)
     assert secret not in packet['files'] and '****' in packet['files']
     assert snapshot_error(supervisor) is None
@@ -675,7 +486,7 @@ def test_final_evaluation_uses_goal_policy(supervisor, monkeypatch):
 
     def evaluate(prompt, **kwargs):
         calls.append((prompt, kwargs))
-        assert contract in prompt
+        assert contract not in prompt and supervisor.message in prompt
         policy = kwargs['system_prompt']
         assert FINAL_POLICY in policy
         return 'ACHIEVED\nWORKSPACE_COVERAGE: [{"criterion_id":"C1","status":"passed","evidence_ids":["test-1"]}]'
@@ -696,7 +507,7 @@ def test_final_evaluation_rejects_missing_documentation(supervisor, monkeypatch)
     monkeypatch.setattr('consciousness_agent.system_ai_call', lambda *a, **kw: feedback)
     decision = json.loads(invoke(supervisor))
     assert decision['status'] == 'REWORK'
-    assert decision['defects'][0]['evidence'] == '사본 문서에 필수 설치 안내 누락'
+    assert '필수 설치 안내 누락' in decision['reason'] and not decision['instruction']
 
 
 def test_saved_completion_review_cannot_take_receipt_shortcut(supervisor, monkeypatch):
@@ -716,7 +527,7 @@ def test_saved_completion_review_cannot_take_receipt_shortcut(supervisor, monkey
         return "ACHIEVED"
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     finish(supervisor, "검증한 결과")
-    assert len(seen) == 1 and "보존된 전체 기준" in seen[0]
+    assert len(seen) == 1 and "보존된 전체 기준" not in seen[0] and supervisor.message in seen[0]
 
 
 @pytest.mark.parametrize('outcome', ['ACHIEVED', 'UNKNOWN'])
@@ -739,69 +550,26 @@ def test_definition_only_repair_leaves_review_to_ai_choice(supervisor, monkeypat
     finish(supervisor, '개정 결과')
     assert len(seen) == int(independent_review)
     if independent_review:
-        assert '등록된 함수가 새 결과를 반환한다' in seen[0]
+        assert '등록된 함수가 새 결과를 반환한다' not in seen[0] and supervisor.message in seen[0]
         assert tc.get_goal_eval_outcome()['goal_status'] == outcome
     else:
         assert tc.get_goal_eval_outcome()['review_status'] == 'NOT_RUN'
 
 
-def test_submitted_file_citations_are_bound_to_file_hash(supervisor, monkeypatch, tmp_path):
-    import research_capture
-    from research_context import scope
-    from research_store import ResearchStore
-    from research_library import ResearchLibrary
-    from final_evaluator import prepare
-    store = ResearchStore(tmp_path, 'file-research')
-    tid = store.create_thread('파일 근거')['id']
-    ctx = {'project_uid': store.uid, 'thread_id': tid, 'run_id': 'r', 'epoch': store.epoch, 'path': str(tmp_path)}
-    supervisor.project_path = str(tmp_path)
-    with scope(ctx):
-        lib = ResearchLibrary(store, tid)
-        rec = lib.capture('효과는 미확인이다.', title='한계', paragraphs=[('p1', '효과는 미확인이다.')])
-        lib.read(rec['version_ref'])
-        marker = f"[자료:{rec['version_ref']}:p1]"
-        report = tmp_path / 'report.md'
-        report.write_text('효과가 입증되었다. ' + marker)
-        supervisor.store.put_response(f'보고서: [파일]({report})')
-        packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}])
-    import hashlib
-    context = packet['context']
-    receipt = context['research_citations']['valid'][0]['receipts'][0]
-    assert 'quote' not in receipt
-    assert supervisor.store.read_evidence(receipt['evidence_ref']['id'], 0, None)['text'] == '효과는 미확인이다.'
-    assert context['research_claims'][0]['path'] == str(report)
-    assert context['research_claims'][0]['hash'] == hashlib.sha256(report.read_bytes()).hexdigest()
-    assert '효과가 입증' in context['research_claims'][0]['claim_context']
 
 
-def test_reference_links_are_not_submissions_but_explicit_republication_is(supervisor, tmp_path):
+def test_explicit_final_paths_submit_existing_files_without_creation_receipt(supervisor, tmp_path):
     from final_evaluator import prepare
     plan, report = tmp_path / 'plan.md', tmp_path / 'report.md'
     plan.write_text('기존 계획의 인용 [자료:old:p70]')
     report.write_text('다시 제출하는 기존 보고서')
     supervisor.store.put_response(f'참고 계획: {plan}\n보고서: {report}')
     packet = prepare(supervisor, [{'name': 'artifact', 'result': {'path': str(report), 'role': 'submission'}}])
-    assert plan.read_text() not in packet['files']
+    assert plan.read_text() in packet['files']
     assert report.read_text() in packet['files']
-    assert str(plan) in packet['context']['reference_paths']
+    assert str(plan) in supervisor._evaluation_snapshot['files']
 
 
-def test_repair_presents_changed_source_and_prior_response_without_transferring_approval(supervisor, tmp_path):
-    from final_evaluator import prepare
-    report = tmp_path / 'report.md'
-    report.write_text('목표는 100건. 실적은 미확인.\n결론은 잠정적이다.')
-    calls = [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}]
-    supervisor.store.put_response('실적은 미확인입니다.')
-    original = prepare(supervisor, calls)
-    report.write_text('목표는 100건. 실적은 100건으로 확정.\n결론은 잠정적이다.')
-    block = supervisor.store.blocks[0]
-    supervisor.store.patch(supervisor.store.version, [{'id': block['id'], 'hash': block['hash'], 'text': '실적 100건입니다.'}])
-    revised = prepare(supervisor, calls)
-    change = next(a for a in revised['attachments'] if a['subject'].startswith('changes:'))
-    assert '-목표는 100건. 실적은 미확인.' in change['text']
-    assert '+목표는 100건. 실적은 100건으로 확정.' in change['text']
-    assert any(a['subject'] == 'previous_response' for a in revised['attachments'])
-    assert revised['criteria'] == original['criteria']
 
 
 def test_unused_question_and_read_additions_do_not_invalidate_selected_inputs(supervisor, tmp_path):
@@ -830,37 +598,78 @@ def test_unused_question_and_read_additions_do_not_invalidate_selected_inputs(su
         assert review_state(deps) != result['state_revision']
 
 
-def test_research_question_correction_invalidates_review_of_same_file(supervisor, tmp_path):
-    import research_capture  # noqa: F401
-    from research_context import scope
-    from research_store import ResearchStore
-    from research_questions import ResearchQuestions
-    from research_library import ResearchLibrary
-    from final_evaluator import prepare, snapshot_error
-    store = ResearchStore(tmp_path, 'question-review')
-    tid = store.create_thread('판본 검수')['id']
-    ctx = {'project_uid': store.uid, 'thread_id': tid, 'run_id': 'r', 'epoch': store.epoch, 'path': str(tmp_path)}
-    supervisor.project_path = str(tmp_path)
-    with scope(ctx):
-        lib = ResearchLibrary(store, tid)
-        rec = lib.capture('계약 목표이며 체결 실적은 아니다.', title='조건', paragraphs=[('p1', '계약 목표이며 체결 실적은 아니다.')])
-        lib.read(rec['version_ref'])
-        ref = {'version_ref': rec['version_ref'], 'extraction_revision': 1, 'locator': 'p1',
-               'quote': '계약 목표이며 체결 실적은 아니다.'}
-        questions = ResearchQuestions(store, tid)
-        q = questions.apply([{'expected_revision': 0, 'text': '목표와 실적을 구별',
-                              'supporting': [ref], 'gaps': ['체결 여부'], 'next_probes': ['체결 공시 확인']}])['items'][0]
-        supervisor.message = q['question_id'] + ' 현재 체결 실적을 설명해'
-        report = tmp_path / 'report.md'
-        report.write_text('체결 실적이다. [자료:' + rec['version_ref'] + ':p1]')
-        supervisor.store.put_response(f'[보고서]({report})')
-        packet = prepare(supervisor, [{'name': 'Write', 'input': {'path': str(report)}, 'result': 'saved'}])
-        citations = packet['context']['research_citations']
-        assert citations['questions']['items'][0]['revision_digest'] == q['revision_digest']
-        assert citations['valid'][0]['question_links'][0]['candidate_included']
-        assert supervisor.store.read_evidence(citations['valid'][0]['question_links'][0]['anchor_ref'], 0, None)['text'] == ref['quote']
-        assert citations['valid'][0]['occurrence_refs'] == [0]
-        assert 'occurrences' not in citations['valid'][0]
-        questions.apply([{'question_id': q['question_id'], 'expected_revision': 1,
-                          'scope': '목표가 아닌 실제 체결만'}])
-        assert '연구 질문' in snapshot_error(supervisor)
+
+
+@pytest.mark.parametrize('status', ['ACHIEVED', 'NOT_ACHIEVED', 'UNKNOWN'])
+def test_final_comparison_never_reopens_execution_or_evidence(supervisor, monkeypatch, status):
+    calls = []
+    def evaluate(prompt, **kwargs):
+        calls.append(prompt)
+        assert supervisor.message in prompt and '최종 결과' in prompt
+        return status + '\nUNKNOWN_REASON: evidence\nREPAIR_SCOPE: research\nEVIDENCE_REQUESTS: [{"start":0,"end":24000}]'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    monkeypatch.setattr('evaluation_input.recover', lambda *a: pytest.fail('final comparison read evidence'))
+    supervisor.runner.ai.process_message_stream = lambda *a, **k: pytest.fail('final comparison restarted work')
+    supervisor.config['max_repairs'] = 10
+    result = finish(supervisor, '최종 결과')
+    assert result[-1]['content'] == '최종 결과'
+    assert tc.get_goal_eval_outcome()['status'] == status
+    assert len(calls) == 1
+
+
+def test_final_comparison_uses_user_goal_and_corrections_not_internal_plan(supervisor, monkeypatch):
+    from final_evaluator import prepare, invoke
+    supervisor.message = '보고서에서 성과와 한계를 설명해'
+    supervisor.history = [{'role': 'user', 'content': '확인 안 된 것은 미확인이라고 써'},
+                          {'role': 'assistant', 'content': '추가로 100개 과제를 새로 실행하겠다'}]
+    supervisor.framing['achievement_criteria'] = '출처 100개를 다시 조회하라'
+    supervisor.store.put_response('일반 성과 개선은 미확인이다.')
+    prepare(supervisor)
+    def model(prompt, **kwargs):
+        assert '보고서에서 성과와 한계를 설명해' in prompt
+        assert '확인 안 된 것은 미확인이라고 써' in prompt
+        assert '100개' not in prompt
+        assert '일반 성과 개선은 미확인이다.' in prompt
+        return 'ACHIEVED'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', model)
+    assert json.loads(invoke(supervisor))['status'] == 'APPROVED'
+
+
+def test_complete_final_result_overflow_stops_before_model_without_truncation(supervisor, tmp_path, monkeypatch):
+    import consciousness_agent as ca
+    from final_evaluator import prepare, invoke
+    from test_evaluation_input import provider
+    report = tmp_path / 'report.md'
+    report.write_text('최종 본문' * 20000 + '마지막 한계')
+    supervisor.store.put_response(f'[최종 보고서]({report})')
+    p = provider(request_limits={'chars': 20000})
+    p.process_message = lambda **kw: pytest.fail('overflow called model')
+    monkeypatch.setattr(ca, '_resolve_oneshot_provider', lambda role: p)
+    monkeypatch.setattr(ca, 'system_ai_call', real_system_ai_call)
+    packet = prepare(supervisor)
+    assert report.read_text() in packet['files']
+    result = json.loads(invoke(supervisor))
+    assert result['status'] == 'UNKNOWN' and result['failure']['kind'] == 'input_too_large'
+    assert not result.get('recoverable')
+
+
+@pytest.mark.parametrize('change', ['request', 'user_history'])
+def test_user_goal_change_invalidates_comparison(supervisor, monkeypatch, change):
+    def model(prompt, **kwargs):
+        if change == 'request':
+            supervisor.message += ' 수정된 요청'
+        else:
+            supervisor.history.append({'role': 'user', 'content': '추가한 명시 조건'})
+        return 'ACHIEVED'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', model)
+    finish(supervisor, '최종 결과')
+    assert tc.get_goal_eval_outcome()['status'] == 'UNKNOWN'
+    assert '사용자 목표·정정' in tc.get_goal_eval_outcome()['reason']
+
+
+def test_requested_comparison_does_not_require_generated_criteria(supervisor, monkeypatch):
+    supervisor.configure({'task_framing': '요청 처리', 'independent_review': True})
+    seen = []
+    monkeypatch.setattr('consciousness_agent.system_ai_call', lambda prompt, **kw: seen.append(prompt) or 'ACHIEVED')
+    finish(supervisor, '최종 결과')
+    assert len(seen) == 1 and supervisor.message in seen[0]

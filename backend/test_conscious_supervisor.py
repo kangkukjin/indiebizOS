@@ -72,7 +72,7 @@ def test_review_reframes_shared_turn_evaluation_and_handoff_without_second_model
         assert '직종별 차이를 비교하라' in notice['instruction']
         assert channel.current is supervisor.framing and channel.revisions == 1
         assert supervisor._final_criteria_contract["task_framing"] == channel.current["task_framing"]
-        assert '완료 기준' in final_evaluator.snapshot_error(supervisor)
+        assert final_evaluator.snapshot_error(supervisor) is None  # 내부 규정은 최종 비교 목표가 아니다
         packet = final_evaluator.prepare(supervisor, [])
         contract = packet['context']['criteria_contract']
         assert contract['task_framing'] == channel.current['task_framing']
@@ -318,33 +318,6 @@ def test_long_response_is_evaluated_without_page_read_tools(supervisor, monkeypa
     assert finish(supervisor, text)[-1]["content"] == text
 
 
-def test_repair_sends_only_changed_block_and_keeps_rest(supervisor, monkeypatch):
-    rounds = []
-    original = "앞부분" * 900 + "수정할 뒷부분"
-
-    def invoke(c, *args, **kwargs):
-        c.store.read_response(0, 24000, mark=True)
-        rounds.append(1)
-        return verdict(c, "REWORK", instruction="마지막 블록의 오류만 고치세요") if len(rounds) == 1 else verdict(c)
-
-    def stream(prompt, **kwargs):
-        assert "변경된 부분만" in prompt
-        assert original not in prompt
-        blocks = supervisor.store.read_response()["blocks"]
-        last = blocks[-1]
-        result = supervisor.tool({"op": "patch", "version": 1,
-                                  "patches": [{"id": last["id"], "hash": last["hash"], "text": "수정됨"}]})
-        assert json.loads(result)["success"]
-        # 재실행 중 도구가 있어도 감독 잠금에 교착하지 않는다.
-        assert supervisor.run_tool("inspect", {}, lambda: "ok") == "ok"
-        yield {"type": "final", "content": "PATCH_DONE"}
-
-    supervisor.runner.ai.process_message_stream = stream
-    monkeypatch.setattr("final_evaluator.invoke", invoke)
-    events = finish(supervisor, original)
-    assert events[-1]["content"] == original[:2000] + "수정됨"
-    assert "PATCH_DONE" not in str(events)
-    assert supervisor.store.version == 2
 
 
 def test_patch_is_atomic_and_rejects_stale_hash_and_version(tmp_path):
@@ -555,7 +528,7 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     events = list(runner._cognitive_stream_body("질문", []))
     assert not [e for e in events if e["type"] == "error"], events
     assert [e["content"] for e in events if e["type"] == "text"] == ["사용자 응답"]
-    reviewed = lane == "THINK" and independent_review
+    reviewed = lane in {"THINK", "NO_CRITERIA"} and independent_review
     assert len(calls) == int(reviewed)
     if not reviewed:
         outcome = next(e['evaluation'] for e in events if e['type'] == 'final')

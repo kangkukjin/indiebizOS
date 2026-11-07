@@ -1,16 +1,4 @@
-"""목표평가(GoalEval) 재실행 구간 스트리밍 회귀 시험
-
-사건(2026-08-22, 상상훈련 22회차 턴): 1라운드 응답이 화면에 나온 뒤 파이프라인이
-`_run_goal_evaluation_loop` 블로킹 함수로 들어가 **10분간 이벤트 0** 을 냈다.
-평가자 호출 91초 + 전면 재실행 595,995ms(도구 30여 회)가 전부 스트림 밖이라
-화면에는 영원히 도는 스피너로 보였고, 그 침묵이 WS 유휴 타임아웃(600초)보다 길어
-긴 턴은 NOT_ACHIEVED 를 받는 순간 타임아웃이 구조적으로 확정이었다.
-
-여기서 단언하는 것은 "재실행이 도는 동안 무언가 흐른다"는 계약이다 —
-봉투(반환값)만 보는 시험은 옛 판도 통과했다.
-
-실행: cd indiebizOS && .venv/bin/python -m pytest backend/test_goal_eval_streaming.py
-"""
+"""최종 비교는 상태를 먼저 전달하고 한 번 평가한 뒤 원래 결과를 반환한다."""
 
 import os
 import sys
@@ -156,95 +144,16 @@ def test_evidence_collection_failure_is_unreviewed(tmp_path, monkeypatch):
     clear_goal_eval_outcome()
 
 
-def test_재실행_구간이_침묵하지_않는다():
-    """★본체: NOT_ACHIEVED → 재실행 동안 에이전트 이벤트가 그대로 흘러야 한다."""
-    runner = _Runner([(False, "파일이 없다", 1), (True, "", 0)])
-    events, result = _run(runner)
-
-    assert result == "보완된 응답", "재실행 결과가 반환값으로 채택되지 않았다"
-    assert runner.ai.stream_calls == 1
-
-    types = [e.get("type") for e in events]
-    assert "tool_start" in types and "tool_result" in types, \
-        f"재실행의 도구 이벤트가 스트림 밖으로 샜다 — 화면은 멈춘 것처럼 보인다: {types}"
-    assert "text" in types, "재실행 본문이 한 글자도 안 흘렀다"
-
-    # 재실행 표식이 사용자에게 보여야 한다(왜 답이 바뀌는지의 설명)
-    assert any(e.get("type") == "text" and "재실행" in e.get("content", "")
-               for e in events), "재실행 표식이 없다"
-
-    # 재실행의 final 은 반환값으로 회수 — 이중 final 로 흘리지 않는다
-    assert "final" not in types, \
-        "재실행 final 을 그대로 흘리면 파이프라인의 최종 final 과 이중 적재된다"
 
 
-def test_침묵_구간이_유휴_타임아웃_안에_들어온다():
-    """이벤트 사이 간격을 '한 블로킹 단위'로 세어, 어떤 구간도 두 단위를 넘지 않는지.
-
-    옛 판은 평가+재실행 전체가 이벤트 0 이라 이 시험이 곧장 깨진다.
-    """
-    runner = _Runner([(False, "부족", 2), (False, "아직", 1), (True, "", 0)])
-    events, _ = _run(runner)
-    # 라운드 3회 = 평가 3 + 재실행 2. 각 라운드가 최소 1개의 표지를 내야 한다.
-    thinking = [e for e in events if e.get("type") == "thinking"]
-    assert len(thinking) >= 3, \
-        f"라운드마다 진행 표지가 필요하다 (받은 표지 {len(thinking)}개)"
-    assert runner.ai.stream_calls == 2
 
 
-class _LedgerRunner(_Runner):
-    """라운드별 평가자에게 건너간 action_ledger 를 기록하는 러너."""
-
-    def __init__(self, verdicts):
-        super().__init__(verdicts)
-        self.ledgers = []
-
-    def _evaluate_achievement(self, *a, **kw):
-        self.ledgers.append(kw.get("action_ledger", ""))
-        return super()._evaluate_achievement(*a, **kw)
 
 
-def test_재실행_도구호출이_다음_라운드_원장에_실린다():
-    """★2026-08-30 실사건: 재실행이 실제 수행한 self:edit·self:patch 가 다음 라운드
-    원장에 없어 평가자가 "원장에 없으면 안 한 것" 규칙으로 적용된 수리를 "미수행"으로
-    뒤집었다. 재실행 원장의 1차 소스는 방금 흘려보낸 스트림의 tool_start/tool_result 다
-    — thread_context 델타는 claude_code(도구가 CLI 서브프로세스)에서 항상 빈다."""
-    runner = _LedgerRunner([(False, "편집이 원장에 없다", 2), (True, "", 0)])
-    events, result = _run(runner)
-
-    assert result == "보완된 응답"
-    assert len(runner.ledgers) == 2, "평가가 2라운드 돌아야 한다"
-    assert "self:time" not in runner.ledgers[0], "라운드 1 원장에 재실행분이 미리 있을 수 없다"
-    assert "self:time" in runner.ledgers[1], \
-        f"재실행의 도구 호출이 라운드 2 원장에 없다 — 실제 수행을 '안 했다=조작'으로 " \
-        f"뒤집는 거짓 판정의 재발: {runner.ledgers[1]!r}"
-    # 라운드 1 원장(호출자 전달 tool_calls)도 보존되어야 한다 — 교체가 아니라 누적.
-    assert "Bash" in runner.ledgers[1], f"기존 원장이 유실됐다: {runner.ledgers[1]!r}"
 
 
-class _EmptyFinalAI(_FakeAI):
-    """도구는 돌았는데 final 이 빈 재실행 대역 (503 등)."""
-
-    def process_message_stream(self, message_content, history=None,
-                               images=None, cancel_check=None):
-        self.stream_calls += 1
-        yield {"type": "tool_start", "name": "execute_ibl",
-               "input": {"code": "[self:edit]{path: \"x.py\"}"}}
-        yield {"type": "tool_result", "name": "execute_ibl", "result": "{}"}
-        yield {"type": "final", "content": ""}
 
 
-def test_빈_final_이어도_돈_도구는_원장에_남는다():
-    """응답 채택 여부와 무관하게 원장은 사실을 따른다 — 도구는 실제로 돌았고
-    세계는 이미 바뀌었으므로, 다음 라운드 평가가 그 사실 위에서 판정해야 한다."""
-    runner = _LedgerRunner([(False, "부족", 1), (True, "", 0)])
-    runner.ai = _EmptyFinalAI()
-    events, result = _run(runner)
-
-    assert result == "초안", "빈 재실행 결과가 이전 응답을 덮으면 안 된다"
-    assert len(runner.ledgers) == 2
-    assert "self:edit" in runner.ledgers[1], \
-        f"빈 final 라운드의 도구 호출이 원장에서 증발했다: {runner.ledgers[1]!r}"
 
 
 def test_중단이_평가루프에도_닿는다():
@@ -273,3 +182,12 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
     raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))
+
+
+@pytest.mark.parametrize('achieved', [True, False, None])
+def test_final_result_comparison_is_one_call_even_with_extra_round_budget(achieved):
+    runner = _Runner([(achieved, '판단', 0)])
+    events, result = _run(runner, max_rounds=10)
+    assert result == '초안' and runner.ai.stream_calls == 0
+    assert runner._verdicts == []
+    assert [e['type'] for e in events] == ['thinking']

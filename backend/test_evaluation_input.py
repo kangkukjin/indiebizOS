@@ -55,12 +55,12 @@ def test_structured_display_uses_masked_store_copy(tmp_path, monkeypatch):
     secret = 'sk-' + 'Ab3' * 12
     captured = []
     def evaluate(prompt, **kwargs):
-        captured.append(prompt.prepare_request(provider()))
+        captured.append(prompt)
         return 'ACHIEVED'
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
     evaluator._evaluate_achievement('inspect', '{"criteria":[{"id":"C1","text":"check"}]}', 'done', '',
         evaluation_context=json.dumps({'evidence_index': [{'warning': secret + ' 부분 실패'}]}))
-    assert captured and secret not in captured[0] and '부분 실패' in captured[0]
+    assert captured and secret not in captured[0] and '부분 실패' not in captured[0]
 
 
 def test_structured_evidence_is_whole_or_omitted_and_citation_roles_remain_distinct():
@@ -167,51 +167,8 @@ def test_structured_recovery_validates_revision_range_and_masking(supervisor):
         recover(supervisor, [request])
 
 
-def test_controller_reads_existing_evidence_once_without_executor(supervisor, monkeypatch):
-    from final_evaluator import prepare
-    ref = supervisor.store.evidence('정확한 원문')
-    from supervisor_handoff import criteria_contract
-    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
-    calls = []
-    def evaluate(prompt, **kwargs):
-        calls.append(prompt)
-        if len(calls) == 1:
-            # Use the original tool index's reference, already in this turn.
-            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([
-                {'criterion_id': cid, 'evidence_id': ref['id'], 'revision': ref['id'], 'start': 0, 'end': 6}])
-        assert '정확한 원문' in prompt
-        return 'ACHIEVED'
-    supervisor.run_tool('read', {}, lambda: '정확한 원문')
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('automatic and executor recovery duplicated')
-    finish(supervisor, '응답')
-    assert len(calls) == 2
 
 
-def test_mixed_newline_source_recovers_full_original_range_without_reexecution(supervisor, monkeypatch):
-    from supervisor_handoff import criteria_contract
-    from thread_context import get_goal_eval_outcome
-    text = '앞🙂\r\n대조 근거\r단독 CR\n끝\r\n'
-    supervisor.run_tool('read', {}, lambda: text)
-    ref = supervisor.store.evidence(text)
-    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
-    evaluations = []
-
-    def evaluate(prompt, **kwargs):
-        evaluations.append(prompt)
-        if len(evaluations) == 1:
-            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([
-                {'criterion_id': cid, 'evidence_id': ref['id'], 'revision': ref['id'],
-                 'start': 0, 'end': ref['chars']}])
-        recovered = [r for r in prompt.sections if r['role'] == 'recovered']
-        assert any(r['text'] == text and r['total'] == len(text) for r in recovered)
-        return 'ACHIEVED'
-
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('원문 회수에 실행자 불필요')
-    finish(supervisor, '응답')
-    assert len(evaluations) == 2
-    assert get_goal_eval_outcome()['status'] == 'ACHIEVED'
 
 
 def test_dedup_keeps_subjects_and_every_explicit_criterion_relation():
@@ -229,6 +186,7 @@ def request_packet(supervisor):
     supervisor.run_tool('read', {}, lambda: '앞🙂\n정답 7\n끝')
     supervisor.store.put_response('응답')
     packet = prepare(supervisor)
+    packet['context']['evidence_index'] = supervisor.store.tool_index()
     ref = packet['context']['evidence_index'][0]['result']
     return packet, {'criterion_id': packet['context']['criteria_contract']['criteria'][0]['id'],
                     'evidence_id': ref['id'], 'start': 3, 'end': 7}
@@ -268,45 +226,8 @@ def test_invalid_items_do_not_silently_recover_the_valid_subset(supervisor, chan
     assert len(result['requests']) == 1  # retained for diagnosis, not automatic dispatch
 
 
-def test_three_omitted_revisions_recover_and_persist_once(supervisor, monkeypatch):
-    from supervisor_handoff import criteria_contract
-    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
-    requests = []
-    for text in ['정상 합계 7', '반례 합계 6', '부품 호출 5회']:
-        supervisor.run_tool('read', {}, lambda text=text: text)
-        ref = supervisor.store.evidence(text)
-        requests.append({'criterion_id': cid, 'evidence_id': ref['id'], 'start': 0, 'end': len(text)})
-    calls = []
-    def evaluate(prompt, **kw):
-        calls.append(prompt)
-        if len(calls) == 1:
-            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps(requests)
-        saved = json.loads((supervisor.store.directory / 'repair_review.json').read_text())
-        assert saved['repair_counts'] == [0, 1]
-        assert len([r for r in saved['packet']['attachments'] if r['role'] == 'recovered']) == 3
-        # Repeating already delivered ranges must not trigger another recovery.
-        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps(requests)
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('duplicate executor recovery')
-    finish(supervisor, '응답')
-    assert len(calls) == 2 and supervisor._final_repair_counts == [0, 1]
 
 
-def test_protocol_failure_uses_existing_bounded_handoff(supervisor, monkeypatch):
-    calls, repairs = [], []
-    def evaluate(prompt, **kw):
-        calls.append(prompt)
-        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: [42]'
-    def repair(prompt, **kw):
-        repairs.append(prompt)
-        assert 'format' in prompt
-        assert json.loads((supervisor.store.directory / 'repair_review.json').read_text())['repair_counts'] == [0, 1]
-        supervisor.repair_kept = True
-        yield {'type': 'final', 'content': '기존 결과 유지'}
-    supervisor.runner.ai.process_message_stream = repair
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    finish(supervisor, '응답')
-    assert len(calls) == 2 and len(repairs) == 1
 
 
 def test_recovered_segment_is_never_silently_retruncated():
@@ -360,76 +281,10 @@ def test_new_evidence_ranges_exclude_overlap_and_preserve_revision():
     assert new_evidence_requests([other], rows) == [other]
 
 
-def test_new_evidence_can_be_recovered_in_multiple_rounds(supervisor, monkeypatch):
-    from supervisor_handoff import criteria_contract
-    cid = criteria_contract(supervisor.message, supervisor.framing)['criteria'][0]['id']
-    requests = []
-    for text in ['보고서 전체', '구현 원문', '반례 원문']:
-        supervisor.run_tool('read', {}, lambda text=text: text)
-        ref = supervisor.store.evidence(text)
-        requests.append({'criterion_id': cid, 'evidence_id': ref['id'], 'start': 0, 'end': len(text)})
-    calls = []
-
-    def evaluate(prompt, **kw):
-        calls.append(prompt)
-        recovered = [r for r in prompt.sections if r['role'] == 'recovered']
-        assert len(recovered) == len(calls) - 1
-        if len(calls) <= len(requests):
-            return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([requests[len(calls) - 1]])
-        return 'ACHIEVED'
-
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('executor must not rerun')
-    assert finish(supervisor, '응답')[-1]['content'] == '응답'
-    assert len(calls) == 4 and supervisor._final_repair_counts == [0, 3]
-    saved = json.loads((supervisor.store.directory / 'repair_review.json').read_text())
-    assert saved['repair_counts'] == [0, 3]
-    assert len([r for r in saved['packet']['attachments'] if r['role'] == 'recovered']) == 3
 
 
-@pytest.mark.parametrize('stop', ['cancel', 'deadline', 'task_budget', 'supervisor_budget'])
-def test_evidence_recovery_respects_stop_conditions(supervisor, monkeypatch, stop):
-    from model_call_context import record_captured_usage
-    packet, request = request_packet(supervisor)
-    supervisor._resume_evaluation = True
-    calls = []
-    monkeypatch.setattr('providers.base.remaining_turn_tokens', lambda: 1 if calls and stop == 'task_budget' else None)
-    monkeypatch.setattr('providers.base.turn_limit_reason', lambda: (
-        {'kind': 'deadline', 'reason': 'task deadline'} if calls and stop == 'deadline' else None))
-    if stop == 'supervisor_budget':
-        supervisor.config.update(budget_mode='hard', max_input_tokens=80000)
-
-    def evaluate(prompt, **kw):
-        calls.append(prompt)
-        if stop == 'cancel':
-            supervisor.cancel_check = lambda: True
-        record_captured_usage({'input': 79000, 'output': 10}, 1)
-        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([request])
-
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('executor must not rerun')
-    finish(supervisor, '응답')
-    assert len(calls) == 1
-    assert supervisor.final_usage == {'input': 79000, 'output': 10}
 
 
-def test_recovery_after_checkpoint_does_not_reread_old_ranges(supervisor, monkeypatch):
-    packet, request = request_packet(supervisor)
-    request['revision'] = request['evidence_id']
-    packet['attachments'].extend(recover(supervisor, [request]))
-    supervisor._resume_evaluation = True
-    supervisor._final_repair_counts = [0, 1]
-    calls = []
-
-    def evaluate(prompt, **kw):
-        calls.append(prompt)
-        return 'UNKNOWN\nUNKNOWN_REASON: evidence\nEVIDENCE_REQUESTS: ' + json.dumps([request])
-
-    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
-    result = finish(supervisor, '응답')
-    assert len(calls) == 1
-    assert result[-1]['content'] == '응답'
-    assert '이미 전달' in result[-1]['evaluation']['reason']
 
 
 def test_review_restore_preserves_evaluation_budget(supervisor, monkeypatch, tmp_path):

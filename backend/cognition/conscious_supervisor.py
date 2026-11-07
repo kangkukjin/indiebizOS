@@ -372,14 +372,10 @@ class Supervisor:
 
     @property
     def evaluation_enabled(self):
-        from supervisor_handoff import criteria_contract
-        criteria = getattr(self, "_final_criteria_contract", None)
-        if criteria is None:
-            criteria = criteria_contract(self.message, self.framing)
         requested = ((self.framing or {}).get("independent_review") is True
                      or getattr(self, "_resume_evaluation", False)
                      or self.completion_review_required)
-        return self.enabled and requested and bool(criteria["criteria"])
+        return self.enabled and requested and bool(self.message.strip())
 
     def reframe(self, payload):
         from reframe import _revise, render_for_executor
@@ -997,7 +993,7 @@ class Supervisor:
             self.finalizing = True
             self.pending = None
         from episode_logger import record_trajectory_event
-        from supervisor_runtime import parse_decision, repair_message
+        from supervisor_runtime import parse_decision
         from final_evaluator import invoke, prepare, snapshot_error
         from repair_continuation import defer
         from thread_context import set_goal_eval_outcome
@@ -1052,10 +1048,7 @@ class Supervisor:
             self.log("evaluation.stage_finished", role="harness", stage="wait",
                      elapsed_s=round(time.monotonic() - wait_started, 6), completed=True)
             self.executor_paused = True
-            # 예전 설정에 2 이상이 남아 있어도 최종 보완은 한 번으로 제한한다.
-            max_repairs = min(1, max(0, self.config["max_repairs"]))
-            repairs_used, evidence_reads = getattr(self, "_final_repair_counts", (0, 0))
-            # 회수는 새 불변 구간이 있을 때만 계속한다. 결함 수리 횟수와 구분한다.
+            repairs_used, evidence_reads = 0, 0
             attempt = 0
             while True:
                 if self.cancelled():
@@ -1067,15 +1060,16 @@ class Supervisor:
                 attempt += 1
                 self.phase = "final"
                 self.call_stop = None
-                yield {"type": "thinking", "content": "평가자가 의식이 정한 달성 기준의 충족 여부를 확인하고 있습니다."}
+                yield {"type": "thinking", "content": "사용자 목표와 최종 결과를 비교하고 있습니다."}
                 try:
-                    if getattr(self, "_resume_evaluation", False):
-                        self._resume_evaluation = False
-                        changed = snapshot_error(self)
-                        if changed:
-                            decision = {"status": "UNKNOWN", "reason": changed + " — 보존된 검수 증거 재사용 불가"}
-                            break
-                    else:
+                    resuming = getattr(self, "_resume_evaluation", False)
+                    self._resume_evaluation = False
+                    if resuming and (changed := snapshot_error(self)):
+                        decision = {"status": "UNKNOWN", "reason": changed}
+                        break
+                    # Reuse frozen final results, including ephemeral image bytes.
+                    # Legacy audit packets are rebuilt after their snapshot check.
+                    if not resuming or self._evaluation_packet.get('scope') != 'goal_result':
                         with self.evaluation_stage("prepare"):
                             prepare(self, tool_calls)
                     from repair_continuation import review_checkpoint
@@ -1112,107 +1106,9 @@ class Supervisor:
                     "feedback_text": decision.get("reason", ""), "response_hash": manifest["hash"],
                     "response_version": manifest["version"], "store": str(self.store.directory),
                 })
-                evidence_missing = decision["status"] == "UNKNOWN" and decision.get("recoverable")
-                requests = decision.get('evidence_requests', []) if evidence_missing else []
-                if evidence_missing:
-                    if requests:
-                        from evaluation_input import new_evidence_requests
-                        requests = new_evidence_requests(requests, self._evaluation_packet.get('attachments', []))
-                        if not requests:
-                            decision.update(kind='evidence_no_progress',
-                                            reason=decision['reason'] + '\n요청 구간은 이미 전달됐으며 새로 회수할 근거가 없습니다.')
-                            self.log('evaluation.recovery_stopped', role='harness', reason='evidence_no_progress')
-                            break
-                    elif evidence_reads:
-                        # 정확한 범위가 없는 실행자 인계는 기존 한 번만 허용한다.
-                        break
-                    evidence_reads += 1
-                elif decision["status"] == "REWORK":
-                    # 개발이 남았으면 최종 문구 보완 통로 대신 영속 실행 단계로 넘긴다.
-                    if self.repair_granted and getattr(self, "_review_row", None) and decision.get("repair_scope") == "research":
-                        break
-                    if repairs_used >= max_repairs:
-                        break
-                    repairs_used += 1
-                else:
-                    break
-                expected = max(self.config["final_input_reserve"],
-                               self.phase_usage.get("final", {}).get("last_input", 0))
-                remaining_budget = self.model_budget_remaining()
-                remaining = remaining_budget["input"]
-                from providers.base import remaining_turn_tokens
-                task_remaining = remaining_turn_tokens()
-                last_input = (getattr(getattr(self.runner.ai, "_provider", None), "_last_prompt_usage", {}) or {}).get("input", 0)
-                direct_recovery = bool(requests)
-                recovery_chars = sum(r['end'] - r['start'] for r in requests)
-                cycle_expected = (expected + recovery_chars if direct_recovery else
-                                  expected + max(last_input, self.config["repair_context_chars"] // 2))
-                if ((self.config["budget_mode"] == "hard" and
-                     (remaining < cycle_expected or remaining_budget['output'] <= 0))
-                        or (task_remaining is not None and task_remaining < cycle_expected)):
-                    self.log("repair.skipped", role="harness", reason="재검수 여력 부족", expected_input=expected)
-                    decision = {"status": "UNKNOWN", "reason": "재검수 여력이 없어 보완을 시작하지 않았습니다"}
-                    break
-                self.log("repair.admitted", role="harness", expected_recheck_input=expected,
-                         allocation_extension=max(0, expected - remaining), budget_policy=self.config["budget_mode"])
-                self.last_decision = decision
-                self._final_repair_counts = [repairs_used, evidence_reads]
-                review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
-                if direct_recovery:
-                    from evaluation_input import recover
-                    recovery_started = time.monotonic()
-                    try:
-                        with self.evaluation_stage('recover'):
-                            recovered = recover(self, requests)
-                        changed = snapshot_error(self)
-                        if changed:
-                            raise ValueError(changed)
-                        self._evaluation_packet['attachments'] = [
-                            *self._evaluation_packet.get('attachments', []), *recovered]
-                        self._resume_evaluation = True
-                        review_checkpoint(self, self._evaluation_packet, self._evaluation_snapshot)
-                        self.log('evaluation.evidence_recovered', role='harness',
-                                 requests=requests,
-                                 elapsed_s=round(time.monotonic() - recovery_started, 6))
-                    except (ValueError, OSError) as exc:
-                        decision = {'status': 'UNKNOWN', 'reason': str(exc)}
-                        break
-                    continue
-                if not hasattr(self, "_repair_evidence_since"):
-                    self._repair_evidence_since = self.store.sequence
-                self.phase = "repair"
-                self.executor_paused = False
-                self.repair_kept = False
-                before_version = self.store.version
-                self.log("ownership.handoff", role="harness", to="execution", instruction=decision.get("instruction"))
-                from supervisor_handoff import repair_execution
-                with repair_execution(self, decision, history) as (executor, repair_history, checkpoint):
-                    prompt = repair_message(self, decision) + "\n작업 인계=" + json.dumps(checkpoint, ensure_ascii=False, default=str)
-                    for event in executor.process_message_stream(prompt, history=repair_history,
-                                                                 images=None, cancel_check=cancel_check):
-                        collect(event)
-                        self.observe_native(event)
-                        if event.get("type") not in {"text", "final"}:
-                            yield event
-                from task_repair import pending_response
-                if notice := pending_response():
-                    yield {"type": "final", "content": notice}
-                    return notice
-                self.log("ownership.handoff", role="harness", to="evaluate")
-                self.executor_paused = True
-                pending = defer(self, self.store.text)
-                if pending:
-                    reason = "검수 보완에서 예약한 변경을 적용한 뒤 같은 완료 기준으로 이어갑니다."
-                    set_goal_eval_outcome(False, 0, status="PENDING_APPLY", reason=reason)
-                    print("[GoalEval] 최종 판정: PENDING_APPLY")
-                    final = self.store.text + "\n\n[적용 대기] " + reason
-                    yield {"type": "text", "content": final}
-                    yield {"type": "final", "content": final}
-                    return final
-                if self.store.version == before_version and not self.repair_kept:
-                    decision = {"status": "UNKNOWN", "reason": "실행자의 보완 결과가 patch/keep로 확정되지 않았습니다"}
-                    self.log("repair.unconfirmed", role="harness", decision=decision)
-                    break
+                # Final comparison reports the mismatch; it does not launch research,
+                # evidence recovery, or another execution of the user's task.
+                break
         approved = decision["status"] == "APPROVED"
         if approved and self.repair_granted:
             from repair_readiness import completion_error
@@ -1240,6 +1136,7 @@ class Supervisor:
         if finish_review(self, completion):
             status = "PENDING_EXECUTION" if self._review_row.get("phase") == "execution" else "PENDING_REVIEW"
         set_goal_eval_outcome(approved, 2 if status == "NOT_ACHIEVED" else 0,
+                              method="goal_result",
                               status=status, reason=decision.get("reason", ""), review_status=decision["status"],
                               goal_status=completion.get("goal_status", "UNKNOWN") if not status.startswith("PENDING_") else "UNKNOWN",
                               goal_reason=delivery_result['reason'] if delivery_result else decision.get("goal_reason", ""),

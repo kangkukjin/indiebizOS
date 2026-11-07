@@ -2,9 +2,10 @@
 import json
 import re
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 MARKER = re.compile(r'\[자료:([^:\]]+):([^\]]+)\]')
-PATH = re.compile(r"(?<![\w:])((?:/|outputs/)[^\n`\"'<>]*?\.(?:md|txt|html|json|csv|tsv))(?=[\s)`\"'<>]|$)")
+PATH = re.compile(r"(?<![\w:])((?:/|outputs/)[^\n`\"'<>]*?\.(?:md|txt|html|json|csv|tsv|py|js|ts|tsx|jsx|css|yaml|yml|sh|sql|toml|xml|svg|log))(?=[\s)`\"'<>]|$)")
 
 
 def submission_paths(text, root):
@@ -14,6 +15,26 @@ def submission_paths(text, root):
         path = Path(value)
         path = (root / path).resolve() if not path.is_absolute() else path.resolve()
         if path.is_relative_to(root):
+            paths.add(str(path))
+    return paths
+
+
+def local_link_paths(text, root):
+    """Explicit Markdown file references within the project; no network or directory walk.
+
+    Reading a referenced file is not proof that this turn created it. Resolve
+    answer links, retaining the project boundary after symlinks.
+    """
+    root = Path(root).resolve()
+    paths = set()
+    for target in re.findall(r'\]\(\s*(<[^>]+>|[^\s)]+)(?:\s+"[^"\n]*")?\s*\)', text or ''):
+        target = re.sub(r':\d+(?::\d+)?$', '', target.strip('<>'))
+        url = urlsplit(target)
+        if url.scheme or url.netloc or not url.path or url.query:
+            continue
+        name = re.sub(r':\d+(?::\d+)?$', '', unquote(url.path))
+        path = (root / name).resolve()
+        if path.is_relative_to(root) and path.suffix:
             paths.add(str(path))
     return paths
 

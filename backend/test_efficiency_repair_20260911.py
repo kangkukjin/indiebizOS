@@ -41,7 +41,7 @@ def test_hard_quota_does_not_start_repair_without_recheck(supervisor, monkeypatc
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="fix"))
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("재검수 없는 보완")
     finish(supervisor, "candidate")
-    assert "repair.skipped" in (supervisor.store.directory / "events.jsonl").read_text()
+    assert "repair.admitted" not in (supervisor.store.directory / "events.jsonl").read_text()
 
 
 def test_unrelated_crawl_does_not_discard_failure_guidance(supervisor, monkeypatch):
@@ -430,7 +430,7 @@ def test_global_quota_protects_recheck_even_in_soft_supervisor_mode(supervisor, 
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("전체 한도 밖 보완")
     with turn_token_scope("test", "repair-quota", hard_token_limit=50000):
         finish(supervisor, "candidate")
-    assert "repair.skipped" in (supervisor.store.directory / "events.jsonl").read_text()
+    assert "repair.admitted" not in (supervisor.store.directory / "events.jsonl").read_text()
 
 
 def test_visual_layout_reuse_requires_unchanged_pixels_and_validator(tmp_path):

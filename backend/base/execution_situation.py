@@ -51,6 +51,8 @@ def projection_kind(record):
         return 'request'
     if record['availability'] in {'conflict', 'needs_recheck'}:
         return record['availability']
+    if row['facet'] == 'diagnostics' and row['basis'] == 'observed':
+        return 'diagnostics'
     if row['facet'] == 'recovery':
         from recovery_projection import requires_attention
         return 'unresolved' if requires_attention(value) else 'state'
@@ -73,7 +75,7 @@ def projection_priority(record):
               any(value.get(k) for k in ('error', 'exception', 'unknown')) or
               any(value.get(k) not in (None, 0) for k in ('exit', 'exit_code', 'returncode')) or
               value.get('state', value.get('status')) in {'failed', 'blocked', 'error'})
-    priority = {'request': 9, 'conflict': 8, 'needs_recheck': 8, 'unresolved': 7,
+    priority = {'request': 9, 'conflict': 8, 'needs_recheck': 8, 'diagnostics': 8, 'unresolved': 7,
                 'pending': 7, 'receipt': 7, 'state': 6, 'evidence': 3,
                 'interpretation': 2, 'history': 1}[kind]
     return priority, bool(body or failed) if kind == 'evidence' else False, record['revision']
@@ -128,7 +130,9 @@ def projection_row(group, compact):
            'availability': record['availability']}
     limit = 120 if compact else 320
     row['latest']['value'] = short_value(row['latest']['value'], limit)
-    if record['first']['id'] != latest['id']:
+    # A cleared diagnostic must not carry the old errors back into the next input.
+    # The complete before/after history remains in the snapshot evidence.
+    if record['first']['id'] != latest['id'] and group['kind'] != 'diagnostics':
         row['first'] = {k: record['first'][k] for k in ('value', 'subject_revision', 'observed_at')}
         row['first']['value'] = short_value(row['first']['value'], limit)
     for key in ('late', 'conflict'):
@@ -488,7 +492,7 @@ class Situation:
             included = {} if baseline else cursor.get('included', {})
             # Unsent current facts survive a cursor advance. Old detailed history does not
             # become a drain queue: it remains accessible through the snapshot reference.
-            states = {'request', 'conflict', 'needs_recheck', 'unresolved', 'pending', 'receipt', 'state'}
+            states = {'request', 'conflict', 'needs_recheck', 'diagnostics', 'unresolved', 'pending', 'receipt', 'state'}
             groups = [g for g in all_groups if baseline or (
                 included.get(g['key']) != g['version'] and
                 (g['kind'] in states or g['record']['revision'] > since))]
@@ -535,7 +539,13 @@ class Situation:
                 delivery['omitted']['by_kind'][kind] += 1
                 return False
 
-            state_rows = [g for g in groups if g['kind'] in states]
+            # Producer diagnostics are immediate edit feedback. Reserve their space before
+            # old dependencies and tool bodies compete for the ordinary state/result lanes.
+            # Overflow stays explicit in omitted.by_kind and unacknowledged in the cursor.
+            for g in groups:
+                if g['kind'] == 'diagnostics':
+                    add(g, limit)
+            state_rows = [g for g in groups if g['kind'] in states and g['key'] not in selected]
             evidence_rows = [g for g in groups if g['kind'] == 'evidence']
             base_size = size()
             # Each lane gets a protected share; unused space is shared afterward.

@@ -204,3 +204,46 @@ def test_many_diagnostics_fit_compact_and_delta_context_with_full_evidence(activ
     assert delta['mode'] == 'delta' and 'lsp_after_edit' in json.dumps(delta)
     row = next(r for r in delta['observations'] if r['latest'].get('source') == 'lsp_after_edit')
     assert row['latest']['value']['total'] == 0 and row['latest']['source_ref']['id']
+
+
+@pytest.mark.parametrize('compact', [False, True])
+def test_edit_diagnostics_survive_crowded_context_and_clear_without_old_errors(active, tmp_path, compact):
+    from test_execution_situation import mixed_workload
+    from situation_evidence import observe_result
+    from situation_delivery import render
+    s = active.situation
+    mixed_workload(s)
+    auto = Feedback(s)
+    path = str(tmp_path / 'invoice.py')
+    items = [
+        {'message': 'Type "str" is not assignable to return type "int"', 'severity': 1,
+         'code': 'reportReturnType', 'source': 'Pyright',
+         'range': {'start': {'line': 5, 'column': 12}, 'end': {'line': 5, 'column': 33}}},
+        {'message': 'Type "int" is not assignable to return type "str"', 'severity': 1,
+         'code': 'reportReturnType', 'source': 'Pyright',
+         'range': {'start': {'line': 9, 'column': 12}, 'end': {'line': 9, 'column': 17}}},
+    ]
+    value = {'path': path, 'document_hash': 'broken', 'status': 'received', 'server': 'python',
+             'total': 2, 'items': items}
+    auto.publish(value)
+    # Subsequent read/tool receipts used to evict the diagnostic from every MCP baseline.
+    for i in range(12):
+        s.observe({'kind': 'file', 'path': f'/read-{i}'}, 'version', {'read': True}, source='file_io')
+        observe_result(s, {'output': 'file body ' * 200}, {'id': f'read-{i}'}, f'read-{i}')
+    first = s.prepare('test', baseline=True, compact=compact)
+    diagnostic = next(r for r in first['observations'] if r['latest']['source'] == 'lsp_after_edit')
+    assert diagnostic['latest']['value']['items'] == items
+    assert len(json.dumps(first, ensure_ascii=False).encode()) <= (4000 if compact else 8000)
+    # This is the exact opaque-client transport, not just the stored observation.
+    from api_supervision import situation_context
+    context = situation_context('executor', 'situation-test')['context']
+    assert all(item['message'].replace('"', '\\"') in context for item in items)
+    s.acknowledge('test', first)
+    auto.publish({**value, 'document_hash': 'fixed', 'total': 0, 'items': []})
+    cleared = s.prepare('test', retained=[first['delivery_id']], compact=compact)
+    diagnostic = next(r for r in cleared['observations'] if r['latest']['source'] == 'lsp_after_edit')
+    assert diagnostic['latest']['subject_revision'] == 'fixed'
+    assert diagnostic['latest']['value']['total'] == 0
+    assert 'first' not in diagnostic
+    assert 'reportReturnType' not in render(cleared)
+    assert len(json.dumps(cleared, ensure_ascii=False).encode()) <= (4000 if compact else 2400)

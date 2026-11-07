@@ -197,7 +197,7 @@ class Feedback:
                 if 'message' in small:
                     small['message'] = small['message'].encode()[:160].decode(errors='ignore')
                 inline['items'].append(small)
-                if len(json.dumps(inline, ensure_ascii=False).encode()) > 550:
+                if len(json.dumps(inline, ensure_ascii=False).encode()) > 900:
                     inline['items'].pop()
                     break
             inline['omitted'] = max(0, value.get('total', len(items)) - len(inline['items']))

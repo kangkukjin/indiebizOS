@@ -17,8 +17,11 @@ def test_generated_count_is_separate_from_original_user_request():
     assert json.loads(user) == original
     assert plan.index('현재 수행할 요청:') < plan.index('수행 절차')
     assert '7행 누락과 합계를 대조한다.' in plan
-    assert '사용자 직접 발화가 아니다' in plan
-    assert '선택적 조언이 아니다' in plan
+    framing = json.loads(plan.split('현재 수행할 요청:\n', 1)[1].splitlines()[0])
+    hint = json.loads(plan.split('수행 절차(내부 제안): ', 1)[1])
+    assert framing['source'] == hint['source'] == 'consciousness'
+    assert framing['field'] == 'task_framing' and hint['field'] == 'capability_focus.hint'
+    assert '7행' not in json.loads(user)
 
 
 def test_unaugmented_request_remains_unchanged():

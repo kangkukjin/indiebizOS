@@ -722,6 +722,9 @@ class Supervisor:
             from reframe import accept_revision, render_for_executor
             from research_planning import apply_revision_plan
             try:
+                from supervisor_interventions import refresh_notice
+                correction = (refresh_notice(self, notice) if any(
+                    row.get("instruction") for row in notice["findings"]) else None)
                 env = accept_revision(self._framing_channel, notice["framing_update"], {
                     "trigger": "review", "broken_assumption": notice["reason"],
                     "evidence": json.dumps(notice.get("evidence_ids", [])),
@@ -729,8 +732,8 @@ class Supervisor:
                     framing, notice["framing_update"], notice.get("research_topic"),
                     self.project_path, self.cancelled))
                 notice["instruction"] = render_for_executor(env)
-                if notice.get("execution_instruction"):
-                    notice["instruction"] += "\n" + notice["execution_instruction"]
+                if correction:
+                    notice["instruction"] += "\n" + correction["instruction"]
             except (ValueError, OSError, RuntimeError) as exc:
                 self.log("framing.rejected", role="harness", reason=str(exc))
                 notice["instruction"] = ("의식의 새 요청을 적용하지 못했다: " + str(exc)
@@ -870,8 +873,7 @@ class Supervisor:
                                     "conditions": conditions}
                     if update:
                         notice.update(framing_update=update, research_topic=research_topic,
-                                      evidence_ids=decision.get("evidence_ids", []),
-                                      execution_instruction=decision.get("instruction", ""))
+                                      evidence_ids=decision.get("evidence_ids", []))
                         self.pending = notice
                     else:
                         self.pending = refresh_notice(self, notice)

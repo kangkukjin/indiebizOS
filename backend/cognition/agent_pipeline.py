@@ -628,16 +628,6 @@ class CognitivePipelineMixin:
             extra_role=extra_role, allowed_set=allowed_set,
         )
 
-        # 시스템 AI·프로젝트 에이전트 모두 동일한 초안 인계. 이전에는 시스템 분기에만
-        # 저장이 있어 프로젝트 실행자는 정상 task가 있어도 $초안을 회수하지 못했다.
-        if consciousness_output:
-            from prompt_builder import validate_imagined_draft
-            from ibl_turn_vars import save_draft
-            _d0 = (consciousness_output.get("imagined_ibl") or "").strip()
-            if _d0 and validate_imagined_draft(_d0)[0]:
-                if not save_draft(_d0):
-                    raise RuntimeError("의식 초안을 턴에 저장하지 못했습니다")
-
         # 히스토리 편집 (명시적 빈 요약은 비움, 판단 부재만 원본 유지)
         history = self._apply_consciousness_to_history(history, consciousness_output)
         reflex_turn.prepare(reflex_selected, history, enabled=not force_role)
@@ -990,17 +980,6 @@ class CognitivePipelineMixin:
                     print(f"[출력해부] calls={_oc['calls']} typed={_oc['typed_chars']} retyped={_oc['retyped_chars']}"
                           f"({_oc['retyped_warns']}) pointed={_oc['pointed']} fn_sites={_oc['fn_calls']}"
                           f" outside={_oc['other_calls']}/{_oc['other_typed_chars']}")
-            except Exception:
-                pass
-            # 상상실행 초안 채택 관찰 — 의식 초안(imagined_ibl)의 액션이 실제 실행에
-            # 등장했는지 로그 한 줄(관찰 계기 — 초안 제도의 실측 근거를 쌓는다).
-            try:
-                _draft = ((consciousness_output or {}).get("imagined_ibl") or "").strip()
-                if _draft:
-                    from prompt_builder import draft_adoption
-                    _ad = draft_adoption(_draft, tool_calls_log)
-                    if _ad is not None:
-                        print(f"[상상실행] 초안 {'채택' if _ad else '미채택'}: {_draft[:60]}")
             except Exception:
                 pass
             # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(_after_response).

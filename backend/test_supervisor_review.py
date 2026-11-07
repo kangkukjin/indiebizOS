@@ -298,3 +298,31 @@ def test_incomplete_findings_preserve_original_review_for_recheck(supervisor, mo
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_direction_correction_needs_no_response_repair_contract():
+    import json
+    from supervisor_runtime import parse_decision
+    from supervisor_interventions import review_findings
+    finding = {'scope': 'goal', 'reason': '새 원자료에서 단위가 다름',
+               'instruction': '같은 단위로 비교한다'}
+    decision = parse_decision(json.dumps({'status': 'REWORK', 'reason': finding['reason'],
+                                         'findings': [finding]}))
+    assert decision['status'] == 'REWORK'
+    assert 'repair_scope' not in decision and 'response_hash' not in decision
+    rows = review_findings(decision)
+    assert len(rows) == 1 and rows[0]['scope'] == 'goal'
+    assert rows[0]['instruction'] == finding['instruction'] and not rows[0]['needs_recheck']
+
+
+def test_reframing_keeps_the_single_findings_instruction(supervisor, monkeypatch):
+    monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw: json.dumps({
+        'status': 'REWORK', 'reason': '측정 단위가 다르다', 'task_framing': '동일 단위 금액 비교',
+        'criteria': [{'text': '금액 차이 제시'}],
+        'findings': [{'scope': 'goal', 'reason': '집계기간 확인은 별도 질문',
+                      'instruction': '요청한 금액 비교를 먼저 제시'}]}))
+    supervisor.review('milestone', paused=True)
+    notice = supervisor.boundary()
+    assert supervisor.framing['task_framing'] == '동일 단위 금액 비교'
+    assert notice['instruction'].count('요청한 금액 비교를 먼저 제시') == 1
+    assert supervisor.boundary() is None

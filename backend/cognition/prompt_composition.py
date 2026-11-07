@@ -183,7 +183,7 @@ def _user_command_section(sample: str, include_think_note: bool = True) -> Dict[
     plain = compile_user_command(sample, None)
     note = ("EXECUTE 경로: 원문 그대로. THINK 경로: 원문과 시스템 실행 지침(의식 보강)의 출처를 구분하고 "
             "'다음 절차에 따라 수행하라' 앵커 아래 task_framing · 기준의 출처(criteria_contract) · 전문가의 선택 · 전제(assumptions) · "
-            "작업 구조와 판단 힌트(hint) · 실행 초안(imagined_ibl, 기계 검증) · "
+            "필요한 맥락과 판단 힌트(hint) · "
             "참고할 가이드 · 충족 기준이 차례로 붙는다." if include_think_note else "")
     return _section("user_command", "사용자 명령과 시스템 실행 지침", "user", "input",
                     "prompt_builder.compile_user_command", plain, note=note)
@@ -473,9 +473,9 @@ def _assemble_consciousness(sample: str) -> Dict[str, Any]:
     return {"model": model, "sections": sections, "assembled": assembled,
             "entry": "cognitive_consciousness._run_consciousness → consciousness_agent.ConsciousnessAgent.process "
                      "(_load_prompt + _build_input); 감독이 살아 있으면 supervisor.plan 으로 위임",
-            "output_keys": ["task_framing", "achievement_criteria", "expert_choice", "capability_focus",
-                            "guide_files", "assumptions", "imagined_ibl", "needs_clarification", "needs_repair",
-                            "history_summary", "deep_research"]}
+            "output_keys": ["task_framing", "criteria", "capability_focus",
+                            "guide_files", "assumptions", "needs_clarification", "needs_repair",
+                            "history_summary", "deep_research", "independent_review"]}
 
 
 def _agent_block(name: str, role: str, notes: str) -> str:
@@ -516,9 +516,6 @@ def _assemble_supervisor(sample: str) -> Dict[str, Any]:
         _section("role_prompt", "[검토 단계] 감독자 역할", "system", "constant",
                  "supervisor_runtime.ROLE_PROMPT", SR.ROLE_PROMPT,
                  note="중간관리(review) 호출의 시스템 프롬프트 — supervision 도구 하나로 state/evidence/execute."),
-        _section("receipt_prompt", "[영수증 단계] 인용 확인", "system", "constant",
-                 "supervisor_runtime.RECEIPT_PROMPT", SR.RECEIPT_PROMPT,
-                 condition="내용 검수는 승인됐지만 인용 구간 읽기 기록이 빠진 경우", included=False),
         _section("plan_input", "[계획 단계] 의식 입력", "user", "dynamic",
                  "consciousness_agent.ConsciousnessAgent._build_input — '의식' 항목의 입력 조각들", "",
                  note="의식 항목의 user 층과 동일."),

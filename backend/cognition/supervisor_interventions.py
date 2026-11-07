@@ -18,9 +18,9 @@ def review_findings(decision):
         row = raw if isinstance(raw, dict) else {'instruction': str(raw)}
         valid = (isinstance(row.get('scope'), str) and row['scope'] in {'trigger', 'goal'}
                  and all(isinstance(row.get(k), str) and row[k].strip()
-                         for k in ('id', 'reason', 'instruction', 'resolved_when'))
-                 and isinstance(row.get('evidence_ids'), list)
-                 and all(isinstance(ref, str) for ref in row['evidence_ids']))
+                         for k in ('reason', 'instruction'))
+                 and isinstance(row.get('evidence_ids', []), list)
+                 and all(isinstance(ref, str) for ref in row.get('evidence_ids', [])))
         result.append({
             'id': row.get('id') if isinstance(row.get('id'), str) else f'finding-{index + 1}',
             'scope': row['scope'] if valid else 'unscoped',

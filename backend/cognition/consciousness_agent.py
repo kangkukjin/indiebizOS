@@ -28,6 +28,14 @@ def project_framing(value):
     if not isinstance(value, dict):
         return value
     result = dict(value)
+    summary = result.pop("achievement_criteria", None)
+    if "criteria" not in result and summary:
+        result["criteria"] = [{"text": text} for text in
+                              (summary if isinstance(summary, list) else [summary])
+                              if isinstance(text, str) and text.strip()]
+    for retired in ("expert_choice", "imagined_ibl", "research_plan_action",
+                    "research_plan_patch", "research_plan"):
+        result.pop(retired, None)
     if "capability_focus" in value or "ibl_focus" in value:
         focus = value.get("capability_focus")
         if (focus is None or focus == {}) and "ibl_focus" in value:
@@ -237,15 +245,13 @@ class ConsciousnessAgent:
             {
                 "history_summary": str,    # 관련 맥락으로 원본 대체. 빈 문자열이면 실행 이력 비움
                 "task_framing": str,       # 지금 풀어야 할 문제 정의
-                "achievement_criteria": str, # 실행자가 확인할 완료 기준
+                "criteria": list,          # 실행자가 참고할 결과 메모
                 "independent_review": bool, # 별도 검토가 필요하다고 판단한 경우만 True
-                "expert_choice": str,      # 전문가의 선택 — 실행자 명령의 제 이름 섹션(한 문장)
                 "capability_focus": {
                     "hint": str                # 입력·출력·의존 관계·불확실성
                 },
                 "guide_files": list[str],  # 읽어야 할 가이드 파일
                 "assumptions": list[str],  # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증
-                "imagined_ibl": str        # 상상실행 초안(선택) — 기계 검증 후 융합
             }
         """
         if not self.is_ready:
@@ -313,10 +319,6 @@ class ConsciousnessAgent:
 
             def validate_initial(value):
                 validate_contract(value)
-                if research_topic is not None or (revision and previous_research_plan):
-                    from research_planning import validate_topic_choice, read_current
-                    topic = research_topic or {"current_plan": read_current(previous_research_plan, project_path)}
-                    validate_topic_choice(value, topic)
 
             if result:
                 from episode_logger import record_trajectory_event
@@ -352,10 +354,13 @@ class ConsciousnessAgent:
                     from reframe import merge_revision
                     result = merge_revision(revision["previous_contract"], result)
                 from research_planning import prepare
-                result = prepare(self, result, base_input, supervisor=supervisor,
-                                 project_path=project_path,
-                                 previous_plan=previous_research_plan,
-                                 validate_framing=validate_contract, topic=research_topic)
+                try:
+                    result = prepare(self, result, base_input, supervisor=supervisor,
+                                     project_path=project_path,
+                                     previous_plan=previous_research_plan,
+                                     validate_framing=validate_contract, topic=research_topic)
+                except (OSError, ValueError) as exc:
+                    raise FramingContractError("연구 작업 문서를 인계하지 못했습니다: " + str(exc)) from exc
                 import json as _json
                 print(f"[ConsciousnessAgent] 파싱 결과:\n{_json.dumps(result, ensure_ascii=False, indent=2)}")
             else:
@@ -445,7 +450,7 @@ class ConsciousnessAgent:
         if repair_doctrine:
             parts.append(
                 "<repair_doctrine note=\"이 턴은 시스템 자체 코드를 바꿀 수 있는 수리 턴이다. "
-                "task_framing·achievement_criteria 를 이 규칙으로 쓴다.\">\n"
+                "task_framing·criteria 를 이 규칙으로 쓴다.\">\n"
                 f"{repair_doctrine}\n"
                 "</repair_doctrine>"
             )
@@ -460,13 +465,12 @@ class ConsciousnessAgent:
                 f"{r.get('revision_no', 1)}, 방아쇠={r.get('trigger', '')}, 종류={r.get('kind', '')}). "
                 "실행 에이전트가 아래 규정으로 일하다가 전제가 깨졌음을 알았다. 사용자 메시지는 그대로이고, "
                 "이미 확보된 사실(progress)은 제약으로 흡수하며, 깨진 전제를 다시 세우지 않는 새 규정을 "
-                "현재 실행 요청으로 다시 쓴다. 바뀐 문제에 맞춰 기준과 계획도 수정한다. 이 틀 안에서 풀 수 없거나 위험하면 "
+                "현재 실행 요청으로 다시 쓴다. 바뀐 문제에 맞춰 필요한 기준도 수정한다. 이 틀 안에서 풀 수 없거나 위험하면 "
                 "needs_clarification 으로 멈춘다.\">\n"
                 f"<previous_framing>\n{r.get('previous_framing', '')}\n</previous_framing>\n"
                 f"<previous_assumptions>\n{prev_a_txt}\n</previous_assumptions>\n"
                 f"<previous_criteria>\n{r.get('previous_criteria', '')}\n</previous_criteria>\n"
-                "기존 계획이 있으면 research_plan_action으로 keep/patch/revise를 판단한다. "
-                "기준을 바꾸면 criteria와 achievement_criteria를 함께 반환한다.\n"
+                "방법과 연구계획의 갱신은 실행자가 맡는다.\n"
                 f"<previous_contract>{json.dumps(r.get('previous_contract', {}), ensure_ascii=False)}</previous_contract>\n"
                 f"<previous_request_intent>{r.get('previous_request_intent', 'task')}</previous_request_intent>\n"
                 "사실 통보(context_update) 분류가 문제라면 사용자 원문과 직전 대화를 대조한다. "
@@ -579,7 +583,7 @@ class ConsciousnessAgent:
         (그 뒤 자기반성이 98초 더). 버려진 쪽이 최종 답보다 나았다.
 
         형식 위반의 대가가 '4분치 사고를 버리고 처음부터 다시'여선 안 된다. 구조화
-        필드(capability_focus·guide_files·achievement_criteria)는 복구할 수 없지만,
+        필드(capability_focus·guide_files·criteria)는 복구할 수 없지만,
         주 산출물인 프레이밍은 그대로 실행 에이전트에게 넘긴다. 소비자는 전부
         `.get()` 이라 나머지 키가 없어도 안전하다.
 

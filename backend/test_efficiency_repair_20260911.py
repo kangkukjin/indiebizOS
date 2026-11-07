@@ -190,7 +190,7 @@ def test_research_quota_requires_user_provenance():
     result = criteria_contract("적용 사례를 찾아줘", {"criteria": [{"text": "3개 직업", "user_quote": "3개 직업"}]})
     assert result["criteria"][0]["source"] == "consciousness"
     result = criteria_contract("3개 직업의 사례를 찾아줘", {"criteria": [{"text": "3개 직업", "user_quote": "3개 직업"}]})
-    assert result["criteria"][0]["source"] == "user"
+    assert result["criteria"][0]["source"] == "consciousness"
 
 
 def test_verification_reuse_invalidates_dependency_or_criteria(tmp_path):

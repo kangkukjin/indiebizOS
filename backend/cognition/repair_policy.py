@@ -8,7 +8,6 @@ VERSION = 2
 def direct_framing(message):
     return {"_repair_policy": VERSION, "_framing_source": "repair_execution",
             "needs_repair": True, "task_framing": message,
-            "achievement_criteria": message,
             "criteria": [{"text": message, "user_quote": message, "verification_phase": "workspace"}],
             "capability_focus": {"hint": "변경 대상부터 확인하세요. 관리 연산으로 개정하는 정의·데이터는 그 연산으로 수정하고 새 호출로 검증합니다. "
                 "관용구는 workflow detail의 revision을 expected_revision으로 save합니다. 코드 적용 없이 원래 목표를 평가합니다. "

@@ -693,61 +693,6 @@ def _build_dynamic_context(
     )
 
 
-# ── 상상실행 초안 (2026-08-31, 사용자 판정 집행) ─────────────────────────────
-# 의식이 문제를 규정하며 핵심 작업의 IBL 문장을 초안(imagined_ibl)으로 짓는다 — 사람이
-# 행동 전에 동작을 상상실행하듯, 계획을 액추에이터의 언어로 강제해 산문 절차가 숨기는
-# 불가능성(안 흐르는 통화·없는 파라미터)을 실행 전에 드러낸다. 초안은 명령이 아니라
-# **검증 대상**: 기계 앞모형(파서·액션 실재·파라미터 어휘·T1/T2 통화 타입, LLM 0)을
-# 통과해야 강한 출발점이 되고, 실패하면 오류를 붙여 참고로 강등된다. 초안은 턴-로컬 —
-# 해마에는 절대 직접 들어가지 않는다(합성 접지 원칙: 기억은 실행된 문장만. 초안이
-# 채택·실행·성공하면 기존 증류가 *실행된 형태*를 거둬간다 — 상상→실행→기억 일방향 밸브).
-
-import re as _re
-
-_DRAFT_ACTION_RE = _re.compile(r'\[([a-z_-]+):([a-z_0-9-]+)\]')
-
-
-def validate_imagined_draft(code: str) -> tuple:
-    """새 작성 초안도 실행과 같은 컴파일러로 검수한다. 도구는 실행하지 않는다."""
-    if not isinstance(code, str) or not code.strip():
-        return False, '빈 초안'
-    from ibl_edition import authoring_request
-    from ibl_v2_entry import handle_request
-    checked = handle_request(authoring_request({'code': code, 'check': True}))
-    return bool(checked.get('ok')), '' if checked.get('ok') else str(checked.get('issues') or checked.get('error'))
-
-
-def draft_adoption(draft_code: str, tool_calls: list):
-    """초안의 액션이 실제 실행에 등장했는가 — True/False/None(초안 또는 실행 없음).
-
-    관찰 계기(리랭킹·게이트 아님): _recall_was_used 와 같은 액션 교집합 판정.
-    턴 끝에 [상상실행] 로그 한 줄 — 초안이 실제로 채택되는지의 실측 데이터."""
-    pairs = set(_DRAFT_ACTION_RE.findall(draft_code or ""))
-    if not pairs:
-        return None
-    executed = set()
-    for tc in tool_calls or []:
-        if isinstance(tc, dict) and tc.get("tool_name") == "execute_ibl":
-            executed |= set(_DRAFT_ACTION_RE.findall(
-                (tc.get("input") or {}).get("code", "") or ""))
-    if not executed:
-        return None
-    return bool(pairs & executed)
-
-
-def _expert_choice_line(consciousness_output: dict) -> str:
-    """의식의 expert_choice 를 실행자 명령의 한 줄로 정규화한다 (없으면 빈 문자열).
-
-    한 문장 계약이므로 개행은 공백으로 눕힌다. 내용의 질(이름이 들어있는가)은 기계가
-    판정할 수 없어 프롬프트의 ○/✕ 예시와 실주행 관측이 맡는다 — 여기서 상투구를
-    정규식으로 거르려 들면 "감정사는 거래 사례부터 본다" 같은 합격 문장이 먼저 죽는다.
-    """
-    v = (consciousness_output or {}).get("expert_choice")
-    if not isinstance(v, str):
-        return ""
-    return " ".join(v.split()).strip()
-
-
 def internal_plan_field(field: str, text: str) -> str:
     """생성된 규정·절차의 출처를 본문과 함께 전달한다. 원문 인용으로 승격하지 않는다."""
     return json.dumps({"source": "consciousness", "field": field, "text": text},
@@ -767,18 +712,11 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
         aug.append("현재 수행할 요청:\n" + internal_plan_field("task_framing", task_framing))
 
     from supervisor_handoff import criteria_contract
-    if co.get("achievement_criteria") or co.get("criteria"):
+    if co.get("criteria"):
         aug.append("기준의 출처: " + json.dumps(criteria_contract(user_message, co), ensure_ascii=False))
         aug.append("사용자가 정한 판정 조건을 임의로 강화하거나 완화하지 않는다. 추가 품질 우려는 "
                    "근거와 함께 별도 표시하고, 새 자격 조건으로 삼아 요청된 결과를 누락하지 않는다. "
                    "실제 실행 권한·안전 경계는 유지한다.")
-
-    # 전문가의 선택 — 규정 산문에 묻히지 않도록 제 이름의 섹션으로. 실행자가 요청의 낱말에서
-    # 출발하는 것을 막는 자리다(09-07 사용자 설계). 여러 줄로 오면 한 줄로 눕힌다 — 이 자리가
-    # 두 번째 task_framing 이 되면 섹션으로 뽑은 값이 사라진다.
-    expert = _expert_choice_line(co)
-    if expert:
-        aug.append("전문가의 선택: " + expert)
 
     # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증하고, 깨졌으면 계획을 밀지 않는다.
     assumptions = _assumption_lines(co)
@@ -791,20 +729,6 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if hint:
         # 방법 지시는 허가 어조에서 분리해 명령문 줄로.
         aug.append("수행 절차(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
-
-    # 상상실행 초안 — 검증 통과분만 강한 출발점, 실패분은 오류 동반 참고로 강등.
-    # (당위 앵커 아래 실리므로 통과분은 명령 권위를 갖는다 — 그래서 관문이 앞선다.)
-    draft = (co.get("imagined_ibl") or "").strip()
-    if draft:
-        ok, err = validate_imagined_draft(draft)
-        if ok:
-            aug.append("실행 초안(기계 검증 통과):\n" + draft +
-                       "\n이 초안이 출발점이다. 이 턴에 보관돼 있으니 그대로 맞으면 execute_ibl(code: \"$초안\") 한 줄로 "
-                       "실행하고(본문을 다시 치지 말 것), 고칠 것이 있으면 고친 문장만 적어라. 실행 결과에 따라 "
-                       "파라미터·구성을 검증하며 다듬어라.")
-        else:
-            aug.append(f"실행 초안(검증 실패 — {err}):\n" + draft +
-                       "\n이 초안은 그대로 쓰지 말 것. 위 오류를 감안해 직접 재구성하라.")
 
     from guide_registry import execution_guides, guide_delivery
     guide_files = execution_guides(co.get("guide_files"))
@@ -821,10 +745,6 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
                        + " — 본문은 자동 주입하지 않는다. 주 가이드로 부족한 별도 절차가 생길 때만 "
                          "read_guide로 필요한 절을 읽는다.")
 
-    achievement_criteria = (co.get("achievement_criteria") or "").strip()
-    if achievement_criteria:
-        aug.append(f"충족 기준: {achievement_criteria}")
-
     from research_planning import execution_block
     research = execution_block(co)
     if research:
@@ -834,10 +754,9 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if not aug:
         return f"사용자 명령: {user_cmd}"
 
-    return ("아래 현재 요청을 수행하고 완료 기준으로 결과를 확인하라. "
-            "의식이 사용자 요구를 재구성한 실행 명령이며 선택적 조언이 아니다. "
-            "source=consciousness인 내용은 사용자 직접 발화가 아니다. "
-            "사용자 원문과 대화의 확정 결정은 목적·명시 조건·권한의 근거로 보존한다.\n\n"
+    return ("사용자 원래 요청과 대화의 명시 정정을 수행하라. "
+            "아래 현재 요청과 실행 메모는 의식이 정리한 해석이며 사용자 요구를 대체하지 않는다. "
+            "방법·계획·검산은 실행자가 실제 관측에 따라 판단한다.\n\n"
             + "\n\n".join(aug)
             + "\n\n요청의 근거(사용자 원문): " + json.dumps(user_cmd, ensure_ascii=False))
 

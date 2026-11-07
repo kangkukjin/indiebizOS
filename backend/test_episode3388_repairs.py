@@ -147,14 +147,14 @@ def test_http_command_without_task_runs_plan_review_final_and_mcp(tmp_path, monk
         task = tc.get_current_task_id()
         controller = current()
         identities.append((task, el.EpisodeLogger.current().trajectory.run_id))
-        assert task and controller.task == task and load_draft() == DRAFT
+        assert task and controller.task == task and load_draft() == ""
         # 네트워크 모델만 대역. 실제 MCP 재진입 수신 핸들러→워커→IBL→변수를 두 번 돈다.
         def bridge(code, inputs=None):
             return asyncio.run(execute_ibl_code(IBLRequest(code=code,edition=2,inputs=inputs,
                 project_path=str(tmp_path), agent_id='project:agent_test', task_id=task,
                 episode_id=el.EpisodeLogger.current().episode_id,
                 parent_run_id=el.EpisodeLogger.current().trajectory.run_id)))
-        first = bridge('$초안')
+        first = bridge(DRAFT)
         assert first.get('success') is True and first['value']==[{'k':1},{'k':2}],first
         second = bridge('$입력 >> [table:take]{n:1}',first['result_ref']['input_args'])
         assert second.get('success') is True and second['value']==[{'k':1}],second

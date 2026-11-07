@@ -142,7 +142,7 @@ Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다
 - **안정부(system_prompt)** — 현재 날짜(일 단위) → `base_prompt_v7.md` → `<system_structure>` 정체성 코어 → 조건부 프래그먼트(`06_git`·`09_delegation`·`10_system_ai_delegation`) → IBL 환경(`ibl_access.build_environment`: 압축 문법서 + 허용 노드의 액션 카탈로그 + 상시 관용구) → 프로젝트 에이전트만 `<project_memory>`(폴더 포식 문서) → `# Role`(`system_ai_role.txt` / `agent_<이름>_role.txt`) → `# Notes` / `# 시스템 메모`.
 - **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층 지도 + 가이드 목차) → 모델명 → 의식이 고른 주 가이드 본문(첫 항목만)·추가 후보 이름 → 수리 턴 교리(RED 그랜트 때만).
 - **현재 실행 요청** — `compile_user_command`가 의식의 `task_framing`을 중심 명령으로, 완료 기준·전제·유용한 방법을 그 아래 전달한다. 사용자 원문은 목적·명시 조건·권한의 근거로 보존하며 `source=consciousness`인 생성 내용을 사용자 직접 발화로 인용하지 않는다. 최초 인계와 재규정이 같은 표현을 사용한다.
-- **심층연구와 연구 대화의 계획** — 일반 대화에서 의식이 `deep_research=true`로 판단하거나 연구 대화의 계획을 최초 작성·개정할 때 `research_planning.prepare`가 의식에게 심층연구 가이드를 공급하여 주제별 계획을 작성하게 한다. 하네스가 작업공간의 `outputs/research_plans/<판본>/research_plan.md`를 저장·재열람하고 시각·지문·본문을 실행자에게 전달한다. 계획 완성은 기존 맥락만 사용하는 도구 없는 호출이며 작성·정정은 최대 2회다. 필수 완성은 초기 탐색의 소프트 예산 소진으로 생략하지 않고, 하드 한도·취소·시간 제한은 유지한다. 호출 생략·중단의 실제 이유를 보존하고 JSON 오류로 재시도하지 않는다. 비용은 plan_completion 단계에도 합산한다. 보완 응답은 연구계획 본문과 변경할 규정 필드만 반환하고 생략 필드는 이전 판단에서 계승한다. 명시한 필드는 전체 교체하며 병합한 규정에 기존 검증을 적용한다. 계획 실패는 실행으로 폴백하지 않는다. 실행자는 같은 파일에 진행·근거를 갱신하며 중요한 변경은 재규정으로 의식에게 돌린다. 후속 심층연구와 연구 대화는 경량 규정 계승을 우회해 의식이 현재 계획을 확인한다. 연구 대화에서 `research_plan_action=keep`이면 현재 본문을 다시 읽어 전달하고 추가 계획 작성 호출·새 판본을 만들지 않는다. 최초 작성이나 목적·범위·방법의 변경(`revise`)은 새 판본으로 이어간다. 계획의 전체 목적과 이번 턴의 수행 범위를 구분하며 설명·토론에 추가 조사를 강제하지 않는다. 최종 평가자는 사용자 목표와 최종 제출물만 비교하며 연구계획을 새 완료 조건으로 삼지 않는다. 가이드 자체는 실행자의 목차·자동 주입·검색 추천에서 제외하며 일반 작업에는 이 계획 호출·저장을 추가하지 않는다.
+- **심층연구**: 의식은 요청과 관련 맥락을 정리한다. 하네스는 기존 연구 작업 문서를 회수하거나 요청을 출발 메모로 저장해 같은 주제에 연결한다. 실행자가 `deep_research.md`와 문서를 받아 계획·방법·진행을 작성·갱신한다. 별도 계획 완성 모델 호출이나 의식 전용 가이드 제한은 없다. 문서 경계·활성 실행·판본 검사는 유지한다.
 
 의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다. 안경 메뉴의 도구 창(프롬프트 구성·가이드 파일·내 어휘)은 Electron 에서 런처 안 모달이 아니라 **독립 OS 창**이다(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별; IPC `open-tool-window`), 웹 표면은 같은 창의 해시 라우트(`#/prompt-composition`·`#/guides`·`#/vocabulary`). 가이드 파일 창은 `data/guides/*.md` 를 등록(guide_db)·신선도·예산과 함께 보여 주고 본문을 고쳐 저장한다(`/guides`, `guide_registry.guide_catalog` — 폴더가 정본이라 '등록만 있고 파일 없음'·'파일만 있고 미등록'을 숨기지 않는다). 정본 `docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md`.
 
@@ -280,7 +280,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, independent_review(별도 검토 선택, 기본 false), history_summary, capability_focus(hint: 작업 분해·입출력·의존 관계·불확실성), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
+  - 출력: task_framing, 필요한 history_summary·assumptions·criteria·capability_focus.hint·guide_files, needs_clarification·clarification_question·needs_repair·deep_research·independent_review. 세부 계획과 검산은 실행자가 맡는다.
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 현재 지시를 해석할 때 필요한 과거만 채택한 뒤 규정한다. 명시적 빈 history_summary는
     실행 히스토리를 비우고, 비어 있지 않은 선별 요약도 CLI 세션 재개로 우회하지 않는다.
@@ -330,9 +330,9 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **정적 정합성 검증 합류 (2026-05-28 신설, 현행 배관은 2026-06-27 단순화)**: `build_ibl_nodes.py`의 삼각 검증(src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS`)을 self-check 사이클이 실행 — 현행은 `world_pulse_health.run_ibl_health_check()`가 `scripts/ibl_health_check.py`를 subprocess로 돌려 §1A 결과를 `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록(옛 `run_static_ibl_check()`는 2026-06-27 은퇴). 정적 부채(누락된 등록, op 키 drift)와 런타임 부채(액션 실패)가 같은 사이클에서 잡힘. pre-commit 훅(commit 시점)과 일일 건강 점검(하루 1회)의 이중 검증 채널.
 
-**의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: 관리되는 정의·데이터와 실행 구현을 구분하고, 격리 편집·검사와 라이브 적용·재기동 인계를 분리한다. 첫 호출 성공 시 의심을 갱신하고, timeout/실패 후 환경 확인 없이 같은 코드를 즉시 재시도하지 않는다. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 `task_framing`은 실행자에게 그대로 맡길 구체적인 요청이며 고정된 항목별 골격을 채우지 않는다. `assumptions`는 확인할 전제, `expert_choice`는 분야의 함정, `capability_focus.hint`는 유용한 방법·입출력·의존 관계를 맡는다.
+**의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: 관리되는 정의·데이터와 실행 구현을 구분하고, 격리 편집·검사와 라이브 적용·재기동 인계를 분리한다. 첫 호출 성공 시 의심을 갱신하고, timeout/실패 후 환경 확인 없이 같은 코드를 즉시 재시도하지 않는다. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 `task_framing`은 실행자에게 그대로 맡길 구체적인 요청이며 고정된 항목별 골격을 채우지 않는다. `assumptions`는 확인할 전제, `capability_focus.hint`는 필요한 참고 사항을 맡는다. 세부 방법은 실행자가 정한다.
 
-**문제 재구성과 중간감사**: 현재 요청의 완료 기준과 연구계획은 그 문제에서 도출한다. 의식이 만든 잠정 질문·목표는 근거에 따라 교체할 수 있으며 사용자 명시 조건의 미충족은 남긴다. `TurnChannel.current`를 감독자와 파이프라인이 공유한다. 중간감사의 `REWORK`가 기존 규정 필드를 반환하면 다음 실행 경계에서 기준·계획과 함께 채택하고, 평가 기준 캐시·보완 인계·다음 턴 계승도 같은 규정을 사용한다. 기존 계획의 keep/patch/revise 경로를 사용하며 유효 자료를 보존한다. 관측·규정·계획 판본이 달라진 늦은 판단과 종료 후 판단은 적용하지 않는다. [구현과 검증](../../docs/CONSCIOUSNESS_PROBLEM_REFORMULATION_DESIGN_2026_11_07.md#9-구현-기록).
+**문제 재구성과 중간감사**: 의식은 사용자 요청·정정을 명료화하고 중간감사는 새 관측에 따라 필요한 방향 수정만 전달한다. 세부 계획·검산·제작·보완은 실행자가 맡는다. 수정 요청은 `TurnChannel.current`를 통해 다음 실행 경계에서 채택한다. 실행 메모 `criteria`는 한 표현이며 사용자 조건으로 인증하지 않는다. 연구 문서의 현재 본문을 보존해 실행자가 수정된 요청에 맞춰 갱신한다. 관측·규정·계획 판본이 달라진 늦은 판단과 종료 후 판단은 적용하지 않는다. [책임 축소와 검증](../../docs/CONSCIOUSNESS_EXECUTION_ROLES_2026_11_07.md).
 
 **턴 안 재규정 (`cognition/reframe.py`, 감독 통합 2026-09-10)**: 실행자가 `reframe`으로 실제 반증을 제시하면 해당 agent+task의 감독이 같은 의식 역할·중간 검토 예산으로 규정을 바꾼다. 새 규정은 도구 결과로 실행자에게 돌아오며 이미 만든 산출물을 유지한다. 권한은 재규정으로 늘어나지 않는다. 감독 없는 실행도 `open_turn`의 명시 재규정을 사용한다. 검수 실패 횟수·심각도로 기준을 자동 교체하던 경로는 제거했다. 보완 검수는 원래 전체 기준을 유지한다. IBL 어휘를 추가하지 않고 인지 역할 사이의 내부 도구로 연결한다. 양쪽의 실제 행동·근거·판정·인계·응답 버전은 `supervision.*`, 검수 결과는 `validation.completed` 사건과 작업대 `events.jsonl`에 남는다.
 
@@ -534,7 +534,7 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
    2026-08-23 에 `test_*.py` 신규 생성의 리로드 절단을 이름 열거로 봉했는데, 08-27 에 같은 부류가 **다른 이름으로 재발**했다: 수리 턴이 만든 실측 사본(선행 밑줄 하나로 시작하는 스크래치 이름)이 리로드를 불러 그 턴 자신을 apply 전에 절단하고 좌초시켰다. 열거 대신 스크래치의 자연 작명(선행 밑줄 하나)을 부류로 덮었다 — `_[!_]*.py`(`[!_]` 가 `__init__.py` 같은 산 배관을 지킨다). ★**제외 목록은 uvicorn 부팅 때 읽힌다** — 재기동 전의 몸은 옛 목록으로 판단한다. 그리고 가드는 선언(fnmatch)이 아니라 **실판정자**(설치본 uvicorn FileFilter, `pathlib.match`)로 종단 실측해야 한다. 둘의 의미론이 업그레이드로 갈리면 선언만 초록인 채 샌다.
 
 7. **수리 교리는 소비처에 둔다 — 경계는 범위가 아니라 원인 사슬(2026-09-02).**
-   실행자가 받는 것은 의식의 task_framing 뿐이라, 의식 프롬프트에만 적힌 교리는 병목을 지나며 접히고 실행자 base 프롬프트의 "요청 밖 개선 금지"만 온전히 도달했다 — 결과가 "뿌리는 범위 밖이라 안 고침 + 고칠까요?". 그랜트가 살아 있는 턴에는 `fragments/13_repair.md` 가 turn_context 로 실행자에 직접 실린다: 수리 단위=원인(사슬 위면 명령 안, 값 보정·예외 삼키기·특례 분기=미룸) · '명령 밖'=사슬 밖 · 되묻기=정책 변경·파괴적 변경 둘뿐 · 보고 형식 [증상→원인 사슬→고친 자리→손대지 않은 것→적용 상태]. 의식은 필요한 수리 결과를 achievement_criteria에 명시하며 평가자는 그 기준의 달성만 확인한다. 보고 형식을 별도 합격 조건으로 만들지 않는다.
+   실행자가 받는 것은 의식의 task_framing 뿐이라, 의식 프롬프트에만 적힌 교리는 병목을 지나며 접히고 실행자 base 프롬프트의 "요청 밖 개선 금지"만 온전히 도달했다 — 결과가 "뿌리는 범위 밖이라 안 고침 + 고칠까요?". 그랜트가 살아 있는 턴에는 `fragments/13_repair.md` 가 turn_context 로 실행자에 직접 실린다: 수리 단위=원인(사슬 위면 명령 안, 값 보정·예외 삼키기·특례 분기=미룸) · '명령 밖'=사슬 밖 · 되묻기=정책 변경·파괴적 변경 둘뿐 · 보고 형식 [증상→원인 사슬→고친 자리→손대지 않은 것→적용 상태]. 필요한 수리 결과는 실행 메모 criteria로 전달하며 최종 평가자는 사용자 원래 목표와 최종 결과를 비교한다. 보고 형식을 별도 합격 조건으로 만들지 않는다.
 
 상세: `docs/SELF_MODIFICATION_SAFETY_DESIGN.md`
 
@@ -576,7 +576,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **51개** (+ 백엔드 extensions **5개**), IBL: **6노드 171 액션** (sense 39·self 58·limbs 13·others 20·engines 19·table 22)
-- backend **.py 706개**(test 제외, git 추적 기준) — 층 디렉토리 `base 120 · datastore 97 · ibl 100 · cognition 98 · services 113 · surface 102`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **104개**(guide_db 등록 **99**)
+- backend **.py 705개**(test 제외, git 추적 기준) — 층 디렉토리 `base 120 · datastore 97 · ibl 100 · cognition 97 · services 113 · surface 102`(+ common 32·providers 14·channels 4·drivers 3). 가이드 **104개**(guide_db 등록 **99**)
 - op 분기 액션 **86개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**34개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 59·false 23·미선언 89)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-10-04 실측)

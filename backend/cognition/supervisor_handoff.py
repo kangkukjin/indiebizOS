@@ -15,32 +15,25 @@ patch는 해당 version/hash와 정확한 old_string/new_string을 쓴다. 구�
 
 
 def criteria_contract(message, framing):
-    """의식이 확정한 달성 기준. 추천 수단·규정 산문에서 새 기준을 만들지 않는다."""
+    """사용자 요청과 실행 메모. 생성된 문장을 사용자 조건으로 인증하지 않는다."""
+    from consciousness_agent import project_framing
+    framing = project_framing(framing or {})
     rows = []
     for row in (framing or {}).get("criteria", []):
         if not isinstance(row, dict) or not row.get("text"):
             continue
-        quote = row.get("user_quote", "")
-        mandatory = isinstance(quote, str) and bool(quote.strip()) and quote in message
-        rows.append({"text": str(row["text"]).strip(), "source": "user" if mandatory else "consciousness",
-                     "user_quote": quote if mandatory else "", "fallback": row.get("fallback", ""),
+        rows.append({"text": str(row["text"]).strip(), "source": "consciousness",
+                     "user_quote": row.get("user_quote", ""), "fallback": row.get("fallback", ""),
                      "verification_phase": row.get("verification_phase", "workspace"),
                      "activation_plan": row.get("activation_plan", "")})
         if "verification_method" in row:
             rows[-1]["verification_method"] = row["verification_method"]
-    if not rows and (framing or {}).get("achievement_criteria"):
-        values = framing["achievement_criteria"]
-        for value in values if isinstance(values, list) else [values]:
-            if isinstance(value, str) and value.strip():
-                rows.append({"text": value.strip(), "source": "consciousness", "user_quote": "", "fallback": ""})
     rows = [row for row in rows if row["text"]]
     for i, row in enumerate(rows, 1):
         row["id"] = f"C{i}"
     return {"user_goal": message, "task_framing": (framing or {}).get("task_framing", ""), "owner": "execution" if (framing or {}).get("_framing_source") == "repair_execution" else "consciousness", "criteria": rows,
-            "policy": "평가는 이 criteria의 달성 여부만 판정한다. 사용자 원문은 기준의 뜻과 권한을 해석하는 맥락이다. "
-                      "기준 추가·강화·면제는 평가자의 권한이 아니다. 의식이 정한 fallback만 적용하며 사용자 명시 조건을 대체하지 않는다. "
-                      "기준이 사용자 원문과 명백히 충돌하면 UNKNOWN으로 보고하며 승인하거나 대신 수정하지 않는다. "
-                      "추천 도구·잠정 조사량·task_framing의 포부를 별도 합격 조건으로 만들지 않는다."}
+            "policy": "사용자 원래 요청과 명시 정정이 목표다. criteria는 실행을 위한 잠정 메모이며 사용자 요구를 대체하지 않는다."}
+
 
 
 def handoff_state(controller, decision):

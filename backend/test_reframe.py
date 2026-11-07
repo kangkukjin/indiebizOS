@@ -121,7 +121,7 @@ def test_executor_reframe_revises_and_updates_channel():
     assert rev["previous_assumptions"] == ["원장 파일이 있다"] and rev["revision_no"] == 1
     assert r.calls[0]["message"] == "보고서 써줘"      # 사용자 메시지는 그대로
     # 통로의 current 가 갱신 — 평가는 이걸 본다
-    assert ch.revised and ch.current["achievement_criteria"] == "5건 이상 + 원장 신설"
+    assert ch.revised and ch.current["criteria"] == [{"text": "5건 이상 + 원장 신설"}]
     assert ch.current["_framing_origin"] == _BASE["task_framing"]
 
 

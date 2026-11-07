@@ -185,7 +185,6 @@
     "cognition/repair_policy",
     "cognition/repair_readiness",
     "cognition/repair_resume",
-    "cognition/research_plan_patch",
     "cognition/research_planning",
     "cognition/research_runner",
     "cognition/routing_system",
@@ -652,8 +651,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 641,
-    "engine": 609,
+    "total": 640,
+    "engine": 608,
     "blocklist": 32
   }
 }

@@ -177,7 +177,7 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
             "kind": kind or "other",
             "previous_framing": ch.current.get("task_framing", ""),
             "previous_assumptions": ch.current.get("assumptions") or [],
-            "previous_criteria": ch.current.get("achievement_criteria", ""),
+            "previous_criteria": ch.current.get("criteria", []),
             "previous_contract": copy.deepcopy(ch.current),
             "previous_request_intent": ch.current.get("request_intent", getattr(ch, "request_intent", "task")),
             "previous_research_plan": ch.current.get("_research_plan"),
@@ -214,11 +214,10 @@ def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str
 
 # 중간감사는 최초 의식과 같은 필드만 수정한다. 내부 영수증·권한은 하네스 소유다.
 REVISION_FIELDS = frozenset({
-    "task_framing", "achievement_criteria", "criteria", "assumptions", "expert_choice",
+    "task_framing", "criteria", "assumptions",
     "capability_focus", "guide_files", "history_summary", "needs_clarification",
     "clarification_question", "deep_research", "independent_review",
-    "request_intent", "request_intent_reason", "research_plan_action",
-    "research_plan_patch", "research_plan",
+    "request_intent", "request_intent_reason",
 })
 
 
@@ -226,14 +225,11 @@ def merge_revision(current, update):
     """생략은 계승하고 변경 필드는 교체한다. 의미 판단은 같은 의식이 소유한다."""
     from consciousness_agent import project_framing, validate_framing_focus
     update = project_framing(update)
-    result = copy.deepcopy({**(current or {}), **update})
+    result = copy.deepcopy({**project_framing(current or {}), **update})
     validate_framing_focus(result)
     if not isinstance(result.get("task_framing"), str) or not result["task_framing"].strip():
         raise ValueError("현재 수행할 요청 task_framing이 필요합니다")
-    if ("criteria" in update or ("achievement_criteria" in update and (current or {}).get("criteria"))):
-        if not {"criteria", "achievement_criteria"} <= update.keys():
-            raise ValueError("criteria와 achievement_criteria는 함께 갱신해야 합니다")
-    for key in ("achievement_criteria", "expert_choice", "history_summary", "clarification_question"):
+    for key in ("history_summary", "clarification_question"):
         if key in update and not isinstance(update[key], str):
             raise ValueError(f"{key}는 문자열이어야 합니다")
     for key in ("criteria", "assumptions", "guide_files"):
@@ -277,7 +273,7 @@ def accept_revision(ch, update, revision, prepare=None):
             record_trajectory_event("framing.revised", {
                 **out["_revision"], "evidence": revision.get("evidence", "")[:2000],
                 "new_framing": out["task_framing"][:3000],
-                "new_criteria": out.get("achievement_criteria", "")[:2000],
+                "new_criteria": out.get("criteria", []),
             })
         except Exception:
             pass  # 관측 기록 실패가 이미 채택한 규정을 되돌리지 않는다.

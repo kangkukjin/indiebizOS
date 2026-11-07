@@ -26,7 +26,7 @@ def test_existing_review_consumes_optional_assessment_without_certifying_goal(su
     row = supervisor.recovery.view()[0]
     assert row['assessment']['actor'] == supervisor.supervisor_id
     assert row['resolution'] == 'unresolved' and not requires_attention(row)
-    assert supervisor.framing['achievement_criteria'] == '실제 증거 확인'
+    assert supervisor.framing['criteria'] == [{'text': '실제 증거 확인'}]
 
 
 def test_continue_assessment_keeps_its_own_corrective_instruction(supervisor, monkeypatch):

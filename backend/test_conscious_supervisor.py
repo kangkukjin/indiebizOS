@@ -91,7 +91,7 @@ def test_review_cannot_publish_stale_or_incomplete_framing(supervisor, monkeypat
     old = dict(supervisor.framing)
     update = {'task_framing': '새 요청'}
     if change == 'invalid_criteria':
-        update['criteria'] = [{'text': '짝이 없는 기준'}]
+        update['criteria'] = [{'text': 3}]
     monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw:
         verdict(supervisor, 'UNKNOWN' if change == 'unknown' else 'REWORK', **update))
     supervisor.review('milestone', paused=True)
@@ -169,7 +169,7 @@ def test_completion_criteria_do_not_require_independent_review(supervisor, monke
     assert finish(supervisor, response)[-1]['content'] == response
     assert tc.get_goal_eval_outcome()['review_status'] == 'NOT_RUN'
     assert supervisor.store.text == response
-    assert not supervisor.evaluation_enabled and supervisor.framing['achievement_criteria']
+    assert not supervisor.evaluation_enabled and supervisor.framing['criteria']
 
 
 def test_unreviewed_delivery_failure_remains_visible(supervisor, monkeypatch):

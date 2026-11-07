@@ -96,11 +96,11 @@ def test_block_id_does_not_return_the_whole_response(supervisor):
 
 
 
-def test_legacy_local_scope_and_small_repair_do_not_resume_large_session(supervisor):
+def test_explicit_local_repair_does_not_resume_large_session(supervisor):
     from supervisor_runtime import parse_decision
     from supervisor_handoff import repair_execution
     decision = parse_decision(json.dumps({"status": "REWORK", "reason": "산술 오류",
-        "instruction": 'repair_scope="local". 한 문장만 수정'}))
+        "repair_scope": "local", "instruction": "한 문장만 수정"}))
     assert decision["repair_scope"] == "local"
     provider = SimpleNamespace(system_prompt="실행 규약" * 10000, tools=[{"name": "execute_ibl"}],
                                _last_prompt_usage={"input": 125000, "cache_read": 124000},

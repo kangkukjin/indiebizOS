@@ -27,7 +27,7 @@ def test_repair_framing_reawakens_and_does_not_inherit(run):
 def test_plain_framing_is_fresh_without_inherited_privilege(run):
     runner, out = run(False)
     assert runner.calls == 1 and not out.get('needs_repair')
-    assert out['achievement_criteria'] == '새 기준'
+    assert out['criteria'] == [{'text': '새 기준'}]
 
 
 def test_fresh_consciousness_may_declare_repair(run):

@@ -78,7 +78,7 @@ def test_repeat_inherits_without_waking_consciousness(monkeypatch):
     assert r.calls == 0 and seen == ["background"]          # 관계 판정 없이 패치만
     assert out["_framing_source"] == "inherited_repeat"
     assert out["task_framing"].startswith("문제: 2026-10-07")
-    assert out["achievement_criteria"] == "NEW 5건" and out["imagined_ibl"]   # 정기는 초안을 잇는다
+    assert out["criteria"][0]["text"] == "NEW 5건" and "imagined_ibl" not in out
     assert "history_summary" not in out
     assert "needs_repair" not in out and "_repair_policy" not in out       # 권한 미계승
     assert not {"scope", "pursuit_id", "title"} & out.keys()

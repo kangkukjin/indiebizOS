@@ -35,7 +35,7 @@ REPEAT_MAX_AGE_S = 30 * 24 * 3600     # 정기 계승 창
 REPEAT_KEEP = 40                      # 자아별 문장 기록 보존 수
 
 # 경량 패치가 손댈 수 있는 필드 — 권한·과제 연결·히스토리는 밖이다.
-PATCHABLE_TEXT = ("task_framing", "achievement_criteria", "expert_choice", "clarification_question")
+PATCHABLE_TEXT = ("task_framing", "clarification_question")
 PATCHABLE_LIST = ("assumptions", "guide_files", "criteria")
 PATCHABLE_DICT = ("capability_focus",)
 PATCHABLE_BOOL = ("needs_clarification", "deep_research", "independent_review")
@@ -184,8 +184,7 @@ def _prompt(name: str) -> str:
 
 def _compact(framing: dict) -> dict:
     framing = project_framing(framing)
-    return {k: framing.get(k) for k in ("task_framing", "achievement_criteria", "criteria", "assumptions",
-                                        "expert_choice", "capability_focus", "guide_files")
+    return {k: framing.get(k) for k in ("task_framing", "criteria", "assumptions", "capability_focus", "guide_files")
             if framing.get(k) not in (None, "", [], {})}
 
 
@@ -272,13 +271,6 @@ def _patch(previous: dict, message: str, mode: str, *, history=None) -> dict:
         raw = _oneshot(request, system_prompt, "background")
         try:
             patch = _parse_patch(raw)
-            # 구조화 기준이 평가의 정본이다. 산문만 바꿔 예전 criteria가 이기는 것을 막는다.
-            if mode == "followup" or "criteria" in patch or ("achievement_criteria" in patch
-                                      and previous.get("framing", {}).get("criteria")):
-                if "criteria" not in patch or "achievement_criteria" not in patch:
-                    raise ValueError("현재 요청의 criteria와 achievement_criteria를 함께 명시하세요")
-                if not patch["criteria"]:
-                    raise ValueError("후속·변경 요청의 달성 기준 criteria는 비어 있을 수 없습니다")
             return patch
         except (ValueError, json.JSONDecodeError) as exc:
             last_error = exc
@@ -334,10 +326,6 @@ def _inherit(runner, message, history, record_trajectory_event):
         return None
     previous = {**found, "framing": project_framing(found.get("framing"))}
     from research_planning import requested
-    if requested(previous.get("framing")):
-        record_trajectory_event("framing.inherit_declined", {
-            "mode": mode, "reason": "심층연구의 계획 선택·갱신은 의식이 담당"})
-        return None
     t0 = time.monotonic()
     if mode == "followup":
         relation = _judge_relation(previous, message, history=history)
@@ -358,8 +346,6 @@ def _inherit(runner, message, history, record_trajectory_event):
     for k in STRIP_ALWAYS:
         framing.pop(k, None)
     framing.pop("history_summary", None)          # 판단 부재 → 원본 히스토리 유지
-    if mode == "followup":
-        framing.pop("imagined_ibl", None)         # 직전 메시지의 초안이지 이번 것이 아니다
     for key, value in patch.items():
         if key in PATCHABLE_DICT and isinstance(value, dict):
             framing[key] = {**(framing.get(key) or {}), **value}
@@ -368,9 +354,9 @@ def _inherit(runner, message, history, record_trajectory_event):
     framing = project_framing(framing)
     validate_framing_focus(framing)
     if requested(framing):
-        record_trajectory_event("framing.inherit_declined", {
-            "mode": mode, "reason": "심층연구로 변경되어 의식의 계획 작성 필요"})
-        return None
+        from research_planning import prepare
+        framing = prepare(None, framing, "", project_path=getattr(runner, "project_path", None),
+                          previous_plan=framing.get("_research_plan"))
     framing["_framing_source"] = "inherited_" + mode
     framing["_inherited_from"] = {"episode_id": previous.get("episode_id"), "at": previous.get("at"),
                                   "task_id": previous.get("task_id")}

@@ -14,7 +14,7 @@ class ResearchRunner(AgentRunner):
         # 연구 표면은 지속 계획의 의미 판단을 소유한다. 명시 태그·자기수리 경로는 유지한다.
         if self._tag_override(message) or self._is_repair_cue(message):
             return super()._decide_request_type(message, hippocampus_score, top_code, history, images)
-        print('[무의식] 분류: THINK (연구 대화의 지속 계획 판단)')
+        print('[무의식] 분류: THINK (연구 대화의 요청·맥락 정리)')
         return 'THINK', None
 
     def _research_planning_context(self):
@@ -36,7 +36,7 @@ class ResearchRunner(AgentRunner):
         if result:
             result["_framing_source"] = "fresh_consciousness"
         if not result:
-            raise FramingContractError('연구계획 판단에 사용할 의식 모델이 준비되지 않았거나 응답하지 않았습니다')
+            raise FramingContractError('연구 요청을 정리할 의식 모델이 준비되지 않았거나 응답하지 않았습니다')
         return result
 
     def _refresh_execution_prompt(self, message, consciousness_output=None, execution_memory='', **kwargs):

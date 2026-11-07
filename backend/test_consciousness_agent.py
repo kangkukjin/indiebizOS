@@ -7,7 +7,7 @@ import boot_paths  # noqa: F401
 import consciousness_agent as ca
 
 QUESTION = "요청의 의미를 확인해 주세요."
-GOOD = {"task_framing": "요청의 의미를 확인한다", "achievement_criteria": "의미를 설명한다"}
+GOOD = {"task_framing": "요청의 의미를 확인한다", "criteria": [{"text": "의미를 설명한다"}]}
 BAD = {"task_framing": "", "achievement_criteria": ""}
 
 
@@ -57,7 +57,7 @@ def test_valid_plan_needs_only_one_call(agent, monkeypatch):
 def test_partial_plan_parser_is_explicit_and_preserves_invalid_overrides(agent):
     raw = json.dumps({'research_plan': '# plan', 'criteria': None})
     assert agent._parse_response(raw) is None
-    assert agent._parse_response(raw, partial=True) == {'research_plan': '# plan', 'criteria': None}
+    assert agent._parse_response(raw, partial=True) == {'criteria': None}
     assert agent._parse_response('[]', partial=True) is None
 
 
@@ -129,3 +129,31 @@ if __name__ == "__main__":
     import pytest
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_saved_framing_projects_once_without_promoting_added_conditions():
+    from copy import deepcopy
+    from supervisor_handoff import criteria_contract
+    from prompt_builder import compile_user_command
+    old = {'task_framing': '금액을 비교한다', 'achievement_criteria': '옛 요약',
+           'expert_choice': '기간을 재확인한다', 'imagined_ibl': '[self:read]{}',
+           'criteria': [{'text': '단위와 집계기간이 모두 같아야 비교한다', 'user_quote': '동등한 단위'}]}
+    saved = deepcopy(old)
+    out = ca.project_framing(old)
+    assert out == ca.project_framing(out) and old == saved
+    contract = criteria_contract('동등한 단위로 비교해줘', out)
+    assert contract['criteria'][0]['source'] == 'consciousness'
+    assert contract['user_goal'] == '동등한 단위로 비교해줘'
+    command = compile_user_command(contract['user_goal'], out)
+    assert command.count(old['criteria'][0]['text']) == 1
+    assert '옛 요약' not in command and '기간을 재확인한다' not in command
+
+
+def test_revision_accepts_single_criteria_update_and_can_clear_it():
+    from reframe import merge_revision
+    prior = {'task_framing': '금액 비교', 'achievement_criteria': '옛 요약',
+             'criteria': [{'text': '집계기간 확인'}]}
+    current = merge_revision(prior, {'criteria': [{'text': '금액 차이 제시'}]})
+    assert current['criteria'] == [{'text': '금액 차이 제시'}]
+    assert 'achievement_criteria' not in current
+    assert merge_revision(current, {'criteria': []})['criteria'] == []

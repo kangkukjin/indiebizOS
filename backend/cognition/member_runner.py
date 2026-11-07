@@ -201,13 +201,9 @@ class MemberRunner(AgentRunner):
         """회원 계획도 공통 실행기가 읽는 자료형을 지킨다. 잘못된 형은 모델이 정정한다."""
         if not isinstance(value, dict) or not isinstance(value.get('task_framing'), str):
             raise ValueError('task_framing 문자열을 포함한 JSON 객체가 필요합니다')
-        for key in ('approach', 'history_summary', 'imagined_ibl'):
+        for key in ('history_summary',):
             if value.get(key) is not None and not isinstance(value[key], str):
                 raise ValueError(f'{key}는 문자열이어야 합니다')
-        criteria = value.get('achievement_criteria')
-        if criteria is not None and not (isinstance(criteria, str) or
-                isinstance(criteria, list) and all(isinstance(x, str) for x in criteria)):
-            raise ValueError('achievement_criteria는 문자열 또는 문자열 목록이어야 합니다')
         if value.get('criteria') is not None and not (isinstance(value['criteria'], list) and
                 all(isinstance(x, dict) and isinstance(x.get('text'), str) for x in value['criteria'])):
             raise ValueError('criteria는 text 문자열을 갖는 객체 목록이어야 합니다')
@@ -221,11 +217,11 @@ class MemberRunner(AgentRunner):
         # 주인용 싱글턴의 프롬프트/사전을 회원과 공유하지 않는다.
         agent._provider = self._role_provider("consciousness")
         agent._prompt_path = None
-        agent._prompt = ("회원의 요청에 대한 작업 규정자다. JSON으로 task_framing, approach, achievement_criteria, "
-                         "assumptions를 반환한다. task_framing·approach·achievement_criteria는 문자열, assumptions는 문자열 목록이다. "
-                         "achievement_criteria는 요청의 완료 조건이다. 선택 필드 imagined_ibl·history_summary는 문자열, "
-                         "independent_review는 기본 false인 불리언이며 실행자 확인 외에 독립 검토가 필요할 때만 true다. "
-                         "capability_focus는 {hint:문자열} 객체다. hint는 작업의 입력·출력·의존 관계와 불확실성을 담고 자명하면 비운다. 액션 추천 목록이나 상세 계약을 다른 필드에 옮기지 않는다. "
+        agent._prompt = ("회원의 원래 요청과 명시 정정을 읽고 task_framing 문자열로 정리한다. "
+                         "JSON 객체로 답하며 필요한 history_summary, assumptions, criteria:[{text:문자열}], "
+                         "capability_focus:{hint:문자열}만 덧붙인다. 생성된 해석은 사용자 요구를 대체하지 않는다. "
+                         "방법·세부 계획·검산은 실행자가 맡는다. "
+                         "independent_review는 기본 false이며 별도 목표–결과 비교가 필요할 때만 true다. "
                          "허브 하네스 변경은 허용되지 않는다.\n" + self._build_system_prompt(self._load_role()))
         agent._supervisor_prompt = agent._prompt
         return agent.process(user_message=user_message, history=history,

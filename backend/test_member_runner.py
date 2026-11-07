@@ -9,7 +9,6 @@ from member_runner import MemberRunner
 
 @pytest.mark.parametrize('bad', [
     {'capability_focus': ['self:read']},
-    {'imagined_ibl': {'code': '[self:read]{}'}},
     {'ibl_focus': {'hint': [1]}},
     {'capability_focus': []},
     {'criteria': '완료'},
@@ -23,7 +22,7 @@ def test_malformed_member_plan_is_corrected_before_execution(monkeypatch, tmp_pa
     monkeypatch.setattr(runner, '_load_role', lambda: '회원 역할')
     monkeypatch.setattr(runner, '_build_system_prompt', lambda role: role)
     monkeypatch.setattr(runner, '_get_available_tools', lambda: ['execute_ibl'])
-    good = {'task_framing': '출하량 비교', 'achievement_criteria': '보고서 저장 및 재독'}
+    good = {'task_framing': '출하량 비교', 'criteria': [{'text': '보고서 저장 및 재독'}]}
     responses = iter([json.dumps({**good, **bad}), json.dumps(good)])
     calls = []
     def respond(provider, prompt, **kwargs):

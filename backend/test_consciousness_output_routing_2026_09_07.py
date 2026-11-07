@@ -172,8 +172,7 @@ def test_reframe_reply_carries_the_same_keys():
     """재규정(reframe) 응답도 같은 칸들을 싣는다 — 한 자리에서만 살면 재규정 뒤 사라진다."""
     import reframe
     keys = {k for k in _prompt_schema_keys()
-            if k in ("task_framing", "expert_choice", "assumptions",
-                     "achievement_criteria", "capability_focus.hint")}
+            if k in ("task_framing", "criteria", "assumptions", "capability_focus.hint")}
     co = _fill(keys)
     co["_revision"] = {"revision_no": 1}
     rendered = reframe.render_for_executor({"revised": True, "output": co})

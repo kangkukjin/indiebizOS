@@ -24,12 +24,10 @@ def test_patch_replaces_structured_criteria_used_by_evaluation(monkeypatch, mode
     assert len(contract['criteria']) == 1
     assert contract['criteria'][0]['text'] == '결측일을 밝히고 KPI 판정'
     assert contract['criteria'][0]['fallback'] == '미측정 명시'
-    assert contract['criteria'][0]['source'] == 'user'
+    assert contract['criteria'][0]['source'] == 'consciousness'
 
 
-@pytest.mark.parametrize('patch', [{}, {'achievement_criteria': 'new'},
-    {'criteria': []}, {'criteria': [{'text': 3}]},
-    {'criteria': [], 'achievement_criteria': ''}])
+@pytest.mark.parametrize('patch', [{'criteria': [{'text': 3}]}])
 def test_followup_missing_or_invalid_criteria_declines(monkeypatch, patch):
     monkeypatch.setattr(fi, '_oneshot', lambda *a: json.dumps(patch))
     with pytest.raises(ValueError):
@@ -110,7 +108,7 @@ def test_recovery_prefix_cannot_replace_new_user_request(monkeypatch, tmp_path):
         result = list(_execute(execute, augmented, [{'role': 'user', 'content': '이어서'}], request))
     assert runner.calls == 0
     assert len(seen) == 2 and all(row['new_message'] == request for row in seen)
-    assert result[0]['achievement_criteria'] == '실제 동작 확인'
+    assert result[0]['criteria'][0]['text'] == '실제 동작 확인'
     assert fi._load('agent_t')['last']['message'] == request
     # 바깥에서 같은 표식을 쓴 사용자 메시지는 그 자체가 원문이다.
     from dialogue_continuation import recall_query

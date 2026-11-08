@@ -54,7 +54,7 @@
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:manage_events]{op: "list"}'
         description: 이벤트·스케줄 통합 관리 (op 분기). 캘린더 이벤트 + 정기 발행·자동화 스케줄 인터페이스 (트리거는 [self:trigger] 별도).
-        target_description: 'create는 title 필수(date "YYYY-MM-DD" · time "HH:MM" · repeat/type/description). do 에 IBL 문장을 주면 실행 이벤트(run_pipeline)로 저장되고 호출한 프로젝트에서 발화한다 — 등록되지 않은 액션 이름은 거절. update/delete/toggle/run_now는 event_id 필요(run_now 는 실행 이벤트에만 — 캘린더 일정·미등록 액션은 정직 거절). list는 year/month 필터 가능.'
+        target_description: 'create는 title 필수(date "YYYY-MM-DD" · time "HH:MM" · repeat/type/description). do 에 IBL 문장을 주면 실행 이벤트(run_pipeline)로 저장되고 호출한 프로젝트에서 발화한다 — 등록되지 않은 액션 이름은 거절. update/delete/toggle/run_now는 event_id 필요(run_now 는 실행 이벤트에만 — 캘린더 일정·미등록 액션은 정직 거절). list는 year/month 필터 가능. create/update는 정규화하여 실제 저장한 일정의 사본을 event로 반환한다. 수정 직후 저장값 확인은 반환된 event를 사용하며, 이후 새 상태가 필요할 때 list로 조회한다.'
         group: schedule
         target_key: op
         router: system

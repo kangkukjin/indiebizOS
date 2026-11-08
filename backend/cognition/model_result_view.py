@@ -941,6 +941,46 @@ def execution_evidence_summary(result):
     return summary
 
 
+def _retained_failure_view(result, out, ref, budget):
+    """Bound display copies; keep exact paths into the original stored result."""
+    import copy
+    from logging_utils import mask_secret_data
+    from model_value_preview import preview_value
+    from tool_failure_results import collect, fields
+    rows, scan = collect(result)
+    if not rows:
+        return {**out, 'tool_failures_scan': scan} if scan['scan_incomplete'] else out
+    # The evidence store masks secrets independently. Apply the same policy to
+    # the newly retained display bodies, including caught failures in value.
+    out = mask_secret_data(copy.deepcopy(out))
+    summaries = []
+    for index, (path, failure) in enumerate(rows):
+        body = mask_secret_data(failure['details']['tool_result'])
+        shown, preview = preview_value(body, max(256, budget // len(rows)), ref['id'], path=path)
+        summary = {'code': failure['code'], 'kind': failure['kind'], 'basis': 'tool_claim',
+                   **fields(body), 'result': shown,
+                   'read_args': {'id': ref['id'], 'path': path, 'offset': 0, 'limit': budget}}
+        if preview:
+            summary['preview'] = preview
+        summaries.append(summary)
+        # Avoid showing the same body twice. A parent may already be omitted
+        # by the ordinary preview; never fabricate a missing parent record.
+        parent = out
+        try:
+            for key in path[:-1]:
+                parent = parent[key]
+            if isinstance(parent, dict) and path[-1] in parent:
+                parent[path[-1]] = {'$model_tool_failure': index}
+        except (KeyError, IndexError, TypeError):
+            pass
+    out['tool_failures'] = summaries
+    out['tool_failures_scan'] = scan
+    out['tool_failures_hint'] = ('실패한 호출이 이미 반환한 결과입니다. 실패 판정은 유지됩니다. '
+                                '충분한 값은 그대로 사용하고 생략된 상세는 read_args로 회수하세요. '
+                                '이 참조 조회는 도구를 재실행하지 않습니다.')
+    return out
+
+
 def project_v2_result(result):
     """Typed values keep their meaning; verbose execution evidence stays on disk."""
     raw = json.dumps(result, ensure_ascii=False, default=str)
@@ -994,6 +1034,7 @@ def project_v2_result(result):
             if preview:
                 out["diagnostic"] = {**out["diagnostic"], "details": shown}
                 out["diagnostic_details_preview"] = preview
+    out = _retained_failure_view(result, out, ref, policy['prose_chars'])
     from operation_effects import summaries
     effects, omitted = summaries(result, {'id': ref['id']})
     if effects:

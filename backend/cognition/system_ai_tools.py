@@ -534,11 +534,11 @@ def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
                 else:
                     updates["action"] = _ea
 
-            if cm.update_event(event_id, **updates):
+            stored = cm.update_event_result(event_id, **updates)
+            if stored is not None:
                 from calendar_rules import recurrence_notice
-                stored = next((e for e in cm.config.get("events", []) if e.get("id") == event_id), {})
                 notice = recurrence_notice(stored)
-                return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 수정됨",
+                return json.dumps({"success": True, "event": stored, "message": f"이벤트 '{event_id}' 수정됨",
                                    **({"notice": notice} if notice else {})}, ensure_ascii=False)
             return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다."}, ensure_ascii=False)
 

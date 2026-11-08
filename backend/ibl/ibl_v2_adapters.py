@@ -271,7 +271,8 @@ def decode_envelope(raw, adapter, input_values=None):
                         # 긴 작업 투영(task_receipts) — 기다리던 작업이 실패·취소·유실로 끝났을 때 catch 가 사정을 가른다
                         "state", "terminal", "task_ref", "timed_out", "failure", "progress", "accepted_at", "elapsed_s",
                         "task_observation", "observation", "execution_result", "details",
-                    ) if key in raw} | ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
+                    ) if key in raw} | {"tool_result": copy.deepcopy(raw)} |
+                    ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value
         raw = {**raw, "value": document_value(raw)}
@@ -306,7 +307,8 @@ def decode_envelope(raw, adapter, input_values=None):
     markers = markers_of(raw)
     if incomplete or any(t.get("scope") != "selection" for t in truncation.get("truncations", [])) or any(b.get("rows_dropped") for b in boundaries):
         raise Fault("PARTIAL_SOURCE", _partial_message(raw, truncation), kind="partial", partial=value,
-                    details={"completion": incomplete, "truncation": truncation, "markers": markers})
+                    details={"completion": incomplete, "truncation": truncation, "markers": markers,
+                             "tool_result": copy.deepcopy(raw)})
     from ibl_v2_ir import pack, unpack
     value = unpack(pack(value))
     evidence = {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}

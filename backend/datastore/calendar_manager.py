@@ -31,6 +31,7 @@ calendar_events.json이 유일한 정보 원천(Single Source of Truth)입니다
 """
 
 import runtime_work
+import copy
 import json
 import os
 import shutil
@@ -295,7 +296,12 @@ class CalendarManagerBase:
 
     @_locked
     def update_event(self, event_id: str, **kwargs) -> bool:
-        """이벤트 수정"""
+        """기존 불리언 계약. 실제 저장과 정규화는 한 입구를 쓴다."""
+        return self.update_event_result(event_id, **kwargs) is not None
+
+    @_locked
+    def update_event_result(self, event_id: str, **kwargs) -> Optional[dict]:
+        """저장한 판본의 사본을 같은 잠금 안에서 반환한다."""
         valid_keys = ("title", "date", "type", "repeat", "description", "time",
                       "action", "action_params", "enabled", "weekdays",
                       "month", "day", "interval_hours",
@@ -311,8 +317,8 @@ class CalendarManagerBase:
                             value = {**value, "pipeline": pin_source(value["pipeline"], value.get("edition"))}
                         evt[key] = value
                 self._save_config()
-                return True
-        return False
+                return copy.deepcopy(evt)
+        return None
 
     def add_goal_schedule(self, goal_id: str, goal_name: str,
                          every_frequency: str = None, schedule_at: str = None) -> dict:

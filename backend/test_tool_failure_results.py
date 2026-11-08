@@ -1,0 +1,133 @@
+"""Producer replies survive failure, catch, journal replay and bounded model views."""
+import copy
+import json
+
+import pytest
+
+from ibl_v2_adapters import decode_envelope
+from ibl_v2_ir import Fault, UNIT
+from tool_failure_results import collect
+
+
+def failure(raw, **adapter):
+    with pytest.raises(Fault) as caught:
+        decode_envelope(raw, {'protocol': 'legacy-envelope', **adapter})
+    return caught.value
+
+
+@pytest.mark.parametrize('body', [
+    {'downloads': [{'path': '/saved', 'size': 5, 'saved': True}, {'saved': False, 'error': 'blocked'}],
+     'tab_id': 'tab-1', 'navigated': [{'url': 'https://example.test'}]},
+    {'items': ['a (2).txt', 'b.txt'], 'count': 2},
+    {'items': [{'cell': 'A1', 'value': 42}], 'errors': [{'cell': 'B1', 'error': '#DIV/0!'}],
+     'recalculated': True, 'path': '/calculated.xlsx'},
+    {'a_future_driver_field': {'finished': [7], 'uncertain': [8]}},
+])
+def test_reply_preserved_without_changing_failure_semantics(body):
+    raw = {'success': False, 'error': 'not all done', **body}
+    original = copy.deepcopy(raw)
+    error = failure(raw)
+    assert error.code == 'TOOL' and error.kind == 'runtime' and error.catchable
+    assert error.partial is UNIT
+    assert error.details['tool_result'] == original
+    raw.clear()
+    assert error.details['tool_result'] == original  # stored snapshot, not mutable producer state
+
+
+@pytest.mark.parametrize('extra,kind,code', [
+    ({'denied': True}, 'permission', 'TOOL'),
+    ({'error_type': 'result_unknown'}, 'protocol', 'TOOL'),
+    ({'approval_required': True}, 'suspended', 'APPROVAL_REQUIRED'),
+    ({'suspended': True, 'task_ref': {'kind': 'x', 'task_id': 'y'}}, 'suspended', 'TASK_PENDING'),
+])
+def test_unrecoverable_failure_is_not_promoted(extra, kind, code):
+    error = failure({'success': False, 'error': 'blocked', 'items': [1], **extra}, partial_value_path='')
+    assert (error.kind, error.code, error.catchable, error.partial) == (kind, code, False, UNIT)
+    assert error.details['tool_result']['items'] == [1]
+
+
+def test_explicit_partial_and_partial_source_keep_original_contract():
+    raw = {'success': False, 'items': [1], 'errors': ['bad']}
+    error = failure(raw, partial_value_path='')
+    assert error.kind == 'partial' and error.partial == raw
+    with pytest.raises(Fault) as caught:
+        decode_envelope({'success': True, 'source_complete': False, 'items': [2], 'errors': ['missing']},
+                        {'protocol': 'legacy-envelope'})
+    assert caught.value.code == 'PARTIAL_SOURCE'
+    assert caught.value.details['tool_result']['errors'] == ['missing']
+
+
+def test_collector_ignores_text_wire_and_report_body_claims():
+    f = failure({'success': False, 'error': 'x', 'items': [1]}).view()
+    wrapped = {'value': {'caught': f}, 'output': json.dumps(f), 'value_wire': {'fake': f}}
+    rows, scan = collect(wrapped)
+    assert len(rows) == 1 and rows[0][0] == ['value', 'caught', 'details', 'tool_result']
+    assert scan == {'omitted': 0, 'scan_incomplete': False}
+    assert collect({'output': json.dumps(f)})[0] == []
+    assert collect({'tool_result': f})[0] == []
+    many, scan = collect([f] * 10, limit=2)
+    assert len(many) == 2 and scan['omitted'] == 8
+    deep = f
+    for _ in range(20):
+        deep = {'value': deep}
+    assert collect(deep)[1]['scan_incomplete']
+    assert collect([0] * 1000 + [f])[1]['scan_incomplete']
+    assert collect([0] * 1000 + [f])[0] == []
+
+
+def test_actual_ibl_copy_failure_and_resume_do_not_repeat_effect(tmp_path):
+    from ibl_v2_entry import handle_request
+    source, dest = tmp_path / 'source.txt', tmp_path / 'dest'
+    source.write_text('new')
+    dest.mkdir()
+    (dest / source.name).write_text('old')
+    code = '[{path:$source},{path:$missing}] >> [self:copy]{dest:$dest}'
+    request = {'edition': 2, 'code': code,
+               'inputs': {'source': str(source), 'missing': str(tmp_path / 'missing.txt'), 'dest': str(dest)}}
+    first = handle_request(request, str(tmp_path))
+    assert not first['success'], first
+    raw = first['diagnostic']['details']['tool_result']
+    assert raw['items'] == ['source (2).txt'] and raw['count'] == 1
+    assert (dest / 'source (2).txt').read_text() == 'new'
+    resumed = handle_request({**request, 'resume': first['resume']}, str(tmp_path))
+    assert not resumed['success'] and resumed['diagnostic']['details']['tool_result'] == raw
+    assert sorted(p.name for p in dest.iterdir()) == ['source (2).txt', 'source.txt']
+    # A caught failure exposes the retained body; the nested failed call remains failed.
+    caught = handle_request({**request, 'code': 'return [try] { ' + code + ' } [catch] { $error.details.tool_result }'}, str(tmp_path))
+    assert caught['success'] and caught['value']['success'] is False
+    assert caught['value']['items'] == ['source (3).txt']
+
+
+def test_model_preview_masks_retains_exact_path_and_does_not_reexecute(tmp_path, monkeypatch):
+    import model_result_view as view
+    from supervision_store import TurnStore
+    store = TurnStore(tmp_path / 'evidence')
+    monkeypatch.setattr(view, 'evidence_store', lambda: store)
+    raw = {'success': False, 'error': 'partial', 'api_key': 'sk-' + 'Ab3' * 12,
+           'items': [{'path': f'/file/{i}', 'detail': 'data ' * 100} for i in range(80)]}
+    fault = failure(raw).view()
+    original = {'edition': 2, 'success': True, 'value': {'caught': fault}}
+    shown = view.project_result(original)
+    reports = shown['tool_failures']
+    assert len(reports) == 1 and reports[0]['basis'] == 'tool_claim'
+    assert reports[0]['preview']['changes_total'] > 0
+    assert raw['api_key'] not in json.dumps(shown)
+    assert original['value']['caught']['details']['tool_result'] == raw
+    ref = reports[0]['read_args']
+    assert ref['path'] == ['value', 'caught', 'details', 'tool_result']
+    rows, _ = view.resolve_input_refs({'kept': {'$ref': ref['id'], 'path': ref['path'] + ['items']}}, store=store)
+    assert rows['kept'] == raw['items']
+    with pytest.raises(ValueError, match='가린 자리'):
+        view.resolve_input_refs({'kept': {'$ref': ref['id'], 'path': ref['path']}}, store=store)
+
+
+def test_situation_keeps_attributed_reference_not_goal_success():
+    from execution_situation import Situation
+    from situation_evidence import observe_result
+    situation = Situation('owner', 'task', lambda *a, **kw: None, lambda v: {'id': 'e'})
+    fault = failure({'success': False, 'error': 'x', 'saved': True, 'items': [1]}).view()
+    observe_result(situation, {'value': fault}, {'id': 'original'}, 'call')
+    rows = [r for r in situation.snapshot()['observations'] if r['latest']['subject']['kind'] == 'tool_failure']
+    assert len(rows) == 1
+    assert rows[0]['latest']['basis'] == 'tool_claim'
+    assert rows[0]['latest']['source_ref']['path'] == ['value', 'details', 'tool_result']

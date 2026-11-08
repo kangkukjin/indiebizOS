@@ -104,6 +104,14 @@ def observe_result(situation, result, ref, call_id):
     from logging_utils import mask_secret_data
     obj = mask_secret_data(result)
     visited = 0
+    from tool_failure_results import collect as failure_results, fields
+    failures, scan = failure_results(obj)
+    for path, failure in failures:
+        situation.observe({'kind': 'tool_failure', 'id': call_id, 'path': path},
+                          'reported_outcome', {'code': failure['code'], 'kind': failure['kind'],
+                                               **fields(failure['details']['tool_result']), **scan},
+                          source='tool_result', source_ref={**ref, 'path': path},
+                          basis='tool_claim', call_id=call_id)
     # Structural producer claims only: no stdout JSON promotion. Exact original paths survive.
     from operation_effects import collect, identity
     effects, omitted = collect(obj)

@@ -109,6 +109,7 @@
     "base/thread_context",
     "base/thumbnails",
     "base/tool_completion",
+    "base/tool_failure_results",
     "base/trace_read",
     "base/trajectory_payload",
     "base/update_maintenance",
@@ -652,8 +653,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 641,
-    "engine": 609,
+    "total": 642,
+    "engine": 610,
     "blocklist": 32
   }
 }

@@ -11,6 +11,9 @@ PATHS = {"path", "root_path", "file_path", "target", "dir_path", "src", "source"
 
 def protected_write_reason(handler, path, body_root):
     """File tools and candidate publication share one protected boundary."""
+    from script_workspace import owned_script_work_path
+    if owned_script_work_path(path) is not None:
+        return None  # Task-owned scratch is not a host-owned execution receipt.
     from program_boundary import protected_reason
     relative = Path(path).relative_to(body_root).as_posix()
     return protected_reason(relative)
@@ -108,10 +111,19 @@ def prepare(self_module, name, payload, project):
     if name == "patch_op":
         return result, str(root)  # 적용자는 정본을 소유. 일반 파일 도구와 구별한다.
     from runtime_utils import expand_body_path
+    from script_workspace import owned_script_work_tree, prepare_path
+    temporary = []
     for field in PATHS & result.keys():
         if not isinstance(result[field], str):
             raise ValueError("수리 파일 경로는 문자열이어야 합니다")
         path = Path(expand_body_path(result[field]))
+        scratch = owned_script_work_tree(path if path.is_absolute() else wt / path)
+        scratch_operand = name in FILE_TOOLS or (
+            name == 'script_op' and payload.get('op') == 'run' and field == 'args_file')
+        if scratch_operand and scratch is not None:
+            result[field] = str(scratch)
+            temporary.append(scratch)
+            continue
         if read_only or (name == 'copy_path' and field in {'src', 'source'}):
             result[field] = str(source_path(st, root, wt, path))
             continue
@@ -134,13 +146,29 @@ def prepare(self_module, name, payload, project):
                 owner = change(rel, sess['baseline'].get(rel), {'pending': True})
                 if (not owner or owner['route'] != 'workspace') and not artifact_path(rel):
                     raise PermissionError('일반 프로그램 수리 범위 밖 변경: ' + rel)
-        from script_workspace import current_scope, workspace, prepare_path
-        candidate = (wt / rel).resolve()
-        if current_scope() and candidate.is_relative_to(workspace().resolve()):
-            prepare_path(candidate)
-            result[field] = str(candidate)
-        else:
-            result[field] = str(st._candidate.target(wt, rel))
+        result[field] = str(st._candidate.target(wt, rel))
+    if name == 'copy_path' and temporary and not (result.get('src') or result.get('source')):
+        # The legacy pipe carries source paths inside rows, not PATHS. Validate
+        # the whole batch before copy_piped_items creates/writes its destination.
+        rows = self_module._load_sibling('copy_ops').piped_items(result.get('_prev_result'))
+        destination = result.get('dest') or result.get('destination')
+        if rows is not None and destination:
+            mapped = []
+            for row in rows:
+                row = dict(row) if isinstance(row, dict) else row
+                src = (row.get('path') or row.get('file') or row.get('url')) if isinstance(row, dict) else None
+                if isinstance(src, str) and src and not src.startswith(('http://', 'https://')):
+                    owned_script_work_tree(Path(destination) / Path(src).name)
+                    if row.get('source') != 'usb':
+                        path = Path(expand_body_path(src))
+                        scratch = owned_script_work_tree(path if path.is_absolute() else wt / path)
+                        row['path'] = str(scratch or source_path(st, root, wt, path))
+                mapped.append(row)
+            result['_prev_result'] = {'items': mapped}
+    # Validate every operand before making any directory (including mixed moves).
+    if name in WRITE_TOOLS:
+        for path in temporary:
+            prepare_path(path)
     return result, str(wt)
 
 
@@ -202,6 +230,12 @@ def file_call(handler, payload, context):
     from thread_context import repair_workspace_scope
     from runtime_utils import expand_body_path
     from program_boundary import describe
+    from script_workspace import owned_script_work_path
+    # Resolve scratch in the caller's candidate, before the live-document view
+    # temporarily clears repair_workspace. prepare() validates all operands.
+    if name in FILE_TOOLS and any(isinstance(payload[f], str)
+            and owned_script_work_path(expand_body_path(payload[f])) is not None for f in fields & payload.keys()):
+        return None
     paths, routes = {}, set()
     with repair_workspace_scope(None):
         for field in fields & payload.keys():
@@ -274,8 +308,15 @@ def execute(handler, payload, context, operation):
             return operation(*routed, prepared=True)
     if name == 'script_op' and payload.get('op') in {'register', 'remove'}:
         return managed_write(st, repo, key, lambda: operation(payload, context))
-    result = operation(payload, context)
-    return record_write(st, repo, key, result) if name in WRITE_TOOLS else result
+    from copy import copy
+    from script_workspace import owned_script_work_path
+    mapped, project = prepare(handler, name, payload, context.project_path)
+    prepared_context = copy(context)
+    prepared_context.project_path = project
+    result = operation(mapped, prepared_context, prepared=True)
+    paths = [mapped[f] for f in PATHS & mapped.keys()]
+    scratch_only = bool(paths) and all(owned_script_work_path(p) is not None for p in paths)
+    return record_write(st, repo, key, result) if name in WRITE_TOOLS and not scratch_only else result
 
 
 def managed_write(st, repo, key, operation):

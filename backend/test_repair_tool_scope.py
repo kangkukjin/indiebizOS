@@ -7,6 +7,7 @@ from pathlib import Path
 
 import boot_paths  # noqa: F401
 import api_repair_continuation  # noqa: F401 — bind real path accessor before fixture patches
+import repair_execution_scope  # noqa: F401 — bind real authority before fixture patches
 import pytest
 from test_repair_staging import _load_handler, _make_repo
 from test_conscious_supervisor import supervisor  # noqa: F401
@@ -68,10 +69,222 @@ def repair(tmp_path, monkeypatch, supervisor):
     from tool_context import ToolContext
     def call(name, args):
         result = handler.execute(args, ToolContext(str(repo), name, agent_id='system_ai'))
-        return result if name in {'read_file', 'edit_file'} else json.loads(result)
+        return result if isinstance(result, dict) or name in {'read_file', 'edit_file'} else json.loads(result)
     call.handler = handler
     with repair_workspace_scope(str(wt)):
         yield repo, wt, st, supervisor, call
+
+
+@pytest.mark.parametrize('limited', [False, True])
+def test_public_turn_script_repair_edit_retry_and_candidate_separation(repair, monkeypatch, limited):
+    import execution_turn
+    import tool_loader
+    from ibl_v2_entry import handle_request
+    from script_workspace import request_scope, workspace
+    from thread_context import actor_context
+    repo, wt, st, controller, call = repair
+    # Runtime state belongs to the fixture; executable vocabulary belongs to
+    # the installed body, just as in a real repair candidate.
+    body = Path(__file__).resolve().parents[1]
+    (repo / 'data/vocabulary_policy.yaml').write_bytes((body / 'data/vocabulary_policy.yaml').read_bytes())
+    monkeypatch.setattr('runtime_utils.get_code_root', lambda: body)
+    monkeypatch.setattr('runtime_utils.get_source_root', lambda: body)
+    monkeypatch.setattr('vocabulary_state.get_base_path', lambda: body)
+    monkeypatch.setattr('ibl_registry._nodes_path', body / 'data/ibl_nodes.yaml')
+    session = st.read_session(str(repo), 'script-repair')
+    if limited:
+        session['task_scope'] = {'paths': ['data/scripts/calculator.py']}
+        st._save_session(str(repo), session)
+    original = tool_loader.load_tool_handler
+    monkeypatch.setattr(tool_loader, 'load_tool_handler', lambda name:
+                        call.handler if name in {'patch_op', 'write_file', 'read_op', 'edit_file', 'script_op'}
+                        else original(name))
+    token = execution_turn._current.set(execution_turn.Binding(controller.runner, 'system_ai', 'script-repair'))
+    source = ('import json, os\nfrom pathlib import Path\n'
+              'data = json.load(__import__("sys").stdin)\n'
+              'raise ValueError("repair me")\n'
+              f'assert os.environ["INDIEBIZ_BASE_PATH"] == {str(wt)!r}\n'
+              f'target = Path({str(repo / "backend/test_existing.py")!r})\n'
+              'try:\n    target.write_text("FORBIDDEN")\n'
+              'except PermissionError:\n    pass\n'
+              'else:\n    raise AssertionError("live write escaped sandbox")\n'
+              'Path(os.environ["INDIEBIZ_SCRIPT_RESULT"]).write_text(json.dumps(data))\n')
+    try:
+        with actor_context(agent_id='system_ai', task_id='script-repair', origin='user'), request_scope(repo, 'system_ai'):
+            def run(code, inputs=None):
+                return handle_request({'code': code, 'edition': 2, 'inputs': inputs or {}}, str(repo), 'system_ai')
+            first = run('[self:write]{path:"~turn/probe.py",content:$source}; '
+                        'return [self:script]{path:"~turn/probe.py",args:{items:[{n:2},{n:4}]}}', {'source': source})
+            assert not first['success'] and first.get('diagnostic', {}).get('code') == 'SCRIPT_EXIT', json.dumps(first, ensure_ascii=False)
+            work = workspace()
+            assert work.is_relative_to(wt)
+            assert 'repair me' in str(call('read_file', {'path': '~turn/probe.py'}))
+            edited = run('[self:edit]{path:"~turn/probe.py",old_string:$old,new_string:""}',
+                         {'old': 'raise ValueError("repair me")\n'})
+            assert edited['success'], edited
+            second = run('$v=[self:script]{path:"~turn/probe.py",args:{items:[{n:2},{n:4}]}}; '
+                         'return $v.items >> [table:filter]{where:($r)=>$r.n>2}')
+            assert second['success'] and second['value'] == [{'n': 4}], second
+            cancelled = handle_request({'code': '[self:script]{path:"~turn/probe.py"}', 'edition': 2},
+                                       str(repo), 'system_ai', cancel_check=lambda: True)
+            assert not cancelled['success'] and cancelled['diagnostic']['code'] == 'CANCELLED', cancelled
+            assert len(list((work.parent / 'executions').glob('*/meta.json'))) == 2
+            assert (repo / 'backend/test_existing.py').read_text() == 'def test_existing(): assert True\n'
+            current = st.read_session(str(repo), 'script-repair')
+            st._candidate.collect(str(repo), current)
+            assert not current['files'], current['files']
+            assert not (repo / 'data/script_runs').exists()
+    finally:
+        execution_turn._current.reset(token)
+
+
+@pytest.fixture
+def repair_turn(repair):
+    import execution_turn
+    from script_workspace import request_scope, workspace
+    from thread_context import actor_context
+    repo, wt, st, controller, call = repair
+    token = execution_turn._current.set(execution_turn.Binding(controller.runner, 'system_ai', 'script-repair'))
+    try:
+        with actor_context(agent_id='system_ai', task_id='script-repair'), request_scope(repo, 'system_ai'):
+            yield (*repair, workspace())
+    finally:
+        execution_turn._current.reset(token)
+
+
+def test_turn_file_operations_do_not_invalidate_or_publish_candidate(repair_turn):
+    repo, wt, st, controller, call, work = repair_turn
+    before = st.read_session(str(repo), 'script-repair')
+    made = call('write_file', {'path': '~turn/a.py', 'content': 'VALUE = 1\n'})
+    assert made['success'] and not made.get('staged'), made
+    assert call('read_file', {'path': made['path']}) == 'VALUE = 1\n'
+    edit = call('edit_file', {'path': '~turn/a.py', 'old_string': '1', 'new_string': '2'})
+    assert 'staged' not in edit and (work / 'a.py').read_text() == 'VALUE = 2\n', edit
+    for name, args in [
+        ('make_directory', {'path': '~turn/sub'}),
+        ('copy_path', {'src': '~turn/a.py', 'dest': '~turn/sub/b.py'}),
+        ('move_path', {'src': '~turn/sub/b.py', 'dest': '~turn/sub/c.py'}),
+        ('delete_path', {'path': '~turn/sub/c.py'}),
+    ]:
+        result = call(name, args)
+        assert result.get('success', True) and not result.get('staged') and not result.get('error'), result
+    assert not (work / 'sub/c.py').exists()
+    assert st.read_session(str(repo), 'script-repair') == before
+    assert not (repo / 'data/script_runs').exists()
+
+
+@pytest.mark.parametrize('kind', ['other_turn', 'receipt', 'live', 'symlink', 'parent_link', 'hardlink', 'escape'])
+def test_turn_ownership_rejects_foreign_records_and_links_before_mutation(repair_turn, kind):
+    import os
+    repo, wt, st, controller, call, work = repair_turn
+    assert call('write_file', {'path': '~turn/good.py', 'content': 'ORIGINAL'})['success']
+    target = {
+        'other_turn': work.parent.parent / 'another-scope/work/private.py',
+        'receipt': work.parent / 'executions/id/meta.json',
+        'live': repo / work.relative_to(wt) / 'private.py',
+    }.get(kind)
+    if target:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('PRIVATE')
+        requested = str(target)
+    elif kind == 'escape':
+        target = work.parent / 'scope.json'
+        requested = '~turn/../scope.json'
+    else:
+        target = work / 'good.py'
+        if kind == 'parent_link':
+            (work / 'linked').symlink_to(work, target_is_directory=True)
+            requested = '~turn/linked/good.py'
+        elif kind == 'symlink':
+            (work / 'link.py').symlink_to(target)
+            requested = str(work / 'link.py')
+        else:
+            os.link(target, work / 'link.py')
+            requested = '~turn/link.py'
+    before = target.read_bytes()
+    result = call('write_file', {'path': requested, 'content': 'FORBIDDEN'})
+    assert not result.get('success', True), result
+    assert target.read_bytes() == before
+    result = call('read_file', {'path': requested})
+    assert 'PRIVATE' not in result
+
+
+def test_turn_mixed_transfer_checks_destination_and_limited_source(repair_turn):
+    repo, wt, st, controller, call, work = repair_turn
+    assert call('write_file', {'path': '~turn/helper.py', 'content': 'VALUE = 1\n'})['success']
+    session = st.read_session(str(repo), 'script-repair')
+    session['task_scope'] = {'paths': ['data/scripts/calculator.py']}
+    st._save_session(str(repo), session)
+    for dest in ['data/scripts/forbidden.py', 'backend/base/script_workspace.py',
+                 str(work.parent / 'executions/forged.json')]:
+        result = call('move_path', {'src': '~turn/helper.py', 'dest': dest})
+        assert not result['success'], result
+        assert (work / 'helper.py').exists()
+    # A permitted implementation is still staged, while scratch remains private.
+    result = call('copy_path', {'src': '~turn/helper.py', 'dest': 'data/scripts/calculator.py'})
+    assert result['success'] and result['staged'], result
+    assert not (repo / 'data/scripts/calculator.py').exists()
+    session = st.read_session(str(repo), 'script-repair')
+    assert {row['rel'] for row in session['files'].values()} == {'data/scripts/calculator.py'}
+    (wt / 'data/scripts/outside.py').write_text('OUTSIDE')
+    result = call('move_path', {'src': 'data/scripts/outside.py', 'dest': '~turn/outside.py'})
+    assert not result['success'] and (wt / 'data/scripts/outside.py').exists(), result
+    assert not (work / 'outside.py').exists()
+
+
+def test_turn_batch_copy_validates_all_local_sources_before_copying(repair_turn):
+    repo, wt, st, controller, call, work = repair_turn
+    assert call('write_file', {'path': '~turn/a.py', 'content': 'GOOD'})['success']
+    private = work.parent / 'executions/receipt.json'
+    private.parent.mkdir()
+    private.write_text('PRIVATE')
+    result = call('copy_path', {'dest': '~turn/batch', '_prev_result': {
+        'items': [{'path': '~turn/a.py'}, {'file': str(private)}]}})
+    assert not result['success'], result
+    assert not (work / 'batch').exists()
+    result = call('copy_path', {'dest': '~turn/batch', '_prev_result': {
+        'items': [{'path': '~turn/a.py'}]}})
+    assert result['success'] and not result.get('staged'), result
+    assert (work / 'batch/a.py').read_text() == 'GOOD'
+
+
+@pytest.mark.parametrize('limited', [False, True])
+def test_registered_script_can_read_current_turn_args_file(repair_turn, limited):
+    repo, wt, st, controller, call, work = repair_turn
+    result = call('write_file', {'path': 'data/scripts/calculator.py',
+        'content': 'import json,sys\nprint(json.dumps(json.load(sys.stdin)))\n'})
+    assert result['success'], result
+    result = call('script_op', {'op': 'register', 'id': 'calculator', 'path': 'data/scripts/calculator.py'})
+    assert result['success'], result
+    if limited:
+        session = st.read_session(str(repo), 'script-repair')
+        session['task_scope'] = {'paths': ['data/scripts/calculator.py']}
+        st._save_session(str(repo), session)
+    assert call('write_file', {'path': '~turn/input.json', 'content': '{"n":42}'})['success']
+    result = call('script_op', {'op': 'run', 'id': 'calculator', 'args_file': '~turn/input.json', '_ibl_edition': 2})
+    assert result['success'] and result['value'] == {'n': 42}, result
+    forbidden = work.parent / 'executions/input.json'
+    forbidden.parent.mkdir(parents=True, exist_ok=True)
+    forbidden.write_text('{"n":99}')
+    result = call('script_op', {'op': 'run', 'id': 'calculator', 'args_file': str(forbidden)})
+    assert not result['success'], result
+
+
+@pytest.mark.parametrize('restriction', ['cancelled', 'activation', 'nonowner', 'nodes'])
+def test_turn_file_operations_keep_authority_and_lifetime(repair_turn, monkeypatch, restriction):
+    import principal
+    from contextlib import nullcontext
+    repo, wt, st, controller, call, work = repair_turn
+    if restriction == 'cancelled':
+        monkeypatch.setattr('repair_continuation.cancelled', lambda *a: True)
+    elif restriction == 'activation':
+        monkeypatch.setattr('repair_context.activation_only', lambda: True)
+    elif restriction == 'nodes':
+        monkeypatch.setattr('thread_context.get_allowed_nodes', lambda: ['self'])
+    with principal.narrow(principal.ANONYMOUS) if restriction == 'nonowner' else nullcontext():
+        result = call('write_file', {'path': '~turn/no.py', 'content': 'FORBIDDEN'})
+        assert not result['success'], result
+    assert not (work / 'no.py').exists()
 
 
 def test_document_and_ledger_edits_reach_live_owner_without_code_completion(repair, monkeypatch):

@@ -41,7 +41,7 @@ def request_scope(project, agent=None, resume=None, stored_scope=None):
 def storage_root():
     from runtime_utils import get_base_path
     from thread_context import get_repair_workspace
-    root = Path(get_repair_workspace() or get_base_path())
+    root = Path(get_repair_workspace() or get_base_path()).resolve()
     return root / 'data' / 'script_runs' / 'transient'
 
 
@@ -58,37 +58,64 @@ def workspace():
 
 
 def expand(path):
-    root = workspace().resolve()
+    root = workspace()
     relative = path[len('~turn'):].lstrip('/\\')
-    target = (root / relative).resolve()
-    if not target.is_relative_to(root):
+    target = owned_script_work_path(root / relative)
+    if target is None:
         raise PermissionError('~turn 경로는 현재 턴 작업 폴더 안에 있어야 합니다.')
     return str(target)
+
+
+def owned_script_work_path(path):
+    """Recognize only this task's working files, never its sibling receipts.
+
+    Observation does not create directories or renew retention. File tools and
+    script execution share ownership/link checks; repair publication keeps the
+    whole script_runs tree private.
+    """
+    if _scope.get() is None:
+        return None
+    root = storage_root() / _scope.get() / 'work'
+    path = Path(os.path.abspath(path))
+    if not path.is_relative_to(root):
+        return None
+    authorize()
+    if path.resolve() != path or path.is_symlink():
+        raise PermissionError('~turn 작업 경로의 심볼릭 링크는 지원하지 않습니다.')
+    if path.is_file() and path.stat().st_nlink != 1:
+        raise PermissionError('~turn 작업 파일의 하드 링크는 지원하지 않습니다.')
+    return path
+
+
+def owned_script_work_tree(path):
+    """Validate directory operands before recursive file mutations."""
+    path = owned_script_work_path(path)
+    if path is not None and path.is_dir():
+        for child in path.rglob('*'):
+            owned_script_work_path(child)
+    return path
 
 
 def source_path(raw):
     from runtime_utils import expand_body_path
     root = workspace().resolve()
     path = Path(expand_body_path(raw))
-    path = (path if path.is_absolute() else root / path).resolve()
-    if not path.is_relative_to(root) or path.suffix != '.py' or not path.is_file():
-        raise PermissionError('path는 현재 ~turn 작업 폴더 안의 실존 Python 파일이어야 합니다.')
-    if path.stat().st_nlink != 1:
-        raise PermissionError('임시 Script 진입 파일의 하드 링크는 지원하지 않습니다.')
+    path = owned_script_work_path(path if path.is_absolute() else root / path)
+    if path is None or path.suffix != '.py' or not path.is_file():
+        raise PermissionError('path는 현재 ~turn 작업 폴더 안의 실존 Python 파일이어야 합니다. '
+                              '~turn에 작성한 뒤 실행하세요. 프로젝트 파일은 셸 실행 또는 등록 id를 사용하세요.')
     return path
 
 
 def prepare_path(path):
     """Called only by file mutation, never by compiler/path observation."""
-    if _scope.get() is None:
+    if owned_script_work_path(path) is None:
         return
-    root = (storage_root() / _scope.get() / 'work').resolve()
-    if Path(path).resolve().is_relative_to(root):
-        authorize()
-        root.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        os.chmod(root.parent, 0o700)
-        root.mkdir(exist_ok=True, mode=0o700)
-        os.chmod(root, 0o700)
-        import time
-        from file_script import atomic_json
-        atomic_json(root.parent / 'scope.json', {'protocol': 'file-workspace/1', 'updated': time.time()})
+    root = workspace()
+    root.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(root.parent, 0o700)
+    root.mkdir(exist_ok=True, mode=0o700)
+    os.chmod(root, 0o700)
+    import time
+    from file_script import atomic_json
+    atomic_json(root.parent / 'scope.json', {'protocol': 'file-workspace/1', 'updated': time.time()})

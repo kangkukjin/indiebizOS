@@ -176,6 +176,26 @@ def test_links_and_foreign_turn_paths_are_rejected(ibl, tmp_path):
         assert not out['success'], out
 
 
+def test_configured_body_alias_keeps_turn_paths_canonical(tmp_path, monkeypatch):
+    import script_workspace
+    body = tmp_path / 'body'
+    body.mkdir()
+    alias = tmp_path / 'body-link'
+    alias.symlink_to(body, target_is_directory=True)
+    monkeypatch.setattr('runtime_utils.get_base_path', lambda: alias)
+    monkeypatch.setattr('thread_context.get_repair_workspace', lambda: None)
+    with request_scope(alias, 'alias-test'):
+        path = Path(script_workspace.expand('~turn/main.py'))
+        assert path.is_relative_to(body) and not path.is_relative_to(alias)
+        script_workspace.prepare_path(path)
+        path.write_text(RESULT)
+        assert script_workspace.source_path('~turn/main.py') == path
+        # A configured body alias is not permission for links within scratch.
+        (path.parent / 'link.py').symlink_to(path)
+        with pytest.raises(PermissionError):
+            script_workspace.source_path('~turn/link.py')
+
+
 def test_retention_deletes_raw_record_and_work_but_skips_active(tmp_path):
     from filelock import FileLock
     root = tmp_path / 'transient'

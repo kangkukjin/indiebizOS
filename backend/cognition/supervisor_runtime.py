@@ -26,7 +26,8 @@ ROLE_PROMPT = """당신은 실행 중인 요청의 방향을 점검하는 의식
 진행이 적절하면 CONTINUE다. 진단할 수 없으면 UNKNOWN, 바꿀 행동이 있으면 REWORK다.
 방법 선택·계산·제작·결과 보완은 실행자가 맡는다. 문제 자체가 틀렸을 때만 수정한
  task_framing과 필요한 기존 규정 필드(criteria, assumptions 등)를 반환한다.
-연구계획 갱신도 실행자가 맡는다. 같은 판단을 받으려고 다시 reframe을 시키지 않는다.
+연구계획의 세부 방법·진행 갱신은 실행자가 맡는다. 전체 접근의 재설계가 필요하면
+그 이유를 전달한다. 이번 교정으로 충분한데 같은 판단을 받으려고 다시 reframe을 시키지 않는다.
 첫 입력의 상태와 기존 로그를 사용한다. executor_paused=true일 때만 supervision의
 execute로 진단에 필요한 원문을 읽을 수 있다. 실행 중인 외부 작업을 중복 시작하지 않는다.
 교정은 findings에 한 번만 쓴다. 각 항목은 reason, instruction, scope를 갖는다.

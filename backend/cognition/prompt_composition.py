@@ -182,9 +182,8 @@ def _user_command_section(sample: str, include_think_note: bool = True) -> Dict[
     from prompt_builder import compile_user_command
     plain = compile_user_command(sample, None)
     note = ("EXECUTE 경로: 원문 그대로. THINK 경로: 원문과 시스템 실행 지침(의식 보강)의 출처를 구분하고 "
-            "'다음 절차에 따라 수행하라' 앵커 아래 task_framing · 기준의 출처(criteria_contract) · 전문가의 선택 · 전제(assumptions) · "
-            "필요한 맥락과 판단 힌트(hint) · "
-            "참고할 가이드 · 충족 기준이 차례로 붙는다." if include_think_note else "")
+            "task_framing · 기준의 출처(criteria_contract) · 전제(assumptions) · "
+            "전문가의 접근방식과 이유(hint) · 참고할 가이드 · 필요한 연구계획을 전달한다." if include_think_note else "")
     return _section("user_command", "사용자 명령과 시스템 실행 지침", "user", "input",
                     "prompt_builder.compile_user_command", plain, note=note)
 
@@ -457,6 +456,10 @@ def _assemble_consciousness(sample: str) -> Dict[str, Any]:
         _section("framing_revision", "<framing_revision> 턴 안 재규정", "user", "turn",
                  "reframe.py — 실행자가 깨진 전제를 들고 되물은 경우", "",
                  condition="실행자가 reframe 도구를 부른 턴", included=False),
+        _file_section("research_planning_guide", "의식의 심층연구 계획 교재", "user",
+                      "data/guides/deep_research.md", included=False,
+                      condition="심층연구의 최초·중요 개정 때 별도 계획 작성 입력에 한 번 제공",
+                      note="research_planning.plan_once: 전문가 접근을 계획 본문으로 구체화해 저장·인계. 유효한 계획은 재사용."),
         _section("user_message", "<user_message>", "user", "input", "사용자 원문",
                  f"<user_message>\n{sample}\n</user_message>"),
     ]
@@ -475,7 +478,7 @@ def _assemble_consciousness(sample: str) -> Dict[str, Any]:
                      "(_load_prompt + _build_input); 감독이 살아 있으면 supervisor.plan 으로 위임",
             "output_keys": ["task_framing", "criteria", "capability_focus",
                             "guide_files", "assumptions", "needs_clarification", "needs_repair",
-                            "history_summary", "deep_research", "independent_review"]}
+                            "history_summary", "deep_research", "revise_research_plan", "independent_review"]}
 
 
 def _agent_block(name: str, role: str, notes: str) -> str:
@@ -696,7 +699,7 @@ AGENTS: List[Dict[str, Any]] = [
      "summary": "앱 만들기 표면의 시스템 AI. 앱메이커 역할이 덧붙는다.",
      "build": lambda s, p: _assemble_system_ai(s, "appmaker")},
     {"id": "consciousness", "label": "의식", "group": "인지", "role": "consciousness",
-     "summary": "THINK 턴의 문제 규정·달성 기준·전문가의 선택·실행 초안. 출력은 실행자의 사용자 명령에 융합된다.",
+     "summary": "사용자 요청과 전문가의 접근을 정리한다. 심층연구는 가이드를 읽고 연구계획을 작성해 실행자에게 전달한다.",
      "build": lambda s, p: _assemble_consciousness(s)},
     {"id": "supervisor", "label": "의식 감독", "group": "인지", "role": "consciousness",
      "summary": "계획·재규정·중간관리(검토)·인용 영수증. 감독 버스가 살아 있으면 의식 호출을 대신 받는다.",

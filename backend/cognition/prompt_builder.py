@@ -755,7 +755,7 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
 
     return ("사용자 원래 요청과 대화의 명시 정정을 수행하라. "
             "아래 현재 요청과 실행 메모는 의식이 정리한 해석이며 사용자 요구를 대체하지 않는다. "
-            "방법·계획·검산은 실행자가 실제 관측에 따라 판단한다.\n\n"
+            "전달된 접근·연구계획을 바탕으로 세부 방법·검산은 실행자가 실제 관측에 따라 판단한다.\n\n"
             + "\n\n".join(aug)
             + "\n\n요청의 근거(사용자 원문): " + json.dumps(user_cmd, ensure_ascii=False))
 

@@ -1,4 +1,4 @@
-"""연구 작업 문서의 저장·판본 전달. 계획 작성과 갱신은 실행자가 맡는다."""
+"""의식의 연구 설계와 저장·인계. 실행자는 조사·세부 조정·진행 갱신을 맡는다."""
 import hashlib
 import json
 import uuid
@@ -6,6 +6,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 GUIDE = "deep_research.md"
+
+PLANNING_PROMPT = """당신은 연구를 설계하는 의식 에이전트다.
+사용자 원래 목적·명시 조건과 관련 맥락을 기준으로 제공된 심층연구 가이드를 읽고,
+해당 분야 전문가라면 이 문제를 어떻게 구성하고 조사할지 생각해 연구계획을 작성한다.
+방법 이름 하나나 도구 목록에 머물지 말고 질문의 분해, 경쟁 설명·대안, 판단을 바꿀 증거,
+자료 선정·분석·종합 방식과 그 이유를 이번 문제에 맞게 연결한다. 불필요한 항목은 만들지 않는다.
+기존 계획·확보한 근거·진행을 보존하며 필요한 부분만 고친다. 전문가의 접근은 잠정 설계이며
+사용자 요구나 추가 합격 조건이 아니다. 모르는 방법·자료 접근성은 예비 조사의 질문으로 남긴다.
+아직 수행하지 않은 조사·열람·검증을 완료했다고 쓰지 않는다. 계획만 요청했으면 수행을 지시하지 않는다.
+저장 자료만 모드에서는 기존 자료 안에서 계획한다. 계획이 새로운 권한을 부여하지 않는다.
+실행자는 저장된 계획으로 조사하고 세부 방법·진행을 갱신한다. 작은 조정은 재승인받지 않는다.
+현재 요청에 맞는 계획 본문만 Markdown으로 반환한다. JSON·출력용 코드펜스·파일 저장 주장은 불필요하다.
+계획의 목적·접근과 이유·질문별 증거와 판단·종합·멈춤 조건·미확인을 연결하되 고정 서식은 없다.
+"""
 
 
 def topic_context(project_path, project_uid, thread_id, run_id):
@@ -27,15 +41,22 @@ def topic_context(project_path, project_uid, thread_id, run_id):
 def topic_prompt(topic):
     if topic is None:
         return ''
-    return ("같은 주제의 연구 문맥이다. 사용자 목적과 이번 요청의 관계를 정리한다. "
-            "계획 작성·방법 선택·진행 갱신은 실행자가 맡는다.\n<research_topic>\n"
+    return ("기존 연구 문맥이다. 사용자 목적과 이번 요청의 관계, 전문가의 접근을 판단한다. "
+            "현재 계획이 유효하면 재사용한다. 전체 목적·접근을 다시 설계해야 할 때만 "
+            "revise_research_plan=true로 표시한다. 작은 방법 조정·진행 갱신은 실행자가 맡는다.\n<research_topic>\n"
             + json.dumps(topic, ensure_ascii=False) + '\n</research_topic>\n')
 
 
 def requested(framing):
     """자연어 키워드가 아니라 의식의 의미 판단(옛 저장본의 선택 포함)을 사용한다."""
     return isinstance(framing, dict) and (
-        framing.get("deep_research") is True or GUIDE in (framing.get("guide_files") or []))
+        framing.get("deep_research") is True or any(
+            _planning_guide(name) for name in (framing.get("guide_files") or [])))
+
+
+def _planning_guide(name):
+    """가이드 선택의 경로 표기도 같은 교재로 해소하며 임의 경로를 열지는 않는다."""
+    return isinstance(name, str) and name.replace('\\', '/').rsplit('/', 1)[-1] == GUIDE
 
 
 def _root(project_path=None):
@@ -70,7 +91,7 @@ def persist(body, guide, project_path=None, previous=None, *, exact=False, metad
     directory = _root(project_path) / uuid.uuid4().hex
     directory.mkdir(parents=True, exist_ok=False)
     path = directory / "research_plan.md"
-    document = body if exact else (f"<!-- author: execution; saved_at: {created} -->\n" + body.rstrip() + "\n")
+    document = body if exact else (f"<!-- author: consciousness; saved_at: {created} -->\n" + body.rstrip() + "\n")
     with path.open("x", encoding="utf-8") as stream:
         stream.write(document)
     saved = path.read_text(encoding="utf-8")
@@ -79,7 +100,7 @@ def persist(body, guide, project_path=None, previous=None, *, exact=False, metad
     receipt = {"path": str(path), "body": saved, "saved_at": created,
                "sha256": hashlib.sha256(saved.encode()).hexdigest(),
                "guide_sha256": hashlib.sha256(guide.encode()).hexdigest(),
-               "task_id": get_current_task_id(), "author": "execution",
+               "task_id": get_current_task_id(), "author": "consciousness",
                "previous_path": previous.get("path") if previous else None, **(metadata or {})}
     atomic_json(directory / "receipt.json", receipt)
     record_trajectory_event("research.plan_saved", {k: v for k, v in receipt.items() if k != "body"})
@@ -88,13 +109,14 @@ def persist(body, guide, project_path=None, previous=None, *, exact=False, metad
 
 def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
             previous_plan=None, validate_framing=None, topic=None):
-    """기존 문서를 인계하거나 실행자가 쓸 작업 메모를 연다. 모델 호출은 없다."""
+    """유효한 계획은 재사용한다. 최초·중요 개정만 의식이 가이드를 읽고 한 번 작성한다."""
     framing = dict(framing)
     framing.pop("_research_plan", None)
+    revise = framing.pop("revise_research_plan", False)
     if framing.get("needs_clarification") or framing.get("needs_repair"):
         return framing
     previous = (topic or {}).get("receipt") or previous_plan
-    if not previous and topic is None and not requested(framing):
+    if not previous and not requested(framing):
         return framing
     cancelled = getattr(supervisor, "cancelled", lambda: False)
     if cancelled():
@@ -103,16 +125,49 @@ def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
     if previous:
         current = read_current(previous, project_path)
         receipt = {**previous, "body": current["body"], "current_sha256": current["sha256"]}
-    else:
-        # 요청은 출발 메모다. 모델이 작성한 사전 계획으로 표시하지 않는다.
-        body = "# 연구 작업 메모\n\n" + framing.get("task_framing", "") + "\n"
-        receipt = publish_plan(body, "", project_path, topic=topic, cancelled=cancelled)
+    if not previous or revise:
+        receipt = plan_once(agent, framing, input_text, supervisor=supervisor,
+                            project_path=project_path, topic=topic,
+                            previous={**receipt, "sha256": current["sha256"]} if previous else None,
+                            cancelled=cancelled)
     framing["_research_plan"] = receipt
     if topic:
         framing["_research_topic"] = {"mode": topic["mode"]}
-    if requested(framing):
-        framing["guide_files"] = list(dict.fromkeys([GUIDE, *framing.get("guide_files", [])]))
+    # 실행자에게는 주제별 계획을 전달한다. 명시적인 가이드 조회는 금지하지 않는다.
+    if "guide_files" in framing:
+        framing["guide_files"] = [g for g in framing["guide_files"] if not _planning_guide(g)]
     return framing
+
+
+def plan_once(agent, framing, input_text, *, supervisor, project_path, topic, previous, cancelled):
+    """계획 본문 한 번 작성. 형식 보정·재심사·저장 실패 후 재생성 루프는 두지 않는다."""
+    from consciousness_agent import FramingContractError, call_oneshot_provider
+    from episode_logger import record_trajectory_event
+    from runtime_utils import get_base_path
+    if agent is None:
+        raise ValueError("새 연구계획은 의식의 가이드 기반 작성이 필요합니다")
+    guide = (Path(get_base_path()) / "data" / "guides" / GUIDE).read_text(encoding="utf-8")
+    if not guide.strip():
+        raise ValueError("심층연구 가이드가 비어 있습니다")
+    context = {"framing": framing, "previous_plan": previous,
+               "topic": {k: v for k, v in (topic or {}).items() if k not in {"receipt", "current_plan"}}}
+    prompt = (input_text + "\n<research_context>\n" + json.dumps(context, ensure_ascii=False)
+              + "\n</research_context>\n<research_planning_guide>\n" + guide
+              + "\n</research_planning_guide>")
+    record_trajectory_event("research.guide_supplied", {
+        "recipient": "consciousness", "sha256": hashlib.sha256(guide.encode()).hexdigest()})
+    try:
+        body = (supervisor.plan(prompt, PLANNING_PROMPT, completion=True) if supervisor else
+                call_oneshot_provider(agent._provider, prompt, system_prompt=PLANNING_PROMPT,
+                                      role="research_plan", step_role="consciousness"))
+    except Exception as exc:
+        from consciousness_agent import ConsciousnessCallSkipped
+        if isinstance(exc, ConsciousnessCallSkipped):
+            raise
+        raise FramingContractError("의식의 연구계획 작성에 실패했습니다") from exc
+    if not isinstance(body, str) or not body.strip() or len(body) > 64000:
+        raise ValueError("의식의 연구계획 본문이 비었거나 읽기 한도를 넘었습니다")
+    return publish_plan(body, guide, project_path, previous, topic, cancelled)
 
 
 def revision_context(framing, runner, project_path):
@@ -185,7 +240,9 @@ def execution_block(framing):
         return ""
     library = (framing.get("_research_topic") or {}).get("mode") == "library"
     instruction = ("저장 자료만 모드다. 기존 자료로 답하고 파일 쓰기·외부 획득은 하지 않는다." if library else
-                   "실행자가 필요한 계획을 작성하고 같은 문서에 방법·진행을 갱신한다. "
-                   "현재 사용자 요청에 필요한 범위만 수행한다.")
-    return ("연구 작업 문서(사용자 요구가 아닌 실행 메모):\n"
+                   "전달된 연구계획을 따라 조사하고 같은 문서에 근거·세부 방법·진행을 갱신한다. "
+                   "계획을 처음부터 중복 작성하거나 작은 방법 조정마다 재승인받지 않는다. "
+                   "전체 목적·접근을 다시 설계해야 할 때는 근거와 함께 reframe으로 의식에 전달한다. "
+                   "현재 사용자 요청에 필요한 범위만 수행하며 계획만 요청했으면 계획을 전달하고 마친다.")
+    return ("연구계획(사용자 요구를 대체하지 않는 잠정 설계·진행 기록):\n"
             + json.dumps(receipt, ensure_ascii=False) + "\n" + instruction)

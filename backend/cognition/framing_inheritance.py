@@ -38,7 +38,7 @@ REPEAT_KEEP = 40                      # 자아별 문장 기록 보존 수
 PATCHABLE_TEXT = ("task_framing", "clarification_question")
 PATCHABLE_LIST = ("assumptions", "guide_files", "criteria")
 PATCHABLE_DICT = ("capability_focus",)
-PATCHABLE_BOOL = ("needs_clarification", "deep_research", "independent_review")
+PATCHABLE_BOOL = ("needs_clarification", "deep_research", "independent_review", "revise_research_plan")
 PATCHABLE = set(PATCHABLE_TEXT) | set(PATCHABLE_LIST) | set(PATCHABLE_DICT) | set(PATCHABLE_BOOL)
 # 저장본에서 벗기는 키 — 권한·턴 전용 표식
 STRIP_ALWAYS = ("needs_repair", "_repair_policy", "_framing_source", "_inherited_from",
@@ -353,7 +353,7 @@ def _inherit(runner, message, history, record_trajectory_event):
             framing[key] = value
     framing = project_framing(framing)
     validate_framing_focus(framing)
-    if requested(framing):
+    if requested(framing) or framing.get("revise_research_plan"):
         from research_planning import prepare
         framing = prepare(None, framing, "", project_path=getattr(runner, "project_path", None),
                           previous_plan=framing.get("_research_plan"))

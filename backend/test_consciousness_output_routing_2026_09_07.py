@@ -23,6 +23,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 PROMPT = ROOT / "data" / "common_prompts" / "consciousness_prompt.md"
+CONTROL_KEYS = {"deep_research", "independent_review", "revise_research_plan"}
 
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT / "backend" / "cognition"))
@@ -58,7 +59,7 @@ def _fill(keys) -> dict:
             target[name] = [_sentinel(key)]
         elif name == "criteria":
             target[name] = [{"text": _sentinel(key), "user_quote": "", "fallback": "한계를 명시"}]
-        elif name.startswith("needs_") or name in {"deep_research", "independent_review"}:
+        elif name.startswith("needs_") or name in CONTROL_KEYS:
             target[name] = True
         else:
             target[name] = _sentinel(key)
@@ -132,7 +133,15 @@ def _bool_probes():
     holder = CognitiveConsciousnessMixin()
     from conscious_supervisor import Supervisor
     from types import SimpleNamespace
+    def revise_plan(value):
+        from unittest.mock import patch
+        import research_planning as rp
+        with patch.object(rp, 'read_current', return_value={'body': 'current', 'sha256': 'digest'}), \
+                patch.object(rp, 'plan_once', return_value={'body': 'revised'}):
+            return rp.prepare(SimpleNamespace(), {'deep_research': True, 'revise_research_plan': value},
+                              '', previous_plan={'path': 'current'})['_research_plan']['body']
     return {
+        "revise_research_plan": revise_plan,
         "independent_review": lambda v: Supervisor.evaluation_enabled.fget(SimpleNamespace(
             enabled=True, framing={'independent_review': v, 'achievement_criteria': '요청 결과'},
             message='요청', completion_review_required=False)),
@@ -152,7 +161,7 @@ def test_every_prompt_key_reaches_a_consumer(tmp_path):
     dead = []
     for key in sorted(keys):
         name = key.rpartition(".")[2]
-        if name.startswith("needs_") or name in {"deep_research", "independent_review"}:
+        if name.startswith("needs_") or name in CONTROL_KEYS:
             probe = probes.get(name)
             if probe is None:
                 dead.append(f"{key} (불리언인데 소비처 프로브 미등록)")

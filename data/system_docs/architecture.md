@@ -142,7 +142,7 @@ Claude Code는 CLI 기본 정책, API는 모델별 입력 예산을 사용한다
 - **안정부(system_prompt)** — 현재 날짜(일 단위) → `base_prompt_v7.md` → `<system_structure>` 정체성 코어 → 조건부 프래그먼트(`06_git`·`09_delegation`·`10_system_ai_delegation`) → IBL 환경(`ibl_access.build_environment`: 압축 문법서 + 허용 노드의 액션 카탈로그 + 상시 관용구) → 프로젝트 에이전트만 `<project_memory>`(폴더 포식 문서) → `# Role`(`system_ai_role.txt` / `agent_<이름>_role.txt`) → `# Notes` / `# 시스템 메모`.
 - **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층 지도 + 가이드 목차) → 모델명 → 의식이 고른 주 가이드 본문(첫 항목만)·추가 후보 이름 → 수리 턴 교리(RED 그랜트 때만).
 - **현재 실행 요청** — `compile_user_command`가 의식의 `task_framing`을 중심 명령으로, 완료 기준·전제·유용한 방법을 그 아래 전달한다. 사용자 원문은 목적·명시 조건·권한의 근거로 보존하며 `source=consciousness`인 생성 내용을 사용자 직접 발화로 인용하지 않는다. 최초 인계와 재규정이 같은 표현을 사용한다.
-- **심층연구**: 의식은 요청과 관련 맥락을 정리한다. 하네스는 기존 연구 작업 문서를 회수하거나 요청을 출발 메모로 저장해 같은 주제에 연결한다. 실행자가 `deep_research.md`와 문서를 받아 계획·방법·진행을 작성·갱신한다. 별도 계획 완성 모델 호출이나 의식 전용 가이드 제한은 없다. 문서 경계·활성 실행·판본 검사는 유지한다.
+- **전문가의 접근과 심층연구**: 의식은 일반 작업에서도 전문가라면 문제를 어떻게 구성·분해하고 어떤 증거·비교로 판단할지와 이유를 `capability_focus.hint`로 전달한다. 심층연구의 최초·중요 개정에서는 `deep_research.md`와 관련 맥락을 받아 그 접근에 기반한 계획 본문을 한 번 작성한다. 하네스가 저장·확인한 본문·경로·판본을 실행자에게 전달한다. 유효한 기존 계획은 작성 호출 없이 재사용하고, 실행자는 조사·세부 방법 조정·진행 갱신을 맡는다. 계획 재심사·JSON 정정 반복·keep/patch/revise 프로토콜·가이드 접근 금지는 없다. 문서 경계·활성 실행·판본 검사는 유지한다.
 
 의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다. 안경 메뉴의 도구 창(프롬프트 구성·가이드 파일·내 어휘)은 Electron 에서 런처 안 모달이 아니라 **독립 OS 창**이다(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별; IPC `open-tool-window`), 웹 표면은 같은 창의 해시 라우트(`#/prompt-composition`·`#/guides`·`#/vocabulary`). 가이드 파일 창은 `data/guides/*.md` 를 등록(guide_db)·신선도·예산과 함께 보여 주고 본문을 고쳐 저장한다(`/guides`, `guide_registry.guide_catalog` — 폴더가 정본이라 '등록만 있고 파일 없음'·'파일만 있고 미등록'을 숨기지 않는다). 정본 `docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md`.
 
@@ -280,7 +280,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, 필요한 history_summary·assumptions·criteria·capability_focus.hint·guide_files, needs_clarification·clarification_question·needs_repair·deep_research·independent_review. 세부 계획과 검산은 실행자가 맡는다.
+  - 출력: task_framing, 필요한 history_summary·assumptions·criteria·capability_focus.hint·guide_files, needs_clarification·clarification_question·needs_repair·deep_research·independent_review. hint에는 전문가의 접근과 이유를 담는다. 기존 연구계획의 전체 접근 재설계가 필요할 때만 일회성 revise_research_plan을 표시한다. 심층연구 계획은 의식이, 세부 실행과 검산은 실행자가 맡는다.
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 현재 지시를 해석할 때 필요한 과거만 채택한 뒤 규정한다. 명시적 빈 history_summary는
     실행 히스토리를 비우고, 비어 있지 않은 선별 요약도 CLI 세션 재개로 우회하지 않는다.
@@ -332,7 +332,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: 관리되는 정의·데이터와 실행 구현을 구분하고, 격리 편집·검사와 라이브 적용·재기동 인계를 분리한다. 첫 호출 성공 시 의심을 갱신하고, timeout/실패 후 환경 확인 없이 같은 코드를 즉시 재시도하지 않는다. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 `task_framing`은 실행자에게 그대로 맡길 구체적인 요청이며 고정된 항목별 골격을 채우지 않는다. `assumptions`는 확인할 전제, `capability_focus.hint`는 필요한 참고 사항을 맡는다. 세부 방법은 실행자가 정한다.
 
-**문제 재구성과 중간감사**: 의식은 사용자 요청·정정을 명료화하고 중간감사는 새 관측에 따라 필요한 방향 수정만 전달한다. 세부 계획·검산·제작·보완은 실행자가 맡는다. 수정 요청은 `TurnChannel.current`를 통해 다음 실행 경계에서 채택한다. 실행 메모 `criteria`는 한 표현이며 사용자 조건으로 인증하지 않는다. 연구 문서의 현재 본문을 보존해 실행자가 수정된 요청에 맞춰 갱신한다. 관측·규정·계획 판본이 달라진 늦은 판단과 종료 후 판단은 적용하지 않는다. [책임 축소와 검증](../../docs/CONSCIOUSNESS_EXECUTION_ROLES_2026_11_07.md).
+**문제 재구성과 중간감사**: 의식은 사용자 요청·정정을 명료화하고 전문가의 접근을 검토한다. 심층연구 계획의 최초·중요 개정은 의식이, 세부 방법·검산·제작·진행 갱신은 실행자가 맡는다. 중간감사의 방향 수정은 `TurnChannel.current`를 통해 다음 실행 경계에서 채택한다. 실행 메모 `criteria`는 한 표현이며 사용자 조건으로 인증하지 않는다. 관측·규정·계획 판본이 달라진 늦은 판단과 종료 후 판단은 적용하지 않는다. [책임 분담과 검증](../../docs/CONSCIOUSNESS_EXECUTION_ROLES_2026_11_07.md).
 
 **턴 안 재규정 (`cognition/reframe.py`, 감독 통합 2026-09-10)**: 실행자가 `reframe`으로 실제 반증을 제시하면 해당 agent+task의 감독이 같은 의식 역할·중간 검토 예산으로 규정을 바꾼다. 새 규정은 도구 결과로 실행자에게 돌아오며 이미 만든 산출물을 유지한다. 권한은 재규정으로 늘어나지 않는다. 감독 없는 실행도 `open_turn`의 명시 재규정을 사용한다. 검수 실패 횟수·심각도로 기준을 자동 교체하던 경로는 제거했다. 보완 검수는 원래 전체 기준을 유지한다. IBL 어휘를 추가하지 않고 인지 역할 사이의 내부 도구로 연결한다. 양쪽의 실제 행동·근거·판정·인계·응답 버전은 `supervision.*`, 검수 결과는 `validation.completed` 사건과 작업대 `events.jsonl`에 남는다.
 

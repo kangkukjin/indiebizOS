@@ -51,6 +51,8 @@ def validate_framing_focus(value):
     """Validate the live hint contract after projecting away retired fields."""
     if not isinstance(value, dict):
         raise ValueError("의식 출력은 JSON 객체여야 합니다")
+    if "revise_research_plan" in value and not isinstance(value["revise_research_plan"], bool):
+        raise ValueError("revise_research_plan은 참/거짓이어야 합니다")
     focus = value.get("capability_focus")
     if focus is not None:
         if not isinstance(focus, dict):
@@ -269,8 +271,15 @@ class ConsciousnessAgent:
             repair_doctrine=self._load_repair_doctrine() if repair else "",
             revision=revision,
         )
-        from research_planning import topic_prompt
-        input_text = base_input + topic_prompt(research_topic)
+        from research_planning import topic_prompt, read_current
+        planning_context = research_topic
+        if planning_context is None and previous_research_plan:
+            try:
+                planning_context = {"receipt": previous_research_plan,
+                                    "current_plan": read_current(previous_research_plan, project_path)}
+            except (OSError, ValueError) as exc:
+                raise FramingContractError("기존 연구계획을 읽지 못했습니다: " + str(exc)) from exc
+        input_text = base_input + topic_prompt(planning_context)
 
         try:
             # 시스템 프롬프트 설정
@@ -359,7 +368,9 @@ class ConsciousnessAgent:
                                      project_path=project_path,
                                      previous_plan=previous_research_plan,
                                      validate_framing=validate_contract, topic=research_topic)
-                except (OSError, ValueError) as exc:
+                except ConsciousnessCallSkipped:
+                    raise
+                except (OSError, ValueError, RuntimeError) as exc:
                     raise FramingContractError("연구 작업 문서를 인계하지 못했습니다: " + str(exc)) from exc
                 import json as _json
                 print(f"[ConsciousnessAgent] 파싱 결과:\n{_json.dumps(result, ensure_ascii=False, indent=2)}")

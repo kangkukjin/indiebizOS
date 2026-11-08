@@ -16,6 +16,105 @@ def turn():
     execution_turn._current.reset(token)
 
 
+@pytest.mark.parametrize('termination', ['complete', 'close', 'error'])
+def test_execution_usage_settles_before_turn_finalization(turn, monkeypatch, termination):
+    import episode_logger
+    from agent_pipeline import CognitivePipelineMixin
+    from cognitive_consciousness import CognitiveConsciousnessMixin
+    from cognitive_eval import CognitiveEvalMixin
+    from providers.base import BaseProvider, turn_token_scope, read_turn_tokens
+    from reflex_execution import ReflexTurn
+
+    closed, charges, finalized = [], [], []
+
+    class Provider(BaseProvider):
+        def init_client(self):
+            return True
+
+        def process_message(self, *args, **kwargs):
+            raise AssertionError('stream only')
+
+        def process_message_stream(self, message, **kwargs):
+            try:
+                episode_logger.notify_response_snapshot(
+                    'CLI', 'model', 'response1',
+                    {'input': 200, 'output': 4, 'cache_read': 100}, [])
+                yield {'type': 'text', 'content': 'partial'}
+                self.metrics.record_usage(1, {
+                    'input_tokens': 100, 'cache_read_input_tokens': 100,
+                    'output_tokens': 4})
+                yield {'type': 'final', 'content': 'done'}
+            finally:
+                closed.append(True)
+
+    class AI:
+        agent_id = 'audit'
+
+        def __init__(self):
+            self._provider = Provider('', 'model', 'prompt', [])
+
+        def process_message_stream(self, message_content, **kwargs):
+            yield from self._provider.process_message_stream(message_content, **kwargs)
+
+    class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin, CognitiveEvalMixin):
+        pass
+
+    runner = Runner()
+    runner.config = {'name': 'worker'}
+    runner.ai = AI()
+    runner._associate = lambda *a, **kw: None
+    runner._decide_request_type = lambda *a, **kw: ('EXECUTE', None)
+    runner._refresh_execution_prompt = lambda message, *a, **kw: message
+    runner._after_response_async = lambda *a, **kw: None
+    runner._collect_thread_tool_calls = lambda *a, **kw: None
+    monkeypatch.setattr('supervision_bus.current', lambda: None)
+    monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
+    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr(episode_logger, 'record_trajectory_event',
+                        lambda kind, data: charges.append(data) if kind == 'model.usage' else None)
+
+    # Keep the stream alive: finalization must not depend on garbage collection.
+    streams, original_stream = [], ReflexTurn.stream
+
+    def retained_stream(self, *args):
+        stream = original_stream(self, *args)
+        streams.append(stream)
+        return stream
+
+    monkeypatch.setattr(ReflexTurn, 'stream', retained_stream)
+
+    def observe_finalization():
+        count = read_turn_tokens()
+        finalized.append((count, bool(closed)))
+        return count
+
+    monkeypatch.setattr('providers.base.read_turn_tokens', observe_finalization)
+    with turn_token_scope('audit', 'audit'):
+        stream = runner._cognitive_stream_body('audit', [])
+        try:
+            for event in stream:
+                if event.get('type') == 'text':
+                    break
+            if termination == 'close':
+                stream.close()
+            elif termination == 'error':
+                event = stream.throw(RuntimeError('consumer interrupted'))
+                assert event == {'type': 'error', 'content': 'consumer interrupted'}
+                list(stream)
+            else:
+                events = list(stream)
+                assert events[-1]['turn_tokens'] == 204
+            assert finalized == [(204, True)]
+            assert read_turn_tokens() == 204
+            assert len(charges) == 1
+            assert bool(charges[0].get('usage_partial')) == (termination != 'complete')
+            assert closed == [True]
+        finally:
+            stream.close()
+            for child in streams:
+                child.close()
+
+
 @pytest.mark.parametrize('route', ['EXECUTE', 'THINK'])
 @pytest.mark.parametrize('case', ['recovered', 'unresolved', 'missing', 'partial', 'effect'])
 def test_failure_history_does_not_reopen_or_replace_executor_answer(turn, monkeypatch, route, case):

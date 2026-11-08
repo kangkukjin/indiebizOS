@@ -800,19 +800,24 @@ class CognitivePipelineMixin:
             if _repair_granted_task is not None and not _clarify_text:
                 from repair_readiness import execution_stream
                 _initial_stream = execution_stream(_initial_stream)
-            for event in _initial_stream:
-                _collect(event)
-                if _supervisor:
-                    _supervisor.observe_native(event)
-                elif _execution := __import__('execution_turn').current():
-                    if _execution.situation:
-                        _execution.situation.observe_native(event)
-                if event.get("type") == "final":
-                    final_content = event.get("content", "")
-                    continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.
-                if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
-                    continue  # 저장된 후보만 검수 후 한 번 전달한다.
-                yield event
+            try:
+                for event in _initial_stream:
+                    _collect(event)
+                    if _supervisor:
+                        _supervisor.observe_native(event)
+                    elif _execution := __import__('execution_turn').current():
+                        if _execution.situation:
+                            _execution.situation.observe_native(event)
+                    if event.get("type") == "final":
+                        final_content = event.get("content", "")
+                        continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.
+                    if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
+                        continue  # 저장된 후보만 검수 후 한 번 전달한다.
+                    yield event
+            finally:
+                # 중단된 모델의 부분 사용량을 턴 비용·결말 기록보다 먼저 정산한다.
+                if hasattr(_initial_stream, "close"):
+                    _initial_stream.close()
 
             if reflex_selected and not reflex_turn.active:
                 history = reflex_turn.full_history

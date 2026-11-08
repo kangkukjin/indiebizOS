@@ -727,8 +727,7 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     cap_focus = co.get("capability_focus") or {}
     hint = (cap_focus.get("hint") or "").strip()
     if hint:
-        # 방법 지시는 허가 어조에서 분리해 명령문 줄로.
-        aug.append("수행 절차(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
+        aug.append("접근 후보(내부 제안): " + internal_plan_field("capability_focus.hint", hint))
 
     from guide_registry import execution_guides, guide_delivery
     guide_files = execution_guides(co.get("guide_files"))
@@ -756,7 +755,9 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
 
     return ("사용자 원래 요청과 대화의 명시 정정을 수행하라. "
             "아래 현재 요청과 실행 메모는 의식이 정리한 해석이며 사용자 요구를 대체하지 않는다. "
-            "방법·계획·검산은 실행자가 실제 관측에 따라 판단한다.\n\n"
+            "방법·계획·검산은 실행자가 실제 관측에 따라 판단한다. "
+            "조건부 제안은 그 조건이 성립할 때만 적용하고, 확보한 관측으로 충분한 확인을 반복하거나 "
+            "사용자가 요구하지 않은 제외·검수 조건을 추가하지 않는다.\n\n"
             + "\n\n".join(aug)
             + "\n\n요청의 근거(사용자 원문): " + json.dumps(user_cmd, ensure_ascii=False))
 

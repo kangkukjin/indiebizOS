@@ -1063,6 +1063,11 @@ def project_v2_result(result):
     record_trajectory_event("context.result_projected", {
         "raw_chars": len(raw), "model_chars": len(json.dumps(text_view, ensure_ascii=False)),
         "image_count": len(images), "evidence_id": ref["id"]})
+    from execution_situation import current, active_call_id
+    situation = current()
+    if situation:
+        from logging_utils import mask_secret_data
+        situation.retain_result(active_call_id(), mask_secret_data(result), {'id': ref['id']}, display=out)
     return out
 
 

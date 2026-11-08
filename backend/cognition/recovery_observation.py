@@ -43,6 +43,17 @@ def observe(recovery, key, name, payload, result, ref, *, error=False, unknown=F
         count = summary.get(field)
         if type(count) is int and count > 0:
             facts.append({'signal': 'failure', 'path': ['evidence_summary', field], 'count': count})
+    # Failure history is not evidence that every returned value is missing.
+    # Preserve the producer's scope without treating its claims as effect proofs.
+    from tool_failure_results import collect, fields
+    reports, scan = collect(raw)
+    if reports:
+        available = [{'code': row['code'], 'kind': row['kind'], 'basis': 'tool_claim',
+                      'source_ref': {**ref, 'path': path},
+                      **fields(row['details']['tool_result'])} for path, row in reports]
+        for fact in facts:
+            fact.update(reported_results=available, reported_results_scan=scan,
+                        effect_scope='effect_confirmation_not_returned_data')
     changed = recovery.observe(key, facts, ref, name=name, repair_key=repair_key)
     from execution_situation import current
     situation = current()

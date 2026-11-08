@@ -15,10 +15,10 @@ def test_generated_count_is_separate_from_original_user_request():
     })
     plan, user = command.split('\n\n요청의 근거(사용자 원문): ', 1)
     assert json.loads(user) == original
-    assert plan.index('현재 수행할 요청:') < plan.index('수행 절차')
     assert '7행 누락과 합계를 대조한다.' in plan
-    framing = json.loads(plan.split('현재 수행할 요청:\n', 1)[1].splitlines()[0])
-    hint = json.loads(plan.split('수행 절차(내부 제안): ', 1)[1])
+    records = [json.loads(line[line.index('{"source":'):]) for line in plan.splitlines()
+               if '{"source": "consciousness"' in line]
+    framing, hint = records
     assert framing['source'] == hint['source'] == 'consciousness'
     assert framing['field'] == 'task_framing' and hint['field'] == 'capability_focus.hint'
     assert '7행' not in json.loads(user)

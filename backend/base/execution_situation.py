@@ -253,6 +253,7 @@ class Situation:
         self.on_result = None
         self.on_recovery = None
         self.call_inputs = {}
+        self.result_sources = {}
         from recovery_projection import RecoveryProjection
         self.recovery = RecoveryProjection(owner, task, self.publish_recovery)
         self.native_calls = {}
@@ -406,8 +407,34 @@ class Situation:
                      source='tool', source_cursor=0, source_ref=ref, call_id=key, observed_at=time.time())
 
     @optional_observation
+    def retain_result(self, key, result, ref, display=None):
+        """Keep the producer value until this call finishes, before display projection.
+
+        This is an in-flight handoff, not a cross-call cache or a truth judgment.
+        Only the active producer can supply it; display fields cannot select it.
+        """
+        if key and key == active_call_id() and key in self.call_inputs:
+            self.result_sources[key] = (copy.deepcopy(result), copy.deepcopy(ref),
+                                        fingerprint(result if display is None else display))
+
+    def result_source(self, key, result, ref):
+        source = self.result_sources.get(key)
+        display = result
+        if source and isinstance(display, str):
+            try:
+                display = json.loads(display)
+            except (ValueError, TypeError):
+                return result, ref
+        if source and source[2] == fingerprint(display):
+            return source[:2]
+        return result, ref
+
+    @optional_observation
     def tool_finished(self, key, result, unknown=False, error=False):
         ref = self.evidence(result)
+        if not unknown:
+            result, ref = self.result_source(key, result, ref)
+        self.result_sources.pop(key, None)
         name, payload = self.call_inputs.pop(key, ('', {}))
         self.feedback('tool_finished', key=key, name=name, payload=payload, unknown=unknown)
         if self.on_recovery:
@@ -601,3 +628,4 @@ class Situation:
                 self.pending.clear()
                 self.pending_versions.clear()
                 self.refreshers.clear()
+                self.result_sources.clear()

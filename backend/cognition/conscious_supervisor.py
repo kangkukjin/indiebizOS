@@ -501,13 +501,16 @@ class Supervisor:
         from execution_situation import current as current_situation, active_call_id
         situation = current_situation()
         recovery_key = active_call_id() or key
+        recovery_result, recovery_ref = result, self.store.evidence(result)
+        if situation and not unknown:
+            recovery_result, recovery_ref = situation.result_source(recovery_key, result, recovery_ref)
         if situation and not active_call_id():
             situation.tool_finished(key, result, unknown=unknown, error=error)
         with self.lock:
             original_call = dict(self.active.get(key, {}))
         from recovery_observation import observe as observe_recovery
         observe_recovery(self.recovery, recovery_key, original_call.get('name', ''),
-                         original_call.get('_payload'), result, self.store.evidence(result),
+                         original_call.get('_payload'), recovery_result, recovery_ref,
                          error=error, unknown=unknown)
         self._last_recovery_call = recovery_key
         with self.lock:

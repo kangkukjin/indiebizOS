@@ -7,6 +7,7 @@ import pytest
 from ibl_v2_adapters import decode_envelope
 from ibl_v2_ir import Fault, UNIT
 from tool_failure_results import collect
+from test_conscious_supervisor import supervisor  # noqa: F401
 
 
 def failure(raw, **adapter):
@@ -131,3 +132,90 @@ def test_situation_keeps_attributed_reference_not_goal_success():
     assert len(rows) == 1
     assert rows[0]['latest']['basis'] == 'tool_claim'
     assert rows[0]['latest']['source_ref']['path'] == ['value', 'details', 'tool_result']
+
+
+@pytest.mark.parametrize('supervised', [False, True])
+@pytest.mark.parametrize('outer_boundary', [False, True])
+def test_original_reaches_situation_and_recovery_across_display_json(
+        supervisor, monkeypatch, supervised, outer_boundary):
+    import execution_situation as es
+    import model_result_view as view
+    from situation_evidence import observe_result
+    from recovery_observation import configure
+    from recovery_projection import requires_attention
+
+    situation = es.Situation(supervisor.recovery.owner, supervisor.task,
+                             lambda *a, **kw: None, supervisor.store.evidence)
+    situation.on_result = lambda result, ref, key: observe_result(situation, result, ref, key)
+    configure(situation, supervisor.recovery)
+    monkeypatch.setattr(es, 'current', lambda *a, **kw: situation)
+    monkeypatch.setattr(view, 'evidence_store', lambda: supervisor.store)
+    body = {'success': False, 'error': 'partial', 'items': ['one', 'two'], 'count': 2,
+            'api_key': 'must-not-leak'}
+    raw = {'edition': 2, 'success': True, 'value': {'nested': failure(body).view()},
+           'evidence': [{'kind': 'tool_failure', 'id': 'failure', 'incomplete': True}]}
+
+    def produce():
+        return json.dumps(view.project_result(raw))
+
+    def execute():
+        return supervisor.run_tool('execute_ibl', {}, produce) if supervised else produce()
+
+    # Both standalone supervisor and outer bridge ownership use the same handoff.
+    if outer_boundary or not supervised:
+        result = es.run_tool('execute_ibl', {}, execute)
+    else:
+        result = execute()
+    shown = json.loads(result)
+    assert shown['tool_failures'][0]['result']['items'] == ['one', 'two']
+    assert not collect(shown)[0]  # display markers are never producer bodies
+    rows = [r['latest'] for r in situation.snapshot()['observations']
+            if r['latest']['subject']['kind'] == 'tool_failure']
+    assert len(rows) == 1 and rows[0]['basis'] == 'tool_claim'
+    assert 'items' in rows[0]['value']['fields']
+    assert '$model_tool_failure' not in rows[0]['value']['fields']
+    ref = rows[0]['source_ref']
+    stored = json.loads(supervisor.store.read_evidence(ref['id'], limit=None)['text'])
+    assert stored['value']['nested']['details']['tool_result']['items'] == ['one', 'two']
+    assert ref['path'] == ['value', 'nested', 'details', 'tool_result']
+    incidents = situation.recovery_view()
+    assert incidents and all(requires_attention(row) for row in incidents)
+    for row in incidents:
+        assert row['revision'] == 1  # supervisor/bridge do not overwrite with display refs
+        assert row['detail']['reported_results'][0]['source_ref'] == {
+            'id': ref['id'], 'path': ref['path']}
+        assert row['detail']['effect_scope'] == 'effect_confirmation_not_returned_data'
+        assert row['effect'] == 'unknown'  # claims are not independent effect proofs
+    assert 'must-not-leak' not in json.dumps(situation.snapshot())
+    assert not situation.result_sources and not situation.call_inputs
+
+
+def test_result_handoff_is_call_scoped_and_cleared_on_exception(monkeypatch):
+    import execution_situation as es
+    situation = es.Situation('owner', 'task', lambda *a, **kw: None, lambda v: {'id': 'e'})
+    monkeypatch.setattr(es, 'current', lambda *a, **kw: situation)
+    with pytest.raises(RuntimeError):
+        with es.tool_call('write', {}, call_id='one'):
+            situation.retain_result('unrelated', {'items': [0]}, {'id': 'wrong'})
+            assert not situation.result_sources
+            situation.retain_result('one', {'items': [1]}, {'id': 'original'})
+            raise RuntimeError('transport lost')
+    assert not situation.result_sources
+    assert situation.recovery_view()[0]['signal'] == 'result_missing'
+    es.run_tool('read', {}, lambda: {'items': [2]})
+    assert not situation.result_sources
+
+
+def test_nested_projection_cannot_replace_a_different_outer_result(monkeypatch):
+    import execution_situation as es
+    s = es.Situation('owner', 'task', lambda *a, **kw: None, lambda v: {'id': 'e'})
+    monkeypatch.setattr(es, 'current', lambda *a, **kw: s)
+    observed = []
+    s.on_result = lambda value, ref, key: observed.append(value)
+
+    def produce():
+        s.retain_result(es.active_call_id(), {'inner': [1]}, {'id': 'inner'}, display={'preview': 1})
+        return json.dumps({'success': False, 'error': 'outer failed'})
+
+    result = es.run_tool('outer', {}, produce)
+    assert observed == [result] and not s.result_sources

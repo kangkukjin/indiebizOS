@@ -459,3 +459,26 @@ def test_expansion_keeps_original_observation_and_coordinates(tmp_path, monkeypa
     newer = store.evidence({'value': {'text': '다른 관측', 'revision': 'source-v2'}})
     assert newer['id'] != ref['id']
     assert view.read_result({'id': ref['id'], 'path': ['value', 'text']})['text'] == '앞🙂가운데끝'
+
+
+@pytest.mark.parametrize("location", ["value", "diagnostic"])
+def test_failure_body_keeps_native_location_and_exact_small_values(tmp_path, monkeypatch, location):
+    from test_tool_failure_results import failure
+    store = TurnStore(tmp_path / "native-failure")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    body = {"success": False, "error": "one operation failed", "rows": ["Q", "Q", "R"],
+            "count": 100, "complete": False, "items": [], "future_field": {"a": 1},
+            "api_key": "secret-for-display-test"}
+    fault = failure(body).view()
+    original = {"edition": 2, "success": location == "value", location: fault}
+    before = deepcopy(original)
+    shown = view.project_result(original)
+    expected = {**body, "api_key": "****"}
+    assert shown[location]["details"]["tool_result"] == expected
+    assert shown[location]["code"] == fault["code"]
+    assert shown[location]["has_partial"] is False
+    assert original == before
+    assert "secret-for-display-test" not in json.dumps(shown)
+    ref = shown["result_ref"]["id"]
+    page = view.read_result({"id": ref, "path": [location, "details", "tool_result"]})
+    assert json.loads(page["text"]) == expected

@@ -171,9 +171,12 @@ class BrowserEvents:
         if self.dropped:
             result["events_omitted"] = self.dropped
             self.dropped = 0
-        if any(not row.get("saved") for row in result.get("downloads", [])):
+        downloads = result.get("downloads", [])
+        unsaved = sum(not row.get("saved") for row in downloads)
+        if unsaved:
             result.update(success=False, error_code="DOWNLOAD_NOT_SAVED",
-                          error="내려받기가 시작됐으나 저장되지 않았습니다. downloads의 오류를 확인하세요.")
+                          error=f"내려받기 {len(downloads)}건 중 {len(downloads) - unsaved}건 저장, "
+                                f"{unsaved}건 미저장.")
         self.destination = None
         return result
 

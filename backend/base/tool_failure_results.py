@@ -21,8 +21,7 @@ def collect(value, limit=8):
         if isinstance(obj, dict):
             details = obj.get('details')
             if (isinstance(obj.get('code'), str) and isinstance(obj.get('kind'), str)
-                    and isinstance(details, dict) and isinstance(details.get('tool_result'), dict)
-                    and '$model_tool_failure' not in details['tool_result']):
+                    and isinstance(details, dict) and isinstance(details.get('tool_result'), dict)):
                 if len(rows) < limit:
                     rows.append((path + ['details', 'tool_result'], obj))
                 else:

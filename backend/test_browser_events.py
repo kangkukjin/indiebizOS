@@ -135,6 +135,13 @@ def test_late_events_multiple_downloads_and_failed_save(browser, tmp_path, monke
             assert result['success'] and len(result['downloads']) == 2, result
             paths = [Path(x['path']) for x in result['downloads']]
             assert len(set(paths)) == 2 and {p.read_text() for p in paths} == {'file0', 'file1'}
+            # One save fails after another has completed: the summary preserves both.
+            (tmp_path / 'mixed_2.txt').mkdir()
+            mixed = await call(op='evaluate', expression=script, path=str(tmp_path / 'mixed.txt'))
+            assert not mixed['success'] and mixed['error_code'] == 'DOWNLOAD_NOT_SAVED'
+            assert sum(row['saved'] for row in mixed['downloads']) == 1
+            assert mixed['error'] == '내려받기 2건 중 1건 저장, 1건 미저장.'
+            assert (tmp_path / 'mixed.txt').read_text() == 'file0'
             # A late browser event is not erased at the start of the next command.
             await session.raw_page.evaluate("setTimeout(()=>{throw new Error('late-error')},100)")
             await asyncio.sleep(.2)
@@ -145,6 +152,7 @@ def test_late_events_multiple_downloads_and_failed_save(browser, tmp_path, monke
             failed = await call(op='evaluate', expression=script)
             assert not failed['success'] and failed['error_code'] == 'DOWNLOAD_NOT_SAVED', failed
             assert all(not x['saved'] and 'path' not in x for x in failed['downloads'])
+            assert failed['error'] == '내려받기 2건 중 0건 저장, 2건 미저장.'
         finally:
             await call(op='close')
     asyncio.run(run())

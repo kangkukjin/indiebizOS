@@ -109,12 +109,12 @@ def test_model_preview_masks_retains_exact_path_and_does_not_reexecute(tmp_path,
     fault = failure(raw).view()
     original = {'edition': 2, 'success': True, 'value': {'caught': fault}}
     shown = view.project_result(original)
-    reports = shown['tool_failures']
-    assert len(reports) == 1 and reports[0]['basis'] == 'tool_claim'
-    assert reports[0]['preview']['changes_total'] > 0
+    reports, _ = collect(shown)
+    assert len(reports) == 1
+    assert shown['_preview']['changes_total'] > 0
     assert raw['api_key'] not in json.dumps(shown)
     assert original['value']['caught']['details']['tool_result'] == raw
-    ref = reports[0]['read_args']
+    ref = {'id': shown['result_ref']['id'], 'path': reports[0][0]}
     assert ref['path'] == ['value', 'caught', 'details', 'tool_result']
     rows, _ = view.resolve_input_refs({'kept': {'$ref': ref['id'], 'path': ref['path'] + ['items']}}, store=store)
     assert rows['kept'] == raw['items']
@@ -167,13 +167,11 @@ def test_original_reaches_situation_and_recovery_across_display_json(
     else:
         result = execute()
     shown = json.loads(result)
-    assert shown['tool_failures'][0]['result']['items'] == ['one', 'two']
-    assert not collect(shown)[0]  # display markers are never producer bodies
+    assert shown['value']['nested']['details']['tool_result']['items'] == ['one', 'two']
     rows = [r['latest'] for r in situation.snapshot()['observations']
             if r['latest']['subject']['kind'] == 'tool_failure']
     assert len(rows) == 1 and rows[0]['basis'] == 'tool_claim'
     assert 'items' in rows[0]['value']['fields']
-    assert '$model_tool_failure' not in rows[0]['value']['fields']
     ref = rows[0]['source_ref']
     stored = json.loads(supervisor.store.read_evidence(ref['id'], limit=None)['text'])
     assert stored['value']['nested']['details']['tool_result']['items'] == ['one', 'two']

@@ -363,5 +363,5 @@ def op_calculate(params):
     return {'success': not errors, 'path': str(dest), 'source_path': str(path), 'recalculated': True,
             'engine': 'LibreOffice', 'formula_count': len(formulas), 'errors': errors,
             'items': [{'sheet': sn, 'cell': addr, 'value': value} for (sn, addr), (_, value) in cached.items()],
-            **({'error': '수식 계산 오류가 있습니다. errors와 결과 파일을 확인하세요.'} if errors else {}),
+            **({'error': '수식 계산 결과에 오류가 있습니다.'} if errors else {}),
             'note': '셀 계산 캐시만 갱신했습니다. 도형·차트 파트와 수식 원문은 보존하며 차트 캐시는 갱신하지 않습니다.'}

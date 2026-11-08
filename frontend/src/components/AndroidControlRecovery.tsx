@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { confirmAndroid, dismissAndroidTask, pendingAndroidTask, subscribeAndroidTasks } from '../lib/android-control';
+import { androidObservationNotice, confirmAndroid, dismissAndroidTask, pendingAndroidTask, subscribeAndroidTasks } from '../lib/android-control';
 
 export function AndroidControlRecovery({ target, disabled, onBusy }: {
   target: string; disabled: boolean; onBusy: (busy: boolean) => void;
@@ -14,7 +14,7 @@ export function AndroidControlRecovery({ target, disabled, onBusy }: {
     setBusy(true); onBusy(true);
     try {
       const result = await confirmAndroid(task!);
-      setNotice(result.verified ? '기존 작업의 결과를 확인했습니다. 상태를 새로 조회하세요.' : '요청 접수를 확인했습니다. 실제 효과는 미확인입니다.');
+      setNotice(androidObservationNotice(result));
     } catch (e) { setNotice(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); onBusy(false); }
   };

@@ -7,6 +7,27 @@
 - 파일·전달: download(url, output_path), relay(query/url, media).
 조회·검색 결과의 반환 형식과 재생·저장의 효과는 op마다 다르다. 내 파일 음악 라이브러리는 `self:music`이다.
 
+## 현재 곡 교체와 실행 후 관측
+
+`play`는 이미 재생 중이면 기본적으로 대기열에 추가한다. 현재 곡을 바꿀 때는
+`if_playing:"replace"`(audio 전용)를 명시한다. 새 음원 준비가 실패하면 기존 곡을 유지한다.
+교체는 기존 대기열을 보존하고, 검색 후보가 더 있으면 그 뒤에 추가한다. 한 곡만 선택할 때는
+`limit:1`(`count:1` 별칭)을 쓴다. 대기열도 비워야 한다면 `stop` 후 한 곡을 재생한다.
+
+```ibl
+[limbs:youtube]{op:"play",query:"김지연 찬바람이 불면",limit:1,if_playing:"replace"}
+```
+
+play/skip/stop의 `observation`은 `operation-effect/1` 계약이다. `status:confirmed`와
+`scope:player_state`는 폰의 동일 playback_id에서 읽은 playing·position_seconds 관측이다.
+`actual.queue_length`도 함께 반환하므로 같은 조건을 확인하려고 곧바로 queue를 다시 읽을
+필요는 없다. `queue_membership`은 대기열 추가만 확인하고, PC의 `process_state`는 프로세스
+생존·종료만 확인한다. 외부 앱/클라이언트는 `unsupported`이며 실제 재생으로 단정하지 않는다.
+가청음·지속 재생·예약 시각의 미래 정지는 이 관측으로 증명되지 않는다.
+`unknown`/`mismatch`이면 실제값과 이유를 읽고 판단한다. 확인 실패 때문에 변경을 자동 재전송하지 않는다.
+원격 허브는 작업·대상·등록 세대를 결속하고 원문 참조를 보존한다. 구형 기기의 관측 필드 없는
+성공 응답은 효과 확인으로 승격하지 않는다. 새 옵션은 해당 코드가 배포된 기기에서 사용한다.
+
 ## 폰 단독 재생
 
 폰의 `limbs:youtube` 중 search/play/add/skip/seek/queue/stop은 폰에서 직접 실행한다. 검색·스트림

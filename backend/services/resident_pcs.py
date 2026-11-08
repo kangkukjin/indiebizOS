@@ -477,9 +477,18 @@ def transfer_local(target, args):
         # an unrelated file. Commit a complete, verified copy without clobbering.
         import shutil
         import tempfile
+        def collected():
+            from operation_effects import make
+            actual = {'path': str(dest), 'sha256': row['sha256'], 'size': row['size']}
+            observation = make(driver='resident_transfer', implementation=__file__,
+                resource={'kind': 'file', 'id': str(dest)}, scope='file_publication',
+                requested={'sha256': row['sha256'], 'size': row['size']}, actual=actual,
+                checks=[{'name': 'published_file_hash', 'matched': True}], request_id=tid,
+                method='sha256_before_atomic_publication')
+            return {'success': True, **actual, 'observation': observation}
         if dest.exists():
             if dest.is_file() and _file_sha256(dest) == row['sha256']:
-                return {'success': True, 'path': str(dest), 'sha256': row['sha256'], 'size': row['size']}
+                return collected()
             raise ValueError('destination_exists')
         fd, staged_name = tempfile.mkstemp(dir=dest.parent, prefix='.indiebiz-')
         staged_path = Path(staged_name)
@@ -495,7 +504,7 @@ def transfer_local(target, args):
             os.link(staged_path, dest)
         finally:
             staged_path.unlink(missing_ok=True)
-        return {'success': True, 'path': str(dest), 'sha256': row['sha256']}
+        return collected()
     # Resolve a lost submission reply by its original request, before creating
     # another transfer. submit() still checks the complete command fingerprint.
     if args.get('request_id'):

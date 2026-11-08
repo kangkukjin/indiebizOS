@@ -47,6 +47,14 @@
             ],
             "default": "search"
           },
+          "if_playing": {
+            "type": "string",
+            "enum": [
+              "enqueue",
+              "replace"
+            ],
+            "description": "play audio: 재생 중 enqueue(기본)는 대기열 추가, replace는 현재 곡 교체·기존 큐 보존. 한 곡만 선택은 limit:1."
+          },
           "position": {
             "type": "number",
             "description": "점프할 위치(초) (op=seek 시)"

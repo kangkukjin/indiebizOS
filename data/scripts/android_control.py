@@ -401,9 +401,15 @@ def verify_task(args, context):
         verified = readback(plan["request"], value)
         if not completion_allowed(plan["request"], value, verified):
             return fail("POSTCONDITION_FAILED: 결과 재검증에 실패했습니다.", value, "failed")
-        return {**out, "status": "completed", "verified": verified, "result": {
-            **value, "verified": verified, "condition": condition(action, plan["request"]),
-            "verification_scope": condition(action, plan["request"])["verification_scope"]}}
+        # Only the hub-side verifier imports the shared stdlib contract.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend' / 'base'))
+        from operation_effects import verified_result
+        value = {**value, "verified": verified, "condition": condition(action, plan["request"]),
+                 "verification_scope": condition(action, plan["request"])["verification_scope"]}
+        value = verified_result(value, driver="android_control", implementation=__file__,
+            requested=plan['request'], request_id=plan['request_id'], target=job['limb'],
+            scope=value['verification_scope'])
+        return {**out, "status": "completed", "verified": verified, "result": value}
     except (KeyError, TypeError, AttributeError, ValueError):
         return fail("준비·접수·관측 근거의 형식이 불완전합니다.")
 

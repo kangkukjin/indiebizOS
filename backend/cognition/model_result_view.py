@@ -994,6 +994,11 @@ def project_v2_result(result):
             if preview:
                 out["diagnostic"] = {**out["diagnostic"], "details": shown}
                 out["diagnostic_details_preview"] = preview
+    from operation_effects import summaries
+    effects, omitted = summaries(result, {'id': ref['id']})
+    if effects:
+        out['operation_observations'] = effects
+        out['operation_observations_omitted'] = omitted
     out["result_ref"] = _read_reference(ref, result)
     if result.get("success") is False:
         out["result_ref"].update(completed_call_references(result))

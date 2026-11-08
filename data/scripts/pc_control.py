@@ -541,6 +541,12 @@ def verify_task(args, context):
         value = decode(result.get("output"), plan)
     except (ValueError, TypeError, KeyError) as exc:
         return fail(str(exc), "failed", getattr(exc, "state", result))
+    # Only the hub-side verifier imports the shared stdlib contract.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend' / 'base'))
+    from operation_effects import verified_result
+    value = verified_result(value, driver="pc_control", implementation=__file__,
+        requested=plan['request'], request_id=plan['request']['request_id'], target=job['limb'],
+        scope=value.get('verification_scope') or 'driver_postcondition')
     return {**out, "status": "completed", "verified": value.get("verified") is True, "result": value}
 
 

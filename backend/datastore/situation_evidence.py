@@ -104,6 +104,15 @@ def observe_result(situation, result, ref, call_id):
     from logging_utils import mask_secret_data
     obj = mask_secret_data(result)
     visited = 0
+    # Structural producer claims only: no stdout JSON promotion. Exact original paths survive.
+    from operation_effects import collect, identity
+    effects, omitted = collect(obj)
+    for path, effect in effects:
+        situation.observe({'kind': 'operation_effect', 'operation_ref': effect['operation_ref'],
+                           'target': effect['target'], 'resource': effect['resource']},
+                          'reported_effect', {**effect, 'observations_omitted': omitted},
+                          source='tool_result', source_ref={**ref, 'path': path},
+                          basis='tool_claim', call_id=call_id, evidence_key=identity(effect))
 
     def excerpt(text, limit=900):
         raw = text.encode('utf-8')

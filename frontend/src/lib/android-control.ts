@@ -60,3 +60,17 @@ export function dismissAndroidTask(target: string) {
   pending.delete(target);
   listeners.forEach(listener => listener());
 }
+
+// Show the original operation's readback; confirmation never issues a second mutation.
+export function androidObservationNotice(value: unknown): string {
+  const state = record(value), observation = record(state.observation);
+  if (observation.contract !== 'operation-effect/1') {
+    return state.verified === true ? '요청한 상태를 확인했습니다.' : '요청은 전달됐으며 실제 효과는 미확인입니다.';
+  }
+  if (observation.status !== 'confirmed') return '실제 상태를 확정하지 못했습니다. 기존 작업 결과를 확인하세요.';
+  const actual = record(observation.actual);
+  const labels: Record<string, string> = { volume: '음량', max_volume: '최대 음량', brightness: '밝기' };
+  const values = Object.entries(labels).flatMap(([key, label]) =>
+    typeof actual[key] === 'number' ? [`${label} ${actual[key]}`] : []);
+  return '작업 직후 요청한 상태를 확인했습니다.' + (values.length ? ` ${values.join(' · ')}` : '');
+}

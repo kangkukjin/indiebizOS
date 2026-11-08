@@ -157,7 +157,8 @@ def _op_play(tool_input, yt):
     return yt.play_youtube(
         query=tool_input.get('query', ''),
         mode=tool_input.get('mode', 'audio'),
-        count=tool_input.get('limit', tool_input.get('count', 5)))
+        count=tool_input.get('limit', tool_input.get('count', 5)),
+        if_playing=tool_input.get('if_playing', 'enqueue'))
 
 
 def _op_add(tool_input, yt):

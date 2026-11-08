@@ -1,3 +1,4 @@
+import { androidObservationNotice } from '../lib/android-control';
 import { useEffect, useRef, useState } from 'react';
 import { mergeHardwareState, runPhoneAction, type HardwareOp, type HardwareState } from '../lib/phone-actions';
 
@@ -26,7 +27,7 @@ export function PhoneControlExtras({ target, disabled, onBusy }: {
       if (!mounted.current) return;
       if (result.hardware_control !== undefined) setState(previous => mergeHardwareState(previous, result));
       if (result.reading) setReading(`${sensorNames[result.sensor || ''] || result.sensor}: ${result.reading.values.map(n => n.toFixed(3)).join(', ')} · 정확도 ${result.reading.accuracy}`);
-      setNotice((result.message || '처리했습니다.') + (result.verified === false ? ' · 요청은 전달됐으며 실제 변경은 미확인입니다.' : ''));
+      setNotice((result.message ? result.message + ' ' : '') + androidObservationNotice(result));
       setElapsed((performance.now() - start) / 1000);
     } catch (e) {
       if (mounted.current) { setError(e instanceof Error ? e.message : String(e)); setState(null); setReading(''); setElapsed(null); }

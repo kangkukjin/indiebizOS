@@ -466,19 +466,19 @@
   "limbs:youtube": {
    "fields": {
     "description": "1f73751e4380",
-    "target_description": "35b838d9a64d",
+    "target_description": "0df8fe8a2c60",
     "implementation": "74c75a760b84",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "aliases": "07c8f1849551",
-    "ops": "7118e30c80fc",
+    "ops": "964b496bc260",
     "side_effect": "b5bea41b6c62",
     "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "86ce612b2f53"
    },
-   "reviewed": "2026-10-23",
-   "examples": 178
+   "reviewed": "2026-11-08",
+   "examples": 67
   },
   "others:agents": {
    "fields": {

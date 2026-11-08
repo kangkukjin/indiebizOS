@@ -58,6 +58,13 @@ def prepare():
         _registered = True
 
 
+def stream_status():
+    """Read MediaPlayer state, excluding private stream URLs."""
+    state = json.loads(str(bridge().streamStatus()))
+    return {key: state[key] for key in ('playing', 'playback_id', 'position_seconds', 'error')
+            if key in state}
+
+
 class Playback:
     """Minimal Popen contract used by the shared queue, with playback ownership."""
 

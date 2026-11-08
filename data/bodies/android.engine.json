@@ -58,6 +58,7 @@
     "base/model_deadline",
     "base/model_request_budget",
     "base/model_resolver",
+    "base/operation_effects",
     "base/output_publish",
     "base/phone_execution_contract",
     "base/phone_jobs",
@@ -651,8 +652,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 640,
-    "engine": 608,
+    "total": 641,
+    "engine": 609,
     "blocklist": 32
   }
 }

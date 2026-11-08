@@ -24,7 +24,15 @@ nodes:
 
 
 
-          play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션).
+          play/add — query 파라미터로 검색어 또는 URL. play는 재생 중이면 기본 enqueue(큐 추가)다.
+          현재 곡 대신 다른 곡을 바로 틀 때 audio 모드에서 if_playing:replace를 명시한다. 새 음원 준비 후 교체하며 기존 대기열은 보존한다.
+          한 곡만 선택할 때 limit:1(count:1도 가능)을 명시한다. 기본5는 나머지 검색 결과도 대기열에 넣는다.
+          replace의 추가 검색 후보는 기존 대기열 뒤에 붙는다. stop은 현재 곡과 대기열을 모두 비운다.
+          play/skip/stop의 observation은 실행 직후 관측이다. confirmed+player_state는 해당 playback_id의 재생 상태 확인이며
+          같은 상태를 즉시 queue로 다시 조회할 필요가 없다. 가청음이나 미래 정지는 보증하지 않는다.
+          queue_membership은 큐 추가 확인이고 재생 확인이 아니다. process_state는 PC 프로세스 상태까지만 확인한다.
+          unknown/mismatch는 실제값과 이유를 보고 필요하면 읽기만 수행하며 변경을 무조건 재전송하지 않는다.
+ seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션).
           relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음.
           skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
 
@@ -61,7 +69,7 @@ nodes:
             languages: 사용 가능한 자막 언어 목록
             channel: 채널 핸들·URL·ID 해석 + 채널 메타데이터와 최신 영상
             summarize: 자막+AI요약+HTML 보고서 생성
-            play: 즉시 재생 (query 검색어/URL)
+            play: '재생 또는 큐 추가 (query; 현재 곡 교체는 if_playing:replace, 한 곡은 limit:1)'
             add: 큐에 추가 (query 검색어/URL)
             skip: 현재 곡 스킵
             seek: 현재 곡의 특정 지점으로 점프 (position 초)
@@ -203,6 +211,10 @@ tool_json:
         op:
           type: string
           description: YouTube 동작 (기본 search·재생 없음)
+        if_playing:
+          type: string
+          enum: [enqueue, replace]
+          description: 'play audio: 재생 중 enqueue(기본)는 대기열 추가, replace는 현재 곡 교체·기존 큐 보존. 한 곡만 선택은 limit:1.'
         position:
           type: number
           description: 점프할 위치(초) (op=seek 시)

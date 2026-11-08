@@ -246,6 +246,13 @@ def test_script_wire_and_native_boundary_in_real_child_process(tmp_path):
                               'limb':'phone','task_ref':task['task_ref'],'request_id':plan['request_id']}}}}
     observation = {'task_ref':task['task_ref'],'state':'succeeded','result':{'success':True,'value':value}}
     assert pc.verify_task({'task':task,'observation':observation},context)['verified']
+    # The registered verifier is a real isolated child, not this pytest process's imports.
+    verified = subprocess.run([sys.executable, str(ROOT/'data/scripts/android_control.py')],
+        input=json.dumps({'args': {'op': 'verify', 'task': task, 'observation': observation},
+                          'context': context}), capture_output=True, text=True, timeout=10)
+    reply = json.loads(verified.stdout)
+    assert reply['ok'] and reply['value']['result']['observation']['status'] == 'confirmed', reply
+
     for altered in [{'request_id':'wrong'},{'source_sha256':'wrong'},{'verified':True,'screen_on':None}]:
         obs = {**observation,'result':{'success':True,'value':{**value,**altered}}}
         assert not pc.verify_task({'task':task,'observation':obs},context)['verified']

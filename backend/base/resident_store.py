@@ -118,7 +118,7 @@ def _watch_situation(rec, jid):
                     'source_hash': jid, 'executed': None, 'items': [], 'total': 0,
                     'coverage': {'syntax': 'helper_did_not_report'}}
                 publish(report, {**subject, 'kind': 'remote_command'}, situation=situation)
-            situation.on_result({'device': device, 'cwd': summary.get('cwd'),
+            situation.on_result({'device': device, 'generation': generation, 'cwd': summary.get('cwd'),
                                  'op': summary.get('op'),
                                  'task_ref': {'kind': 'guestpc', 'task_id': jid},
                                  'result': result}, ref, 'resident:' + jid)
@@ -172,7 +172,10 @@ def observe(rec, events):
                 state = ("cancelled" if payload.get("cancelled") else
                          "unknown" if payload.get("unknown") else
                          "failed" if payload.get("timeout") or payload.get("error") or payload.get("exit", 0) != 0 else "succeeded")
-                encoded = json.dumps(payload, ensure_ascii=False)
+                from operation_effects import bind
+                bound = bind(payload, device=rec['device_id'], generation=rec['registration']['generation'],
+                             job_id=jid, request_id=row['request_id'], received_at=time.time())
+                encoded = json.dumps(bound, ensure_ascii=False)
                 db.execute("UPDATE resident_tasks SET state=?,result=? WHERE id=?", (state, encoded, jid))
                 db.execute("UPDATE jobs SET state='completed',result=?,partial=NULL,updated=? WHERE id=?",
                            (encoded, time.time(), jid))

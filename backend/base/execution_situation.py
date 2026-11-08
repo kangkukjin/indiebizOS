@@ -63,6 +63,8 @@ def projection_kind(record):
             from task_receipts import LIVE
             return 'pending' if value.get('state') in LIVE or value.get('state') == 'waiting' else 'receipt'
         return 'state'
+    if row['facet'] == 'reported_effect':
+        return 'state'  # attributed driver claim; basis remains tool_claim
     return 'evidence' if row['facet'] == 'reported_outcome' else 'interpretation'
 
 

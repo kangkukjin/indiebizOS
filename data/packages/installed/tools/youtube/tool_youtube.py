@@ -40,6 +40,7 @@ from common.pkg_utils import load_sibling
 
 _tx = load_sibling(__file__, "tool_transcript")
 _phone = load_sibling(__file__, "youtube_phone")
+_feedback = load_sibling(__file__, "youtube_feedback")
 markdown_to_html = _tx.markdown_to_html
 download_youtube_music = _tx.download_youtube_music
 format_timestamp = _tx.format_timestamp
@@ -77,7 +78,7 @@ _player_audio_url = None    # 현재 곡의 오디오 스트림 URL (seek 재시
 _player_duration = 0        # 현재 곡 길이(초)
 _player_started_at = None   # 현재 ffplay 를 띄운 벽시계 시각(위치 추정용)
 _player_seek_offset = 0.0   # 현재 ffplay 를 -ss 로 시작한 오프셋(초)
-_player_lock = threading.Lock()  # 큐/상태 동시접근 보호
+_player_lock = threading.RLock()  # 큐/상태 동시접근 보호
 
 
 def _get_audio_url(video_id):
@@ -181,8 +182,8 @@ def _play_next_in_queue_locked():
         return False
 
 
-def _close_player():
-    """재생 중지 + 큐 초기화"""
+def _close_player(preserve_queue=False):
+    """재생 종료. 명시 교체만 기존 대기열을 보존한다."""
     global _player_process, _player_video_id, _player_title, _player_queue
     global _player_audio_url, _player_duration, _player_started_at, _player_seek_offset
     with _player_lock:
@@ -202,7 +203,8 @@ def _close_player():
         _player_process = None
         _player_video_id = None
         _player_title = None
-        _player_queue = []
+        if not preserve_queue:
+            _player_queue = []
         _player_audio_url = None
         _player_duration = 0
         _player_started_at = None
@@ -502,13 +504,15 @@ def relay_youtube(query: str, media: str = "audio", count: int = 6) -> dict:
     }
 
 
-def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
+@_feedback.operation("play", lambda: globals())
+def play_youtube(query: str, mode: str = "audio", count: int = 5, if_playing: str = "enqueue") -> dict:
     """유튜브 검색 후 재생
 
     Args:
         query: 검색어 또는 YouTube URL
         mode: 재생 모드 - "audio" (소리만, 기본), "video" (브라우저)
-        count: 검색 결과 수 (1-75, 기본 5). URL 직접 지정 시 무시됨.
+        if_playing: enqueue(기본)는 재생 중이면 큐 추가, replace는 audio 현재 곡 교체·기존 큐 보존.
+        count: 검색 결과 수 (1-75, 기본 5). 한 곡만 틀 때 1. URL 직접 지정 시 무시됨.
             상한 초과 시 clamped/requested 로 신고
 
     Returns:
@@ -524,6 +528,8 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
         }
 
     mode = (mode or "audio").lower()
+    if if_playing not in {"enqueue", "replace"} or if_playing == "replace" and mode != "audio":
+        return {"success": False, "error": "if_playing은 enqueue 또는 replace(audio 전용)여야 합니다."}
     requested = int(count or 5)
     count = max(1, min(SEARCH_COUNT_MAX, requested))
     # 침묵 클램프 금지 — 검색 경로(search_youtube)와 같은 자로 신고한다.
@@ -615,7 +621,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
 
     # ★ 이미 재생 중이면 자동으로 큐에 추가 (play_youtube 반복 호출 대응)
     with _player_lock:
-        if _player_process and _player_video_id:
+        if _player_process and _player_video_id and if_playing == "enqueue" and mode != "client":
             queue_item = {
                 'video_id': video_id,
                 'title': title,
@@ -674,8 +680,16 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
             result.update(clamp_info)
         return result
 
-    # 이전 재생 종료
-    _close_player()
+    # 준비가 실패하면 기존 곡을 유지한다. 변경 이후의 실패에는 자동 재실행하지 않는다.
+    audio_url = None
+    if mode == "audio":
+        try:
+            audio_url = _get_audio_url(video_id)
+            if not audio_url:
+                return {'success': False, 'error': '오디오 스트림 URL을 가져올 수 없습니다.'}
+        except Exception as exc:
+            return {'success': False, 'error': f'오디오 준비 실패: {exc}'}
+    _close_player(preserve_queue=if_playing == "replace")
     _player_mode = mode
 
     if mode == "video":
@@ -700,9 +714,6 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     else:
         # audio 모드: yt-dlp + ffplay로 오디오 스트림 재생
         try:
-            audio_url = _get_audio_url(video_id)
-            if not audio_url:
-                return {'success': False, 'error': '오디오 스트림 URL을 가져올 수 없습니다.'}
             _player_duration = int(duration or 0)  # seek 진행바용 곡 길이(초)
             _start_ffplay(audio_url)
             _player_video_id = video_id
@@ -762,6 +773,7 @@ def _open_phone_video(video_id, title=''):
     return result
 
 
+@_feedback.operation("stop", lambda: globals())
 def stop_youtube() -> dict:
     """현재 재생 중인 유튜브 중지 (큐도 모두 초기화)"""
     with _player_lock:
@@ -875,6 +887,7 @@ def add_to_queue(query: str, count: int = 3) -> dict:
     }
 
 
+@_feedback.operation("skip", lambda: globals())
 def skip_youtube() -> dict:
     """현재 곡 건너뛰고 대기열의 다음 곡 재생"""
     global _player_process, _player_video_id, _player_title

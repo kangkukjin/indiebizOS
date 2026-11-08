@@ -33,6 +33,23 @@ def test_actual_file_calculation_tracks_only_used_inputs(active, tmp_path):
     assert row['availability'] == 'needs_recheck'
 
 
+def test_edit_effect_survives_later_transformation_failure(active, tmp_path):
+    path = tmp_path / 'draft.txt'
+    path.write_text('OLD')
+    code = '[self:edit]{path:$path,old_string:"OLD",new_string:"NEW"} >> [table:each]{return 1} ?? "FAIL"'
+    inputs = {'path': str(path)}
+    plan = compile_program(code, load_registry(str(Path(__file__).resolve().parents[1])), inputs)
+    assert not plan.issues, plan.issues
+    runtime = Runtime(plan, inputs)
+    result = runtime.run()
+    assert path.read_text() == 'NEW'
+    assert result['success'] and result['value'] == 'FAIL', result
+    # Catch transforms the value, not the already completed file operation.
+    assert any(row.get('kind') == 'tool_evidence' for row in runtime.trace)
+    observations = active.situation.snapshot()['observations']
+    assert any(row['latest']['subject'].get('address') == str(path) for row in observations)
+
+
 if __name__ == '__main__':
     import sys
     import pytest

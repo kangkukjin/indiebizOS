@@ -140,7 +140,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-11-09", impl: "51714889d5151179"}  # 수리 ~turn 파일 경로 연결. 제한 없는 주인만 임시 경로를 소유하며 회원 문서 변환·기기 실행 분기는 유지.
+        path_audited: {at: "2026-11-09", impl: "f4c33b58f00c5420"}  # 대상별 실행 연결 재감사: 주인 실행 scope·격리 유지, 회원 문서 변환·기기 실행 분기는 불변.
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -153,7 +153,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-11-09", impl: "51714889d5151179"}  # 수리 ~turn 파일 경로 연결. 제한 없는 주인만 임시 경로를 소유하며 회원 문서 변환·기기 실행 분기는 유지.
+        path_audited: {at: "2026-11-09", impl: "f4c33b58f00c5420"}  # 대상별 실행 연결 재감사: 주인 실행 scope·격리 유지, 회원 문서 변환·기기 실행 분기는 불변.
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -233,7 +233,7 @@ nodes:
         lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
         limb_op: {op: write, path: $path, content: $content}
         member_transform: member_documents:write
-        path_audited: {at: "2026-11-09", impl: "51714889d5151179"}  # 수리 ~turn 파일 경로 연결. 제한 없는 주인만 임시 경로를 소유하며 회원 문서 변환·기기 실행 분기는 유지.
+        path_audited: {at: "2026-11-09", impl: "f4c33b58f00c5420"}  # 대상별 실행 연결 재감사: 주인 실행 scope·격리 유지, 회원 문서 변환·기기 실행 분기는 불변.
         target_key: path
       list:
         callable_contract:
@@ -1007,7 +1007,7 @@ nodes:
               args = json.load(sys.stdin)
               print(json.dumps({"value": args["value"]}, ensure_ascii=False))
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-11-09", impl: "51714889d5151179"}  # 수리 ~turn 파일 경로 연결. 제한 없는 주인만 임시 경로를 소유하며 회원 문서 변환·기기 실행 분기는 유지.
+        path_audited: {at: "2026-11-09", impl: "f4c33b58f00c5420"}  # 대상별 실행 연결 재감사: 주인 실행 scope·격리 유지, 회원 문서 변환·기기 실행 분기는 불변.
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -1331,7 +1331,7 @@ tool_json:
       type: object
       properties:
         shell: {type: string, enum: [powershell, pwsh, cmd, sh, bash, zsh], description: "PC 실행 셸. Windows 기본 powershell; 기존 배치는 cmd 명시. macOS/Linux 기본 sh. 설치되지 않은 셸을 다른 셸로 대체하지 않음."}
-        mode: {type: string, enum: [sync, session], description: session은 출력·입력·중단 가능한 process 작업 접수증 반환}
+        mode: {type: string, enum: [sync, session], description: "session은 긴 실행·서버의 process 접수증 반환. self:task status/control로 관측·제어. 수리도 지원하며 lifetime=task 사용."}
         io: {type: string, enum: [pipe, pty]}
         yield_ms: {type: integer, minimum: 0, maximum: 30000}
         request_id: {type: string}
@@ -1345,7 +1345,7 @@ tool_json:
           description: 폰 Python에 주입할 입력 객체
         cwd:
           type: string
-          description: 폰 작업 디렉터리, 생략 시 userdata/remote_work
+          description: "작업 디렉터리. PC 생략 시 현재 프로젝트(수리 구현은 후보), 폰 생략 시 userdata/remote_work. PC 수리의 파일 소유 프로젝트는 정본에서 실행. 위치 지정은 권한을 확대하지 않음."
         command:
           type: string
           description: 셸 명령 또는 폰 runtime:python의 Python 본문

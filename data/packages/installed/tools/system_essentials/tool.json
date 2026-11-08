@@ -184,7 +184,7 @@
               "sync",
               "session"
             ],
-            "description": "session은 출력·입력·중단 가능한 process 작업 접수증 반환"
+            "description": "session은 긴 실행·서버의 process 접수증 반환. self:task status/control로 관측·제어. 수리도 지원하며 lifetime=task 사용."
           },
           "io": {
             "type": "string",
@@ -222,7 +222,7 @@
           },
           "cwd": {
             "type": "string",
-            "description": "폰 작업 디렉터리, 생략 시 userdata/remote_work"
+            "description": "작업 디렉터리. PC 생략 시 현재 프로젝트(수리 구현은 후보), 폰 생략 시 userdata/remote_work. PC 수리의 파일 소유 프로젝트는 정본에서 실행. 위치 지정은 권한을 확대하지 않음."
           },
           "command": {
             "type": "string",

@@ -85,7 +85,8 @@ def test_n1_name_shape_rule_is_now_a_gate_not_prose():
 
 def test_r1_repair_fragment_preserves_capabilities_and_check_receipts():
     frag = open(os.path.join(os.path.dirname(BACKEND), "data", "common_prompts", "fragments", "13_repair.md"), encoding="utf-8").read()
-    assert "같은 사본" in frag and "스크립트" in frag
+    assert "몸의 구현은 사본, 파일 소유 프로젝트는 정본" in frag
+    assert "mode:session" in frag and "접수증으로 관측·제어" in frag
     assert "verification_plan" in frag and "선택 기능" in frag
     assert "검사 수·명령 형식·과거 실패 이력은 적용 허가 조건이 아니다" in frag
     assert "모델·인증·네트워크·일반 도구는 기존 권한" in frag

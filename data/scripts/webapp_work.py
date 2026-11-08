@@ -109,6 +109,12 @@ def configuration(project):
         require(isinstance(argv, list) and bool(argv) and all(isinstance(v, str) and v and '\0' not in v for v in argv),
                 f"{name}: argv는 비어 있지 않은 문자열 목록이어야 합니다(셸 문자열 불가)")
         seen.add(name)
+        if check.get('report') is not None:
+            report = check['report']
+            require(isinstance(report, dict) and report.get('format') == 'junit'
+                    and isinstance(report.get('path'), str), f'{name}: report는 format=junit과 path가 필요합니다')
+            require((project / report['path']).resolve().is_relative_to(project.resolve()),
+                    '검사 보고서는 프로젝트 안에 있어야 합니다')
     selected_package = {k: package[k] for k in ("name", "type", "packageManager", "engines", "scripts") if k in package}
     # 계획 후 설정·의존성 잠금이 바뀌면 옛 명령으로 계속 진행하지 않는다.
     digest = hashlib.sha256()
@@ -202,19 +208,14 @@ def plan(project, names):
     missing = [n for n in names if n not in available]
     require(not missing, f"검사 설정 없음: {', '.join(missing)}. package.json 또는 {CONFIG}에 선언하세요")
     env = environment(project)
-    items = [{"name": n, "argv": resolve_command(available[n]["argv"], project, env)} for n in names]
+    items = [{"name": n, "argv": resolve_command(available[n]["argv"], project, env),
+              **({'report': available[n]['report']} if available[n].get('report') else {})} for n in names]
     return {"project": str(project), "items": items, "fingerprint": config["fingerprint"]}
 
 
 def stop_process(process):
-    if os.name == "nt":
-        subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
-    else:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-    process.wait(timeout=10)
+    from script_process import stop_tree
+    return stop_tree(process)
 
 
 def run_check(project, name, timeout, fingerprint):
@@ -223,10 +224,18 @@ def run_check(project, name, timeout, fingerprint):
     require(isinstance(fingerprint, str) and fingerprint == selected["fingerprint"],
             "검사 계획 이후 설정이 바뀌었습니다. 다시 계획하세요")
     row = selected["items"][0]
+    report_path = (project / row['report']['path']) if row.get('report') else None
+    def report_identity():
+        if report_path is None or not report_path.is_file():
+            return None
+        stat = report_path.stat()
+        return (stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+    previous_report = report_identity()
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
     log = LOG_ROOT / (uuid.uuid4().hex + ".log")
     t0 = time.monotonic()
     status, exit_code = "failed", None
+    cleanup = None
     with log.open("wb") as output:
         try:
             process = subprocess.Popen(row["argv"], cwd=project, env=environment(project, name),
@@ -236,7 +245,7 @@ def run_check(project, name, timeout, fingerprint):
                 exit_code = process.wait(timeout=timeout)
                 status = "passed" if exit_code == 0 else "failed"
             except subprocess.TimeoutExpired:
-                stop_process(process)
+                cleanup = stop_process(process)
                 status = "timeout"
         except OSError as exc:
             output.write(str(exc).encode())
@@ -245,8 +254,25 @@ def run_check(project, name, timeout, fingerprint):
     with log.open("rb") as source:
         source.seek(max(0, size - 8000))
         tail = source.read().decode("utf-8", errors="replace")
+    report = None
+    if report_path is not None:
+        from repair_test_results import summary
+        if (report_path.is_symlink() or not report_path.resolve().is_relative_to(project.resolve())
+                or report_identity() is None or report_identity() == previous_report):
+            report = {'passed': False, 'error': '현재 실행의 검사 보고서가 없습니다'}
+        else:
+            report = summary({'kind': 'junit', 'report': str(report_path)}, '', exit_code)
+            report['path'] = str(report_path)
+            if report_path.stat().st_size <= 8_000_000:
+                report['sha256'] = hashlib.sha256(report_path.read_bytes()).hexdigest()
+        if status == 'passed' and not report['passed']:
+            status = 'failed' if report.get('failures') else 'unverified'
+    if configuration(project)['fingerprint'] != fingerprint:
+        status = 'unverified'
     return {**row, "ok": status == "passed", "status": status, "exit_code": exit_code,
             "seconds": round(time.monotonic() - t0, 3), "log_path": str(log),
+            **({'test_report': report} if report is not None else {}),
+            **({'cleanup': cleanup} if cleanup is not None else {}),
             "output_tail": mask_secrets(tail), "output_truncated": size > 8000, "output_bytes": size}
 
 

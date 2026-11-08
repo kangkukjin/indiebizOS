@@ -34,9 +34,7 @@ def node_runtime(workspace, env):
     from coding_process import sandbox_command
     from runtime_utils import get_runtime_paths
     root = Path(workspace).resolve()
-    project = root / "frontend"
-    if not (project / "package.json").is_file():
-        project = root
+    project = root if (root / "package.json").is_file() else root / "frontend"
     if not (project / "package.json").is_file():
         return None
     candidates = [get_runtime_paths().get("node")]

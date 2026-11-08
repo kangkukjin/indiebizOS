@@ -28,27 +28,43 @@ def check_invocation():
         check()
 
 
-def stop_tree(proc):
-    """Stop the owned child and descendants on every supported desktop OS."""
+def stop_tree(proc, *, grace=0):
+    """Attempt every owned termination; cleanup cannot replace the primary result."""
     import psutil
+    errors = []
+    def attempt(stage, operation):
+        try:
+            return operation()
+        except (ProcessLookupError, psutil.NoSuchProcess):
+            return None
+        except (OSError, psutil.Error, subprocess.TimeoutExpired) as exc:
+            errors.append({'phase': 'cleanup', 'operation': stage,
+                           'errno': getattr(exc, 'errno', None), 'error': str(exc)})
     try:
         children = psutil.Process(proc.pid).children(recursive=True)
-    except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
+    except psutil.NoSuchProcess:
         children = []
+    except (psutil.AccessDenied, PermissionError) as exc:
+        children = []
+        errors.append({'phase': 'cleanup', 'operation': 'descendants',
+                       'errno': getattr(exc, 'errno', None), 'error': str(exc)})
+    if grace and proc.poll() is None:
+        attempt('terminate', lambda: os.killpg(proc.pid, signal.SIGTERM) if os.name != 'nt' else proc.terminate())
+        try:
+            proc.wait(timeout=grace)
+        except subprocess.TimeoutExpired:
+            pass
     if os.name != 'nt':
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        attempt('group', lambda: os.killpg(proc.pid, signal.SIGKILL))
     for child in reversed(children):
-        try:
-            child.kill()
-        except psutil.NoSuchProcess:
-            pass
+        attempt('child', child.kill)
     if proc.poll() is None:
-        proc.kill()
-    proc.wait()
-    psutil.wait_procs(children, timeout=2)
+        attempt('parent', proc.kill)
+    attempt('wait', lambda: proc.wait(timeout=2))
+    remaining = attempt('wait_children', lambda: psutil.wait_procs(children, timeout=2))
+    return {'confirmed': not errors and proc.poll() is not None and not (remaining and remaining[1]),
+            'scope': 'process_group_and_observed_descendants',
+            'diagnostics': errors, 'remaining_pids': [p.pid for p in remaining[1]] if remaining else []}
 
 
 def run_process(argv, stdin, *, cwd, env, timeout, check=None,
@@ -77,6 +93,8 @@ exception waits for child termination before returning to its receipt owner.
                                 cwd=cwd, env=env, start_new_session=os.name != 'nt')
         deadline = time.monotonic() + timeout
         timed_out = False
+        cleanup = None
+        failure = None
         try:
             if started:
                 started(proc.pid)
@@ -85,23 +103,26 @@ exception waits for child termination before returning to its receipt owner.
                     check()
                 if time.monotonic() >= deadline:
                     timed_out = True
-                    stop_tree(proc)
                     break
                 time.sleep(.05)
-        except BaseException:
-            stop_tree(proc)
-            raise
+        except BaseException as exc:
+            failure = exc
         # Transient files own their synchronous children; registered scripts keep
         # the historical successful-exit behavior (some start external services).
-        if terminate_descendants:
-            stop_tree(proc)
+        if terminate_descendants or timed_out or failure is not None:
+            cleanup = stop_tree(proc)
         out.flush()
         err.flush()
         result = {'exit_code': proc.returncode, 'timed_out': timed_out}
+        if cleanup is not None:
+            result['cleanup'] = cleanup
         if stdout_file is None:
             out.seek(0)
             result['stdout'] = out.read().decode('utf-8', errors='replace')
         if stderr_file is None:
             err.seek(0)
             result['stderr'] = err.read().decode('utf-8', errors='replace')
+        if failure is not None:
+            failure.process_result = result
+            raise failure
         return result

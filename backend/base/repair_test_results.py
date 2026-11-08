@@ -90,7 +90,7 @@ def summary(spec, output, exit_code):
     result = {"kind": spec["kind"], "tests": 0, "failures": 0, "skipped": 0,
               "passed": False, "cases": []}
     try:
-        if spec["kind"] == "pytest":
+        if spec["kind"] in {'pytest', 'junit'}:
             path = Path(spec["report"])
             if path.is_symlink() or not path.is_file() or path.stat().st_size > 8_000_000:
                 raise ValueError("검사 보고서가 없거나 유효하지 않습니다")

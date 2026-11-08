@@ -10,6 +10,8 @@ def apply(st, repo, session):
         return None  # the existing staged restart path owns this transaction
     from script_mutation import activation_scope
     with st._candidate.locked(repo, 'application'), activation_scope(repo, session):
+        from process_sessions import quiesce_workspace
+        quiesce_workspace(Path(repo) / session['worktree'])
         result = _apply(st, repo, session)
         if result is not None:
             return result

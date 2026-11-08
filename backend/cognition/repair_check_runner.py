@@ -8,11 +8,14 @@ from pathlib import Path
 from repair_test_results import invocation, selected_invocation, summary
 
 
-def execute(repo, session, candidate, command, controller=None, timeout=300, shell_kind=None):
+def execute(repo, session, candidate, command, controller=None, timeout=300, shell_kind=None, cwd=None):
     from repair_process import run
     wt = Path(repo) / session["worktree"]
+    location = Path(cwd or wt).resolve()
+    if not location.is_relative_to(wt.resolve()):
+        raise PermissionError('검사 cwd가 사본 밖입니다')
     try:
-        spec = invocation(command, wt)
+        spec = invocation(command, location)
     except ValueError:
         spec = None  # 계측하지 못하는 합법적인 명령도 그대로 실행하고 출력을 전달한다.
     def cancelled():
@@ -22,6 +25,7 @@ def execute(repo, session, candidate, command, controller=None, timeout=300, she
     failure_kind = None
     selection = {"command": command, "instrumented": bool(spec)}
     preflight = None
+    process_result = None
     try:
         expression = selected_invocation(command, wt)
         if expression:
@@ -42,7 +46,7 @@ def execute(repo, session, candidate, command, controller=None, timeout=300, she
         shell = repair_argv(command, shell_kind)
         if not spec:
             from command_preflight import check as precheck, blocked, rejection
-            preflight = precheck(shell, cwd=str(wt), runner=lambda argv, **kw: run(
+            preflight = precheck(shell, cwd=str(location), runner=lambda argv, **kw: run(
                 argv, wt, readonly=True, check=cancelled, **kw))
             if blocked(preflight):
                 record = {**rejection(preflight), 'id': uuid.uuid4().hex, 'command': command,
@@ -54,28 +58,34 @@ def execute(repo, session, candidate, command, controller=None, timeout=300, she
         from execution_situation import command_feedback
         with command_feedback(wt):
             result = run(spec["argv"] if spec else shell, wt,
-                         cwd=spec["cwd"] if spec else str(wt), timeout=timeout, check=cancelled, env=child_env)
+                         cwd=spec["cwd"] if spec else str(location), timeout=timeout, check=cancelled, env=child_env)
         output = result.stdout + result.stderr
+        process_result = getattr(result, 'process_result', None)
         exit_code = result.returncode
         if preflight:
             from preflight_feedback import execution_result
             execution_result(preflight, exit_code, output)
     except (subprocess.TimeoutExpired, OSError) as exc:
+        process_result = getattr(exc, 'process_result', None)
         failure_kind = ("timeout" if isinstance(exc, subprocess.TimeoutExpired) else
                         "cancelled" if controller and controller.cancelled() else "environment")
         exit_code = 124 if failure_kind == "timeout" else 130 if failure_kind == "cancelled" else 126
         output = "\n".join(x.decode("utf-8", "replace") if isinstance(x, bytes) else x
                            for x in (getattr(exc, "stdout", None), getattr(exc, "stderr", None), str(exc)) if x)
+        if process_result and not isinstance(exc, subprocess.TimeoutExpired):
+            output = process_result.get('stdout', '') + process_result.get('stderr', '') + output
     report = summary(spec, output, exit_code) if spec else None
     status = "failed" if exit_code else "passed" if report and report["passed"] else "unverified"
     if not failure_kind and exit_code:
         from repair_live_probe import failure_kind as classify
-        failure_kind = classify(output, exit_code)
+        failure_kind = 'check' if report and report.get('failures') else classify(output, exit_code)
     record = {"id": uuid.uuid4().hex, "command": command, "exit_code": exit_code, "status": status,
               "output": output, "test_report": report, "failure_kind": failure_kind,
               "selection": selection, "workspace": str(wt.resolve())}
     if preflight is not None:
         record['preflight'] = preflight
+    if process_result and process_result.get('cleanup'):
+        record['cleanup'] = process_result['cleanup']
     if controller:
         record["evidence_ref"] = controller.store.evidence(record)
     session.setdefault("execution_checks", []).append(record)

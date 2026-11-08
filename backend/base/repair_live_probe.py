@@ -56,7 +56,7 @@ def failure_kind(output, exit_code):
     # 기능 assertion 실패는 모델에게 전달하되, 실행 환경 장애는 개발과 분리한다.
     signatures = ("sandbox_apply: Operation not permitted", "<urlopen error [Errno 1] Operation not permitted>",
                   "Live verification upstream unavailable", "Executable doesn't exist at")
-    return "environment" if any(value in output for value in signatures) else "check"
+    return "environment" if any(value in output for value in signatures) else "unknown"
 
 
 def activation_check(base, record, command, persist, run, *, timeout=None):

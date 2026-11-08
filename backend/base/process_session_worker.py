@@ -38,9 +38,12 @@ class Worker:
         self.proc = None
         self.lease = None
         self.stopping = False
+        self.execution_stack = None
+        self.reaper = None
 
     def save(self):
-        write_json(self.meta_path, self.meta)
+        with self.lock:
+            write_json(self.meta_path, self.meta)
 
     def output(self, stream, handle):
         try:
@@ -64,23 +67,24 @@ class Worker:
 
     def terminate(self, interrupt=False):
         if self.proc is None: return
+        if not interrupt:
+            from script_process import stop_tree
+            with self.lock:
+                previous = self.meta.get('cleanup', {})
+                result = stop_tree(self.proc, grace=1)
+                result['confirmed'] = result['confirmed'] and previous.get('confirmed', True)
+                result['diagnostics'] = previous.get('diagnostics', []) + result['diagnostics']
+                self.meta['cleanup'] = result
+                self.save()
+            return
         if os.name == 'nt':
-            if interrupt:
-                self.proc.send_signal(signal.CTRL_BREAK_EVENT)
-            else:
-                subprocess.run(['taskkill', '/PID', str(self.proc.pid), '/T', '/F'], capture_output=True)
+            self.proc.send_signal(signal.CTRL_BREAK_EVENT)
             return
         try:
             pgid = os.tcgetpgrp(self.master) if interrupt and self.master is not None else self.proc.pid
             os.killpg(pgid, signal.SIGINT if interrupt else signal.SIGTERM)
         except (ProcessLookupError, OSError):
             return
-        if not interrupt:
-            def force():
-                time.sleep(1)
-                try: os.killpg(self.proc.pid, signal.SIGKILL)
-                except ProcessLookupError: pass
-            threading.Thread(target=force, daemon=True).start()
 
     def launch(self):
         command = self.meta['argv']
@@ -88,6 +92,30 @@ class Worker:
                if not any(s in k.upper() for s in ('TOKEN', 'API_KEY', 'SECRET', 'PASSWORD'))
                and not k.startswith(('INDIEBIZ', 'GIT_'))}
         env.update(TMPDIR=str(self.directory), PYTHONDONTWRITEBYTECODE='1', TERM='xterm-256color')
+        execution = self.meta.get('execution')
+        if execution:
+            from contextlib import ExitStack
+            import tempfile
+            from repair_process import prepare
+            self.execution_stack = ExitStack()
+            # Unix socket paths have a platform length limit. The worker owns
+            # this short runtime for the entire session, including its bridge.
+            runtime = Path(tempfile.mkdtemp(prefix='process-run-', dir='/tmp'))
+            def cleanup_runtime():
+                if self.meta.get('cleanup', {}).get('confirmed') is False:
+                    self.meta['runtime_retained'] = str(runtime)
+                    self.save()
+                else:
+                    import shutil
+                    shutil.rmtree(runtime)
+            self.execution_stack.callback(cleanup_runtime)
+            source = dict(os.environ, INDIEBIZ_MODEL_CONFIG_ROOT=execution['repo'])
+            command, env = prepare(command, execution['root'], runtime=runtime, env=source,
+                                   body=execution['body'], cwd=self.meta['cwd'])
+            if execution['body']:
+                from repair_process_bridge import serve
+                env.update(self.execution_stack.enter_context(serve(
+                    execution['root'], runtime, readonly=False, live_read=False)))
         kwargs = {'cwd': self.meta['cwd'], 'env': env, 'bufsize': 0}
         if self.meta['io'] == 'pty':
             if os.name == 'nt': raise ValueError('이 로컬 실행자는 PTY 미지원입니다. Windows resident terminal을 사용하세요')
@@ -118,11 +146,14 @@ class Worker:
             # Close escaped/background descendants before releasing ownership.
             self.terminate()
             for thread in threads: thread.join(timeout=2)
+            if self.execution_stack is not None:
+                self.execution_stack.close()
             with self.condition:
                 self.meta.update(state='cancelled' if self.cancelled else 'succeeded' if code == 0 else 'failed',
                                  exit_code=code, ended_at=time.time())
                 self.save(); self.condition.notify_all()
-        threading.Thread(target=reap, daemon=True).start()
+        self.reaper = threading.Thread(target=reap, daemon=True)
+        self.reaper.start()
 
     def snapshot(self, request):
         cursor = int(request.get('cursor') or 0)
@@ -212,6 +243,17 @@ class Worker:
             self.meta['port'] = listener.getsockname()[1]
             self.launch()
             while True:
+                execution = self.meta.get('execution')
+                if execution and self.meta['state'] == 'running':
+                    cancellation = Path(execution['cancel_path'])
+                    stop = cancellation.is_file() and bool(json.loads(cancellation.read_text()))
+                    if execution.get('session_path'):
+                        path = Path(execution['session_path'])
+                        session = json.loads(path.read_text()) if path.exists() else {}
+                        stop = stop or session.get('created_at') != execution.get('created_at') or session.get('status') != 'staging'
+                    if stop:
+                        self.cancelled = True
+                        self.terminate()
                 binding = self.meta.get('attribution') or {}
                 if self.meta.get('lifetime') == 'task' and binding.get('turn_id') and self.meta['state'] == 'running':
                     import sqlite3
@@ -245,7 +287,8 @@ def snapshot(meta, events, end, cursor=0, limit=65536):
             'cursor': position, 'history_cursor': position, 'has_more': position < end,
             'gap': {'from': cursor, 'to': start} if cursor < start else None,
             'exit_code': meta.get('exit_code'), 'accepted_at': meta['created_at'],
-            'ended_at': meta.get('ended_at'), 'capabilities': meta['capabilities']}
+            'ended_at': meta.get('ended_at'), 'capabilities': meta['capabilities'],
+            **({k: meta[k] for k in ('cleanup', 'execution', 'error', 'runtime_retained') if k in meta})}
 
 
 def main(directory):
@@ -253,5 +296,11 @@ def main(directory):
     try: worker.run()
     except BaseException as exc:
         if worker.proc: worker.terminate()
-        worker.meta.update(state='interrupted', error=str(exc), ended_at=time.time())
+        if worker.reaper: worker.reaper.join(timeout=5)
+        if worker.proc is None:
+            worker.meta['cleanup'] = {'confirmed': True, 'diagnostics': []}
+        worker.meta.update(state='interrupted' if worker.proc else 'failed', error=str(exc), ended_at=time.time())
         worker.save()
+    finally:
+        if worker.execution_stack is not None:
+            worker.execution_stack.close()

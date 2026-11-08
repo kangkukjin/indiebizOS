@@ -41,6 +41,7 @@ def guidance():
         '관용구 등 관리 정의만 개정하면 소유 API의 검증·판본 저장·새 호출로 완료한다. '
         'route=file인 문서·업무 원장은 정본 경로의 일반 파일·원장 도구로 편집하고 운영 조회로 확인한다. '
         '수리 턴이나 재개 중에도 이 파일들을 코드 사본으로 옮기거나 patch apply를 요구하지 않는다. '
+        '파일 소유 프로젝트의 명령도 run_command cwd로 그 정본에서 실행한다. 긴 실행은 mode=session과 기존 task 관측·제어를 쓴다. '
         '코드와 함께 배치할 산출물은 명시적인 현재 사본 경로로 작성하고 artifact_paths로 적용한다. '
         '그랜트만으로 코드 적용·재기동·커밋을 요구하지 않으며 실제 후보 변경이 있을 때만 요구한다. '
         '빌더가 읽을 새 후보 파일의 Git 추적 정보는 수리 서비스가 준비한다. 사본 셸에서 git add를 수행하지 않는다. '
@@ -198,14 +199,17 @@ def canonical(relative):
     return path
 
 
+PROTECTED_FILENAMES = frozenset({'AGENTS.md', 'CLAUDE.md', 'conftest.py', 'pytest.ini',
+                                'runtime_components.json', '.env', 'registry.yaml'})
+
+
 def protected_reason(relative):
     path = canonical(relative)
     if path is None:
         return 'noncanonical path'
     if path.name.startswith('.env'):
         return 'credentials'
-    if path.name in {'AGENTS.md', 'CLAUDE.md', 'conftest.py', 'pytest.ini',
-                     'runtime_components.json', '.env', 'registry.yaml'}:
+    if path.name in PROTECTED_FILENAMES:
         return 'instructions, authority or owner-managed contract'
     for prefix, reason in CORE_PREFIXES.items():
         if relative == prefix.rstrip('/') or relative.startswith(prefix if prefix.endswith('/') else prefix + '/'):

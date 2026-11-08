@@ -9,7 +9,7 @@ from pathlib import Path
 from coding_process import sandbox_command
 
 
-def prepare(command, workspace, *, env=None, runtime=None, readonly=False, write_scopes=()):
+def prepare(command, workspace, *, env=None, runtime=None, readonly=False, write_scopes=(), body=True, cwd=None):
     """셸·등록/임시/세션 스크립트가 공유하는 자식 실행 환경."""
     from runtime_utils import get_base_path
     root = Path(workspace).resolve()
@@ -21,6 +21,10 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False, write
     from dotenv import dotenv_values
     clean = {k: v for k, v in dotenv_values(model_root / ".env").items() if v is not None}
     clean.update(source)
+    if not body:
+        # User projects inherit the existing execution credentials, not body paths
+        # or a parent's bridge. These values never enter session metadata.
+        clean = {k: v for k, v in clean.items() if not k.startswith('INDIEBIZ')}
     # Git 대상은 cwd가 정한다. 호스트의 Git 디렉터리 override는 넘기지 않는다.
     for key in list(clean):
         if key.startswith("GIT_") or key == "INDIEBIZ_CODE_ROOT":
@@ -33,12 +37,17 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False, write
                  # 소스 옆 __pycache__ 는 mtime+size 로만 검증돼 같은 크기·같은 시각의 다른 내용에
                  # 옛 바이트코드를 돌려준다(긴문장 98회차 L98-2). 검사는 빈 런타임 캐시만 본다.
                  PYTHONPYCACHEPREFIX=str(runtime / "cache/pycache"),
-                 XDG_CACHE_HOME=str(runtime / "cache"), ELECTRON_DISABLE_SANDBOX="1")
+                 XDG_CACHE_HOME=str(runtime / "cache"), XDG_CONFIG_HOME=str(runtime / "config"),
+                 ELECTRON_DISABLE_SANDBOX="1")
     # Go on macOS ignores XDG_CACHE_HOME for its default build cache. Host
     # overrides can also point outside the sandbox; all toolchain writes belong
     # to this command's writable runtime, including readonly verification.
     clean.update(GOCACHE=str(runtime / "cache/go-build"),
                  GOMODCACHE=str(runtime / "cache/go-mod"), GOTMPDIR=str(runtime))
+    if not body:
+        for key in list(clean):
+            if key.startswith('INDIEBIZ'):
+                clean.pop(key)
     # 로그인 자료는 읽고 CLI가 쓰는 세션/캐시는 작업별 런타임에 둔다.
     codex = Path(source.get("CODEX_HOME") or Path.home() / ".codex")
     claude = Path(source.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
@@ -57,35 +66,40 @@ def prepare(command, workspace, *, env=None, runtime=None, readonly=False, write
     if browsers.is_dir():
         clean.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(browsers))
     from repair_runtime import node_runtime
-    node = node_runtime(root, clean)
+    node = node_runtime(cwd or root, clean)
     if node:
         clean["PATH"] = str(Path(node).parent) + os.pathsep + clean.get("PATH", os.defpath)
     argv = sandbox_command(command, runtime if readonly else root, runtime,
-                           local_network=True, external_network=True, write_scopes=write_scopes)
+                           local_network=True, external_network=True, write_scopes=write_scopes,
+                           **({'file_content': True} if not body else {}))
     return argv, clean
 
 
-def run(command, workspace, *, timeout=300, env=None, text=True, readonly=False, live_read=False, **kwargs):
+def run(command, workspace, *, timeout=300, env=None, text=True, readonly=False, live_read=False, body=True, **kwargs):
     if live_read and not readonly:
         raise ValueError("운영 읽기 통로는 읽기 전용 활성 검사에서만 사용합니다")
     from repair_process_bridge import ADDRESS, request
     check = kwargs.pop("check", None)
     cwd = kwargs.pop("cwd", None) or str(Path(workspace).resolve())
     if os.environ.get(ADDRESS) and os.environ.get("INDIEBIZ_REPAIR_CHILD") == "1":
+        if not body:
+            raise PermissionError('수리 자식에서 정본 실행 범위를 새로 열 수 없습니다')
         return request(command, workspace, timeout=timeout, env=env, readonly=readonly,
                        live_read=live_read, check=check, cwd=cwd)
     return _run_local(command, workspace, timeout=timeout, env=env, readonly=readonly,
-                      live_read=live_read, check=check, cwd=cwd)
+                      live_read=live_read, check=check, cwd=cwd, body=body)
 
 
-def _run_local(command, workspace, *, timeout, env, readonly, live_read, check, cwd, parent="/tmp", write_scopes=()):
+def _run_local(command, workspace, *, timeout, env, readonly, live_read, check, cwd, parent="/tmp", write_scopes=(), body=True):
     root = Path(workspace).resolve()
     from repair_process_bridge import serve
     with tempfile.TemporaryDirectory(prefix="repair-run-", dir=parent) as runtime:
-        argv, clean = prepare(command, root, env=env, runtime=runtime, readonly=readonly, write_scopes=write_scopes)
+        argv, clean = prepare(command, root, env=env, runtime=runtime, readonly=readonly,
+                              write_scopes=write_scopes, body=body, cwd=cwd)
         from script_process import run_process
         from repair_live_probe import live_probe
-        with serve(root, runtime, readonly=readonly, live_read=live_read, check=check, write_scopes=write_scopes) as bridge:
+        with (serve(root, runtime, readonly=readonly, live_read=live_read, check=check, write_scopes=write_scopes)
+              if body else nullcontext({})) as bridge:
             clean.update(bridge)
             with live_probe() if live_read else nullcontext() as url:
                 if url:
@@ -93,6 +107,10 @@ def _run_local(command, workspace, *, timeout, env, readonly, live_read, check, 
                 result = run_process(argv, b"", cwd=cwd, env=clean, timeout=timeout,
                                      check=check, terminate_descendants=True)
         if result["timed_out"]:
-            raise subprocess.TimeoutExpired(command, timeout, result.get("stdout"), result.get("stderr"))
-        return subprocess.CompletedProcess(command, result["exit_code"],
-                                           result.get("stdout", ""), result.get("stderr", ""))
+            exc = subprocess.TimeoutExpired(command, timeout, result.get("stdout"), result.get("stderr"))
+            exc.process_result = result
+            raise exc
+        completed = subprocess.CompletedProcess(command, result["exit_code"],
+                                                result.get("stdout", ""), result.get("stderr", ""))
+        completed.process_result = result
+        return completed

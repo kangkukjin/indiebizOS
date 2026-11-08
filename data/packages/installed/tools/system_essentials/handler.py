@@ -702,6 +702,9 @@ def execute(tool_input: dict, context) -> str:
             with _staging_mod()._candidate.locked(str(_REPO_ROOT), "application"):
                 result = _load_sibling('repair_tool_scope').execute(
                     SimpleNamespace(**globals()), tool_input, context, _execute)
+        elif context.tool_name == 'patch_op' and tool_input.get('op') == 'discard':
+            with _staging_mod()._candidate.locked(str(_REPO_ROOT), "application"):
+                result = _execute(tool_input, context)
         else:
             result = _execute(tool_input, context)
     except (PermissionError, ValueError, RuntimeError) as exc:

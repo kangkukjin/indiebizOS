@@ -44,9 +44,9 @@ def execute_command(h, tool_input, project_path):
 
     # 명령어 실행
     try:
-        if h._red_grant_active() and tool_input.get("mode") == "session":
-            return json.dumps({"success": False, "error": "수리 실행 범위의 세션은 현재 지원하지 않습니다"})
-        if h._red_grant_active():
+        from code_analysis_scope import working_directory
+        project_path = str(working_directory(tool_input.get('cwd') if not h._red_grant_active() else None, project_path))
+        if h._red_grant_active() and tool_input.get('mode') != 'session':
             return json.dumps(h._load_sibling("repair_tool_scope").run_shell(
                 h, command, timeout, **({'shell': tool_input['shell']} if tool_input.get('shell') else {})), ensure_ascii=False)
         if tool_input.get("mode") == "session":

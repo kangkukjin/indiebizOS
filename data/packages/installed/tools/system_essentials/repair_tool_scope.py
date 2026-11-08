@@ -176,11 +176,43 @@ def run_shell(handler, command, timeout, shell=None):
     from supervision_bus import current
     from repair_check_runner import execute
     st, repo, key = handler._staging_mod(), str(handler._REPO_ROOT), handler._staging_key()
+    from code_analysis_scope import current_scope
+    execution = (current_scope() or {}).get('execution')
+    if execution and not execution['body']:
+        from repair_process import run
+        from command_preflight import repair_argv, check as precheck, blocked, rejection
+        from thread_context import repair_workspace_scope
+        import subprocess
+        with repair_workspace_scope(None):
+            try:
+                argv = repair_argv(command, shell)
+                preflight = precheck(argv, cwd=execution['cwd'], runner=lambda parser, **kw:
+                    run(parser, execution['root'], body=False, readonly=True,
+                        check=lambda: command_check(handler), **kw))
+                if blocked(preflight):
+                    return shell_result(rejection(preflight), current())
+                result = run(argv, execution['root'], timeout=timeout,
+                             body=False, check=lambda: command_check(handler))
+                from preflight_feedback import execution_result
+                value = {'success': result.returncode == 0, 'exit_code': result.returncode,
+                         'output': result.stdout + result.stderr,
+                         'preflight': preflight,
+                         'diagnostics': execution_result(preflight, result.returncode, result.stdout + result.stderr),
+                         'cleanup': getattr(result, 'process_result', {}).get('cleanup')}
+            except (subprocess.TimeoutExpired, OSError) as exc:
+                partial = getattr(exc, 'process_result', {})
+                timeout_error = isinstance(exc, subprocess.TimeoutExpired)
+                value = {'success': False, 'exit_code': 124 if timeout_error else 126,
+                         'failure_kind': 'timeout' if timeout_error else 'environment',
+                         'output': partial.get('stdout', '') + partial.get('stderr', '') + str(exc),
+                         'cleanup': partial.get('cleanup')}
+        return shell_result({**value, 'workspace': execution['root']}, current())
     sess = st.ensure_session(repo, key)
     if not sess:
         raise PermissionError("수리 사본이 없습니다")
     record = execute(repo, sess, st._candidate, command, current(), timeout,
-                     **({'shell_kind': shell} if shell is not None else {}))
+                     **({'shell_kind': shell} if shell is not None else {}),
+                     **({'cwd': execution['cwd']} if execution else {}))
     st._save_session(repo, sess)
     return shell_result({"success": record["exit_code"] == 0, "exit_code": record["exit_code"],
             "output": record["output"], "verification": {k: v for k, v in record.items() if k != "output"},
@@ -301,6 +333,16 @@ def execute(handler, payload, context, operation):
     """Run under the caller's application lock and record only owned effects."""
     st, repo, key = handler._staging_mod(), str(handler._REPO_ROOT), handler._staging_key()
     name = context.tool_name
+    if name == 'run_command':
+        from code_analysis_scope import bind
+        from thread_context import repair_workspace_scope
+        from copy import copy
+        execution = command_context(handler, payload)
+        routed = copy(context)
+        routed.project_path = execution['cwd']
+        with bind(execution['root'], writable=True, generation=execution.get('created_at', ''), execution=execution), \
+                repair_workspace_scope(execution['root'] if execution['body'] else None):
+            return operation(payload, routed, prepared=True)
     routed = file_call(handler, payload, context)
     if routed:
         from thread_context import repair_workspace_scope
@@ -317,6 +359,79 @@ def execute(handler, payload, context, operation):
     paths = [mapped[f] for f in PATHS & mapped.keys()]
     scratch_only = bool(paths) and all(owned_script_work_path(p) is not None for p in paths)
     return record_write(st, repo, key, result) if name in WRITE_TOOLS and not scratch_only else result
+
+
+def command_check(handler, session=None, relatives=()):
+    """The file and command routes retain the same repair authority."""
+    from repair_context import activation_only
+    from repair_continuation import current, cancelled
+    from red_grant import active_grant
+    from thread_context import get_current_task_id
+    from task_repair import parent_of, check_delta
+    if activation_only():
+        raise PermissionError('적용 이후에는 활성 확인만 합니다')
+    repo = str(handler._REPO_ROOT)
+    session = session or handler._staging_mod().read_session(repo, handler._staging_key()) or {}
+    grant = active_grant(task_id=get_current_task_id()) or {}
+    if grant.get('task_scope'):
+        parent_of(grant, repo)
+        check_delta({**session, 'task_scope': grant['task_scope']}, list(relatives))
+    check_delta(session, list(relatives))
+    row = current() or session
+    if row.get('root_task_id') and cancelled(row, repo):
+        raise PermissionError('취소된 수리입니다')
+
+
+def command_context(handler, payload):
+    from code_analysis_scope import working_directory, check, current_scope
+    from program_boundary import describe
+    from runtime_utils import expand_body_path
+    from thread_context import repair_workspace_scope
+    root = Path(handler._REPO_ROOT).resolve()
+    st, key = handler._staging_mod(), handler._staging_key()
+    session = st.read_session(str(root), key) or {}
+    from repair_continuation import directory, key as continuation_key
+    cancellation = str(directory(str(root)) / (continuation_key(session.get('root_task_id') or key) + '.cancel'))
+    requested = payload.get('cwd')
+    with repair_workspace_scope(None):
+        raw = Path(expand_body_path(requested)) if requested is not None else root
+    raw = raw if raw.is_absolute() else root / raw
+    if not raw.is_relative_to(root):
+        scope = current_scope()
+        if not scope:
+            raise PermissionError('외부 프로젝트에는 기존 작업 범위가 필요합니다')
+        check(raw, write=True)
+        path = st._candidate.target(scope['root'], raw.relative_to(scope['root']).as_posix())
+        relative, explicit_candidate, body = str(path), False, False
+    else:
+        relative = raw.relative_to(root).as_posix()
+        explicit_candidate = session.get('worktree') and raw.is_relative_to(root / session['worktree'])
+        path = (st._candidate.target(root / session['worktree'], raw.relative_to(root / session['worktree']).as_posix())
+                if explicit_candidate else st._candidate.target(root, relative))
+        body = explicit_candidate or (describe(relative) or {}).get('route') != 'file'
+    command_check(handler, session, [relative] if not body else ())
+    if not body:
+        target = working_directory(str(path), root)
+        # Seatbelt rejects new links and writes through symlink targets. Reject
+        # existing hard links before giving a live content tree write authority.
+        for directory, _, files in os.walk(target, followlinks=False):
+            for name in files:
+                item = Path(directory) / name
+                if not item.is_symlink() and item.stat().st_nlink > 1:
+                    raise PermissionError('하드 링크를 통한 문서 변경은 지원하지 않습니다')
+        return {'root': str(target), 'cwd': str(target), 'body': False,
+                'repo': str(root), 'key': key, 'cancel_path': cancellation}
+    session = st.ensure_session(str(root), key)
+    if not session:
+        raise PermissionError('수리 사본이 없습니다')
+    wt = (root / session['worktree']).resolve()
+    cwd = path if explicit_candidate else wt / relative
+    cwd = working_directory(str(cwd), wt)
+    check(wt, write=True)
+    return {'root': str(wt), 'cwd': str(cwd), 'body': True, 'repo': str(root), 'key': key,
+            'cancel_path': cancellation,
+            'created_at': session.get('created_at'),
+            'session_path': str(Path(st._session_path(str(root), key)))}
 
 
 def managed_write(st, repo, key, operation):

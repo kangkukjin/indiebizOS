@@ -42,10 +42,16 @@ def request(command, workspace, *, timeout, env, readonly, live_read, check, cwd
             chunks.append(chunk)
     result = json.loads(b''.join(chunks))
     if result.get('timeout'):
-        raise subprocess.TimeoutExpired(command, timeout, result.get('stdout'), result.get('stderr'))
+        exc = subprocess.TimeoutExpired(command, timeout, result.get('stdout'), result.get('stderr'))
+        exc.process_result = result.get('process_result', {})
+        raise exc
     if result.get('error'):
-        raise PermissionError(result['error'])
-    return subprocess.CompletedProcess(command, result['exit_code'], result['stdout'], result['stderr'])
+        exc = PermissionError(result['error'])
+        exc.process_result = result.get('process_result', {})
+        raise exc
+    completed = subprocess.CompletedProcess(command, result['exit_code'], result['stdout'], result['stderr'])
+    completed.process_result = result.get('process_result', {})
+    return completed
 
 
 @contextmanager
@@ -93,11 +99,13 @@ def serve(workspace, runtime, *, readonly, live_read, check=None, write_scopes=(
                                       live_read=bool(value.get('live_read')), check=alive,
                                       cwd=str(cwd), parent=runtime,
                                       write_scopes=(*write_scopes, (str(allowed), str(runtime))))
-                result = {'exit_code': response.returncode, 'stdout': response.stdout, 'stderr': response.stderr}
+                result = {'exit_code': response.returncode, 'stdout': response.stdout, 'stderr': response.stderr,
+                          'process_result': getattr(response, 'process_result', {})}
             except subprocess.TimeoutExpired as exc:
-                result = {'timeout': True, 'stdout': exc.stdout, 'stderr': exc.stderr}
+                result = {'timeout': True, 'stdout': exc.stdout, 'stderr': exc.stderr,
+                          'process_result': getattr(exc, 'process_result', {})}
             except Exception as exc:
-                result = {'error': str(exc)}
+                result = {'error': str(exc), 'process_result': getattr(exc, 'process_result', {})}
             try:
                 self.wfile.write(json.dumps(result).encode())
             except (BrokenPipeError, ConnectionResetError):

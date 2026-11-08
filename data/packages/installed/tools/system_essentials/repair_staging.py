@@ -881,10 +881,12 @@ def op_apply(ti):
                               f"기록만 남은 죽은 제안입니다. 다시 propose 하세요.")}
     if sess:
         try:
+            from process_sessions import quiesce_workspace
+            quiesce_workspace(os.path.join(repo, sess['worktree']))
             if "artifact_paths" in ti:
                 _candidate.register_artifacts(repo, sess, ti["artifact_paths"])
             _candidate.collect(repo, sess)
-        except (ValueError, OSError) as exc:
+        except (ValueError, OSError, RuntimeError) as exc:
             return {"success": False, "applied": False, "error": str(exc)}
     if not sess or not (sess.get("files") or {}):
         pend = pending_proposals(repo)
@@ -1046,8 +1048,10 @@ def _recover_immediate(repo, sess):
 def _perform_apply_locked(repo: str, sess: dict, checks: list, prepare, finalize):
     """검증 통과분의 실제 라이브 반영 — 즉시 경로와 지연 수행자가 공유하는 단일 쓰기 코어."""
     try:
+        from process_sessions import quiesce_workspace
+        quiesce_workspace(os.path.join(repo, sess['worktree']))
         plan = _candidate.validate(repo, sess)
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, RuntimeError) as exc:
         return {"success": False, "applied": False, "error": str(exc)}
     files = {str(path): {"rel": str(path.relative_to(os.path.realpath(repo)))} for path, _, _ in plan}
     staged_contents = {str(path): data for path, data, _ in plan if data is not None}
@@ -1245,11 +1249,10 @@ def op_discard(ti):
     if sess.get("status") in {"applying", "applied"}:
         return {"success": False, "error": "적용·복구 중인 사본은 폐기하지 않습니다"}
     live = None  # 폐기는 정본 파생물을 변경하지 않는다.
+    # The handler already owns the non-reentrant application lock.
     _remove_worktree(repo, sess)
     sess["status"] = "discarded"
     sess["discarded_at"] = datetime.now().isoformat()
-    if live:
-        sess["live_derived"] = live
     _save_session(repo, sess)
     # ★"라이브는 무변경"을 무조건 말하지 않는다 — 적재분 기준으로만 참인 문장이고,
     #   ep2519 에선 그 문장이 '아무것도 안 남았다'는 오독을 거들었다(라이브엔 이미
@@ -1272,6 +1275,8 @@ def op_discard(ti):
 def _remove_worktree(repo: str, sess: dict):
     if sess.get("reused_by"):
         return  # 후속 구간이 같은 격리본을 소유한다.
+    from process_sessions import quiesce_workspace
+    quiesce_workspace(os.path.join(repo, sess['worktree']))
     wt = os.path.join(repo, sess.get("worktree") or "")
     if sess.get("worktree") and os.path.isdir(wt):
         r = _git(["worktree", "remove", "--force", wt], repo)

@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 from coding_store import CodingStore, fingerprint, identifier
-from code_analysis_scope import check
+from code_analysis_scope import check, current_scope
 from process_session_worker import write_json, snapshot
 
 
@@ -28,6 +28,12 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
     from runtime_utils import expand_body_path
     cwd = str(Path(expand_body_path(cwd)).resolve(strict=True))
     check(cwd, write=True)
+    execution = (current_scope() or {}).get('execution')
+    if execution:
+        if lifetime != 'task' or not sandbox:
+            raise PermissionError('수리 프로세스는 작업 수명과 기존 격리를 사용합니다')
+        if not Path(cwd).is_relative_to(execution['root']):
+            raise PermissionError('실행 문맥 밖 cwd')
     if io not in ('pipe', 'pty') or lifetime not in ('task', 'session'):
         raise ValueError('io=pipe/pty, lifetime=task/session')
     if not isinstance(command, str) or not command.strip(): raise ValueError('command 필수')
@@ -37,7 +43,8 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
     validate_attribution({'attribution': owner})
     db = db or store()
     signature = fingerprint({'command': command, 'cwd': cwd, 'io': io, 'lifetime': lifetime, 'owner': owner,
-                             **({'shell': shell} if shell is not None else {})})
+                             **({'shell': shell} if shell is not None else {}),
+                             **({'execution': execution} if execution else {})})
     with db.lock('process-start'):
         if request_id:
             for row in db.list('process_session'):
@@ -56,7 +63,7 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
             return rejection(preflight)
         task_id = identifier('process'); folder = directory(task_id, db)
         folder.mkdir(parents=True, mode=0o700)
-        if sandbox:
+        if sandbox and not execution:
             from coding_process import sandbox_command
             argv = sandbox_command(argv, cwd, folder)
         row = {'id': task_id, 'command': command, 'cwd': cwd, 'io': io, 'argv': argv, 'preflight': preflight,
@@ -65,6 +72,8 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
                'state': 'queued', 'capabilities': {'input': True, 'eof': True, 'interrupt': True, 'cancel': True,
                                                 'resize': io == 'pty', 'io': io, 'sandbox': sandbox,
                                                 'restart_reconnect': True, 'output_retention_bytes': 1048576}}
+        if execution:
+            row['execution'] = execution
         write_json(folder / 'session.json', row)
         db.save('process_session', {k: v for k, v in row.items() if k != 'token'})
         backend = Path(__file__).resolve().parents[1]
@@ -125,6 +134,26 @@ def _execution_feedback(meta, result):
         result['diagnostics'] = execution_result(meta['preflight'], result['exit_code'],
             ''.join(row.get('text', '') for row in result.get('output', [])))
     return result
+
+
+def quiesce_workspace(workspace, *, db=None):
+    """Publication/discard holds its existing application lock across this call."""
+    root = str(Path(workspace).resolve())
+    db = db or store()
+    for row in db.list('process_session'):
+        if (row.get('execution') or {}).get('root') != root:
+            continue
+        value = query(row['id'], db=db)
+        if value['state'] in ('queued', 'running'):
+            query(row['id'], db=db, op='control', action='cancel', request_id='publication-stop')
+            deadline = time.monotonic() + 8
+            while value['state'] in ('queued', 'running') and time.monotonic() < deadline:
+                time.sleep(.05)
+                value = query(row['id'], db=db, wait_ms=100)
+        if (value['state'] in ('queued', 'running')
+                or value['state'] == 'interrupted' and value.get('cleanup', {}).get('confirmed') is not True
+                or value.get('cleanup', {}).get('confirmed') is False):
+            raise RuntimeError('소유 프로세스 종료 미확인: ' + row['id'])
 
 
 def task_status(ref):

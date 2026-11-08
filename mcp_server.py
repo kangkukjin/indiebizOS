@@ -416,14 +416,19 @@ async def execute_ibl(code: str, project_path: str = "",
 
 @mcp.tool()
 async def run_command(command: str, timeout: Annotated[int, Field(ge=1, le=300)] = 60,
-                      approved: bool = False, ctx: Context = None):
-    """승인된 자기수리의 같은 사본에서 검색·빌드·테스트를 실행하고 검증 증거를 남깁니다.
-    네이티브 셸 대신 사용합니다. 라이브·사본 밖 쓰기는 OS 격리가 막습니다.
+                      approved: bool = False, ctx: Context = None, cwd: str = None,
+                      mode: str = None, io: str = None, yield_ms: int = None,
+                      request_id: str = None, lifetime: str = None, shell: str = None):
+    """승인된 수리의 대상에서 명령을 실행합니다. cwd는 위치이며 권한을 넓히지 않습니다.
+    사용자 파일은 정본 프로젝트, 몸의 구현은 사본에서 실행합니다. 긴 실행은 mode=session으로
+    접수하고 기존 self:task status/control로 관측·제어합니다. 수리는 lifetime=task입니다.
     일반 작업·무그랜트·다른 실행자는 거절됩니다. timeout은 초(최대 300)입니다.
     """
     agent, _, task, _ = _http_identity(ctx)
     req = {"agent_id": agent or DEFAULT_AGENT_ID, "task_id": task or DEFAULT_TASK_ID,
            "payload": {"command": command, "timeout": timeout, "approved": approved}}
+    req['payload'].update({k: v for k, v in dict(cwd=cwd, mode=mode, io=io, yield_ms=yield_ms,
+                            request_id=request_id, lifetime=lifetime, shell=shell).items() if v is not None})
     raw = await anyio.to_thread.run_sync(
         lambda: _post_backend("/ibl/repair/command", req, timeout + 10))
     from ibl_result_transport import tool_result_is_error

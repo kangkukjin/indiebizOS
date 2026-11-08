@@ -11,6 +11,26 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+@pytest.mark.parametrize('report,write,status', [
+    ('<testsuite><testcase name="x"><failure/></testcase></testsuite>', True, 'failed'),
+    ('<testsuite><testcase name="x"/></testsuite>', True, 'passed'),
+    ('<testsuite><testcase name="x"/></testsuite>', False, 'unverified'),
+    ('<testsuite><testcase name="x"><skipped/></testcase></testsuite>', True, 'unverified'),
+])
+def test_report_cannot_be_hidden_by_successful_wrapper(tmp_path, monkeypatch, report, write, status):
+    spec = importlib.util.spec_from_file_location('webapp_report', ROOT / 'data/scripts/webapp_work.py')
+    work = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(work)
+    monkeypatch.setattr(work, 'LOG_ROOT', tmp_path / 'logs')
+    (tmp_path / 'result.xml').write_text(report)
+    command = f'from pathlib import Path; Path("result.xml").write_text({report!r}); print("done")' if write else 'print("done")'
+    (tmp_path / 'webapp-checks.json').write_text(json.dumps({'checks': [
+        {'name': 'test', 'argv': [sys.executable, '-c', command],
+         'report': {'format': 'junit', 'path': 'result.xml'}}]}))
+    result = work.run_check(tmp_path, 'test', 10, work.plan(tmp_path, ['test'])['fingerprint'])
+    assert result['exit_code'] == 0 and result['status'] == status, result
+
+
 @pytest.mark.parametrize('name,expected', [('build', 'production'), ('test', None)])
 def test_check_process_has_task_environment(tmp_path, monkeypatch, name, expected):
     spec = importlib.util.spec_from_file_location('webapp_work_env', ROOT / 'data/scripts/webapp_work.py')

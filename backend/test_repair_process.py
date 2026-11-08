@@ -20,6 +20,29 @@ def test_go_cache_and_temp_are_inside_runtime(tmp_path, monkeypatch, readonly):
     assert source['GOCACHE'] == '/unwritable/build'
 
 
+@pytest.mark.parametrize('failure', ['cancel', 'timeout'])
+def test_nested_bridge_retains_partial_result(tmp_path, monkeypatch, failure):
+    import subprocess
+    import tempfile
+    from repair_process_bridge import serve, request
+    partial = {'stdout': 'already completed', 'stderr': '',
+               'cleanup': {'confirmed': False, 'diagnostics': [{'phase': 'cleanup'}]}}
+    def fail(*args, **kwargs):
+        exc = (subprocess.TimeoutExpired(['test'], 1, partial['stdout'], '')
+               if failure == 'timeout' else PermissionError('cancelled by owner'))
+        exc.process_result = partial
+        raise exc
+    monkeypatch.setattr('repair_process._run_local', fail)
+    with tempfile.TemporaryDirectory(prefix='bridge-test-', dir='/tmp') as runtime:
+        with serve(tmp_path, runtime, readonly=False, live_read=False) as env:
+            for key, value in env.items():
+                monkeypatch.setenv(key, value)
+            with pytest.raises(subprocess.TimeoutExpired if failure == 'timeout' else PermissionError) as caught:
+                request(['test'], tmp_path, timeout=1, env={}, readonly=False,
+                        live_read=False, check=None, cwd=tmp_path)
+    assert caught.value.process_result == partial
+
+
 @pytest.mark.system
 def test_first_go_test_runs_inside_real_repair_sandbox(tmp_path):
     import os

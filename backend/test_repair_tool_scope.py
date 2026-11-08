@@ -13,6 +13,88 @@ from test_repair_staging import _load_handler, _make_repo
 from test_conscious_supervisor import supervisor  # noqa: F401
 
 
+def test_command_reads_live_edit_without_copying_project(repair):
+    repo, wt, st, controller, call = repair
+    project = repo / 'outputs/reports'
+    assert call('write_file', {'path': str(project / 'value.txt'), 'content': 'EDITED'})['success']
+    result = call('run_command', {'command': 'cat value.txt', 'cwd': str(project)})
+    assert result['success'] and result['output'] == 'EDITED', result
+    assert result['workspace'] == str(project)
+    assert not (wt / 'outputs/reports/value.txt').exists()
+    denied = call('run_command', {'command': 'echo changed > AGENTS.md', 'cwd': str(project)})
+    assert not denied['success'] and not (project / 'AGENTS.md').exists(), denied
+    escape = call('run_command', {'command': 'echo bad > ' + shlex.quote(str(repo / 'backend/test_existing.py')),
+                                  'cwd': str(project)})
+    assert not escape['success'], escape
+
+
+def test_command_candidate_cwd_and_link_boundary(repair):
+    repo, wt, st, controller, call = repair
+    (wt / 'frontend/value.txt').write_text('CANDIDATE')
+    result = call('run_command', {'command': 'cat value.txt', 'cwd': str(repo / 'frontend')})
+    assert result['success'] and result['output'] == 'CANDIDATE', result
+    (repo / 'outputs/reports/link').symlink_to(repo / 'backend', target_is_directory=True)
+    result = call('run_command', {'command': 'pwd', 'cwd': str(repo / 'outputs/reports/link')})
+    assert not result['success'], result
+
+
+def test_live_command_preflight_and_hardlink_rejection(repair):
+    import os
+    repo, wt, st, controller, call = repair
+    project = repo / 'outputs/reports'
+    result = call('run_command', {'command': 'echo should-not-run > marker; if then', 'cwd': str(project)})
+    assert not result['success'] and result['executed'] is False, result
+    assert not (project / 'marker').exists()
+    os.link(repo / 'backend/test_existing.py', project / 'linked.py')
+    result = call('run_command', {'command': 'echo BAD > linked.py', 'cwd': str(project)})
+    assert not result['success'] and '하드 링크' in result['error'], result
+
+
+def test_command_location_never_grants_external_authority(repair, tmp_path):
+    from code_analysis_scope import bind
+    repo, wt, st, controller, call = repair
+    outside = tmp_path / 'user-project'
+    outside.mkdir()
+    (outside / 'value').write_text('USER')
+    args = {'command': 'cat value', 'cwd': str(outside)}
+    assert not call('run_command', args)['success']
+    with bind(outside, writable=False):
+        assert not call('run_command', args)['success']
+    with bind(outside, writable=True):
+        result = call('run_command', args)
+        assert result['success'] and result['output'] == 'USER', result
+
+
+@pytest.mark.parametrize('live', [True, False])
+def test_repair_session_reuses_target_and_quiesces(repair, monkeypatch, tmp_path, live):
+    import time
+    from process_sessions import query, quiesce_workspace
+    repo, wt, st, controller, call = repair
+    monkeypatch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(tmp_path / 'process-state'))
+    project = repo / 'outputs/reports' if live else wt
+    command = 'printf READY; cat'
+    result = call('run_command', {'command': command, 'cwd': str(project), 'mode': 'session', 'request_id': 'once'})
+    assert result.get('state') == 'running', result
+    tid = result['task_ref']['task_id']
+    try:
+        assert result['execution']['root'] == str(project)
+        again = call('run_command', {'command': command, 'cwd': str(project), 'mode': 'session', 'request_id': 'once'})
+        assert again['task_ref']['task_id'] == tid
+        query(tid, op='control', action='input', text='SAME_PROCESS', newline=True, request_id='input')
+        value = query(tid, wait_ms=1000, cursor=result['cursor'])
+        assert 'SAME_PROCESS' in str(value['output'])
+        if live:
+            quiesce_workspace(project)
+        else:
+            assert call('patch_op', {'op': 'discard'})['success']
+            assert not wt.exists()
+        assert query(tid)['state'] == 'cancelled'
+        assert query(tid)['cleanup']['confirmed']
+    finally:
+        if query(tid)['state'] == 'running':
+            query(tid, op='control', action='cancel', request_id='cleanup')
+
+
 @pytest.fixture
 def repair(tmp_path, monkeypatch, supervisor):
     import repair_policy

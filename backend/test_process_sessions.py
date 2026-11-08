@@ -9,6 +9,47 @@ from process_sessions import start, query
 from test_situation_evidence import active  # noqa: F401
 
 
+def test_repair_server_survives_receipt_and_keeps_environment_private(tmp_path, monkeypatch):
+    from pathlib import Path
+    from code_analysis_scope import bind
+    from repair_process import run
+    from process_sessions import quiesce_workspace, directory
+    repo = Path(__file__).resolve().parents[1]
+    workspace = tmp_path / 'project'
+    workspace.mkdir()
+    db = CodingStore(tmp_path / 'store')
+    execution = {'root': str(workspace), 'cwd': str(workspace), 'body': False,
+                 'repo': str(repo), 'key': 'test', 'cancel_path': str(tmp_path / 'cancel')}
+    monkeypatch.setenv('TEST_API_KEY', 'fixture-private-value')
+    code = '''import os
+from pathlib import Path
+from http.server import HTTPServer, BaseHTTPRequestHandler
+assert os.environ['TEST_API_KEY'] == 'fixture-private-value'
+Path(os.environ['XDG_CONFIG_HOME']).mkdir(parents=True)
+class Handler(BaseHTTPRequestHandler):
+ def do_GET(self):
+  self.send_response(200); self.end_headers(); self.wfile.write(b'ALIVE')
+server=HTTPServer(('127.0.0.1',0),Handler)
+print(server.server_port,flush=True)
+server.serve_forever()
+'''
+    script = workspace / 'server.py'
+    script.write_text(code)
+    with bind(workspace, writable=True, execution=execution):
+        receipt = start(shlex.join([sys.executable, '-u', str(script)]), workspace, db=db, yield_ms=1000)
+        tid = receipt['task_ref']['task_id']
+        try:
+            assert receipt['state'] == 'running', receipt
+            port = int(''.join(row['text'] for row in receipt['output']).strip())
+            client = f'import urllib.request; print(urllib.request.urlopen("http://127.0.0.1:{port}").read().decode())'
+            result = run([sys.executable, '-c', client], workspace, body=False, timeout=10)
+            assert result.returncode == 0 and result.stdout.strip() == 'ALIVE', result.stderr
+            assert 'fixture-private-value' not in (directory(tid, db) / 'session.json').read_text()
+        finally:
+            quiesce_workspace(workspace, db=db)
+        assert query(tid, db=db)['cleanup']['confirmed']
+
+
 def test_pipe_reconnect_input_eof_and_output(tmp_path):
     db = CodingStore(tmp_path / 'store')
     script = tmp_path / 'read.py'

@@ -59,7 +59,8 @@ def test_environment_failure_returns_to_executor_for_judgment(consumer, tmp_path
 
 
 def test_failure_classification_does_not_hide_assertions():
-    assert failure_kind("AssertionError: wrong translation", 1) == "check"
+    assert failure_kind("AssertionError: wrong translation", 1) == "unknown"
+    assert failure_kind("mkdir: Operation not permitted", 1) == "unknown"
     assert failure_kind("<urlopen error [Errno 1] Operation not permitted>", 1) == "environment"
     assert failure_kind("sandbox_apply: Operation not permitted", 0) is None
 

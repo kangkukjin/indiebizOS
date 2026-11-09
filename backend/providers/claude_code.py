@@ -252,6 +252,15 @@ class ClaudeCodeProvider(CliSubprocessProvider):
 
     # ================= 세션 =================
 
+    def _start_native_observation(self, env, resume_session_id):
+        # stdout에는 없는 queue/API 입력 사건만 기존 궤적에 연결한다.
+        from cli_native_trace import ClaudeNativeTrace
+        return ClaudeNativeTrace(
+            Path(env.get('CLAUDE_CONFIG_DIR') or Path.home() / '.claude'),
+            resume_session_id,
+            enabled=not getattr(self, 'disable_session_persistence', False),
+        )
+
     def _is_session_issue(self, combined: str) -> bool:
         """resume 실패(세션 만료/무효) 판정 — Claude CLI 의 문구."""
         low = (combined or "").lower()

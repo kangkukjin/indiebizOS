@@ -7,6 +7,7 @@
     "base/approval_tokens",
     "base/audit_lifecycle",
     "base/cli_lifecycle",
+    "base/cli_native_trace",
     "base/code_analysis_channel",
     "base/code_analysis_fileops",
     "base/code_analysis_process",
@@ -653,8 +654,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 642,
-    "engine": 610,
+    "total": 643,
+    "engine": 611,
     "blocklist": 32
   }
 }

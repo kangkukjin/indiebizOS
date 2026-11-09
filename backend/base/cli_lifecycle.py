@@ -1,6 +1,7 @@
 """CLI boundary observations and bounded cleanup owned by the invoking process."""
 import threading
 import time
+import contextvars
 
 
 def boundary(stage, **data):
@@ -15,8 +16,10 @@ def boundary(stage, **data):
 
 
 class CliWatch:
-    def __init__(self, provider, proc, cancel_check):
+    def __init__(self, provider, proc, cancel_check, observation=None):
         self.provider, self.proc, self.cancel_check = provider, proc, cancel_check
+        self.observation = observation
+        self.context = contextvars.copy_context()
         self.state = {'last': time.monotonic(), 'fired': 0.0, 'cancelled': False,
                       'terminal': None, 'reason': None}
         self.stop = threading.Event()
@@ -33,6 +36,8 @@ class CliWatch:
         p, state = self.provider, self.state
         interval = min(p.STREAM_IDLE_POLL_SEC, 0.1) if getattr(p, '_request_deadline', None) else p.STREAM_IDLE_POLL_SEC
         while not self.stop.wait(interval):
+            if self.observation:
+                self.context.run(self.observation.poll)
             if self.proc.poll() is not None:
                 return
             now = time.monotonic()

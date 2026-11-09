@@ -920,6 +920,8 @@ class CliSubprocessProvider(BaseProvider):
                     f"system_prompt={_sp_len}자 message={_msg_len}자"
                 )
 
+                observation_factory = getattr(self, '_start_native_observation', None)
+                observation = observation_factory(env, resume_session_id) if observation_factory else None
                 start = time.time()
                 try:
                     # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
@@ -972,7 +974,7 @@ class CliSubprocessProvider(BaseProvider):
 
                 from cli_lifecycle import CliWatch, StderrDrain, boundary
                 boundary('spawned', session_mode=_resumed)
-                watch = CliWatch(self, proc, cancel_check)
+                watch = CliWatch(self, proc, cancel_check, observation=observation)
                 _idle = watch.state
                 stderr_drain = StderrDrain(proc.stderr)
 
@@ -1010,6 +1012,8 @@ class CliSubprocessProvider(BaseProvider):
                         sid = self._capture_session_id(event)
                         if sid:
                             captured_session_id = sid
+                            if observation:
+                                observation.set_session(sid)
 
                         err_text = self._stream_error_text(event)
                         if err_text:
@@ -1082,6 +1086,8 @@ class CliSubprocessProvider(BaseProvider):
                         self._terminate_cli(proc)
                     proc.wait(timeout=5)
                     stderr_drain.close()
+                    if observation:
+                        observation.close()
                     boundary('process_reaped', returncode=proc.returncode, stop_reason=_idle['reason'])
 
                 # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)

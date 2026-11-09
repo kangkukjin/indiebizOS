@@ -1027,7 +1027,13 @@ class CliSubprocessProvider(BaseProvider):
                                 accumulated_text = new_acc
                             t2 = out_event.get("type")
                             if t2 == "final":
-                                watch.terminal()
+                                if committed or (out_event.get("content") or "").strip():
+                                    watch.terminal()
+                                deferred = [e for e in deferred if e.get("type") != "final"]
+                                deferred.append(out_event)
+                                continue  # Confirm only after EOF; another response may follow.
+                            if watch.activity(out_event):
+                                deferred = [e for e in deferred if e.get("type") != "final"]
                             if t2 in ("text", "tool_start", "tool_result", "thinking"):
                                 committed = True
                                 if situation_delivery:

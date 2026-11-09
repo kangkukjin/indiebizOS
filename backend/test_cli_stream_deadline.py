@@ -23,6 +23,8 @@
 import os
 import sys
 import time
+import json
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
@@ -205,3 +207,89 @@ def test_stderr_pipe_is_drained_and_exit_failure_is_not_hidden_by_text():
     assert any(e['type'] == 'text' for e in events)
     assert events[-1]['type'] == 'error' and p.last_failure_kind == 'process_exit'
     assert 'xxxx' in events[-1]['content']
+
+
+def _claude_wire(monkeypatch, steps, **limits):
+    """Real subprocess + production Claude wire translation, without a model call."""
+    from providers.claude_code import ClaudeCodeProvider
+
+    class WireCli(_FakeCli):
+        CHILD_CODE = 'import time\n' + '\n'.join(
+            f'time.sleep({delay!r}); print({json.dumps(event)!r}, flush=True)'
+            for delay, event in steps)
+
+    p = _make(WireCli, CLEANUP_TIMEOUT_SEC=.15, STREAM_IDLE_POLL_SEC=.02, **limits)
+    translator = ClaudeCodeProvider(api_key='', model='test', system_prompt='')
+    monkeypatch.setattr(p, '_translate_stream_event', translator._translate_stream_event)
+    return p
+
+
+def _text(value):
+    return {'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': value}]}}
+
+
+@pytest.mark.parametrize('initial_result', ['', 'previous response'])
+def test_claude_response_after_result_disarms_cleanup(monkeypatch, initial_result):
+    p = _claude_wire(monkeypatch, [
+        (0, {'type': 'result', 'result': initial_result}),
+        (.35 if not initial_result else .03, _text('working')),
+        (.35, _text('completed')),
+        (0, {'type': 'result', 'result': 'completed'}),
+    ])
+    events = list(p.process_message_stream('continue', history=[]))
+    assert p.last_failure_kind is None, events
+    assert [e['content'] for e in events if e['type'] == 'final'] == ['completed']
+
+
+@pytest.mark.parametrize('receipt', [
+    {'type': 'system', 'subtype': 'task_started', 'task_id': 'native-job'},
+    {'type': 'user', 'tool_use_result': {'backgroundTaskId': 'native-job'}},
+])
+def test_claude_background_completion_continues_after_interim_result(monkeypatch, receipt):
+    p = _claude_wire(monkeypatch, [
+        (0, receipt),
+        (0, _text('waiting')),
+        (0, {'type': 'result', 'result': 'waiting'}),
+        (.35, {'type': 'system', 'subtype': 'task_notification',
+               'task_id': 'native-job', 'status': 'completed'}),
+        (.25, _text('verified')),
+        (0, {'type': 'result', 'result': 'verified'}),
+    ])
+    events = list(p.process_message_stream('run and verify', history=[]))
+    assert p.last_failure_kind is None, events
+    assert [e['content'] for e in events if e['type'] == 'final'] == ['verified']
+
+
+def test_claude_completed_background_job_does_not_disable_later_cleanup(monkeypatch):
+    p = _claude_wire(monkeypatch, [
+        (0, {'type': 'system', 'subtype': 'task_started', 'task_id': 'job'}),
+        (0, {'type': 'result', 'result': 'waiting'}),
+        (.3, {'type': 'system', 'subtype': 'task_notification',
+              'task_id': 'job', 'status': 'failed'}),
+        (0, {'type': 'result', 'result': 'failure reported'}),
+        (2, {'type': 'ignored'}),
+    ])
+    events = list(p.process_message_stream('run', history=[]))
+    assert p.last_failure_details['phase'] == 'cleanup_deadline'
+    assert events[-1]['type'] == 'error'
+    assert not any(e['type'] == 'final' for e in events)
+
+
+@pytest.mark.parametrize('mode', ['idle', 'cancel', 'role'])
+def test_claude_background_receipt_does_not_bypass_other_deadlines(monkeypatch, mode):
+    p = _claude_wire(monkeypatch, [
+        (0, {'type': 'system', 'subtype': 'task_started', 'task_id': 'job'}),
+        (0, {'type': 'result', 'result': 'waiting'}),
+        (3, {'type': 'ignored'}),
+    ], STREAM_IDLE_TIMEOUT_SEC=.6)
+    start = time.monotonic()
+    if mode == 'role':
+        p._request_deadline = start + .3
+    events = list(p.process_message_stream(
+        'run', history=[], cancel_check=(lambda: time.monotonic() - start > .3)
+        if mode == 'cancel' else None))
+    assert events[-1]['type'] == 'error'
+    if mode == 'cancel':
+        assert '취소' in events[-1]['content']
+    else:
+        assert p.last_failure_details['phase'] == mode + '_deadline'

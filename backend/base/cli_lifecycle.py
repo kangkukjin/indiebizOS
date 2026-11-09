@@ -22,14 +22,35 @@ class CliWatch:
         self.context = contextvars.copy_context()
         self.state = {'last': time.monotonic(), 'fired': 0.0, 'cancelled': False,
                       'terminal': None, 'reason': None}
+        self.lock = threading.RLock()
+        self.background_tasks = set()
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self.watch, daemon=True, name=f'{provider.STATE_PREFIX}-idle-watchdog')
         self.thread.start()
 
     def terminal(self):
-        if self.state['terminal'] is None:
-            self.state['terminal'] = time.monotonic()
-            boundary('terminal_received')
+        with self.lock:
+            if self.state['terminal'] is None:
+                self.state['terminal'] = time.monotonic()
+                boundary('terminal_received')
+
+    def activity(self, event):
+        """A result ends one response, not necessarily the CLI's execution."""
+        kind = event.get('type')
+        if kind not in {'text', 'thinking', 'tool_start', 'tool_result',
+                        'task_started', 'task_progress', 'task_finished'}:
+            return False
+        with self.lock:
+            task_id = event.get('id')
+            if kind in {'task_started', 'task_progress'} and task_id:
+                self.background_tasks.add(task_id)
+            elif kind == 'task_finished':
+                self.background_tasks.discard(task_id)
+            if self.state['terminal'] is not None:
+                self.state['terminal'] = None
+                boundary('execution_resumed', event_type=kind)
+            self.state['last'] = time.monotonic()
+        return True
 
     def watch(self):
         from completion_lease import cancel_channel, is_waiting, pending_tickets
@@ -40,29 +61,31 @@ class CliWatch:
                 self.context.run(self.observation.poll)
             if self.proc.poll() is not None:
                 return
-            now = time.monotonic()
-            decision_cancel = getattr(p, '_decision_cancel_check', None)
-            if ((self.cancel_check and self.cancel_check()) or
-                    (decision_cancel and decision_cancel())):
-                state['cancelled'] = True
-                cancel_channel(p._completion_channel)
-            elif getattr(p, '_request_deadline', None) and now >= p._request_deadline:
-                state.update(fired=now - state['last'], reason='role_deadline')
-            elif (state['terminal'] is not None and not pending_tickets(p._completion_channel)
-                  and now - state['terminal'] >= p.CLEANUP_TIMEOUT_SEC):
-                state.update(fired=now - state['terminal'], reason='cleanup_deadline')
-            elif is_waiting(p._completion_channel):
-                state['last'] = now
-                continue
-            elif now - state['last'] > p.STREAM_IDLE_TIMEOUT_SEC:
-                state.update(fired=now - state['last'], reason='idle_deadline')
-            else:
-                continue
-            try:
-                p._terminate_cli(self.proc)
-            except ProcessLookupError:
-                pass
-            return
+            with self.lock:
+                now = time.monotonic()
+                decision_cancel = getattr(p, '_decision_cancel_check', None)
+                if ((self.cancel_check and self.cancel_check()) or
+                        (decision_cancel and decision_cancel())):
+                    state['cancelled'] = True
+                    cancel_channel(p._completion_channel)
+                elif getattr(p, '_request_deadline', None) and now >= p._request_deadline:
+                    state.update(fired=now - state['last'], reason='role_deadline')
+                elif (state['terminal'] is not None and not self.background_tasks
+                      and not pending_tickets(p._completion_channel)
+                      and now - state['terminal'] >= p.CLEANUP_TIMEOUT_SEC):
+                    state.update(fired=now - state['terminal'], reason='cleanup_deadline')
+                elif is_waiting(p._completion_channel):
+                    state['last'] = now
+                    continue
+                elif now - state['last'] > p.STREAM_IDLE_TIMEOUT_SEC:
+                    state.update(fired=now - state['last'], reason='idle_deadline')
+                else:
+                    continue
+                try:
+                    p._terminate_cli(self.proc)
+                except ProcessLookupError:
+                    pass
+                return
 
     def close(self):
         self.stop.set()

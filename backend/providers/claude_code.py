@@ -753,6 +753,19 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                     None,
                 ))
 
+            # Native background receipts are structured protocol data, not tool prose.
+            receipt = event.get("tool_use_result")
+            if (isinstance(receipt, dict) and isinstance(receipt.get("backgroundTaskId"), str)
+                    and receipt["backgroundTaskId"]):
+                out.append(({"type": "task_started", "id": receipt["backgroundTaskId"]}, None))
+
+        elif etype == "system" and event.get("subtype") in {
+            "task_started", "task_progress", "task_notification"
+        }:
+            if isinstance(event.get("task_id"), str) and event["task_id"]:
+                kind = "task_finished" if event["subtype"] == "task_notification" else event["subtype"]
+                out.append(({"type": kind, "id": event["task_id"]}, None))
+
         elif etype == "system" and event.get("subtype") == "compact_boundary":
             # 턴 안 압축 사건(창은 _build_env 의 CLAUDE_CODE_AUTO_COMPACT_WINDOW) — 세기만 한다.
             meta = event.get("compact_metadata") or {}

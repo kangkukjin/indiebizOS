@@ -1063,6 +1063,14 @@ python_libraries:
   file: capability_change.py
   interpreter: python
   timeout: 3600
+대화복구:
+  description: 현재 대화의 시점별 복구. args op:list|preview|apply|status. preview는 checkpoint와
+    mode(files|conversation|both), apply는 preview ID, status는 rewind ID. 미리보기의 외부
+    변경 충돌은 덮어쓰지 않는다. apply는 비동기 rewind 접수증을 반환하고 현재 턴을 중단한다. 네트워크·DB 효과는 되돌리지 않는다.
+  file: conversation_restore.py
+  interpreter: python
+  registered_at: '2026-11-06T18:00:00'
+  timeout: 40
 미디어세션:
   description: '미디어 세션 제어(docs/MEDIA_SESSION_CONTRACT.md) — args: op(capabilities|create|status|accept|reject|end|update|list|history|health)·
     target(장치 이름·device_id 또는 통화 상대 이름/npub)·kind(call|extension)·purpose(voice_call|video_call|camera|microphone|speaker|playback)·
@@ -1120,6 +1128,18 @@ python_libraries:
   interpreter: python
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
+블로그마을주간갱신:
+  created_at: '2026-11-08T13:25:08.008167+00:00'
+  description: 3D 마을 블로그(blog3d.kangkukjin.workers.dev) 주간 갱신. 트리거가 [self:blog]{op:check_new}로
+    새 글을 먼저 수집한 뒤 부른다. 영상 목록·글 내보내기(layout.lock으로 기존 배치 고정)·바뀐 게 없으면 종료·글꼴·빌드·검사·배포·실서버
+    확인·기록(outputs/3d-blog/measure/weekly). args {force:bool}. 실패 시 비정상 종료, 배포 전 실패는
+    운영 사이트 불변.
+  file: blog3d_weekly.py
+  interpreter: python
+  origin: user
+  registered_at: '2026-11-08T13:25:08.008159+00:00'
+  registration_updated_at: '2026-11-08T13:25:08.008169+00:00'
+  timeout: 1800
 빌드검증:
   callable_contract:
     adapter:
@@ -1685,14 +1705,11 @@ python_libraries:
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
 프로세스실행:
-  description: '실행을 시작하고 kind:process 접수증 반환. args: command, cwd(작업 폴더), io(pipe|pty), request_id, yield_ms, lifetime(task|session). 출력은 self:task status, 입력·EOF·인터럽트·크기 변경은 control(action,text|base64,newline,generation,request_id), 종료는 cancel. macOS 쓰기 샌드박스 안에서 실행하며 입력 전달은 프로그램의 처리 완료와 다르다.'
+  description: '실행을 시작하고 kind:process 접수증 반환. args: command, cwd(작업 폴더), io(pipe|pty),
+    request_id, yield_ms, lifetime(task|session). 출력은 self:task status, 입력·EOF·인터럽트·크기
+    변경은 control(action,text|base64,newline,generation,request_id), 종료는 cancel. macOS
+    쓰기 샌드박스 안에서 실행하며 입력 전달은 프로그램의 처리 완료와 다르다.'
   file: process_control.py
-  interpreter: python
-  registered_at: '2026-11-06T18:00:00'
-  timeout: 40
-대화복구:
-  description: '현재 대화의 시점별 복구. args op:list|preview|apply|status. preview는 checkpoint와 mode(files|conversation|both), apply는 preview ID, status는 rewind ID. 미리보기의 외부 변경 충돌은 덮어쓰지 않는다. apply는 비동기 rewind 접수증을 반환하고 현재 턴을 중단한다. 네트워크·DB 효과는 되돌리지 않는다.'
-  file: conversation_restore.py
   interpreter: python
   registered_at: '2026-11-06T18:00:00'
   timeout: 40

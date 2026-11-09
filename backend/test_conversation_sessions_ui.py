@@ -31,6 +31,7 @@ def test_session_workspace_in_browser(tmp_path):
     records['old'] = [{'id':str(i),'role':'user','content':f'오래된 대화 {i}',
         'timestamp':f'2026-10-{13 if i <= 2 else 14}T01:00:00Z','images':[]} for i in range(1,51)] + records['old']
     turns, sent, steering, steer_requests = {}, [], {}, []
+    panels = {}
     steering_mode = {'reject': False, 'drop': False}
     def api(route):
         request = route.request
@@ -50,9 +51,9 @@ def test_session_workspace_in_browser(tmp_path):
             if path.endswith('/messages'):
                 sent.append((sid,body['message']))
                 records[sid].append({'id':str(10+len(sent)),'role':'user','content':body['message'], 'timestamp':'2026-10-15T02:00:00Z','images':[]})
-                turns[sid]={'id':'turn-'+sid,'state':'running','stream_content':'진행 중인 답변'}
+                turns[sid]={'id':('turn-' if len(sent) == 1 else f'turn{len(sent)}-')+sid,'state':'running','stream_content':'진행 중인 답변'}
                 next(i for i in items if i['id']==sid).update(running=True,title=body['message'])
-                result={'session_id':sid,'turn_id':'turn-'+sid}
+                result={'session_id':sid,'turn_id':turns[sid]['id']}
             elif path.endswith('/steer'):
                 steer_requests.append((sid, body))
                 result = {'accepted': not steering_mode['reject'], 'reason': '실행이 종료되어 접수하지 않았습니다.'}
@@ -76,7 +77,7 @@ def test_session_workspace_in_browser(tmp_path):
             else:
                 before=int(parse_qs(urlparse(request.url).query).get('before',['999999'])[0])
                 rows=[r for r in records[sid] if int(r['id']) < before]
-                result={'messages':rows[-50:],'has_older':len(rows)>50,'events':[], 'turn':turns.get(sid),'panels':{},
+                result={'messages':rows[-50:],'has_older':len(rows)>50,'events':[], 'turn':turns.get(sid),'panels':panels.get(sid, {}),
                         'steering':steering.get(sid, [])}
         route.fulfill(status=200,content_type='application/json',body=json.dumps(result),headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'})
     try:
@@ -124,6 +125,14 @@ def test_session_workspace_in_browser(tmp_path):
                 textbox.fill('새 주제 조사');textbox.press('Enter')
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
                 assert sent == [('new1','새 주제 조사')]
+                panels['new1'] = {'todo': {'session_id': 'new1', 'turn_id': 'previous-turn', 'revision': 0,
+                    'todos': [{'content': '옛 완료 목록', 'activeForm': '옛 작업 중', 'status': 'completed'}]}}
+                page.reload()
+                expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
+                expect(page.get_by_text('옛 완료 목록',exact=True)).to_have_count(0)
+                panels['new1']['todo'].update(turn_id='turn-new1', todos=[
+                    {'content': '이번 요청 목록', 'activeForm': '이번 요청 처리 중', 'status': 'in_progress'}])
+                expect(page.get_by_text('이번 요청 처리 중',exact=True)).to_be_visible()
                 expect(textbox).to_be_enabled()
                 textbox.fill('국내 자료만 사용해줘');textbox.press('Enter')
                 expect(textbox).to_have_value('')
@@ -131,6 +140,7 @@ def test_session_workspace_in_browser(tmp_path):
                 assert steer_requests[-1][0] == 'new1'
                 assert steer_requests[-1][1]['turn_id'] == 'turn-new1'
                 assert len(sent) == 1
+                expect(page.get_by_text('이번 요청 처리 중',exact=True)).to_be_visible()
                 steering_mode['reject'] = True
                 textbox.fill('거절되어도 보존할 입력');textbox.press('Enter')
                 expect(page.get_by_text('실행이 종료되어 접수하지 않았습니다.',exact=True)).to_be_visible()
@@ -146,6 +156,7 @@ def test_session_workspace_in_browser(tmp_path):
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
                 page.reload()
                 expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
+                expect(page.get_by_text('이번 요청 처리 중',exact=True)).to_be_visible()
                 expect(page.get_by_text('국내 자료만 사용해줘',exact=True)).to_have_count(1)
                 # 두 번째 창에도 같은 접수 기록이 보이며 다른 새 작업을 만들지 않는다.
                 second = page.context.new_page()
@@ -170,6 +181,13 @@ def test_session_workspace_in_browser(tmp_path):
                 expect(page.get_by_text('결론은 세 줄로',exact=True)).to_have_count(1)
                 page.reload()
                 expect(page.get_by_text('결론은 세 줄로',exact=True)).to_have_count(1)
+                # 완료/미완료에 무관하게 다음 요청에 이전 패널을 다시 붙이지 않는다.
+                textbox.fill('다음 요청');textbox.press('Enter')
+                expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
+                expect(page.get_by_text('이번 요청 처리 중',exact=True)).not_to_be_visible()
+                page.reload()
+                expect(page.get_by_text('진행 중인 답변',exact=False)).to_be_visible()
+                expect(page.get_by_text('이번 요청 처리 중',exact=True)).not_to_be_visible()
                 page.get_by_role('button',name='히스토리',exact=True).click()
                 page.get_by_role('button',name='회의 준비',exact=True).click()
                 expect(page.get_by_text('지난 회의의 결정은 보존해줘.',exact=True)).to_be_visible()

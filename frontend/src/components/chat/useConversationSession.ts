@@ -14,7 +14,7 @@ interface Snapshot {
  revision?: number;
  steering?: Steering[];
  messages: { id: string; role: string; content: string; timestamp: string; images: string[]; evaluation?: ChatMessage['evaluation'] }[];
- panels?: { todo?: {todos?: TodoItem[]}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
+ panels?: { todo?: {todos?: TodoItem[]; session_id?: string; turn_id?: string; revision?: number}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
  has_older: boolean; turn: { id: string; state: string; stream_content?: string; progress?: TurnProgress | null } | null; events: Event[];
 }
 /** 턴의 현재 진행(백엔드 conversation_turns.progress) — age_s 는 서버 시계 기준 마지막 움직임 경과 */
@@ -30,11 +30,14 @@ export function useConversationSession(id: string, target: SessionTarget, active
  const [sendError, setSendError] = useState('');
  const retrySteer = useRef<SteeringRequest | null>(null);
  const revision = useRef(0);
+ const snapshotRequest = useRef(0);
  const targetRef = useRef(target); targetRef.current = target;
  const query = sessionQuery(target);
  const load = useCallback(async (before?: string) => {
+  const request = before ? 0 : ++snapshotRequest.current;
   const result = await sessionCall<Snapshot>(`/${id}`, { ...targetRef.current, ...(before ? { before } : {}) });
-  if (!mounted.current) return;
+  // 새 요청 접수 뒤의 조회보다 늦게 도착한 이전 폴링은 현재 턴을 되돌릴 수 없다.
+  if (!mounted.current || (!before && request !== snapshotRequest.current)) return;
   const rows: ChatMessage[] = result.messages.map(m => ({ ...m, role: m.role === 'user' ? 'user' : 'assistant',
    timestamp: new Date(m.timestamp.endsWith('Z') || /[+-]\d\d:\d\d$/.test(m.timestamp) ? m.timestamp : `${m.timestamp.replace(' ', 'T')}Z`),
    images: m.images.map(path => targetRef.current.target === 'agent'
@@ -67,7 +70,9 @@ export function useConversationSession(id: string, target: SessionTarget, active
   if (e.type === 'interim_text' && e.content && snapshot?.turn) interim.push({ id:`${snapshot.turn.id}-interim-${interim.length}`, role:'assistant', content:e.content, timestamp:new Date() });
   if (e.questions) questions = e.questions;
  }
- if (snapshot?.panels?.todo?.todos) todos = snapshot.panels.todo.todos;
+ const todoPanel = snapshot?.panels?.todo;
+ if (todoPanel?.session_id === id && todoPanel.turn_id === snapshot?.turn?.id
+     && todoPanel.revision === (snapshot?.revision || 0) && todoPanel.todos) todos = todoPanel.todos;
  if (snapshot?.panels?.question) questions = snapshot.panels.question.status === 'pending' ? snapshot.panels.question.questions || [] : [];
  const running = snapshot?.turn?.state === 'running';
  // 진행 좌표는 실행 중인 마지막 도구(보통 execute_ibl)에 단다. 시각은 서버의 경과(age_s)를 클라이언트 시계로 옮긴다.
@@ -93,7 +98,8 @@ export function useConversationSession(id: string, target: SessionTarget, active
  }
  return { messages:shown,
   loading:sending || running, canSteer:running && !sending, streamingContent:running ? snapshot?.turn?.stream_content : '',
-  toolHistory:running ? tools : [], thinkingText:running ? thinking : '', todos, questions, planMode:snapshot?.panels?.plan_mode,
+  // 새 요청 접수/첨부 처리 중에는 아직 이전 턴의 snapshot이 남아 있다.
+  toolHistory:running ? tools : [], thinkingText:running ? thinking : '', todos:sending && !running ? [] : todos, questions, planMode:snapshot?.panels?.plan_mode,
   error:sendError || error || failure?.message || failure?.content || (snapshot?.turn?.state === 'interrupted' ? '앱 재시작으로 실행이 중단됐습니다. 기록을 확인하고 이어서 요청하세요.' : undefined),
   hasOlder, loadOlder:async () => {
    try { if (messages[0]) await load(messages[0].id); }

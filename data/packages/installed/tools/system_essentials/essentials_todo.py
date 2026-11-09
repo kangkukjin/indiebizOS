@@ -22,6 +22,13 @@ def write(tool_input, path, file_io):
         "todos": todos,
         "updated_at": datetime.now().isoformat()
     }
+    # 목록의 소유자는 모델 입력이 아니라 실제 실행 문맥으로 결정한다.
+    # 같은 대화의 다음 요청은 이 파일을 현재 진행으로 재사용하지 않는다.
+    from conversation_sessions import current
+    binding = current()
+    if binding and binding.turn_id:
+        state.update(session_id=binding.session_id, turn_id=binding.turn_id,
+                     revision=binding.revision)
 
     # 결과 포맷팅 (텍스트 기반, Anthropic 스타일)
     result_lines = ["Todo list updated:"]

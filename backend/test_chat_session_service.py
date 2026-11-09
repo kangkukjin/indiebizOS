@@ -1,6 +1,7 @@
 """대화창 추가 지시: 실제 HTTP·원장·인박스·종료 경계의 접수 계약."""
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+import json
 
 import pytest
 from fastapi import FastAPI
@@ -140,6 +141,67 @@ def test_parent_agent_steering_is_not_shown_as_user_input(chat):
         inbox.post('system_ai', '부모의 지시', run.target[2], require_active=True,
                    source='agent', sender='parent')
         assert service.steering_history(store, run.session_binding.session_id) == []
+
+
+@pytest.mark.parametrize('status', ['pending', 'in_progress', 'completed'])
+def test_todo_belongs_to_request_not_conversation(chat, status):
+    from system_tools import execute_tool
+    from thread_context import actor_context
+    store, client = chat
+    with running(store) as (run, _):
+        binding = run.session_binding
+        todo = {'content': '이번 요청의 검수', 'activeForm': '검수 중', 'status': status}
+        with sessions.scope(binding), actor_context(
+                agent_id='system_ai', task_id=binding.turn_id, origin='training'):
+            result = execute_tool('todo_write', {'todos': [todo], 'turn_id': 'forged'},
+                                  str(sessions.state_directory(binding)), 'system_ai')
+        assert 'Todo list updated' in result
+        path = sessions.state_directory(binding) / 'todo_state.json'
+        saved = json.loads(path.read_text())
+        assert saved['turn_id'] == binding.turn_id
+        assert saved['session_id'] == binding.session_id
+        assert saved['revision'] == binding.revision
+        url = f'/chat-sessions/{binding.session_id}'
+        assert client.get(url).json()['panels']['todo']['todos'] == [todo]
+        # 실행 중 추가 지시는 같은 요청이므로 목록을 유지한다.
+        assert send(client, run).json()['accepted']
+        assert client.get(url).json()['panels']['todo']['todos'] == [todo]
+    assert client.get(url).json()['panels']['todo']['todos'] == [todo]
+    # 같은 대화에서 새 요청을 시작해도 저장 파일은 보존하되 현재 진행에는 섞지 않는다.
+    second = store.begin(binding.session_id)
+    assert path.read_text() == json.dumps(saved, ensure_ascii=False, indent=2)
+    assert 'todo' not in client.get(url).json()['panels']
+    with sessions.scope(second), actor_context(
+            agent_id='system_ai', task_id=second.turn_id, origin='training'):
+        execute_tool('todo_write', {'todos': []}, str(path.parent), 'system_ai')
+    assert client.get(url).json()['panels']['todo']['todos'] == []
+    store.finish(second)
+
+
+@pytest.mark.parametrize('invalid', ['legacy', 'list', 'other_session', 'other_turn', 'old_revision', 'no_turn'])
+def test_snapshot_does_not_adopt_unowned_todos(chat, invalid):
+    store, client = chat
+    binding = store.begin(store.create()['id'])
+    directory = sessions.state_directory(binding)
+    directory.mkdir(parents=True)
+    todo = {'content': '이전 작업', 'activeForm': '이전 작업 중', 'status': 'completed'}
+    panel = {'todos': [todo], 'session_id': binding.session_id,
+             'turn_id': binding.turn_id, 'revision': binding.revision}
+    if invalid == 'legacy':
+        panel = {'todos': [todo], 'updated_at': sessions.now()}
+    elif invalid == 'list':
+        panel = [todo]
+    elif invalid == 'other_session':
+        panel['session_id'] = 'another-session'
+    elif invalid == 'other_turn':
+        panel['turn_id'] = 'previous-turn'
+    elif invalid == 'old_revision':
+        panel['revision'] -= 1
+    else:
+        with sessions.connection(store.path) as conn:
+            conn.execute('DELETE FROM conversation_turns WHERE id=?', (binding.turn_id,))
+    (directory / 'todo_state.json').write_text(json.dumps(panel))
+    assert 'todo' not in client.get(f'/chat-sessions/{binding.session_id}').json()['panels']
 
 
 if __name__ == '__main__':

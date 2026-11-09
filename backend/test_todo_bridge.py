@@ -18,7 +18,7 @@ def active(tmp_path):
         token = pb.enter(runner)
         binding = pb.current()
         binding.aliases.add('provider-alias')
-        session = sessions.Binding(str(tmp_path / 'db.sqlite'), 'conversation', 'owner')
+        session = sessions.Binding(str(tmp_path / 'db.sqlite'), 'conversation', 'owner', 'request-turn')
         binding.conversation = session
         with sessions._task_lock:
             sessions._task_bindings['todo-turn'] = session
@@ -46,6 +46,8 @@ def test_http_worker_uses_bound_session_and_restores_context(active):
         assert pool.submit(worker).result()['success']
     saved = sessions.state_directory(session) / 'todo_state.json'
     assert json.loads(saved.read_text())['todos'] == todos
+    assert json.loads(saved.read_text())['turn_id'] == session.turn_id
+    assert json.loads(saved.read_text())['session_id'] == session.session_id
     assert not (b.runner.project_path / 'agent_owner_todo_state.json').exists()
     with ThreadPoolExecutor(1) as pool:
         assert pool.submit(execute, [{'status': 'invalid'}], b.agent, b.task).result()['success'] is False

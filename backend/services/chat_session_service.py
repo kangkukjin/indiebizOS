@@ -145,7 +145,15 @@ def snapshot(store, sid, before=None):
     result["panels"] = {}
     for name in ("todo", "question", "plan_mode"):
         try:
-            result["panels"][name] = json.loads((state_dir / (name + "_state.json")).read_text(encoding="utf-8"))
+            panel = json.loads((state_dir / (name + "_state.json")).read_text(encoding="utf-8"))
+            # 완료 여부와 무관하게 이번 턴이 작성한 목록만 현재 진행에 노출한다.
+            # 소유권 없는 옛 파일도 시각으로 추측하여 새 요청에 붙이지 않는다.
+            if name == "todo" and (not turn or not isinstance(panel, dict)
+                    or panel.get("session_id") != sid
+                    or panel.get("turn_id") != turn["id"]
+                    or panel.get("revision") != result["revision"]):
+                continue
+            result["panels"][name] = panel
         except (OSError, ValueError):
             pass
     return result

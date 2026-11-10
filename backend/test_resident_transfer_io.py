@@ -77,6 +77,8 @@ def test_commit_recovery_after_atomic_rename_and_no_db_lock_during_hash(registry
 def test_binary_protocol_roundtrip_and_direction(registry, monkeypatch, size):
     rec = registry()
     monkeypatch.setattr(api_resident_transfer.lan, 'offer', lambda *a, **k: {})
+    network = {'address': '169.254.2.1', 'interface': 'bridge0', 'kind': 'thunderbolt'}
+    monkeypatch.setattr(api_resident_transfer.lan, 'connection_network', lambda ws: network)
     data = bytes(range(251)) * (size // 251) + bytes(range(size % 251))
     uploaded = row(rec, data)
     app = FastAPI()
@@ -85,7 +87,9 @@ def test_binary_protocol_roundtrip_and_direction(registry, monkeypatch, size):
     with TestClient(app) as client:
         with client.websocket_connect('/limb/resident/transfer/' + uploaded['id']) as ws:
             ws.send_json(auth)
-            assert ws.receive_json()['version'] == 1
+            ready = ws.receive_json()
+            assert ready['version'] == 1
+            assert ready['network'] == network
             for offset in range(0, size, io.BATCH):
                 block = data[offset:offset + io.BATCH]
                 ws.send_bytes(struct.pack('!Q', offset) + block)

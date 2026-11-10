@@ -100,6 +100,7 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 # 주의력이 아니라 실패하는 빌드로 막는다 — IBL --check 삼각검증과 같은 철학).
 # 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
 OS_SEAM_ALLOWLIST = {
+    "backend/services/resident_terminal_lan.py",  # 직접 연결 하드웨어 이음매: Mac Thunderbolt 식별, 다른 OS는 일반 LAN 후보 유지
     "backend/base/command_preflight.py",  # 실제 실행 셸·PowerShell 파서·OS별 검사 자식 종료를 소유하는 이음매
     "backend/base/process_session_worker.py",  # pipe/PTY·OS 신호를 소유하는 프로세스 실행 이음매
     "backend/services/process_sessions.py",  # OS 셸/PTY 선택과 기존 샌드박스 호출 이음매

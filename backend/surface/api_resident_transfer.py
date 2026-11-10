@@ -31,8 +31,10 @@ async def transfer_socket(ws: WebSocket, sid: str):
     try:
         auth = await asyncio.wait_for(ws.receive_json(), 10)
         row = await asyncio.to_thread(transfer.authorize, sid, auth.get('key'), auth.get('installation_id'))
+        network = await asyncio.to_thread(lan.connection_network, ws)
         await ws.send_json({'type': 'ready', 'version': 1, 'batch_bytes': transfer.BATCH,
-                            'route': 'lan' if ws.scope.get('terminal_lan') else 'public'})
+                            'route': 'lan' if ws.scope.get('terminal_lan') else 'public',
+                            'network': network})
         while True:
             message = await asyncio.wait_for(ws.receive(), 60)
             if message['type'] == 'websocket.disconnect':

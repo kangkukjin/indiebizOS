@@ -18,8 +18,9 @@ import (
 )
 
 type terminalLAN struct {
-	URLs   []string `json:"urls"`
-	SHA256 string   `json:"sha256"`
+	URLs          []string `json:"urls"`
+	PreferredURLs []string `json:"preferred_urls"`
+	SHA256        string   `json:"sha256"`
 }
 
 func terminalURL(base, id string) (string, error) { return streamURL(base, id, "terminal") }
@@ -77,28 +78,76 @@ func dialTerminalLAN(ctx context.Context, spec terminalSpec) *websocket.Conn {
 			}
 			return nil
 		}}
-	probe, cancel := context.WithTimeout(ctx, time.Second)
+	preferred := map[string]bool{}
+	for _, base := range spec.LAN.PreferredURLs {
+		preferred[base] = true
+	}
+	groups := [2][]string{}
+	seen := map[string]bool{}
+	for _, base := range spec.LAN.URLs {
+		address := terminalLANURL(base, spec.ID, spec.Channel)
+		if address == "" || seen[address] {
+			continue
+		}
+		seen[address] = true
+		group := 1
+		if preferred[base] {
+			group = 0
+		}
+		groups[group] = append(groups[group], address)
+	}
+	// Give the preferred hardware a bounded chance before racing ordinary LAN.
+	// A single cold TLS/ARP attempt must not pin a whole transfer to the relay.
+	for _, addresses := range groups {
+		if len(addresses) == 0 {
+			continue
+		}
+		for attempt := 0; attempt < 2; attempt++ {
+			if conn := dialLANGroup(ctx, addresses, config); conn != nil {
+				return conn
+			}
+			if ctx.Err() != nil {
+				return nil
+			}
+			if attempt == 0 {
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(200 * time.Millisecond):
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func terminalLANURL(base, id, channel string) string {
+	u, err := url.Parse(base)
+	if err != nil {
+		return ""
+	}
+	ip := net.ParseIP(u.Hostname())
+	if u.Scheme != "https" || ip == nil || ip.To4() == nil || !(ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast()) || u.User != nil || u.RawQuery != "" || u.Path != "" || u.Fragment != "" {
+		return ""
+	}
+	address, err := streamURL(base, id, channel)
+	if err != nil {
+		return ""
+	}
+	return address
+}
+
+func dialLANGroup(ctx context.Context, addresses []string, config *tls.Config) *websocket.Conn {
+	probe, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	var workers sync.WaitGroup
 	var mu sync.Mutex
 	var winner *websocket.Conn
-	for _, base := range spec.LAN.URLs {
-		u, e := url.Parse(base)
-		if e != nil {
-			continue
-		}
-		ip := net.ParseIP(u.Hostname())
-		if u.Scheme != "https" || ip == nil || ip.To4() == nil || !(ip.IsPrivate() || ip.IsLoopback()) || u.User != nil || u.RawQuery != "" || u.Path != "" || u.Fragment != "" {
-			continue
-		}
-		address, e := streamURL(base, spec.ID, spec.Channel)
-		if e != nil {
-			continue
-		}
+	for _, address := range addresses {
 		workers.Add(1)
 		go func(address string) {
 			defer workers.Done()
-			dialer := websocket.Dialer{TLSClientConfig: config, HandshakeTimeout: time.Second}
+			dialer := websocket.Dialer{TLSClientConfig: config, HandshakeTimeout: 3 * time.Second}
 			conn, response, e := dialer.DialContext(probe, address, nil)
 			if response != nil && response.Body != nil {
 				response.Body.Close()

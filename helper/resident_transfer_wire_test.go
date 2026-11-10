@@ -2,15 +2,63 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestBinaryWireLostAckKeepsLANAndReportsNetwork(t *testing.T) {
+	r := residentTestRuntime(t)
+	var connects, relayed int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		upgrader := websocket.Upgrader{}
+		conn, err := upgrader.Upgrade(w, req, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		var auth map[string]interface{}
+		if conn.ReadJSON(&auth) != nil || auth["key"] != r.cfg.Key {
+			t.Error("missing device auth")
+			return
+		}
+		n := atomic.AddInt32(&connects, 1)
+		conn.WriteJSON(map[string]interface{}{"type": "ready", "version": 1, "route": "lan",
+			"network": map[string]interface{}{"address": "169.254.2.1", "interface": "bridge0", "kind": "thunderbolt"}})
+		var request map[string]interface{}
+		if conn.ReadJSON(&request) != nil || n <= 3 {
+			return // lost acknowledgement must reconnect over LAN again
+		}
+		conn.WriteJSON(map[string]interface{}{"offset": 3})
+	}))
+	defer server.Close()
+	public := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		atomic.AddInt32(&relayed, 1)
+		http.Error(w, "relay must not be used", 500)
+	}))
+	defer public.Close()
+	r.cfg.Base = public.URL
+	digest := sha256.Sum256(server.Certificate().Raw)
+	wire := newTransferWire(r, residentID(), map[string]interface{}{"binary": map[string]interface{}{
+		"version": float64(1), "lan": terminalLAN{URLs: []string{server.URL},
+			PreferredURLs: []string{server.URL}, SHA256: hex.EncodeToString(digest[:])}}})
+	defer wire.close()
+	out, err := wire.call(context.Background(), map[string]interface{}{"action": "info"})
+	if err != nil || out["offset"] != float64(3) || wire.route != "lan" || wire.network["kind"] != "thunderbolt" {
+		t.Fatal(out, err, wire.network)
+	}
+	if atomic.LoadInt32(&connects) != 4 || atomic.LoadInt32(&relayed) != 0 {
+		t.Fatal("lost ACK erased LAN preference", connects, relayed)
+	}
+}
 
 func TestBinaryWireLostAckReconnectAndRead(t *testing.T) {
 	r := residentTestRuntime(t)

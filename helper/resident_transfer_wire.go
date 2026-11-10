@@ -14,13 +14,14 @@ import (
 
 // One bounded batch and durable acknowledgement in flight; no full-file buffers.
 type transferWire struct {
-	r      *residentRuntime
-	tid    string
-	batch  int
-	binary bool
-	lan    terminalLAN
-	conn   *websocket.Conn
-	route  string
+	r       *residentRuntime
+	tid     string
+	batch   int
+	binary  bool
+	lan     terminalLAN
+	conn    *websocket.Conn
+	route   string
+	network map[string]interface{}
 }
 
 func newTransferWire(r *residentRuntime, tid string, meta map[string]interface{}) *transferWire {
@@ -67,6 +68,7 @@ func (w *transferWire) connect(ctx context.Context) error {
 		Version int
 		Route   string
 		Error   string
+		Network map[string]interface{}
 	}
 	if err = conn.ReadJSON(&ready); err != nil {
 		return err
@@ -78,6 +80,7 @@ func (w *transferWire) connect(ctx context.Context) error {
 		return fmt.Errorf("invalid_transfer_handshake")
 	}
 	w.route = ready.Route
+	w.network = ready.Network
 	return nil
 }
 func (w *transferWire) call(ctx context.Context, body map[string]interface{}) (map[string]interface{}, error) {
@@ -95,17 +98,10 @@ func (w *transferWire) call(ctx context.Context, body map[string]interface{}) (m
 	for attempt := 0; ; attempt++ {
 		var out map[string]interface{}
 		var err error
+		connectFailed := false
 		if w.conn == nil {
 			err = w.connect(ctx)
-			if err != nil && ctx.Err() == nil {
-				var denied *residentHTTPError
-				if !errors.As(err, &denied) {
-					w.close()
-					w.binary = false
-					w.route = "https-fallback"
-					return w.call(ctx, body)
-				}
-			}
+			connectFailed = err != nil
 		}
 		if err == nil {
 			out, err = w.exchange(ctx, body)
@@ -116,11 +112,19 @@ func (w *transferWire) call(ctx context.Context, body map[string]interface{}) (m
 			return out, nil
 		}
 		w.close()
+		var denied *residentHTTPError
+		if connectFailed && ctx.Err() == nil && !errors.As(err, &denied) &&
+			(attempt >= 2 || !transferTransient(err)) {
+			w.binary = false
+			w.route = "https-fallback"
+			w.network = nil
+			return w.call(ctx, body)
+		}
 		if ctx.Err() != nil || attempt >= 4 || !transferTransient(err) {
 			return nil, err
 		}
 		// Replaying only idempotent batch/meta/read operations. ACK loss is safe.
-		w.lan = terminalLAN{} // failed direct connection falls back to the authenticated hub
+		// Reconnect through the same LAN preference; a lost ACK does not erase it.
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()

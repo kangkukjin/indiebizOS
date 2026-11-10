@@ -9,6 +9,8 @@ import hashlib
 import ipaddress
 import logging
 import socket
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -20,16 +22,61 @@ _port = 0
 _fingerprint = ''
 _retry_at = 0
 _handlers = {}
+_thunderbolt_cache = (0.0, frozenset())
 
 
-def addresses():
+def thunderbolt_interfaces():
+    """Hardware identity, not an assumption that every bridge/link-local IP is Thunderbolt."""
+    global _thunderbolt_cache
+    if sys.platform != 'darwin':
+        return frozenset()
+    now = time.monotonic()
+    if now < _thunderbolt_cache[0]:
+        return _thunderbolt_cache[1]
+    names = set()
+    try:
+        result = subprocess.run(['/usr/sbin/networksetup', '-listallhardwareports'],
+                                capture_output=True, text=True, timeout=2, check=True)
+        thunderbolt = False
+        for line in result.stdout.splitlines():
+            if line.startswith('Hardware Port:'):
+                thunderbolt = line.partition(':')[2].strip().startswith('Thunderbolt')
+            elif thunderbolt and line.startswith('Device:'):
+                names.add(line.partition(':')[2].strip())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    _thunderbolt_cache = (now + 60, frozenset(names))
+    return _thunderbolt_cache[1]
+
+
+def address_candidates():
     import psutil
     nets = [ipaddress.ip_network(n) for n in ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16')]
     stats = psutil.net_if_stats()
-    return sorted({a.address for name, rows in psutil.net_if_addrs().items()
-                   if name in stats and stats[name].isup
-                   for a in rows if a.family == socket.AF_INET
-                   and any(ipaddress.ip_address(a.address) in n for n in nets)})[:8]
+    thunderbolt = thunderbolt_interfaces()
+    found = {}
+    for name, rows in psutil.net_if_addrs().items():
+        if name not in stats or not stats[name].isup:
+            continue
+        for address in rows:
+            if address.family != socket.AF_INET:
+                continue
+            ip = ipaddress.ip_address(address.address)
+            if ip.is_link_local or any(ip in net for net in nets):
+                candidate = {'address': address.address, 'interface': name,
+                             'kind': 'thunderbolt' if name in thunderbolt else 'lan'}
+                if address.address not in found or candidate['kind'] == 'thunderbolt':
+                    found[address.address] = candidate
+    return sorted(found.values(), key=lambda c: (c['kind'] != 'thunderbolt', c['address']))[:8]
+
+
+def connection_network(ws):
+    """Report the interface actually reached, rather than the advertised preference."""
+    if not ws.scope.get('terminal_lan'):
+        return {}
+    address = (ws.scope.get('server') or ('', 0))[0]
+    return next((c for c in address_candidates() if c['address'] == address),
+                {'address': address, 'kind': 'lan'})
 
 
 def _start(handler, channel="terminal"):
@@ -97,12 +144,14 @@ def offer(handler, channel='terminal'):
     with _lock:
         _handlers[channel] = handler
         try:
-            hosts = addresses()
+            hosts = address_candidates()
             if not hosts or time.monotonic() < _retry_at:
                 return {}
             if _server is None or _server.should_exit:
                 _server, _port, _fingerprint = _start(handler, channel)
-            return {'urls': [f'https://{host}:{_port}' for host in hosts],
+            return {'urls': [f'https://{host["address"]}:{_port}' for host in hosts],
+                    'preferred_urls': [f'https://{host["address"]}:{_port}' for host in hosts
+                                       if host['kind'] == 'thunderbolt'],
                     'sha256': _fingerprint}
         except Exception as exc:
             # LAN is an optimization. Existing public TLS transport still works.

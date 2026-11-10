@@ -88,6 +88,9 @@ func (r *residentRuntime) transferFile(ctx context.Context, c Command, tid strin
 				result["transport"] = "binary-v1"
 			}
 			result["route"] = wire.route
+			if len(wire.network) > 0 {
+				result["network"] = wire.network
+			}
 		}
 	}()
 	call := func(body map[string]interface{}) (map[string]interface{}, error) { return wire.call(ctx, body) }

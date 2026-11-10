@@ -12,7 +12,8 @@ LIVE_CODE_ROOTS = ('backend', 'frontend', 'scripts')
 
 # File-owned content uses normal file/ledger operations even in a repair turn.
 # Program sources, managed stores and protected contracts are resolved first.
-FILE_CONTENT_ROOTS = ('docs', 'data/guides', 'data/system_docs', 'outputs', 'data/outputs')
+FILE_CONTENT_ROOTS = ('docs', 'data/guides', 'data/system_docs', 'outputs', 'data/outputs',
+                      '공유창고')
 
 
 def repair_requested(request_type, framing=None):

@@ -118,17 +118,20 @@ def _bunjang(monkeypatch, pages, num_found=1000):
     mod = module("shopping-assistant", "tool_used")
     seen = []
 
-    def fake_page(query, page, n):
+    def fake_page(query, cursor, n):
+        page = int(cursor) if cursor else 0
         seen.append(page)
         rows = pages[page] if page < len(pages) else []
-        return {"list": rows, "num_found": num_found}
+        return {"list": rows, "num_found": num_found,
+                "cursor": str(page + 1) if page + 1 < len(pages) else None}
 
     monkeypatch.setattr(mod, "_bunjang_page", fake_page)
     return mod, seen
 
 
 def _bj(i, loc=""):
-    return {"pid": i, "name": f"스위치 {i}", "price": "300000", "location": loc, "status": "0"}
+    return {"pid": i + 1, "name": f"스위치 {i}", "price": "300000", "location": loc,
+            "status": "SELLING", "type": "PRODUCT"}
 
 
 def test_bunjang_region_scans_past_first_page(monkeypatch):

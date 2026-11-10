@@ -106,7 +106,8 @@ def test_managed_definitions_keep_their_publication_owner(kind, owner):
 @pytest.mark.parametrize('path', [
     'data/guides/ai_trend_report.md', 'outputs/reports/_methodology_rules.md',
     'outputs/reports/candidates.json', 'data/outputs/research/draft.md',
-    'docs/design.md', 'data/system_docs/technical.md'])
+    'docs/design.md', 'data/system_docs/technical.md',
+    '공유창고/0/게임들/1942.html', '공유창고/4/private/report.json'])
 def test_document_route_is_not_program_admission_or_publication(path):
     from program_boundary import path_status, candidate_plan
     import task_repair
@@ -118,7 +119,7 @@ def test_document_route_is_not_program_admission_or_publication(path):
 
 
 @pytest.mark.parametrize('path', ['docs/AGENTS.md', 'docs/generated_templates/anatomy.md',
-                                'outputs/.env',
+                                'outputs/.env', '공유창고/0/.env', '공유창고/0/AGENTS.md',
                                 'data/common_prompts/fragments/13_repair.md',
                                 'data/system_ai_state/repair_sessions/a.json'])
 def test_content_route_cannot_shadow_protected_ownership(path):

@@ -369,6 +369,32 @@ def test_turn_file_operations_keep_authority_and_lifetime(repair_turn, monkeypat
     assert not (work / 'no.py').exists()
 
 
+def test_warehouse_publication_uses_live_file_owner_and_preserves_boundaries(repair, monkeypatch):
+    repo, wt, st, controller, call = repair
+    target = '공유창고/0/게임들/1942.html'
+    source = 'outputs/reports/game.html'
+    monkeypatch.setattr(st, 'ensure_session', lambda *a: pytest.fail('content needs no new workspace'))
+    assert call('write_file', {'path': source, 'content': '<html>new game</html>'})['success']
+    result = call('copy_path', {'src': source, 'dest': target})
+    assert result['success'], result
+    assert call('read_file', {'path': target}) == '<html>new game</html>'
+    result = call('write_file', {'path': target, 'content': '<html>updated</html>'})
+    assert result['success'] and not result.get('staged'), result
+    assert (repo / target).read_text() == '<html>updated</html>'
+    assert not (wt / target).exists()
+    session = st.read_session(str(repo), 'script-repair')
+    session['task_scope'] = {'paths': ['data/scripts/calculator.py']}
+    st._save_session(str(repo), session)
+    assert not call('write_file', {'path': target, 'content': 'OUTSIDE SCOPE'})['success']
+    session.pop('task_scope')
+    st._save_session(str(repo), session)
+    link = repo / '공유창고/0/linked.py'
+    link.symlink_to(repo / 'backend/test_existing.py')
+    assert not call('write_file', {'path': str(link), 'content': 'ESCAPE'})['success']
+    assert not call('move_path', {'src': target, 'dest': 'backend/moved.py'})['success']
+    assert (repo / target).read_text() == '<html>updated</html>'
+
+
 def test_document_and_ledger_edits_reach_live_owner_without_code_completion(repair, monkeypatch):
     from repair_readiness import requires_code_receipts
     from thread_context import get_repair_workspace

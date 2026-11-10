@@ -2216,16 +2216,16 @@
   "sense:used": {
    "fields": {
     "description": "706f004318bc",
-    "target_description": "9d9ec232a542",
-    "implementation": "00190afc3323",
+    "target_description": "a97771a5c186",
+    "implementation": "a71acbca3ad3",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
     "aliases": "96cc7b816c74",
     "router": "ebbb1532efbc",
     "tool": "86d9404c5eca"
    },
-   "reviewed": "2026-09-29",
-   "examples": 31
+   "reviewed": "2026-11-10",
+   "examples": 8
   },
   "sense:weather": {
    "fields": {

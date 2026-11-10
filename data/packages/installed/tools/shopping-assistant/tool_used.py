@@ -7,8 +7,8 @@ tool_used.py — 중고 C2C 매물 검색 어댑터 ([sense:used] 결정화)
 통화 = items[{title, meta, summary, url, image}] (단일 통화 {items:[...]}. realty/stay와 동일).
 
 소스별 접근(2026-07-12 실측 확정):
-- bunjang : 내부 API api.bunjang.co.kr/api/1/find_v2.json → 깨끗한 JSON(위치 포함). ★
-            (옛 Playwright SPA 셀렉터는 빈 껍데기라 실패 → API로 대체가 결정화의 핵심.)
+- bunjang : /api/search/v8/web/search → mainGrid 매물과 커서(2026-11-10 확인).
+            외부·유료 광고 및 추천 목록 제외. 위치 미제공은 미확인으로 보존.
 - joongna : web.joongna.com/search RSC 스트림(self.__next_f)에 seq/title/price/url. best-effort.
 - danggeun: 2단 — ①지역 해소 /kr/api/v1/regions/keyword ②검색 /kr/search/buy-sell/?in=x-{id}&q=
             의 Remix 로더 JSON(`_data=routes/kr.search.buy-sell._index`) → buySellArticles.
@@ -77,57 +77,82 @@ def _num_or_none(v):
 # 전국 최신순 한 쪽(40행)만 보고 걸렀더니 "그 지역 매물 0건"이 사실처럼 나왔다(79회차 B79-4). region 이 있으면
 # 목표 수를 채울 때까지 쪽을 넘기되 상한을 두고, 상한에 닿으면 표본이었음을 truncations 로 말한다.
 BUNJANG_PAGE_SIZE = 40
-BUNJANG_REGION_SCAN_PAGES = 5          # region 후필터가 훑는 최대 쪽 수(= 200행)
+BUNJANG_REGION_SCAN_PAGES = 5          # 최신순 커서 최대 쪽 수; 매물 수도 별도로 200건 제한
 
 
-def _bunjang_page(query, page, n):
-    url = "https://api.bunjang.co.kr/api/1/find_v2.json"
-    params = {"q": query, "order": "date", "n": n,
-              "page": page, "req_ref": "search", "stat_uid": ""}
+def _bunjang_page(query, cursor, n):
+    url = "https://api.bunjang.co.kr/api/search/v8/web/search"
+    params = {"q": query, "policyKey": "pw.product.keyword", "sort": "latest", "size": n}
+    if cursor is not None:
+        params["cursor"] = cursor
     text, code = _get(url, params=params)
     if code != 200:
         raise RuntimeError(f"번개장터 API HTTP {code}")
-    data = json.loads(text)
-    if not isinstance(data, dict) or not isinstance(data.get("list"), list):
-        raise ValueError("번개장터 응답에 list 가 없습니다(원천 구조 변경)")
-    return data
+    try:
+        grid = json.loads(text)["data"]["responses"]["mainGrid"]["searchResponse"]
+        rows = grid["data"]
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError("invalid rows")
+        cursor = grid.get("cursor")
+        if cursor is not None and not isinstance(cursor, str):
+            raise ValueError("invalid cursor")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("번개장터 mainGrid 매물 구조를 확인할 수 없습니다(원천 구조 변경)") from exc
+    return {"list": rows, "num_found": grid.get("totalCount"), "cursor": cursor or None}
 
 
 def _bunjang_record(it, loc):
     pid = it.get("pid")
-    status = "판매완료" if it.get("status") in ("2", 2, "sold") else "판매중"
+    status = {"SELLING": "판매중", "RESERVED": "예약중", "SOLD_OUT": "판매완료"}.get(it.get("status"))
     meta_bits = [_man(it.get("price"))]
     if loc:
         meta_bits.append(loc)
-    if status == "판매완료":
-        meta_bits.append("거래완료")
+    if status in {"판매완료", "예약중"}:
+        meta_bits.append(status)
     return {
         "title": (it.get("name") or "").strip(),
         "meta": " · ".join(meta_bits),
         "summary": "",
         "url": f"https://m.bunjang.co.kr/products/{pid}" if pid else "",
-        "image": it.get("product_image") or "",
+        "image": (it.get("productImage") or "").replace("{res}", "320"),
         # 수치 칸 병기 (F1, 2026-08-16 상상훈련): 가격이 meta 텍스트("80만원")에만 있으면
         # sort/filter/비교 파이프가 원리적으로 막힌다 — 표시용 meta 와 별개로 수치를 나른다.
         "price": _num_or_none(it.get("price")),
         # R7 — meta 에 접힌 거래 지역·거래완료 여부의 구조 칸
         "location": loc or None,
-        "sold": status == "판매완료",
+        "sold": status == "판매완료" if status else None,
     }
 
 
 def search_bunjang(query, limit=20, region=None):
-    """번개장터 내부 API. region 주면 location substring 후필터(반경 아님) — 쪽을 넘기며 훑는다."""
-    n = max(limit * 2, BUNJANG_PAGE_SIZE) if not region else BUNJANG_PAGE_SIZE
-    pages = BUNJANG_REGION_SCAN_PAGES if region else 1
+    """최신순 매물 커서 조회. 최대 5쪽·200매물, region은 위치 후필터이며 미표기는 제외한다."""
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+        return {"success": False, "source": "bunjang", "error": "limit은 양의 정수여야 합니다", "items": []}
+    n, pages = BUNJANG_PAGE_SIZE, BUNJANG_REGION_SCAN_PAGES
+    scan_limit = n * pages
     records, scanned, unlocated, num_found, exhausted = [], 0, 0, None, False
+    cursor, cursors, product_ids = None, set(), set()
     try:
-        for page in range(pages):
-            data = _bunjang_page(query, page, n)
+        for _ in range(pages):
+            data = _bunjang_page(query, cursor, n)
             rows = data["list"]
             if num_found is None and isinstance(data.get("num_found"), int):
                 num_found = data["num_found"]
             for it in rows:
+                if it.get("type") == "EXT_AD":
+                    continue
+                if it.get("type") != "PRODUCT":
+                    raise ValueError("번개장터 매물 type을 확인할 수 없습니다(원천 구조 변경)")
+                if it.get("ad"):
+                    continue
+                pid = it.get("pid")
+                if not pid or not isinstance(it.get("name"), str) or not it["name"].strip():
+                    raise ValueError("번개장터 매물의 pid/name이 없습니다(원천 구조 변경)")
+                if pid in product_ids:
+                    continue
+                if scanned >= scan_limit:
+                    break
+                product_ids.add(pid)
                 scanned += 1
                 loc = (it.get("location") or "").strip()
                 if region:
@@ -139,11 +164,17 @@ def search_bunjang(query, limit=20, region=None):
                 records.append(_bunjang_record(it, loc))
                 if len(records) >= limit:
                     break
-            if len(records) >= limit:
+            else:
+                # A response can exceed size or mix ads. Only its cursor proves
+                # exhaustion; a short page/totalCount must not skip the next page.
+                if not data["cursor"]:
+                    exhausted = True
+            if len(records) >= limit or exhausted or scanned >= scan_limit:
                 break
-            if len(rows) < n or (num_found is not None and scanned >= num_found):
-                exhausted = True
-                break
+            cursor = data["cursor"]
+            if cursor in cursors:
+                raise ValueError("번개장터 페이지 커서가 반복됩니다")
+            cursors.add(cursor)
     except Exception as e:
         if not records:
             return {"success": False, "source": "bunjang", "error": f"번개장터 조회 실패: {e}", "items": []}
@@ -157,21 +188,22 @@ def search_bunjang(query, limit=20, region=None):
     res = {"source": "bunjang", "total": len(records), "items": records}
     if num_found is not None:
         res["total_estimate"] = num_found          # 원천이 말한 검색 모집단(전국, 추정치)
-    if region:
-        res["region"] = region
+    if region or (len(records) < limit and not exhausted):
+        if region:
+            res["region"] = region
         res["scanned"] = scanned                  # 훑은 원천 행 수(전국 최신순)
         res["unlocated"] = unlocated              # 위치 미표기라 region 판정 불가로 뺀 행
         if len(records) < limit and not exhausted:
             # truncation-scope: source — 지역 인자가 없는 원천을 상한 쪽수까지만 훑은 표본
             res["truncated"] = True
             res["truncations"] = [{"scope": "source", "reason": "scan_limit",
-                                   "limit": BUNJANG_REGION_SCAN_PAGES * n, "scanned": scanned,
+                                   "limit": scan_limit, "scanned": scanned,
                                    "retained": len(records), "unlocated": unlocated}]
-            res["note"] = (f"번개장터에는 지역 검색 인자가 없어 전국 최신 {scanned}건을 훑어 위치에 "
-                           f"'{region}' 이 든 매물만 남겼습니다(위치 미표기 {unlocated}건은 판정 불가로 제외). "
-                           f"상한에 닿아 더 오래된 매물은 보지 못했습니다 — 동네 매물은 source=danggeun 을 권합니다.")
-        else:
-            res["note"] = (f"전국 최신 {scanned}건 중 위치에 '{region}' 이 든 매물(위치 미표기 {unlocated}건 제외).")
+            res["note"] = f"최대 {pages}쪽·{scan_limit}매물 조회 상한에 닿아 나머지는 확인하지 못했습니다."
+        if region:
+            res["note"] = (res.get("note", "") + f" 전국 최신 {scanned}건 중 위치에 '{region}' 이 든 매물만 "
+                           f"남겼습니다(위치 미표기 {unlocated}건은 판정 불가로 제외). "
+                           "0건으로 지역 매물 부재를 단정할 수 없습니다. 동네 검색은 source=danggeun을 쓰세요.").strip()
     return res
 
 

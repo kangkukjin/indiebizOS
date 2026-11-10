@@ -71,15 +71,16 @@ def export_pdf(lecture_id: str, output_path: Optional[Path] = None) -> dict:
     if output_path is None:
         output_path = _exports_dir(lecture_id) / f"{lecture_id}_{_timestamp()}.pdf"
 
-    # RGB로 변환 (PDF는 알파 채널 미지원)
-    images = [Image.open(p).convert("RGB") for p in pngs]
-    images[0].save(
-        str(output_path),
-        "PDF",
-        save_all=True,
-        append_images=images[1:] if len(images) > 1 else [],
-        resolution=150.0,
-    )
+    # 고해상도 합성판도 픽셀은 그대로 넣고 종이 크기는 1280px 기준과 맞춘다.
+    # 페이지마다 DPI를 지정해야 720p/4K가 섞여도 PDF 페이지 크기가 달라지지 않는다.
+    for index, png in enumerate(pngs):
+        with Image.open(png) as source:
+            with source.convert("RGB") as image:
+                image.save(
+                    str(output_path), "PDF", append=index > 0,
+                    resolution=150.0 * image.width / 1280,
+                    quality=100, subsampling=0,
+                )
 
     return {
         "success": True,

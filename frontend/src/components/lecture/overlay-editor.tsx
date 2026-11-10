@@ -154,15 +154,17 @@ export function OverlayEditor(props: {
       const img = new Image();
       img.src = url;
       await img.decode();
-      const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      if (Math.max(img.naturalWidth, img.naturalHeight) > 12000 || img.naturalWidth * img.naturalHeight > 60000000) {
+        throw new Error('사진은 한 변 12,000px, 전체 6,000만 화소 이하로 골라 주세요. 자동으로 축소하지 않습니다.');
+      }
       const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('사진을 불러올 수 없습니다.');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const src = canvas.toDataURL('image/png');
-      if (src.length > 6 * 1024 * 1024) throw new Error('사진 용량이 큽니다. 크기를 줄여 다시 골라 주세요.');
+      if (src.length > 48 * 1024 * 1024) throw new Error('원본 해상도의 사진 데이터가 48MB를 넘습니다. 필요한 부분을 잘라 다시 골라 주세요.');
       const width = Math.max(5, Math.min(40, 60 * (CANVAS_H / CANVAS_W) * canvas.width / canvas.height));
       setOverlays((list) => [...list, { kind: 'image', text: '', src, name: file.name, x: 30, y: 20, width }]);
       setSelected(overlays.length);

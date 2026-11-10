@@ -35,6 +35,8 @@ def editing(tmp_path, monkeypatch):
 
 def test_photo_save_reopen_resize_rerender_and_clear(editing):
     ops, _, folder, photo = editing
+    def pixel(image, x, y):
+        return image.getpixel((round(x * image.width / 1280), round(y * image.height / 720)))[:3]
     def save(overlays):
         result = json.loads(ops.slide_image_edit({'lecture_id': 'sample', 'slide_id': 's001',
                                                  'overlay_set': overlays}))
@@ -42,25 +44,25 @@ def test_photo_save_reopen_resize_rerender_and_clear(editing):
     text = {'text': 'Caption', 'x': 60, 'y': 80, 'color': 'black'}
     save([photo, text])
     with Image.open(folder / 's001.png') as im:
-        assert im.getpixel((150, 160))[:3] == (255, 0, 0)
-        assert im.getpixel((460, 160))[:3] == (255, 255, 255)
+        assert pixel(im, 150, 160) == (255, 0, 0)
+        assert pixel(im, 460, 160) == (255, 255, 255)
     saved = ops.lecture_store.read_deck('sample')['slides']['s001']['text_overlays']
     assert saved[0]['src'] == photo['src']
     assert saved[1]['text'] == 'Caption'
     saved[0].update(x=40, width=10)
     save(saved)
     with Image.open(folder / 's001.png') as im:
-        assert im.getpixel((150, 160))[:3] == (255, 255, 255)
-        assert im.getpixel((530, 160))[:3] == (255, 0, 0)
-        assert im.getpixel((650, 160))[:3] == (255, 255, 255)
+        assert pixel(im, 150, 160) == (255, 255, 255)
+        assert pixel(im, 530, 160) == (255, 0, 0)
+        assert pixel(im, 650, 160) == (255, 255, 255)
     meta = ops.lecture_store.read_deck('sample')['slides']['s001']
     Image.new('RGB', (1280, 720), 'blue').save(folder / 's001.png')
     assert ops.reapply_overlays(folder, 's001', meta, folder / 's001.png')
     with Image.open(folder / 's001.png') as im:
-        assert im.getpixel((530, 160))[:3] == (255, 0, 0)
+        assert pixel(im, 530, 160) == (255, 0, 0)
     save([])
     with Image.open(folder / 's001.png') as im:
-        assert im.getpixel((530, 160))[:3] == (0, 0, 255)
+        assert pixel(im, 530, 160) == (0, 0, 255)
     assert not (folder / 's001.base.png').exists()
 
 
@@ -102,3 +104,56 @@ def test_editable_pptx_keeps_photo_and_text(editing, tmp_path, layout):
     assert photo_shape.width == 320 * export.PX_TO_EMU
     assert photo_shape.height == 160 * export.PX_TO_EMU
     assert any(shape.has_text_frame and shape.text == 'Caption' for shape in shapes)
+
+
+def test_photo_detail_preserved_at_native_pixels_without_cumulative_upscale(editing):
+    ops, _, folder, photo = editing
+    # 사진의 한 픽셀 선이 저장 뒤에도 분리돼 있어야 한다 (1280 합성에서는 뭉개졌던 입력).
+    detail = Image.new('RGB', (1920, 480))
+    stripe = Image.new('RGB', (1, 480), 'white')
+    for x in range(0, 1920, 2):
+        detail.paste(stripe, (x, 0))
+    raw = BytesIO()
+    detail.save(raw, format='PNG')
+    photo.update(src='data:image/png;base64,' + base64.b64encode(raw.getvalue()).decode(),
+                 x=0, y=0, width=50)
+    for _ in range(2):
+        result = json.loads(ops.slide_image_edit({
+            'lecture_id': 'sample', 'slide_id': 's001', 'overlay_set': [photo],
+        }))
+        assert result['success'], result
+        with Image.open(folder / 's001.png') as output:
+            assert output.size == (3840, 2160)
+            assert output.convert('RGB').crop((0, 0, 1920, 480)).tobytes() == detail.tobytes()
+        with Image.open(folder / 's001.base.png') as base:
+            assert base.size == (1280, 720)
+    stored = ops.lecture_store.read_deck('sample')['slides']['s001']['text_overlays'][0]
+    assert stored['src'] == photo['src']
+
+
+def test_large_photo_is_retained_and_output_density_is_bounded(editing):
+    _, so, _, photo = editing
+    raw = BytesIO()
+    Image.new('RGB', (6000, 1000), 'white').save(raw, format='PNG')
+    photo['src'] = 'data:image/png;base64,' + base64.b64encode(raw.getvalue()).decode()
+    assert so.image_bytes(photo['src']) == raw.getvalue()
+    assert so._render_scale([photo], 1280, 720) == 3
+    assert so._render_scale([photo], 7680, 4320) == 1  # 큰 배경 자체는 축소하지 않음
+    assert so._render_scale([{'text': 'Caption'}], 1280, 720) == 1
+
+
+def test_pdf_mixed_resolution_retains_pixels_and_page_size(editing, tmp_path):
+    import re
+    ops, _, folder, _ = editing
+    Image.new('RGB', (3840, 2160), 'white').save(folder / 's002.png')
+    ops.lecture_store.register_slide('sample', 's002', '고해상도', 'image',
+                                     'slides/s002.json', 'slides/s002.png')
+    export = importlib.import_module('lecture_export')
+    target = tmp_path / 'mixed.pdf'
+    assert export.export_pdf('sample', target)['slide_count'] == 2
+    data = target.read_bytes()
+    boxes = re.findall(rb'/MediaBox\s*\[([^]]+)\]', data)
+    assert len(boxes) >= 2
+    assert all([float(value) for value in box.split()] == [0, 0, 614.4, 345.6] for box in boxes)
+    assert re.search(rb'/Width\s+3840\b', data)
+    assert re.search(rb'/Height\s+2160\b', data)

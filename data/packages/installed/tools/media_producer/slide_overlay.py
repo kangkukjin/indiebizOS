@@ -1,8 +1,8 @@
 """통짜 이미지 슬라이드 위 결정론 텍스트 오버레이 합성.
 
 이미지 모델을 부르지 않는다 — 현재 슬라이드 PNG를 전면 배경으로 깔고
-Playwright(Chromium)가 글자만 얹어 같은 크기 PNG로 다시 찍는다.
-그림 픽셀은 그대로, 비용은 렌더 1회(토큰 0).
+Playwright(Chromium)가 글자·사진을 얹어 PNG로 다시 찍는다.
+사진의 원본 해상도와 배치 크기에 따라 최대 4K까지 출력 밀도를 높인다.
 
 호출자(lecture_workspace handler)가 원본 PNG({slide_id}.base.png)를 보존하고
 오버레이 목록을 deck 메타에 들고 있다가 매번 원본에서 재합성한다 —
@@ -20,12 +20,12 @@ def image_bytes(src: str) -> bytes:
     """로컬에서 선택해 내장한 PNG만 허용한다 (URL/파일 경로를 읽지 않음)."""
     from PIL import Image
     prefix = "data:image/png;base64,"
-    if not isinstance(src, str) or not src.startswith(prefix) or len(src) > 6 * 1024 * 1024:
-        raise ValueError("사진은 6MB 이하의 PNG data URL이어야 합니다.")
+    if not isinstance(src, str) or not src.startswith(prefix) or len(src) > 48 * 1024 * 1024:
+        raise ValueError("사진은 48MB 이하의 PNG data URL이어야 합니다.")
     raw = base64.b64decode(src[len(prefix):], validate=True)
     with Image.open(BytesIO(raw)) as im:
-        if im.format != "PNG" or max(im.size) > 4096:
-            raise ValueError("사진은 가로·세로 4096px 이하의 PNG여야 합니다.")
+        if im.format != "PNG" or max(im.size) > 12000 or im.width * im.height > 60000000:
+            raise ValueError("사진은 한 변 12,000px, 전체 6,000만 화소 이하의 PNG여야 합니다.")
         im.verify()
     return raw
 
@@ -205,10 +205,23 @@ html,body{{margin:0;padding:0}}
 </body></html>"""
 
 
+def _render_scale(overlays: list, width: int, height: int) -> float:
+    """사진을 배치한 폭에서 원본 픽셀을 살린다. 기존 배경은 축소하지 않는다."""
+    from PIL import Image
+    needed = 1.0
+    for ov in overlays:
+        if ov.get("kind") == "image":
+            with Image.open(BytesIO(image_bytes(ov.get("src")))) as im:
+                placed_width = width * (_width_of(ov) or 35) / 100
+                needed = max(needed, im.width / placed_width)
+    return max(1.0, min(needed, 3840 / max(width, height)))
+
+
 def compose(base_png_path: str, overlays: list, out_path: str) -> str:
-    """원본 PNG + 오버레이 목록 → out_path 에 같은 크기 합성 PNG.
+    """원본 PNG + 오버레이 목록 → 사진 해상도를 반영한 합성 PNG (최대 4K).
 
     base 를 메모리로 읽은 뒤 찍으므로 out_path == base_png_path 여도 안전.
+    논리 좌표·글자 배치는 유지하고 출력 픽셀 밀도만 높인다. 기존 4K 초과 배경은 유지.
     반환은 JSON 문자열 {success, image_path, width, height}.
     """
     if not os.path.exists(base_png_path):
@@ -222,13 +235,14 @@ def compose(base_png_path: str, overlays: list, out_path: str) -> str:
         return json.dumps({"success": False, "error": f"이미지 크기 판독 실패: {e}"},
                           ensure_ascii=False)
 
-    html_doc = _build_html(base_png_path, overlays, width, height)
     try:
+        html_doc = _build_html(base_png_path, overlays, width, height)
+        scale = _render_scale(overlays, width, height)
         from playwright.sync_api import sync_playwright
         with sync_playwright() as pw:
             b = pw.chromium.launch()
             pg = b.new_page(viewport={"width": width, "height": height},
-                            device_scale_factor=1)
+                            device_scale_factor=scale)
             pg.set_content(html_doc, wait_until="networkidle")
             pg.evaluate("() => Promise.all(Array.from(document.images, image => image.decode()))")
             # 웹폰트 완주 대기 (오프라인이면 즉시 resolve → 시스템 폴백으로 진행)
@@ -240,8 +254,10 @@ def compose(base_png_path: str, overlays: list, out_path: str) -> str:
             pg.screenshot(path=out_path, clip={"x": 0, "y": 0,
                                                "width": width, "height": height})
             b.close()
+        with Image.open(out_path) as im:
+            output_width, output_height = im.size
     except Exception as e:
         return json.dumps({"success": False, "error": f"오버레이 합성 실패: {e}"},
                           ensure_ascii=False)
     return json.dumps({"success": True, "image_path": out_path,
-                       "width": width, "height": height}, ensure_ascii=False)
+                       "width": output_width, "height": output_height}, ensure_ascii=False)

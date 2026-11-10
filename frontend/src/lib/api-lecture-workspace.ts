@@ -250,11 +250,11 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       );
     },
 
-    /** 글자 없는 흰 HTML 슬라이드 — AI 없이 생성. */
-    async createBlankSlide(lectureId: string, insertAt?: number) {
+    /** 강의 디자인 또는 흰 배경의 빈 HTML 슬라이드 — AI 없이 생성. */
+    async createBlankSlide(lectureId: string, insertAt?: number, background: 'theme' | 'white' = 'theme') {
       return client.request<SlideMeta>(
         `/lectures/${encodeURIComponent(lectureId)}/slides/blank`,
-        { method: 'POST', body: JSON.stringify({ insert_at: insertAt }) },
+        { method: 'POST', body: JSON.stringify({ insert_at: insertAt, background }) },
       );
     },
 

@@ -14,7 +14,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.concurrency import run_in_threadpool
@@ -1012,26 +1012,35 @@ async def delete_narration_recording(lecture_id: str):
 
 class BlankSlideRequest(BaseModel):
     insert_at: Optional[int] = None
+    background: Literal["theme", "white"] = "theme"
 
 
 @router.post("/{lecture_id}/slides/blank")
 async def create_blank_slide(lecture_id: str, req: BlankSlideRequest):
-    """글자 없는 흰 HTML 슬라이드를 생성한다. AI 호출 없이 기존 렌더·등록을 재사용."""
+    """강의 디자인 또는 흰 배경의 빈 HTML 슬라이드. AI 호출 없이 기존 렌더·등록을 재사용."""
     ls = _load_lecture_store()
     if not ls.lecture_exists(lecture_id):
         raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
     slide_ai = _load_slide_ai()
+    handler = _load_handler()
 
     def _create():
-        sid = ls.next_slide_id(ls.read_deck(lecture_id))
-        # custom 레이아웃은 제목·페이지 번호를 자동 삽입하지 않는다.
-        # 덱의 톤을 바꿔 재렌더해도 빈 종이 위에 테마 장식이 드러나지 않게 한다.
+        deck = ls.read_deck(lecture_id)
+        sid = ls.next_slide_id(deck)
+        # 같은 HTML 페이지 골격에서 본문만 비운다. 배경·질감·장식은 강의 톤을 따른다.
+        # 서명 글자는 숨기되 도형 장식은 유지한다. 흰 배경은 재렌더 뒤에도 흰 종이로 유지.
         spec = {
             "layout": "custom",
-            "custom_html": '<div style="position:fixed;inset:0;background:#fff;z-index:2147483647"></div>',
+            "blank_background": req.background,
+            "custom_html": (
+                '<style>.slide-container::after{content:none!important}</style>'
+                if req.background == "theme" else
+                '<div style="position:fixed;inset:0;background:#fff;z-index:2147483647"></div>'
+            ),
         }
         rendered = slide_ai.render_slide_to_files(
-            spec=spec, design_system="default", slides_dir=ls.slides_dir(lecture_id),
+            spec=spec, design_system=handler._html_design_of(deck.get("design_system")),
+            slides_dir=ls.slides_dir(lecture_id),
             slide_id=sid,
         )
         return ls.register_slide(

@@ -38,7 +38,7 @@ def assert_white(path):
 def test_blank_slide_append_insert_and_overlay(workspace):
     client, store, _, lecture_id = workspace
     url = f'/lectures/{lecture_id}/slides/blank'
-    first = client.post(url, json={})
+    first = client.post(url, json={'background': 'white'})
     assert first.status_code == 200, first.text
     a = first.json()
     assert a['layout'] == 'custom'
@@ -81,4 +81,57 @@ def test_blank_render_failure_does_not_register(workspace, monkeypatch):
     monkeypatch.setattr(slide_ai, 'render_slide_to_files', fail)
     with pytest.raises(RuntimeError, match='render failed'):
         client.post(f'/lectures/{lecture_id}/slides/blank', json={})
+    assert store.read_deck(lecture_id)['slide_order'] == []
+
+
+@pytest.mark.parametrize('design', ['native_vintage_book', 'blueprint', 'image_architect', 'ink_orange'])
+def test_theme_blank_keeps_design_and_export(workspace, design, tmp_path):
+    from pptx import Presentation
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    from playwright.sync_api import sync_playwright
+    client, store, slide_ai, lecture_id = workspace
+    store.update_deck_meta(lecture_id, {'design_system': design})
+    response = client.post(f'/lectures/{lecture_id}/slides/blank', json={})
+    assert response.status_code == 200, response.text
+    meta = response.json()
+    folder = store.lecture_dir(lecture_id)
+    spec = json.loads((folder / meta['spec_file']).read_text())
+    assert spec['blank_background'] == 'theme'
+    with Image.open(folder / meta['png_file']) as image:
+        assert image.convert('RGB').getextrema() != ((255, 255),) * 3
+    html = (folder / 'slides' / f"{meta['id']}.html").read_text()
+    # 일반 HTML 제목 슬라이드와 실제 배경·코너 장식은 같고, 빈 페이지의 글자만 없다.
+    import api_lecture_workspace as api
+    tone = api._load_handler()._html_design_of(design)
+    reference = slide_ai._load_shadcn_module().render_slide(
+        {'layout': 'hero', 'title': '제목이 있는 페이지'}, design_system_name=tone,
+    )
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        page = browser.new_page(viewport={'width': 1280, 'height': 720})
+        page.route('https://**', lambda route: route.abort())
+        styles = '''() => ({
+          background: getComputedStyle(document.body).background,
+          decoration: getComputedStyle(document.querySelector('.slide-container'), '::before').backgroundImage
+        })'''
+        page.set_content(reference)
+        expected = page.evaluate(styles)
+        page.set_content(html)
+        assert page.evaluate(styles) == expected
+        assert page.locator('.slide-container').inner_text().strip() == ''
+        assert page.evaluate("getComputedStyle(document.querySelector('.slide-container'),'::after').content") == 'none'
+        browser.close()
+    export = importlib.import_module('lecture_export')
+    target = tmp_path / 'themed.pptx'
+    assert export.export_pptx_editable(lecture_id, target)['success']
+    slide = Presentation(target).slides[0]
+    assert len(slide.shapes) == 1
+    assert slide.shapes[0].shape_type == MSO_SHAPE_TYPE.PICTURE
+    assert slide.shapes[0].image.blob == (folder / meta['png_file']).read_bytes()
+
+
+def test_unknown_blank_background_rejected(workspace):
+    client, store, _, lecture_id = workspace
+    response = client.post(f'/lectures/{lecture_id}/slides/blank', json={'background': 'unknown'})
+    assert response.status_code == 422
     assert store.read_deck(lecture_id)['slide_order'] == []

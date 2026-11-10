@@ -233,7 +233,15 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
             import json
             with open(spec_file, "r", encoding="utf-8") as f:
                 spec = json.load(f)
-            _populate_editable_slide(slide, spec, lecture_dir, Emu, Pt)
+            if spec.get("blank_background") == "theme":
+                # 빈 HTML의 종이 질감·장식도 내보낸다. 얹은 글자·사진은 아래에서 분리.
+                base_png = lecture_dir / "slides" / f"{sid}.base.png"
+                background = base_png if base_png.exists() else lecture_dir / meta["png_file"]
+                slide.shapes.add_picture(
+                    str(background), 0, 0, width=prs.slide_width, height=prs.slide_height,
+                )
+            else:
+                _populate_editable_slide(slide, spec, lecture_dir, Emu, Pt)
             for ov in meta.get("text_overlays") or []:
                 _add_slide_overlay(slide, ov, Emu, Pt)
             placed += 1

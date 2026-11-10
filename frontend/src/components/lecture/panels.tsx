@@ -532,6 +532,7 @@ export function DeckPanel(props: {
   const imgInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
   const [creatingBlank, setCreatingBlank] = useState(false);
+  const [blankBackground, setBlankBackground] = useState<'theme' | 'white'>('theme');
   const blankInFlight = useRef(false);
   // 다중 선택: ⌘/Ctrl 클릭=토글, Shift 클릭=범위. 선택된 카드를 드래그하면 묶음 전체가 함께 이동.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -642,7 +643,7 @@ export function DeckPanel(props: {
     blankInFlight.current = true;
     setCreatingBlank(true);
     try {
-      const slide = await api.createBlankSlide(lectureId, insertBeforeIndex ?? undefined);
+      const slide = await api.createBlankSlide(lectureId, insertBeforeIndex ?? undefined, blankBackground);
       await onChange();
       onFocus(slide.id);
       setSelectedIds(new Set());
@@ -746,10 +747,20 @@ export function DeckPanel(props: {
             hasMaterials={deck.materials.length > 0}
             onChange={onChange}
           />
+          <select
+            aria-label="빈 슬라이드 배경"
+            value={blankBackground}
+            onChange={(e) => setBlankBackground(e.target.value as 'theme' | 'white')}
+            disabled={creatingBlank}
+            className="px-2 py-1 text-xs bg-white border border-stone-300 rounded text-stone-700"
+          >
+            <option value="theme">강의 디자인 유지</option>
+            <option value="white">흰색 빈 페이지</option>
+          </select>
           <button
             onClick={handleCreateBlank}
             disabled={creatingBlank || uploadingImg}
-            title="글자 없는 흰 슬라이드를 추가합니다. 삽입 위치를 골랐다면 그 자리에 추가합니다."
+            title="선택한 배경으로 글자 없는 슬라이드를 추가합니다. 삽입 위치를 골랐다면 그 자리에 추가합니다."
             className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded text-stone-700 disabled:opacity-50"
           >
             {creatingBlank ? '추가 중…' : '＋ 빈 슬라이드'}

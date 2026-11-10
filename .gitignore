@@ -531,6 +531,9 @@ data/workflows/install-conflicts.json
 # Cross-process lock for the tracked script definition owner.
 data/scripts/registry.yaml.lock
 
+# Per-conversation rewind execution locks.
+data/conversation_state/**/rewind.lock
+
 # Managed language-server versions are source; installed node_modules remain ignored.
 !data/code_analysis/package.json
 !data/code_analysis/package-lock.json

@@ -46,7 +46,7 @@ export function AIChatPanel(props: {
   const [input, setInput] = useState('');
   const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 이미지 품질
   const [editMode, setEditMode] = useState<'image' | 'regen'>('image'); // 통짜 편집: 부분수정 vs 전체재생성
-  // 🅰 글자 얹기 = 곧장 드래그 배치 편집기 (박스별 위치·문구·서체·크기·색 전부 편집기 안에서)
+  // 🅰 글자·사진 얹기 = 곧장 드래그 배치 편집기 (박스별 위치·문구·서체·크기·색 전부 편집기 안에서)
   const [showOverlayEditor, setShowOverlayEditor] = useState(false);
   const [busy, setBusy] = useState(false);
   // 채팅 첨부 이미지 — "이 이미지가 들어간 슬라이드"를 조판 (shadcn hero_image/content_image/custom)
@@ -256,10 +256,10 @@ export function AIChatPanel(props: {
                 type="button"
                 onClick={() => setShowOverlayEditor(true)}
                 disabled={busy}
-                title="이미지 모델 없이 글자만 슬라이드 위에 얹는 배치 편집기 — 박스를 드래그로 놓고 문구·서체·크기·색을 자유로 (조판 픽셀 보존, 즉시·무료)"
+                title="글자를 입력하거나 폴더에서 사진을 골라 슬라이드에 추가하고 위치·크기를 조절합니다"
                 className="flex-1 px-2 py-1 text-xs rounded border bg-white text-stone-700 border-stone-300 hover:border-stone-500 disabled:opacity-50"
               >
-                🅰 글자 얹기
+                🅰 글자·사진 얹기
               </button>
             </div>
           </div>
@@ -285,10 +285,10 @@ export function AIChatPanel(props: {
                 type="button"
                 onClick={() => setShowOverlayEditor(true)}
                 disabled={busy}
-                title="이미지 모델 없이 글자만 그림 위에 얹는 배치 편집기 — 박스를 드래그로 놓고 문구·서체·크기·색을 자유로 (그림 픽셀 완전 보존, 즉시·무료)"
+                title="글자를 입력하거나 폴더에서 사진을 골라 슬라이드에 추가하고 위치·크기를 조절합니다"
                 className="flex-1 px-2 py-1 text-xs rounded border bg-white text-stone-700 border-stone-300 hover:border-stone-500 disabled:opacity-50"
               >
-                🅰 글자 얹기
+                🅰 글자·사진 얹기
               </button>
               {focusNative && (
                 <button
@@ -414,8 +414,8 @@ export function AIChatPanel(props: {
             setMessages((m) => [...m, {
               role: 'ai',
               text: count > 0
-                ? `🎯 글자 배치 저장됨 (얹은 글자 ${count}개, 그림 픽셀 그대로) — ${focusSlideId}`
-                : `🧹 얹은 글자를 모두 지우고 원본을 복원했습니다 — ${focusSlideId}`,
+                ? `🎯 글자·사진 배치 저장됨 (총 ${count}개) — ${focusSlideId}`
+                : `🧹 얹은 글자·사진을 모두 지우고 원본을 복원했습니다 — ${focusSlideId}`,
               slideId: focusSlideId, mode: 'edit',
             }]);
             onChange();

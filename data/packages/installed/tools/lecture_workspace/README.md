@@ -93,3 +93,13 @@ indiebizOS/outputs/lectures/
 - `handler.py` — ToolContext 디스패처. 도구 이름 분기 + 입력 검증 + JSON 응답
 - `ibl_actions.yaml` — IBL 액션 매핑 (`self:` 노드)
 - `tool.json` — 패키지 메타 + 도구 스키마
+
+## 슬라이드에 사진 얹기
+
+슬라이드 선택 → **글자·사진 얹기** → **사진 추가**에서 폴더의 사진을 선택한다.
+사진을 끌어서 이동하고 모서리 손잡이나 사진 크기 슬라이더로 비율을 유지해 크기를
+조절한 뒤 저장한다. 다시 열어 이동·크기 변경·삭제할 수 있으며 글자와 함께 저장된다.
+PNG/JPEG/WebP/GIF/BMP를 지원하며 GIF는 정지 이미지로 넣는다. 사진은 긴 변 최대
+1600px의 PNG로 변환해 deck의 기존 `text_overlays` 목록에 `kind: image`, `src`
+(data URL), `name`, `x`, `y`, `width`로 내장한다. 원본 파일을 옮겨도 유지되고
+재렌더·슬라이드 복제·PDF/PPTX 내보내기에도 포함된다. 편집형 PPTX에서는 사진 개체로 나간다.

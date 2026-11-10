@@ -1,5 +1,5 @@
 /**
- * 강의 워크스페이스 — '글자 얹기' 배치 편집기 (2026-08-09)
+ * 강의 워크스페이스 — 글자·사진 배치 편집기
  *
  * PowerPoint식 직접 조작: base(원본) 이미지 위에 글자 박스를 드래그로 놓고,
  * 크기·서체·색·배경칩을 박스별로 고른 뒤 저장하면 서버가 원본에서 재합성한다.
@@ -54,6 +54,12 @@ function isDark(color?: string): boolean {
 
 /** 박스 스타일 — 합성기 CSS 사상 (x/y 자유 좌표 전제: 편집기는 열 때 전부 x/y로 변환). */
 function boxStyle(ov: TextOverlay, selected: boolean): React.CSSProperties {
+  if (ov.kind === 'image') return {
+    position: 'absolute', left: `${ov.x ?? 30}%`, top: `${ov.y ?? 25}%`,
+    width: `${ov.width ?? 35}%`, cursor: 'move', userSelect: 'none',
+    outline: selected ? '2px dashed #f59e0b' : '1px dashed rgba(128,128,128,.35)',
+    outlineOffset: 2,
+  };
   const vw = sizeVwOf(ov);
   const dark = isDark(ov.color);
   const color = ov.color === 'black' ? '#111111' : ov.color === 'white' || !ov.color ? '#ffffff' : ov.color;
@@ -136,6 +142,37 @@ export function OverlayEditor(props: {
   const [selected, setSelected] = useState<number>(-1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const addPhoto = async (file?: File) => {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    const url = URL.createObjectURL(file);
+    try {
+      if (file.size > 30 * 1024 * 1024) throw new Error('사진은 30MB 이하로 골라 주세요.');
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('사진을 불러올 수 없습니다.');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const src = canvas.toDataURL('image/png');
+      if (src.length > 6 * 1024 * 1024) throw new Error('사진 용량이 큽니다. 크기를 줄여 다시 골라 주세요.');
+      const width = Math.max(5, Math.min(40, 60 * (CANVAS_H / CANVAS_W) * canvas.width / canvas.height));
+      setOverlays((list) => [...list, { kind: 'image', text: '', src, name: file.name, x: 30, y: 20, width }]);
+      setSelected(overlays.length);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '지원하는 사진 파일을 골라 주세요.');
+    } finally {
+      URL.revokeObjectURL(url);
+      setBusy(false);
+    }
+  };
   // 배경 img 캐시버스터 — 열 때 1회 고정 (렌더마다 Date.now()면 부모 폴링 리렌더에 이미지 재요청)
   const [imgBust] = useState(() => Date.now());
 
@@ -185,12 +222,13 @@ export function OverlayEditor(props: {
 
   const sel = selected >= 0 && selected < overlays.length ? overlays[selected] : null;
   const patchSel = (patch: Partial<TextOverlay>) => {
-    if (selected < 0) return;
+    if (selected < 0 || busy) return;
     setOverlays((list) => list.map((o, i) => (i === selected ? { ...o, ...patch } : o)));
   };
 
   // 드래그
   const onPointerDown = (e: React.PointerEvent, idx: number, mode: 'move' | 'resize' = 'move') => {
+    if (busy) return;
     e.preventDefault();
     setSelected(idx);
     const o = overlays[idx];
@@ -229,7 +267,7 @@ export function OverlayEditor(props: {
     // (안 그러면 문구 입력 중 방향키가 캐럿 대신 박스를 움직이고 Enter 줄바꿈도 막힌다)
     const t = e.target as HTMLElement | null;
     if (t && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return;
-    if (selected < 0) return;
+    if (selected < 0 || busy) return;
     const step = e.shiftKey ? 2 : 0.5;
     const o = overlays[selected];
     if (e.key === 'ArrowLeft') patchSel({ x: Math.round(((o.x ?? 50) - step) * 10) / 10 });
@@ -271,12 +309,12 @@ export function OverlayEditor(props: {
       >
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-stone-700">
-            🎯 글자 배치 편집 — {slideId}
+            🎯 글자·사진 배치 편집 — {slideId}
             <span className="ml-2 text-xs font-normal text-stone-400">
-              드래그로 이동 · 방향키 미세 이동 · 그림 픽셀은 그대로
+              드래그로 이동 · 모서리로 크기 조절 · 방향키 미세 이동
             </span>
           </h3>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-700 text-lg leading-none">✕</button>
+          <button onClick={onClose} disabled={busy} className="text-stone-400 hover:text-stone-700 text-lg leading-none">✕</button>
         </div>
 
         {/* 캔버스 */}
@@ -307,12 +345,14 @@ export function OverlayEditor(props: {
               onPointerDown={(e) => { e.stopPropagation(); onPointerDown(e, i); }}
               onClick={(e) => e.stopPropagation()}
             >
-              {o.text}
+              {o.kind === 'image'
+                ? <img src={o.src} alt={o.name || '추가한 사진'} draggable={false} style={{ display: 'block', width: '100%', height: 'auto', pointerEvents: 'none' }} />
+                : o.text}
               {/* 폭 손잡이 — 선택한 박스의 오른쪽 아래. 좌우로 끌면 글상자가 좁아지고 글이 접힌다 */}
               {i === selected && (
                 <span
                   onPointerDown={(e) => { e.stopPropagation(); onPointerDown(e, i, 'resize'); }}
-                  title="드래그해서 글상자 폭 조절 — 좁히면 긴 글이 2~3줄로 접힙니다"
+                  title={o.kind === 'image' ? '드래그해서 사진 크기 조절 (비율 유지)' : '드래그해서 글상자 폭 조절'}
                   style={{
                     position: 'absolute', right: -7, bottom: -7, width: 13, height: 13,
                     background: '#f59e0b', border: '1px solid #fff', borderRadius: 3,
@@ -325,7 +365,18 @@ export function OverlayEditor(props: {
         </div>
 
         {/* 선택 박스 도구 */}
-        {sel ? (
+        {sel?.kind === 'image' ? (
+          <div className="flex items-center gap-3 text-xs text-stone-600">
+            <span className="truncate max-w-72">{sel.name || '사진'}</span>
+            <label className="flex items-center gap-2">사진 크기
+              <input type="range" min={5} max={100} step={1} value={sel.width ?? 35}
+                onChange={(e) => patchSel({ width: Number(e.target.value) })} />
+            </label>
+            <span>가로·세로 비율 유지</span>
+            <button type="button" className="px-2 py-1 rounded border border-red-200 text-red-600"
+              onClick={() => { setOverlays((list) => list.filter((_, i) => i !== selected)); setSelected(-1); }}>삭제</button>
+          </div>
+        ) : sel ? (
           <div className="flex items-center gap-2 flex-wrap">
             <textarea
               value={sel.text}
@@ -407,14 +458,23 @@ export function OverlayEditor(props: {
             </button>
           </div>
         ) : (
-          <div className="text-xs text-stone-400">박스를 클릭해 선택 — 문구·서체·크기·색을 바꿀 수 있습니다.</div>
+          <div className="text-xs text-stone-400">글자나 사진을 클릭해 선택하고 위치와 크기를 바꿀 수 있습니다.</div>
         )}
 
         {error && <div className="text-xs text-red-600">❌ {error}</div>}
 
         <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+          <input ref={photoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"
+            aria-label="슬라이드에 추가할 사진 선택" className="hidden"
+            onChange={(e) => { void addPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+          <button type="button" disabled={busy} onClick={() => photoInputRef.current?.click()}
+            className="px-3 py-1.5 text-xs rounded border border-stone-300 hover:bg-stone-50 disabled:opacity-50">
+            ＋ 사진 추가
+          </button>
           <button
             type="button"
+            disabled={busy}
             onClick={() => {
               setOverlays((l) => [...l, { text: '새 문구', x: 30, y: 42, size_vw: 2.9, color: 'white', chip: false }]);
               setSelected(overlays.length);
@@ -423,6 +483,7 @@ export function OverlayEditor(props: {
           >
             ＋ 글자 추가
           </button>
+          </div>
           <div className="flex gap-2">
             <button
               type="button" onClick={onClose} disabled={busy}

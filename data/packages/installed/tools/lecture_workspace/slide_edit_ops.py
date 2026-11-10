@@ -176,6 +176,19 @@ def _sanitize_overlay(entry: dict, so) -> tuple:
     """오버레이 1건 검증·정규화 — (정규화 dict, None) 또는 (None, 오류문)."""
     if not isinstance(entry, dict):
         return None, "오버레이 항목은 객체여야 합니다."
+    if entry.get("kind") == "image":
+        try:
+            so.image_bytes(entry.get("src"))
+        except Exception as exc:
+            return None, f"사진을 읽을 수 없습니다: {exc}"
+        xy, width = so._free_xy_of(entry), so._width_of(entry)
+        if xy is None or width is None:
+            return None, "사진 위치 x/y(-10~110 %)와 width(5~100 %)가 필요합니다."
+        return {
+            "kind": "image", "text": "", "src": entry["src"],
+            "name": str(entry.get("name") or "사진")[:255],
+            "x": round(xy[0], 2), "y": round(xy[1], 2), "width": width,
+        }, None
     text = str(entry.get("text") or "").strip()
     if not text:
         return None, "오버레이 text 는 비울 수 없습니다."

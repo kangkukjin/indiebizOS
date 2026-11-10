@@ -13,6 +13,21 @@ import html as _html
 import json
 import os
 import re
+from io import BytesIO
+
+
+def image_bytes(src: str) -> bytes:
+    """로컬에서 선택해 내장한 PNG만 허용한다 (URL/파일 경로를 읽지 않음)."""
+    from PIL import Image
+    prefix = "data:image/png;base64,"
+    if not isinstance(src, str) or not src.startswith(prefix) or len(src) > 6 * 1024 * 1024:
+        raise ValueError("사진은 6MB 이하의 PNG data URL이어야 합니다.")
+    raw = base64.b64decode(src[len(prefix):], validate=True)
+    with Image.open(BytesIO(raw)) as im:
+        if im.format != "PNG" or max(im.size) > 4096:
+            raise ValueError("사진은 가로·세로 4096px 이하의 PNG여야 합니다.")
+        im.verify()
+    return raw
 
 # 3×3 위치 어휘 → CSS 배치. (수평, 수직)
 POSITIONS = {
@@ -165,6 +180,16 @@ def _overlay_css(ov: dict) -> str:
 def _build_html(base_png_path: str, overlays: list, width: int, height: int) -> str:
     divs = []
     for ov in overlays:
+        if ov.get("kind") == "image":
+            image_bytes(ov.get("src"))
+            x, y = _free_xy_of(ov) or (30, 20)
+            w = _width_of(ov) or 35
+            src = _html.escape(ov["src"], quote=True)
+            divs.append(
+                f'<div style="position:absolute;left:{x}%;top:{y}%;width:{w}%">'
+                f'<img src="{src}" style="display:block;width:100%;height:auto"></div>'
+            )
+            continue
         text = _html.escape(str(ov.get("text") or "")).strip()
         if not text:
             continue
@@ -205,6 +230,7 @@ def compose(base_png_path: str, overlays: list, out_path: str) -> str:
             pg = b.new_page(viewport={"width": width, "height": height},
                             device_scale_factor=1)
             pg.set_content(html_doc, wait_until="networkidle")
+            pg.evaluate("() => Promise.all(Array.from(document.images, image => image.decode()))")
             # 웹폰트 완주 대기 (오프라인이면 즉시 resolve → 시스템 폴백으로 진행)
             try:
                 pg.evaluate("() => document.fonts.ready.then(() => true)")

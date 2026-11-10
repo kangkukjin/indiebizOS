@@ -26,12 +26,15 @@ export interface SlideMeta {
   created_at: string;
   updated_at: string;
   speaker_note?: string;  // 강의 노트(말할 내용) — 선택 시 좌측 하단에 표시/편집
-  text_overlays?: TextOverlay[];  // '글자 얹기' — 원본(base.png) 위 합성 문구 목록
+  text_overlays?: TextOverlay[];  // 원본(base.png) 위 글자·사진 목록 (기존 저장 키 유지)
 }
 
-/** '글자 얹기' 한 건 — x/y(% 좌상단·자유 좌표)가 있으면 position(9방)보다 우선. */
+/** 글자·사진 한 건 — kind 생략은 기존 글자. x/y(% 좌상단)가 position보다 우선. */
 export interface TextOverlay {
   text: string;
+  kind?: 'text' | 'image';
+  src?: string;        // 선택한 사진의 PNG data URL — 원본 파일 이동 후에도 유지
+  name?: string;
   position?: string;   // 9방: top-left … bottom-right
   x?: number;          // 자유 좌표 — 슬라이드 폭의 % (박스 좌상단)
   y?: number;          // 자유 좌표 — 슬라이드 높이의 %

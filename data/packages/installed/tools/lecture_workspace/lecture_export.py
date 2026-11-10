@@ -215,7 +215,7 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
                     str(base_png), 0, 0, width=prs.slide_width, height=prs.slide_height
                 )
                 for ov in overlays:
-                    _add_overlay_textbox(slide, ov, Emu, Pt)
+                    _add_slide_overlay(slide, ov, Emu, Pt)
                 overlay_boxes += 1
             else:
                 png = lecture_dir / meta.get("png_file", "")
@@ -234,6 +234,8 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
             with open(spec_file, "r", encoding="utf-8") as f:
                 spec = json.load(f)
             _populate_editable_slide(slide, spec, lecture_dir, Emu, Pt)
+            for ov in meta.get("text_overlays") or []:
+                _add_slide_overlay(slide, ov, Emu, Pt)
             placed += 1
         except Exception as e:
             # spec 파싱 실패 → PNG로 fallback
@@ -438,6 +440,23 @@ def _overlay_rgb(color: str):
         except ValueError:
             pass
     return RGBColor(0xFF, 0xFF, 0xFF), False
+
+
+def _add_slide_overlay(slide, ov: dict, Emu, Pt):
+    """사진과 글자를 저장된 순서대로 편집 가능한 PPT 개체로 내보낸다."""
+    if ov.get("kind") != "image":
+        return _add_overlay_textbox(slide, ov, Emu, Pt)
+    from io import BytesIO
+    from slide_edit_ops import load_slide_overlay
+    so = load_slide_overlay()
+    raw = so.image_bytes(ov.get("src"))
+    x, y = so._free_xy_of(ov) or (30, 20)
+    width = so._width_of(ov) or 35
+    slide.shapes.add_picture(
+        BytesIO(raw), Emu(x / 100 * SLIDE_W_PX * PX_TO_EMU),
+        Emu(y / 100 * SLIDE_H_PX * PX_TO_EMU),
+        width=Emu(width / 100 * SLIDE_W_PX * PX_TO_EMU),
+    )
 
 
 def _add_overlay_textbox(slide, ov: dict, Emu, Pt):

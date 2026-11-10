@@ -531,6 +531,8 @@ export function DeckPanel(props: {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [creatingBlank, setCreatingBlank] = useState(false);
+  const blankInFlight = useRef(false);
   // 다중 선택: ⌘/Ctrl 클릭=토글, Shift 클릭=범위. 선택된 카드를 드래그하면 묶음 전체가 함께 이동.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastPickIdx, setLastPickIdx] = useState<number | null>(null);
@@ -635,6 +637,23 @@ export function DeckPanel(props: {
     window.addEventListener('mouseup', onUp);
   };
 
+  const handleCreateBlank = async () => {
+    if (blankInFlight.current) return;
+    blankInFlight.current = true;
+    setCreatingBlank(true);
+    try {
+      const slide = await api.createBlankSlide(lectureId, insertBeforeIndex ?? undefined);
+      await onChange();
+      onFocus(slide.id);
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert('빈 슬라이드 추가 실패: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      blankInFlight.current = false;
+      setCreatingBlank(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -718,7 +737,7 @@ export function DeckPanel(props: {
   return (
     <main className="flex-1 min-w-0 flex flex-col bg-stone-100">
       <div className="px-6 py-3 bg-white border-b border-stone-200 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h2 className="text-sm font-semibold text-stone-700">
             🎴 슬라이드 데크 ({slideIds.length}장)
           </h2>
@@ -728,8 +747,16 @@ export function DeckPanel(props: {
             onChange={onChange}
           />
           <button
+            onClick={handleCreateBlank}
+            disabled={creatingBlank || uploadingImg}
+            title="글자 없는 흰 슬라이드를 추가합니다. 삽입 위치를 골랐다면 그 자리에 추가합니다."
+            className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded text-stone-700 disabled:opacity-50"
+          >
+            {creatingBlank ? '추가 중…' : '＋ 빈 슬라이드'}
+          </button>
+          <button
             onClick={() => imgInputRef.current?.click()}
-            disabled={uploadingImg}
+            disabled={uploadingImg || creatingBlank}
             title="이미 만든 이미지를 슬라이드로 한 번에 추가 (여러 장 선택 가능). 삽입 모드면 그 위치부터."
             className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded text-stone-700 disabled:opacity-50"
           >

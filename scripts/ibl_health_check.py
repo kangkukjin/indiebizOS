@@ -36,7 +36,9 @@ from ibl_check_client import execute as execute_checked, final_of, request, valu
 
 
 def _request(fields, pid):
-    return request(fields, pid, base=BASE, timeout=45, on_admission=_abort_admission)
+    # 공용 클라이언트의 60초를 따른다. 45초로 단축하면 외부 검색이 정상 반환해도
+    # (실측 46.25초) 검사 연결이 먼저 끊겨 통화 결함 RED로 기록된다.
+    return request(fields, pid, base=BASE, on_admission=_abort_admission)
 
 
 def execute(code, pid=PID):

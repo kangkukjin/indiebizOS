@@ -48,6 +48,37 @@ def test_http_probe_declares_current_edition_and_preserves_parent(health, monkey
     assert health.classify_currency(result, "items")[0] == "GREEN"
 
 
+@pytest.mark.parametrize("elapsed, expected", [(46.253, "GREEN"), (61, "RED")])
+def test_probe_waits_for_slow_success_but_keeps_transport_deadline(
+        health, monkeypatch, elapsed, expected):
+    calls = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def read(self):
+            return json.dumps(packet({"items": [{"title": "valid"}]})).encode()
+
+    def open_request(request, *, timeout):
+        calls.append(request)
+        assert timeout == 60
+        if elapsed > timeout:
+            raise TimeoutError("timed out")
+        return Response()
+
+    monkeypatch.setattr(health.urllib.request, "urlopen", open_request)
+    result = health.execute('return {items:[{title:"valid"}]}')
+    verdict, reason = health.classify_currency(result, "items")
+    assert verdict == expected
+    assert len(calls) == 1
+    if expected == "RED":
+        assert "_transport_error: timed out" in reason
+
+
 def test_static_timeout_keeps_deadline_and_reports_failure(health, monkeypatch, capsys):
     import subprocess
 

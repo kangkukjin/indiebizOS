@@ -425,7 +425,7 @@ class PromptBuilder:
 
         # 4.6 World Pulse 직접 주입 폐지 (2026-06-28) — self/world 스냅샷은 이제 의식
         # 에이전트 입력으로만 흐르고 task_framing 으로 녹여 전달된다. 실행 에이전트
-        # (EXECUTE/Reflex)는 ambient 주입 없이, 필요 시 sense:here/host/world 로 pull.
+        # (EXECUTE)는 ambient 주입 없이, 필요 시 sense:here/host/world 로 pull.
         if not consciousness_output:
             if model_name:
                 parts.append(f"# 자기 인식\n- AI 모델: {model_name}")

@@ -113,7 +113,7 @@ export interface RecallSection {
 }
 
 export interface RecallPreviewResult {
-  top_score: number;    // 해마 최고 점수 (≥0.85 = Reflex 경로)
+  top_score: number;    // 해마 최고 점수 (회상 지표, 실행 경로 선택과 독립)
   top_code: string;
   total_chars: number;  // 실제 주입될 전체 문자 수
   sections: RecallSection[];

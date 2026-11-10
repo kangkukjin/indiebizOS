@@ -251,7 +251,7 @@ def test_project_executor_preserves_owned_conversation_and_images(tmp_path, monk
 def test_real_pipeline_resumes_as_execute_without_classifier_or_red_grant(env, monkeypatch):
     from agent_pipeline import CognitivePipelineMixin
     from cognitive_consciousness import CognitiveConsciousnessMixin
-    from test_reflex_execution import AI
+    from test_execution_history import AI
 
     class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin):
         pass

@@ -1,6 +1,5 @@
-"""긴문장 79회차 L79-1: HTTP /system-ai/chat 턴의 대화 소유권 — REFLEX 적격·영수증·동시성 보존."""
+"""긴문장 79회차 L79-1: HTTP /system-ai/chat 턴의 대화 소유권 — 영수증·동시성 보존."""
 import inspect
-from types import SimpleNamespace as NS
 
 import boot_paths  # noqa: F401
 import pytest
@@ -17,15 +16,6 @@ def memory_db(tmp_path, monkeypatch):
     return path
 
 
-def _short_history():
-    return [{"role": "user", "content": "삼성1에서 음악 틀어"},
-            {"role": "assistant", "content": "삼성1에서 재생했습니다."}]
-
-
-def _runner():
-    return NS(ai=NS(agent_id="system_ai", _provider=NS(model="opus")), config={"name": "system_ai"})
-
-
 def test_http_turn_opens_owner_binding_and_links_task(memory_db):
     import api_system_ai as S
     assert sessions.current() is None
@@ -39,16 +29,6 @@ def test_http_turn_opens_owner_binding_and_links_task(memory_db):
     assert sessions.current() is None
     with sessions.connection(memory_db) as conn:
         assert conn.execute("SELECT state FROM conversation_turns WHERE id=?", (binding.turn_id,)).fetchone()[0] == "completed"
-
-
-def test_reflex_becomes_eligible_only_inside_owned_turn(memory_db):
-    import api_system_ai as S
-    from reflex_execution import ReflexTurn
-    outside = ReflexTurn(_runner(), "음악 꺼", _short_history())
-    assert not outside.eligible and outside.reason == "missing_conversation_binding"
-    with S._owned_turn("system_ai", "task_r79_reflex"):
-        inside = ReflexTurn(_runner(), "음악 꺼", _short_history())
-        assert inside.eligible, inside.reason
 
 
 def test_owner_sessions_are_separate_and_match_history_resolution(memory_db):

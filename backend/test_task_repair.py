@@ -509,7 +509,7 @@ def test_child_is_stopped_when_parent_no_longer_authorizes_it(env, monkeypatch, 
 def test_pipeline_yields_pending_instead_of_claiming_original_work_complete(env, monkeypatch, stage):
     from agent_pipeline import CognitivePipelineMixin
     from cognitive_consciousness import CognitiveConsciousnessMixin
-    from test_reflex_execution import AI
+    from test_execution_history import AI
     from thread_context import get_goal_eval_outcome
 
     class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin):

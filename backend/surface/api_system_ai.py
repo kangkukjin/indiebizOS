@@ -204,8 +204,7 @@ def _images_from_response_paths(text: str, since_ts: float, cap: int = 2) -> lis
 
 def _owned_turn(owner: str, task_id: str):
     """HTTP 채팅 턴의 대화 소유권(2026-10-19, 긴문장 79회차 L79-1) — 같은 소유자('system_ai'/'rehearsal')의
-    세션에 턴을 연다. 없으면 REFLEX(명시 #reflex 포함)가 missing_conversation_binding 으로 EXECUTE 로 떨어지고
-    영수증이 남지 않았다. 동시 요청으로 못 열면 옛 무소유 경로로 가고 사건만 남긴다."""
+    세션에 턴을 열어 영수증과 작업 연결의 소유권을 보존한다. 동시 요청으로 못 열면 옛 무소유 경로로 가고 사건만 남긴다."""
     import conversation_sessions as sessions
     from system_ai_memory import MEMORY_DB_PATH
     from episode_logger import record_trajectory_event
@@ -286,7 +285,7 @@ def chat_with_system_ai(chat: ChatMessage):
 
     def _process() -> str:
         # 턴과 그 뒤의 마감(작업 닫기)을 한 수명으로 쥔다 — 이 작업으로 오는 자식 보고는 그동안 러너가 붙들어 둔다(29회차 L29-1).
-        # 대화 소유권(79회차 L79-1): 이 HTTP 턴도 같은 소유자 세션의 턴으로 열어 REFLEX·영수증이 닿게 한다.
+        # 대화 소유권(79회차 L79-1): 이 HTTP 턴도 같은 소유자 세션의 턴으로 열어 영수증·작업 연결이 닿게 한다.
         from steer_inbox import turn_hold
         with turn_hold(task_id):
             with _owned_turn(conv_thread, task_id):

@@ -328,8 +328,7 @@ Most systems plan and act as a single agent. IndieBiz OS separates problem frami
 ```
 User message
    ↓ association: hippocampus + deep memory
-   ↓ classifier: REFLEX, EXECUTE, or THINK (or an explicit user tag)
-   ├─ REFLEX → short, separate execution context → finish
+   ↓ classifier: EXECUTE or THINK (or an explicit user tag)
    ├─ EXECUTE → existing full context → finish
    └─ THINK → consciousness defines the problem and achievement criteria
                     ↓
@@ -341,11 +340,11 @@ User message
      after delivery, select durable execution/relational/spatial memory
 ```
 
-The execution paths do not validate in the same way. Only `THINK` has achievement criteria authored by consciousness, and the final evaluator judges only those criteria. If they are unmet, all identified defects are handed back together for **at most one** repair, followed by evaluation against the same criteria. `REFLEX` and `EXECUTE` without consciousness-authored criteria skip supervision and final evaluation. A `NULL` episode evaluation therefore means “not evaluated,” not failure; `UNKNOWN` means the criteria could not be decided from the available evidence.
+The execution paths do not validate in the same way. Only `THINK` has achievement criteria authored by consciousness, and the final evaluator judges only those criteria. If they are unmet, all identified defects are handed back together for **at most one** repair, followed by evaluation against the same criteria. `EXECUTE` without consciousness-authored criteria skips supervision and final evaluation. A `NULL` episode evaluation therefore means “not evaluated,” not failure; `UNKNOWN` means the criteria could not be decided from the available evidence.
 
 Two verdicts are kept apart (since 2026-10-26): **review approval** — did the response pass the stated criteria — and **goal outcome** — was the user's original goal actually reached. A well-written failure report can be approved while the goal stays unmet, and only a goal that was actually achieved lets a later identical request inherit the earlier framing instead of waking consciousness again; older records that carry only an approval count as goal-undetermined. When the criteria include a rendered image, the evaluator looks at the actual image together with its purpose and render diagnostics; a missing or undecodable file is reported as *could not review*, never scored as a bad picture. Supervision counts **repetition by observation, not by rule**: the same tool input producing the same actual result inside one run is what gets flagged (alternating calls included, up to an eight-call cycle), real progress or a new result closes the issue so stale instructions stop being repeated, and nothing is auto-retried or rewritten on the executor's behalf.
 
-**REFLEX keeps simple requests out of a long working transcript.** It uses the same model gear, common prompt, vocabulary, and recalled material as ordinary execution, with only a short recent conversation in a separate session. Choose it explicitly with `#reflex`, or let the classifier select it. If more context is needed, it can return to the full history. After tool use, the handoff includes the actual calls and receipts so completed effects are preserved. The main session is preserved, and the next ordinary turn receives the separate execution's outcome. Hippocampus similarity does not select this path. → [Context policy](docs/MODEL_CONTEXT_POLICY.md)
+**Ordinary execution retains its working context.** Simple requests use the existing EXECUTE session, model gear, common prompt, vocabulary, and recalled material. Historical results from separate executions are delivered to the same conversation and actor when still unacknowledged. → [Context policy](docs/MODEL_CONTEXT_POLICY.md)
 
 The consciousness agent reframes the raw request into a well-defined problem *before* the executor ever sees it. Because the two are different subjects, the executor solves an *already-framed* problem: the off-target or unsafe paths a single plan-then-act agent would have to *consider and reject* are largely kept out of its frame from the start. This is **containment, not alignment** — safety dissolved into the goal rather than bolted on as a rule. And it's a property a single agent *cannot* have, because it cannot un-ask its own question — which is exactly why a more capable reasoning model doesn't absorb it.
 

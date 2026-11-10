@@ -237,7 +237,7 @@ if __name__ == "__main__":
 
 
 @pytest.mark.parametrize("channel", list(recall.CHANNELS))
-@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REFLEX", "REPAIR", "CONTEXT_UPDATE"])
+@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REPAIR", "CONTEXT_UPDATE"])
 def test_retired_catalogs_are_not_searched_or_presented(monkeypatch, channel, route):
     """모든 공통 진입점에서 기존 기억은 남고 방법·부품 후보는 분류 후에도 추가되지 않는다."""
     from dataclasses import replace

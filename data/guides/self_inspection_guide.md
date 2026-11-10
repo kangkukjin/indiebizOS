@@ -251,7 +251,6 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 - 분류 EXECUTE인데 짧은 시간 안에 같은 사용자가 후속 메시지로 보완 요청 (THINK였어야 함)
 - 분류 THINK인데 의식 frame이 사실상 비어있음 (EXECUTE면 충분했음)
 - 최종평가의 한 번의 보완 뒤에도 기준 미달 또는 평가 불명. 평가 기준과 보완 인계가 일치하는지 확인
-- 무의식의 REFLEX 선택이 부적절하거나 전체 문맥 인계가 실패. 해마 유사도는 현재 분류의 우회 임계값이 아님
 - 같은 사용자 의도가 매번 다른 분류로 갈림 (분류기 일관성 문제)
 
 ---

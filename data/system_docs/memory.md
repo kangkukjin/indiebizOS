@@ -188,7 +188,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **10,000건** 롤링 — `episode_logger.MAX_EPISODES`, 2026-09-07 1000→10000. 실측 1행 ≒ 37KB(로그 21KB + 궤적 15KB)·하루 약 24주행이라 창 = 약 400일치 ≒ 370MB 대)
   - `ibl_code_corpus` (2026-09-06 부활, 사용자 판정 "필요한 정보가 지워지고 있다"): 몸이 실제로 쓴 **IBL 문장 원문 전량**. 전 IBL 표면의 초크포인트(`system_tools_ibl._execute_ibl_unified`)가 매 실행 `episode_logger.record_ibl_code` 로 upsert — 키=원문 sha256(궤적 `ibl.started.code_sha256` 과 같아 한 DB 안에서 조인), 같은 문장은 한 행에 seen/success/fail 누계·마지막 실패 사유·last_agent/origin, 본문은 `mask_secrets` 를 거치고 바뀌었으면 `masked=1`(해시는 원문 기준). 롤링 없이 영구(중복 제거 뒤 월 수 MB 미만). ibl_usage.db 가 아닌 world_pulse.db 인 이유 = 해마 DB 는 hippocampus.zip 으로 릴리스에 실려 사용자 원문을 담을 수 없다. `source` 는 B18-2(실사용이 한 번 밟은 행은 `usage` 유지). 파인튜닝 코퍼스·조합률 실측(`scripts/vocab_composition_metrics.py`, 아직 미독)의 정본 자리.
-  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, REFLEX/EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 도구 없는 평가자가 최종 판정을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 새 `[GoalEval] 최종 판정` 마커를 우선하고, 과거 `[ConsciousSupervisor]` 및 기존 `[GoalEval]` 라운드 마커도 읽는다. 산문 응답에서 성공을 추측하지 않는다.
+  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 도구 없는 평가자가 최종 판정을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 새 `[GoalEval] 최종 판정` 마커를 우선하고, 과거 `[ConsciousSupervisor]` 및 기존 `[GoalEval]` 라운드 마커도 읽는다. 산문 응답에서 성공을 추측하지 않는다.
     - **실행 라운드·IBL 횟수의 정본(2026-09-12, `docs/CODEX_JOURNAL_2026_09_12.md`)**: 라운드 = 모델 응답 수. Claude Code 는 응답 ID, Codex 는 `exec --json` 이 turn/item 만 내보내므로 로컬 롤아웃의 `token_usage_record.response_id` 를 증분 조회해(`backend/base/codex_rollout.py`) 응답별 한 번만 `model.round` 를 적는다 — item 하나를 라운드로 세지 않는다(한 응답에 도구 호출 여럿). 응답 ID 를 주지 않는 구버전 CLI 는 미측정. 주행 목록(`episode_logger` 조회)은 `ended_at` 없는 **진행 중** 주행도 돌려주고, 종료 요약이 없거나 옛 0/NULL 요약이어도 `model.round` 원장에서 같은 집계 함수로 현재까지의 라운드를 보완한다 — 실행 역할 `system_ai`·`system_repair`는 포함, 배경 원샷·평가는 제외. IBL 호출 시도는 `supervision.tool.started` 와 엔진 `ibl.started` 를 중복 합산하지 않고 중첩 실행은 뺀다(전체 도구 수 ≠ IBL 횟수). 과거 요약 복원은 `backend/migrate_codex_episode_rounds.py`(기본 dry-run, 원 사건·토큰 기록은 덮어쓰지 않음).
   - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 롤링 창에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
@@ -377,7 +377,7 @@ metadata가 같아도 내용·목록의 동일성은 unknown이다. content의 u
   ├─[7 포식기억]   일반 턴 자동 주입 없음(2026-09-03 폐지) — AI 가 [self:forage]{op:"recall", locus|query} 로 직접 연다. 프로젝트 에이전트만 자기 폴더 문서를 안정 프롬프트에 통째(<project_memory>)
   ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
-  │     ├ 무의식 REFLEX/EXECUTE 판정 → 짧은 별도 문맥/전체 문맥으로 실행 (회상 점수와 무관)
+  │     ├ 무의식 EXECUTE/THINK 판정 → 기존 문맥으로 실행 / 의식 규정 후 실행 (회상 점수와 무관)
   │     └ 무의식 THINK 판정 → 의식 에이전트 호출
   │                          ├─[1 의미기억]  guide_files 지목 문서 로드
   │                          └─[6 자기상태]  world_pulse 압축 주입
@@ -612,7 +612,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 
 ### 왜 연상기억인가
 
-- 무의식이 REFLEX/EXECUTE/THINK를 판정하려면 **관련 액션과 메모리**가 뭔지 알아야 한다
+- 무의식이 EXECUTE/THINK를 판정하려면 **관련 액션과 메모리**가 뭔지 알아야 한다
 - 의식이 문제를 구성하려면 **과거 코드 사례, 도구 구현 상세, 사용자 맥락**을 알아야 한다
 - 실행이 코드를 생성하려면 **참고 사례, 파라미터 형식, "내 ~", "방금 ~" 같은 사용자 컨텍스트**를 알아야 한다
 - 평가가 검증하려면 **어떤 도구가 있었고 어떻게 동작하는지**를 알아야 한다
@@ -646,7 +646,7 @@ return (result, top_score, top_code)   # 한 번의 검색으로 점수/코드�
     └─ 해마 검색 1회로 (xml, top_score, top_code) 확보
        <execution_memory> + <memory_map> 결합
     ↓
-[1] 무의식 (경량 AI) — REFLEX/EXECUTE/THINK 판정 (회상 점수와 무관)
+[1] 무의식 (경량 AI) — EXECUTE/THINK 판정 (회상 점수와 무관)
     ↓
 THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
     ↓
@@ -800,7 +800,7 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 
 ---
 
-**해마와 REFLEX는 독립**이다. 검색 점수는 회상 자료의 선정에 쓰며 실행 경로를 강제하지 않는다. 현재 REFLEX는 무의식 분류 또는 `#reflex`로 선택하고, 이번 턴 회상은 유지하면서 긴 CLI 이력만 분리한다. 결말과 결과 참조는 `conversation_events`에 남아 같은 대화의 다음 일반 실행으로 이어진다. [문맥 정책](../../docs/MODEL_CONTEXT_POLICY.md).
+**해마 회상과 실행 경로는 독립**이다. 검색 점수는 회상 자료의 선정에 쓰며 실행 경로를 강제하지 않는다. 일반 요청은 기존 실행 문맥을 사용하며, 과거 별도 실행의 미전달 결말과 결과 참조만 같은 대화·행위자의 일반 실행으로 회수한다. [문맥 정책](../../docs/MODEL_CONTEXT_POLICY.md).
 
 ## 심층메모리 (Deep Memory / 연상 풀)
 
@@ -1007,7 +1007,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 | 뇌 구조 | IndieBiz OS 컴포넌트 | 역할 |
 |---|---|---|
-| 기저핵 | 무의식 (경량 AI) | REFLEX/EXECUTE/THINK 게이팅 |
+| 기저핵 | 무의식 (경량 AI) | EXECUTE/THINK 게이팅 |
 | **해마** | **IBL Usage DB + fine-tuned 임베딩** | **과거 IBL 코드 사례 인출** |
 | **연합피질** | **심층메모리 (memory_db)** | **사용자·세계에 대한 장기 사실 인출** |
 | 전전두엽 | 의식 에이전트 (본격 AI) | 자기 참조적 문제 구성 + 달성 기준 |
@@ -1080,7 +1080,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 ### 과거 반사 규칙 모순 수리 (2026-09-26)
 
-이 절은 당시의 사건 기록이다. 해마 고확신 반사 경로는 10-18 제거되었으며, 현재 REFLEX는 무의식 분류 또는 명시 태그로 선택하는 별도 실행 문맥이다.
+이 절은 당시의 사건 기록이다. 해마 고확신 반사 경로는 10-18 제거되었으며, 별도 문맥의 REFLEX 실행도 11-10 사용자 결정으로 제거되어 현재 일반 요청은 EXECUTE 문맥을 사용한다.
 
 회상·학습·내보내기는 `ibl_current_examples` 부분 색인과 현행 FTS·벡터에서 시작한다. 입구 컴파일을 통과한 새 용례만 실행 후보로 등록되며 검토 보류·격리 여부는 `corpus_policy`가 판단한다. 역사 원문은 `ibl_examples`에 그대로 보존하고 명시 `expand:"#ID"`로 읽는다. 이름·실행 교재로 자동 투영하지 않는다. 노출은 길이(1200자)와 현행 AST의 문장 수로 판단한다. 증류는 실행 증거가 완결된 한 프로그램을 재사용한다. 운영 학습 파일 밖의 보존 원문은 `data/ibl_history/`에 있다.
 

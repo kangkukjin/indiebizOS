@@ -23,7 +23,6 @@ def test_execution_usage_settles_before_turn_finalization(turn, monkeypatch, ter
     from cognitive_consciousness import CognitiveConsciousnessMixin
     from cognitive_eval import CognitiveEvalMixin
     from providers.base import BaseProvider, turn_token_scope, read_turn_tokens
-    from reflex_execution import ReflexTurn
 
     closed, charges, finalized = [], [], []
 
@@ -74,14 +73,14 @@ def test_execution_usage_settles_before_turn_finalization(turn, monkeypatch, ter
                         lambda kind, data: charges.append(data) if kind == 'model.usage' else None)
 
     # Keep the stream alive: finalization must not depend on garbage collection.
-    streams, original_stream = [], ReflexTurn.stream
+    streams, original_stream = [], AI.process_message_stream
 
-    def retained_stream(self, *args):
-        stream = original_stream(self, *args)
+    def retained_stream(self, *args, **kwargs):
+        stream = original_stream(self, *args, **kwargs)
         streams.append(stream)
         return stream
 
-    monkeypatch.setattr(ReflexTurn, 'stream', retained_stream)
+    monkeypatch.setattr(AI, 'process_message_stream', retained_stream)
 
     def observe_finalization():
         count = read_turn_tokens()
@@ -123,7 +122,7 @@ def test_failure_history_does_not_reopen_or_replace_executor_answer(turn, monkey
     from cognitive_eval import CognitiveEvalMixin
     from execution_situation import Situation, fingerprint
     from recovery_observation import configure
-    from test_reflex_execution import AI
+    from test_execution_history import AI
     from thread_context import get_goal_eval_outcome
 
     class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin, CognitiveEvalMixin):
@@ -185,7 +184,7 @@ def test_pipeline_reviews_recovered_task_without_second_execution(turn, supervis
     from agent_pipeline import CognitivePipelineMixin
     from cognitive_consciousness import CognitiveConsciousnessMixin
     from cognitive_eval import CognitiveEvalMixin
-    from test_reflex_execution import AI
+    from test_execution_history import AI
     from thread_context import get_goal_eval_outcome
 
     class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin, CognitiveEvalMixin):
@@ -230,7 +229,7 @@ def test_reframed_request_reaches_real_pipeline_evaluation_and_next_turn(turn, s
     from agent_pipeline import CognitivePipelineMixin
     from cognitive_consciousness import CognitiveConsciousnessMixin
     from cognitive_eval import CognitiveEvalMixin
-    from test_reflex_execution import AI
+    from test_execution_history import AI
     from reframe import current
 
     original = '한국 청년 채용을 조사해줘'
@@ -291,7 +290,7 @@ def test_repair_executor_recovers_in_same_stream_with_grant_and_owner_lock(tmp_p
     from agent_pipeline import CognitivePipelineMixin
     from cognitive_consciousness import CognitiveConsciousnessMixin
     from cognitive_eval import CognitiveEvalMixin
-    from test_reflex_execution import AI
+    from test_execution_history import AI
     from thread_context import actor_context
     from repair_context import active
     from repair_continuation import key

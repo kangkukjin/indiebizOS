@@ -81,8 +81,7 @@ def owned_turn(path, table, owner, task_id, on_skip=None):
     """같은 소유자의 현재(legacy) 세션에 턴을 열어 그 범위를 current() 에 둔다(2026-10-19, 긴문장 79회차 L79-1).
 
     HTTP 채팅 같이 세션 id 를 받지 않는 표면이 데스크톱 채팅 세션 경로(store.begin + scope)와 같은
-    소유권을 갖게 한다 — 없으면 REFLEX 가 'missing_conversation_binding' 으로 늘 일반 경로로 가고
-    영수증(conversation_events)·작업 연결이 남지 않는다. 이미 실행 중인 턴이 있으면(동시 요청) 거절하지
+    소유권을 갖게 하여 영수증(conversation_events)·작업 연결을 보존한다. 이미 실행 중인 턴이 있으면(동시 요청) 거절하지
     않고 None 을 내어 옛 무소유 경로를 보존한다(on_skip 에 사유). 턴은 성공/실패로 닫는다."""
     store = binding = None
     try:

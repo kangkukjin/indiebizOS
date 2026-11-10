@@ -3,7 +3,7 @@
 배경: 시스템 AI 러너는 **싱글턴**이다(get_system_ai_runner). 그런데 인지 파이프라인은
 그 상주 객체에 턴마다 달라지는 값을 쓴다 —
   · `self.ai.system_prompt` / `self.ai._provider.system_prompt` (4단계, 의식 framing 포함)
-  · `self.ai._provider` 슬롯 (3단계 THINK/REPAIR/reflex 모델 스왑)
+  · `self.ai._provider` 슬롯 (3단계 THINK/REPAIR 모델 스왑)
   · `_last_tool_images/_results/_calls` (이 턴의 도구 수확)
 채팅 턴·위임 턴·스케줄러 턴이 겹치면 나중 턴의 대입이 앞 턴의 값을 덮는다. 스왑은
 finally 에서 복원하니 **최종 상태**는 맞지만, 겹치는 구간 동안 한쪽이 남의 프롬프트·

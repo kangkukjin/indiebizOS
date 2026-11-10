@@ -22,11 +22,6 @@ def test_high_recall_keeps_classifier_decision(monkeypatch, score, decision):
 @pytest.mark.parametrize("message,decision", [
     ("#think 확인해", "THINK"), ("#execute 확인해", "EXECUTE"),
     ("#repair 고쳐", "REPAIR"),
-    ("부동산 보고서를 써줘. #reflex", "REFLEX"),
-    ("#ReFlEx 확인해", "REFLEX"),
-    ("#reflex #execute 확인해", "EXECUTE"),
-    ("#think #reflex 확인해", "THINK"),
-    ("#reflex #repair 고쳐", "REPAIR"),
 ])
 def test_explicit_route_remains_authoritative(monkeypatch, message, decision):
     runner = CognitiveConsciousnessMixin()

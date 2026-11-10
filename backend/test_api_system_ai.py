@@ -28,7 +28,7 @@ def http_chat(tmp_path, monkeypatch):
 
     def respond(**kwargs):
         calls.append({"binding": sessions.current(), "history": kwargs["history"]})
-        sessions.record_event({"type": "reflex.result", "actor": "system_ai",
+        sessions.record_event({"type": "test.result", "actor": "system_ai",
                                "response": "저장 확인", "completed": True})
         return "저장 확인", []
 
@@ -59,7 +59,7 @@ def test_background_completion_waits_for_saved_reply_and_released_turn(http_chat
     monkeypatch.setattr(api, "save_conversation", save)
     monkeypatch.setattr(sessions.SessionStore, "finish", finish)
     receipt = api.chat_with_system_ai(api.ChatMessage(
-        message="파일을 저장해 #reflex", origin="training", background=True))
+        message="파일을 저장해", origin="training", background=True))
     try:
         assert entered.wait(5)
         observed = api.get_system_ai_task(receipt.task_id)
@@ -76,7 +76,7 @@ def test_background_completion_waits_for_saved_reply_and_released_turn(http_chat
         assert conn.execute("SELECT content FROM conversations WHERE session_id=? AND role='assistant'",
                             (binding.session_id,)).fetchone()[0] == "저장 확인"
     # 완료를 본 즉시 후속을 보내도 소유권과 직전 답변이 함께 있어야 한다.
-    api.chat_with_system_ai(api.ChatMessage(message="방금 결과를 확인해 #reflex", origin="training"))
+    api.chat_with_system_ai(api.ChatMessage(message="방금 결과를 확인해", origin="training"))
     assert http_chat[1]["binding"] is not None
     assert http_chat[1]["binding"].session_id == binding.session_id
     assert any(row["content"] == "저장 확인" for row in http_chat[1]["history"])

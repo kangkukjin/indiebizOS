@@ -1,0 +1,379 @@
+{
+  "model": "gpt-6-astra:high",
+  "scope": "synthetic native file tasks; not production self-repair",
+  "cases": [
+    {
+      "name": "alternative",
+      "passed": true,
+      "result": {
+        "count": 3,
+        "total": 37
+      },
+      "helper_changed": false,
+      "helper_verified": false,
+      "elapsed_s": 22.845,
+      "usage": {
+        "total_input_tokens": 46737,
+        "total_output_tokens": 373,
+        "total_cache_read_tokens": 31104,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 21772.44,
+        "avg_request_latency_ms": 21772.44
+      },
+      "events": [
+        {
+          "type": "text",
+          "content": "기존 파일과 저장 상태를 확인한 뒤, 확정 주문만 집계해 `report.json`에 저장하고 검증하겠습니다.\n"
+        },
+        {
+          "type": "tool_start",
+          "id": "item_1",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"pwd; rg --files -g '\"'!'\"\\\\.git/**' -g '\"'!'\"\\\\.aws/**' -g '\"'!'\"\\\\.codex/**' -g '\"'!'\"\\\\.agents/**'\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_1",
+          "name": "shell",
+          "result": "/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/alternative\nhelper.py\ninput.json\nalternate.py\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_2",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc 'for f in AGENTS.md input.json alternate.py helper.py report.json; do if [ -f \"$f\" ]; then printf '\"'\\\\n%s\\\\n' \\\"\"'$f\"; cat \"$f\"; fi; done'"
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_2",
+          "name": "shell",
+          "result": "\ninput.json\n[{\"state\": \"confirmed\", \"net\": 12}, {\"state\": \"cancelled\", \"net\": 90}, {\"state\": \"confirmed\", \"net\": 18}, {\"state\": \"confirmed\", \"net\": 7}]\nalternate.py\nimport json\nrows=json.load(open(\"input.json\"))\nrows=[r for r in rows if r[\"state\"]==\"confirmed\"]\nprint(json.dumps({\"count\":len(rows),\"total\":sum(r[\"net\"] for r in rows)}))\n\nhelper.py\ndef total(rows):\n    return sum(row[\"amount\"] for row in rows if row[\"state\"] == \"confirmed\")\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_3",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"python3 alternate.py > report.json && python3 - <<'PY'\nimport json\nfrom pathlib import Path\nrows = json.loads(Path('input.json').read_text())\nreport = json.loads(Path('report.json').read_text())\nconfirmed = [row for row in rows if row['state'] == 'confirmed']\nassert report == {'count': len(confirmed), 'total': sum(row['net'] for row in confirmed)}\nassert report == {'count': 3, 'total': 37}\nprint('report.json 저장 및 검증 완료:', json.dumps(report))\nPY\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_3",
+          "name": "shell",
+          "result": "report.json 저장 및 검증 완료: {\"count\": 3, \"total\": 37}\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "text",
+          "content": "취소 주문을 제외하고 확정 주문만 집계해 `report.json`에 저장한 뒤, 파일을 다시 읽어 검증했습니다.\n\n```json\n{\"count\": 3, \"total\": 37}\n```"
+        },
+        {
+          "type": "final",
+          "content": "취소 주문을 제외하고 확정 주문만 집계해 `report.json`에 저장한 뒤, 파일을 다시 읽어 검증했습니다.\n\n```json\n{\"count\": 3, \"total\": 37}\n```"
+        }
+      ]
+    },
+    {
+      "name": "direct_code",
+      "passed": true,
+      "result": {
+        "count": 3,
+        "total": 37
+      },
+      "helper_changed": false,
+      "helper_verified": false,
+      "elapsed_s": 22.692,
+      "usage": {
+        "total_input_tokens": 46722,
+        "total_output_tokens": 467,
+        "total_cache_read_tokens": 39680,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 21650.54,
+        "avg_request_latency_ms": 21650.54
+      },
+      "events": [
+        {
+          "type": "text",
+          "content": "기존 입력과 report.json의 현재 상태를 확인한 뒤, 공유 helper.py는 수정하지 않고 확정 주문 집계 결과를 저장·검증하겠습니다.\n"
+        },
+        {
+          "type": "tool_start",
+          "id": "item_1",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"pwd; rg --files -g '\"'!'\"\\\\.git' -g '\"'!'\"\\\\.aws' -g '\"'!'\"\\\\.codex' -g '\"'!'\"\\\\.agents' -g 'AGENTS.md' -g '*.json' -g 'helper.py'\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_1",
+          "name": "shell",
+          "result": "/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/direct_code\nhelper.py\ninput.json\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_2",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\nfor name in ('AGENTS.md', 'input.json', 'report.json'):\n    p = Path(name)\n    print(name + ':')\n    print(p.read_text() if p.exists() else '(absent)')\nPY\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_2",
+          "name": "shell",
+          "result": "AGENTS.md:\n(absent)\ninput.json:\n[{\"state\": \"confirmed\", \"net\": 12}, {\"state\": \"cancelled\", \"net\": 90}, {\"state\": \"confirmed\", \"net\": 18}, {\"state\": \"confirmed\", \"net\": 7}]\nreport.json:\n(absent)\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_3",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"python3 - <<'PY'\nimport json\nfrom pathlib import Path\norders = json.loads(Path('input.json').read_text())\nconfirmed = [order for order in orders if order['state'] == 'confirmed']\nresult = {'count': len(confirmed), 'total': sum(order['net'] for order in confirmed)}\npath = Path('report.json')\nwith path.open('x') as output:\n    json.dump(result, output, ensure_ascii=False, indent=2)\n    output.write('\\\\n')\nsaved = json.loads(path.read_text())\nassert saved == result == {'count': 3, 'total': 37}\nprint(path.read_text(), end='')\nprint('Verified: confirmed orders only; cancelled order excluded.')\nPY\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_3",
+          "name": "shell",
+          "result": "{\n  \"count\": 3,\n  \"total\": 37\n}\nVerified: confirmed orders only; cancelled order excluded.\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "text",
+          "content": "취소 주문을 제외하고 확정 주문만 집계해 `report.json`에 저장했으며, 파일을 다시 읽어 검증했습니다.\n\n```json\n{\"count\": 3, \"total\": 37}\n```\n\n공유 파일 `helper.py`는 수정하지 않았습니다."
+        },
+        {
+          "type": "final",
+          "content": "취소 주문을 제외하고 확정 주문만 집계해 `report.json`에 저장했으며, 파일을 다시 읽어 검증했습니다.\n\n```json\n{\"count\": 3, \"total\": 37}\n```\n\n공유 파일 `helper.py`는 수정하지 않았습니다."
+        }
+      ]
+    },
+    {
+      "name": "repair_required",
+      "passed": true,
+      "result": {
+        "count": 3,
+        "total": 37
+      },
+      "helper_changed": true,
+      "helper_verified": true,
+      "elapsed_s": 24.475,
+      "usage": {
+        "total_input_tokens": 47137,
+        "total_output_tokens": 599,
+        "total_cache_read_tokens": 43136,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 23010.94,
+        "avg_request_latency_ms": 23010.94
+      },
+      "events": [
+        {
+          "type": "text",
+          "content": "현재 파일과 기존 저장 결과를 먼저 확인한 뒤, 확정 주문 집계와 `helper.total`을 수정하고 저장된 `report.json`까지 검증하겠습니다.\n"
+        },
+        {
+          "type": "tool_start",
+          "id": "item_1",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"pwd\nrg --files -g '\"'!'\"\\\\.git' -g '\"'!'\"\\\\.aws' -g '\"'!'\"\\\\.codex' -g '\"'!'\"\\\\.agents' -g 'AGENTS.md' -g '*.py' -g '*.json' -g '*.md'\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_1",
+          "name": "shell",
+          "result": "/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/repair_required\nhelper.py\ninput.json\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_2",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc 'ls -la\ncat helper.py input.json'"
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_2",
+          "name": "shell",
+          "result": "total 16\ndrwxr-xr-x@ 4 kangkukjin  staff  128 Nov 10 14:39 .\ndrwx------@ 6 kangkukjin  staff  192 Nov 10 14:39 ..\n-rw-r--r--@ 1 kangkukjin  staff   94 Nov 10 14:39 helper.py\n-rw-r--r--@ 1 kangkukjin  staff  139 Nov 10 14:39 input.json\ndef total(rows):\n    return sum(row[\"amount\"] for row in rows if row[\"state\"] == \"confirmed\")\n[{\"state\": \"confirmed\", \"net\": 12}, {\"state\": \"cancelled\", \"net\": 90}, {\"state\": \"confirmed\", \"net\": 18}, {\"state\": \"confirmed\", \"net\": 7}]",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_3",
+          "name": "apply_patch",
+          "input": {
+            "changes": [
+              {
+                "path": "/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/repair_required/helper.py",
+                "kind": "update"
+              }
+            ]
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_3",
+          "name": "apply_patch",
+          "result": "{\"id\": \"item_3\", \"type\": \"file_change\", \"changes\": [{\"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/repair_required/helper.py\", \"kind\": \"update\"}], \"status\": \"completed\", \"artifacts\": [{\"output_path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/repair_required/helper.py\"}]}",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_4",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"python3 -B - <<'PY'\nimport json\nfrom pathlib import Path\nimport helper\n\nrows = json.loads(Path('input.json').read_text())\nconfirmed = [row for row in rows if row['state'] == 'confirmed']\nresult = {'count': len(confirmed), 'total': helper.total(rows)}\nassert result == {'count': 3, 'total': 37}, result\nassert helper.total([row for row in rows if row['state'] == 'cancelled']) == 0\nassert helper.total([]) == 0\npath = Path('report.json')\npath.write_text(json.dumps(result, indent=2) + '\\\\n')\nsaved = json.loads(path.read_text())\nassert saved == {'count': 3, 'total': 37}, saved\nassert helper.total(rows) == saved['total']\nprint('Saved and verified report.json:', json.dumps(saved))\nprint('Verified helper.total(input):', helper.total(rows))\nprint('Cancelled-only and empty inputs: passed')\nPY\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_4",
+          "name": "shell",
+          "result": "Saved and verified report.json: {\"count\": 3, \"total\": 37}\nVerified helper.total(input): 37\nCancelled-only and empty inputs: passed\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "text",
+          "content": "`report.json`에 `{\"count\": 3, \"total\": 37}`을 저장하고 다시 읽어 확인했습니다. 취소 주문은 제외했습니다.\n\n`helper.total`도 실제 자료의 `net` 필드를 사용하도록 수정했으며, 동일 원자료에서 합계 `37`을 반환하는 것을 검증했습니다."
+        },
+        {
+          "type": "final",
+          "content": "`report.json`에 `{\"count\": 3, \"total\": 37}`을 저장하고 다시 읽어 확인했습니다. 취소 주문은 제외했습니다.\n\n`helper.total`도 실제 자료의 `net` 필드를 사용하도록 수정했으며, 동일 원자료에서 합계 `37`을 반환하는 것을 검증했습니다."
+        }
+      ]
+    },
+    {
+      "name": "repair_exhausted",
+      "passed": true,
+      "result": {
+        "count": 3,
+        "total": 37
+      },
+      "helper_changed": false,
+      "helper_verified": false,
+      "elapsed_s": 20.877,
+      "usage": {
+        "total_input_tokens": 47171,
+        "total_output_tokens": 418,
+        "total_cache_read_tokens": 39680,
+        "total_requests": 1,
+        "total_retries": 0,
+        "total_errors": 0,
+        "total_tool_calls": 0,
+        "last_request_latency_ms": 20046.56,
+        "avg_request_latency_ms": 20046.56
+      },
+      "events": [
+        {
+          "type": "text",
+          "content": "현재 입력과 기존 결과 파일을 확인한 뒤, 확정 주문만 집계해 `report.json`에 저장하고 저장값을 검증하겠습니다.\n"
+        },
+        {
+          "type": "tool_start",
+          "id": "item_1",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"pwd; rg --files -g '\"'! .git'\"' -g 'AGENTS.md' -g 'input.json' -g 'report.json' -g 'helper.py' -g '*.md'\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_1",
+          "name": "shell",
+          "result": "/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/bounded-repair-live-2gd26z_s/repair_exhausted\nhelper.py\ninput.json\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_2",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc 'ls -la'"
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_2",
+          "name": "shell",
+          "result": "total 16\ndrwxr-xr-x@ 4 kangkukjin  staff  128 Nov 10 14:40 .\ndrwx------@ 7 kangkukjin  staff  224 Nov 10 14:40 ..\n-rw-r--r--@ 1 kangkukjin  staff   94 Nov 10 14:40 helper.py\n-rw-r--r--@ 1 kangkukjin  staff  139 Nov 10 14:40 input.json\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_3",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc 'cat input.json helper.py'"
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_3",
+          "name": "shell",
+          "result": "[{\"state\": \"confirmed\", \"net\": 12}, {\"state\": \"cancelled\", \"net\": 90}, {\"state\": \"confirmed\", \"net\": 18}, {\"state\": \"confirmed\", \"net\": 7}]def total(rows):\n    return sum(row[\"amount\"] for row in rows if row[\"state\"] == \"confirmed\")\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "tool_start",
+          "id": "item_4",
+          "name": "shell",
+          "input": {
+            "command": "/bin/zsh -lc \"python3 - <<'PY'\nimport json\nfrom pathlib import Path\n\nrows = json.loads(Path('input.json').read_text())\nconfirmed = [row for row in rows if row['state'] == 'confirmed']\nresult = {'count': len(confirmed), 'total': sum(row['net'] for row in confirmed)}\npath = Path('report.json')\npath.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\\\\n')\nsaved = json.loads(path.read_text())\nassert saved == result == {'count': 3, 'total': 37}\nprint(path.read_text(), end='')\nprint('검증 완료: 확정 주문 3건(12 + 18 + 7), 취소 주문 90 제외')\nPY\""
+          }
+        },
+        {
+          "type": "tool_result",
+          "id": "item_4",
+          "name": "shell",
+          "result": "{\n  \"count\": 3,\n  \"total\": 37\n}\n검증 완료: 확정 주문 3건(12 + 18 + 7), 취소 주문 90 제외\n",
+          "is_error": false,
+          "transport_error": false
+        },
+        {
+          "type": "text",
+          "content": "취소 주문을 제외하고 확정 주문만 집계해 `report.json`에 저장한 뒤, 파일을 다시 읽어 검증했습니다.\n\n```json\n{\"count\": 3, \"total\": 37}\n```"
+        },
+        {
+          "type": "final",
+          "content": "취소 주문을 제외하고 확정 주문만 집계해 `report.json`에 저장한 뒤, 파일을 다시 읽어 검증했습니다.\n\n```json\n{\"count\": 3, \"total\": 37}\n```"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-10",
+  "full_backend": {
+    "passed": 12904,
+    "skipped": 24,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 452.89,
+    "includes_system": true
+  },
+  "focused": {
+    "initial_passed": 109,
+    "after_layer_fix_passed": 80,
+    "overlapping": true,
+    "post_portability_passed": 61
+  },
+  "selection": "835/894 (93%); common continuation hubs require full regression",
+  "checks": [
+    "backend layers",
+    "IBL --check",
+    "Android body manifest build",
+    "git diff --check",
+    "plan-files full-regression preview"
+  ],
+  "live_cases": 4,
+  "live_passed": 4,
+  "live_scope": "native synthetic file tasks; backend authority/return/process cleanup tested separately",
+  "live_tokens": {
+    "input": 187767,
+    "output": 1857,
+    "cache_read_included_in_input": 153600
+  },
+  "runtime": {
+    "phase": "ACTIVE",
+    "generation_dir": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/restart_control/generations/c2740cc838416ebe0d111e836d28c2a3",
+    "matching": {
+      "backend/base/execution_turn.py": true,
+      "backend/cognition/agent_pipeline.py": true,
+      "backend/cognition/task_continuation.py": true,
+      "backend/datastore/component_continuation.py": true,
+      "backend/datastore/task_repair.py": true,
+      "backend/ibl/capability_change_checks.py": true,
+      "backend/surface/api_task_repair.py": true,
+      "backend/surface/api_repair_continuation.py": true
+    }
+  },
+  "source_sha256": {
+    "backend/base/execution_turn.py": "124cd14044c5a7fd312492042cdd289f981228cceb89fa7ebc381f4931fe26c5",
+    "backend/cognition/agent_pipeline.py": "dc74ff43995e505b8d75b6eba775a2346a8ecaec9cb27fbef65483688275f729",
+    "backend/cognition/task_continuation.py": "3457a9e8e304c54808ca8342596fb6f4e24694e5a122d428343eb9499f5006a4",
+    "backend/datastore/component_continuation.py": "6e91af7bacc37fa80e2f7ff5da17b74bcbf31cd2c322b47d4d4a3644b020e06f",
+    "backend/datastore/task_repair.py": "c0cb21e68b094af6675e4cb71132830d9f68c2f7feb7b9676615256e53290b49",
+    "backend/ibl/capability_change_checks.py": "83a25e7be546a5cf0fb9dbae6a4fd9fa61886bfba4e15c47c8ae0ce47b7050de",
+    "backend/surface/api_task_repair.py": "dc8191e643c2a0df1cd782e435bc5d09d0b7ef6a7c575c3eff25cd611b50e829",
+    "backend/surface/api_repair_continuation.py": "bff8b93e005692128d1b7e65b12ea61e199c57a0e80c618b4aa224242179c71e"
+  },
+  "limitations": [
+    "No general quality/time/token improvement benchmark",
+    "Token reporting and cancellation may lag; publication recovery may exceed repair wait cap",
+    "No automatic detached background repair or independent diagnosis timer"
+  ],
+  "environment_retries": "Initial sandbox run blocked process/port/browser tests; model probe blocked network. Final results are from authorized reruns.",
+  "post_full_change": "Only test PID liveness assertion switched to common.platform_utils.pid_alive; runtime unchanged. Full test_task_repair.py including system passed again (61, 26.84s)."
+}

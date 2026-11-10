@@ -30,6 +30,7 @@ class Binding:
     history: list = field(default_factory=list)
     images: list = field(default_factory=list)
     allowed_set: object = None
+    repair_limits: dict = field(default_factory=dict)
     on_change: object = None
     situation: object = None
     recovery_checkpoint: object = None

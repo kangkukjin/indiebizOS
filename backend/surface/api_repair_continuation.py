@@ -317,6 +317,14 @@ def process_pending(base, generation, execute=_execute):
                       or evaluation.get("status") == "NOT_RUN" else "blocked")
             if answer.get("cancelled"):
                 status = "cancelled"
+            # 수리 몫 종료는 사용자의 원래 업무 취소가 아니다. 자식이 돌아온 뒤에만
+            # 종결해 프로세스 정리 전 부모의 대체 실행이 시작되지 않게 한다.
+            if scope(row):
+                from task_repair import parent_of, budget_reason
+                reason = budget_reason(parent_of(row, base, check=False))
+                if reason and status != 'completed':
+                    status = 'blocked'
+                    evaluation = {**evaluation, 'reason': reason, 'status': 'REPAIR_BUDGET_EXHAUSTED'}
             response = answer.get("response", "")
             save({**current, "status": status, "evaluation": evaluation,
                   "reason": evaluation.get("reason", "완료 검증을 확인하지 못했습니다")}, base)

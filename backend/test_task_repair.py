@@ -5,6 +5,8 @@ import sqlite3
 import subprocess
 import sys
 import shlex
+import time
+import threading
 from dataclasses import asdict
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -93,6 +95,117 @@ def test_propose_preserves_parent_and_stages_without_grant(env):
     assert candidate.read_text() == 'VALUE = 2\n'
     parents.finish(env.turn, '수리 대기')
     assert journal.read(parent['task_id'])['status'] == 'waiting_repair'
+
+
+def test_repair_allocation_is_cumulative_and_keeps_parent_limits():
+    parent = {'budget': {'input': 100, 'output': 20, 'deadline_at': 150, 'hard_token_limit': 1000}}
+    budget = repair.allocate_budget(parent, now=100)
+    assert budget['deadline_at'] == 137.5  # 남은 50초 중 마무리 25% 보존
+    assert budget['token_ceiling'] == 780
+    assert repair.allocate_budget(parent, {'seconds': 9999}, now=110) == budget
+    parent['budget']['input'] += 100
+    repair.finish_budget(parent, now=110)
+    assert budget['spent_seconds'] == 10 and budget['spent_tokens'] == 100
+    repair.allocate_budget(parent, {'seconds': 9999}, now=120)
+    assert budget['seconds'] == 90 and budget['deadline_at'] == 140
+    assert parent['budget']['deadline_at'] == 150
+    assert parent['budget']['hard_token_limit'] == 1000
+
+
+def test_no_repair_allocation_keeps_task_available_without_staging(env, monkeypatch):
+    env.turn.repair_limits = {'seconds': 0}
+    result = invoke(env.handler, env.repo, 'patch_op', {'path': str(env.path), 'reason': '파서 오류'})
+    assert not result['success'] and not result['pending_repair']
+    parent = journal.read(env.turn.continuation_key)
+    assert parent['status'] == 'running' and not parent.get('repair_child')
+    assert env.controller.apply_scheduled is None and env.path.read_text() == 'VALUE = 1\n'
+
+
+def test_child_token_stop_on_watchdog_thread_preserves_parent_usage_and_deadline(env):
+    from providers.base import _turn_token_ledger
+    parent, child = propose(env)
+    original_budget = dict(parent['budget'])
+    with journal.resuming(child), actor_context(agent_id='system_ai', task_id=child['resume_task_id'], origin='user'), \
+            turn_token_scope('system_ai', child['resume_task_id'], hard_token_limit=2000):
+        turn = execution_turn.Binding(env.turn.runner, 'system_ai', child['resume_task_id'],
+                                     request=child['goal'], context={}, conversation=env.turn.conversation)
+        repair.inherit_budget(turn)
+        ProviderMetrics().record_request(1, 700, 0)
+        results = []
+        worker = threading.Thread(target=lambda: results.append(turn.cancel_check()))
+        worker.start(); worker.join(timeout=2)
+        assert results == [True]
+        assert _turn_token_ledger.get()['hard_token_limit'] == 1000
+        saved = journal.read(parent['task_id'])
+        assert saved['budget']['input'] + saved['budget']['output'] == 820
+        assert saved['budget']['deadline_at'] == pytest.approx(original_budget['deadline_at'], abs=.01)
+        assert saved['repair_budget']['stop_reason']
+        assert not journal.cancelled(saved, env.repo)
+
+
+def test_expired_child_cannot_start_and_pending_publication_is_not_interrupted(env):
+    import api_task_repair
+    parent, child = propose(env)
+    parent['repair_budget']['deadline_at'] = time.time() - 1
+    journal.save(parent)
+    env.store.finish(env.turn.conversation)
+    with pytest.raises(TimeoutError, match='수리 몫'):
+        api_task_repair.ready(child, env.repo)
+    st = env.handler._staging_mod()
+    session = st.read_session(str(env.repo), child['staging_task_id'])
+    session['status'] = 'apply_scheduled'
+    st._save_session(str(env.repo), session)
+    assert api_task_repair.ready(child, env.repo)
+    assert repair.advance_parent(parent, env.repo, lambda *a: (False, '아직 게시 중')) is None
+
+
+def test_timeout_reaps_process_before_parent_uses_alternative_and_keeps_candidate(env, monkeypatch):
+    import api_task_repair
+    import api_component_continuation
+    from script_process import run_process
+    parent, child = propose(env)
+    parent['repair_budget']['deadline_at'] = time.time() + .5
+    journal.save(parent)
+    env.store.finish(env.turn.conversation)
+    processes = []
+
+    def execute(row):
+        with actor_context(agent_id='system_ai', task_id=row['resume_task_id'], origin='user'), \
+                turn_token_scope('system_ai', row['resume_task_id'], hard_token_limit=2000):
+            turn = execution_turn.Binding(env.turn.runner, 'system_ai', row['resume_task_id'],
+                                         request=row['goal'], context={}, conversation=sessions.current())
+            repair.inherit_budget(turn)
+            def check():
+                if turn.cancel_check():
+                    raise PermissionError('수리 몫 종료')
+            with pytest.raises(PermissionError) as error:
+                run_process([sys.executable, '-c', 'import time; time.sleep(30)'], b'', cwd=str(env.repo),
+                            env=None, timeout=30, check=check, started=processes.append, terminate_descendants=True)
+            assert error.value.process_result.get('cleanup')
+        journal.save({**row, 'status': 'blocked', 'reason': '수리 몫 종료'}, env.repo)
+        return {'response': '후보 보존'}
+
+    with journal.resuming(child):
+        api_task_repair.execute(child, execute)
+    assert len(processes) == 1
+    from common.platform_utils import pid_alive
+    assert not pid_alive(processes[0])
+    candidate = env.repo / child['worktree'] / 'backend/services/document_parser.py'
+    assert candidate.read_text() == 'VALUE = 2\n' and env.path.read_text() == 'VALUE = 1\n'
+    monkeypatch.setattr('repair_policy.completion', lambda *a: (False, '후보만 있고 반영하지 않음'))
+    called = []
+    def resume(row):
+        assert row['goal'] == env.turn.request and not row['repair_result']['success']
+        assert '수리 몫' in row['repair_result']['failure']
+        assert not row['repair_result']['followup_scheduled']
+        assert row['budget']['deadline_at'] > time.time()
+        (env.repo / 'report.txt').write_text('대체 변환으로 원래 보고서 완료')
+        called.append(row['task_id'])
+        return {'response': '보고서 저장 완료'}
+    api_component_continuation.consume(journal.read(parent['task_id']), env.repo, 'same', resume)
+    assert called == [parent['task_id']]
+    assert journal.read(parent['task_id'])['status'] == 'completed'
+    assert (env.repo / 'report.txt').is_file()
 
 
 @pytest.mark.parametrize('case', ['valid', 'missing_agent', 'unknown_task', 'nonuser', 'cancelled'])

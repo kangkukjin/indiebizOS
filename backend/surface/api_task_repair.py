@@ -9,6 +9,7 @@ import task_repair
 def ready(row, base=None):
     """부모 구간이 종료된 뒤에만 같은 대화의 자식 구간을 연다."""
     parent = task_repair.parent_of(row, base)
+    task_repair.check_pending_budget(row, base)
     b = parent['last_conversation']
     with sessions.connection(b['db_path']) as conn:
         turn = conn.execute('SELECT state FROM conversation_turns WHERE id=?', (b['turn_id'],)).fetchone()

@@ -345,6 +345,7 @@ class CognitivePipelineMixin:
             if _execution:
                 _execution.history, _execution.images = list(history or []), list(kwargs.get('images') or [])
                 _execution.allowed_set = kwargs.get('allowed_set')
+                _execution.repair_limits = dict(resource_limits.get('task_repair') or {})
             from conscious_supervisor import open_supervisor
             _supervisor = None
             _parent_response = None

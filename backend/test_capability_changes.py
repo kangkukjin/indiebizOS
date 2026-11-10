@@ -318,13 +318,13 @@ def test_explicit_check_scope_and_candidate_change(tmp_path, monkeypatch):
     from capability_change_checks import check
     (tmp_path / 'owned.py').write_text('before')
     (tmp_path / 'other.py').write_text('another task')
-    def execute(argv, **kwargs):
+    def execute(root, argv, deadline, cancel):
         if 'select_tests.py' in str(argv):
             assert argv[-1] == 'owned.py' and 'other.py' not in argv
             return subprocess.CompletedProcess(argv, 0, 'backend/test_owned.py', 'explicit selection')
         (tmp_path / 'owned.py').write_text('changed during check')
         return subprocess.CompletedProcess(argv, 0, 'passed', '')
-    monkeypatch.setattr('capability_change_checks.subprocess.run', execute)
+    monkeypatch.setattr('capability_change_checks._run', execute)
     result = check(tmp_path, ['owned.py'])
     assert result['files'] == ['owned.py']
     assert result['candidate_changed'] and not result['ok']

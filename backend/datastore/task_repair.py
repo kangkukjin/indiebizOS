@@ -1,6 +1,7 @@
 """일반 업무가 발견한 구현 결함의 한정 수리. 부모 목적과 수리 목적을 별도로 보존한다."""
 import hashlib
 import json
+import math
 import re
 import time
 from pathlib import Path
@@ -9,7 +10,87 @@ import component_continuation as parent_tasks
 import repair_continuation as journal
 
 from program_boundary import describe, eligible
-NOTICE = '필요한 구현 수리를 같은 업무의 사본에서 진행합니다. 검사·반영 뒤 원래 업무를 자동으로 이어갑니다.'
+NOTICE = '원래 업무에 필요한 구현 수리를 한정 예산 안에서 진행합니다. 수리 완료 또는 안전한 중단 뒤 남은 업무를 이어갑니다.'
+
+
+def allocate_budget(parent, settings=None, *, now=None):
+    """부모의 전체 한도를 바꾸지 않고 누적 수리 몫과 복귀 여유를 예약한다.
+
+    settings는 소유자의 agent_resource_limits.task_repair 설정이다. 모델의
+    도구 인자나 수리 후보가 한도를 새로 만들거나 늘리지 않는다.
+    """
+    now = time.time() if now is None else now
+    budget = parent.get('repair_budget')
+    if budget is None:
+        settings = settings or {}
+        policy = {'seconds': 90, 'tokens': 500000, 'return_fraction': .25, 'return_seconds': 10}
+        for name, default in policy.items():
+            value = settings.get(name, default)
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(value) or value < 0
+                    or name == 'return_fraction' and not 0 < value < 1):
+                raise ValueError('유효하지 않은 업무 수리 예산: ' + name)
+            policy[name] = value
+        budget = parent['repair_budget'] = {**policy, 'spent_seconds': 0, 'spent_tokens': 0}
+    if budget.get('started_at') is not None:
+        return budget  # 같은 수리의 재개·중복 요청은 시계를 다시 시작하지 않는다.
+    whole = parent['budget']
+    used = whole['input'] + whole['output']
+    seconds = max(0, budget['seconds'] - budget['spent_seconds'])
+    tokens = max(0, budget['tokens'] - budget['spent_tokens'])
+    if whole.get('deadline_at') is not None:
+        remaining = max(0, whole['deadline_at'] - now)
+        reserve = max(budget['return_seconds'], remaining * budget['return_fraction'])
+        seconds = min(seconds, max(0, remaining - reserve))
+    if whole.get('hard_token_limit') is not None:
+        remaining = max(0, whole['hard_token_limit'] - used)
+        tokens = min(tokens, math.floor(remaining * (1 - budget['return_fraction'])))
+    budget.update(started_at=now, deadline_at=now + seconds, token_start=used,
+                  token_ceiling=used + tokens)
+    return budget
+
+
+def budget_reason(parent, *, used=None, now=None):
+    budget = parent.get('repair_budget') or {}
+    if budget.get('stop_reason'):
+        return budget['stop_reason']
+    if budget.get('started_at') is None:
+        return None
+    now = time.time() if now is None else now
+    whole = parent['budget']
+    used = whole['input'] + whole['output'] if used is None else used
+    if now >= budget['deadline_at'] or used >= budget['token_ceiling']:
+        return '업무 중 수리 몫을 소진했습니다. 후보·근거를 보존하고 남은 예산으로 원래 요구를 해결할 다른 방법을 실행하세요.'
+    return None
+
+
+def finish_budget(parent, *, now=None):
+    budget = parent.get('repair_budget') or {}
+    started = budget.pop('started_at', None)
+    if started is not None:
+        now = time.time() if now is None else now
+        budget['spent_seconds'] += max(0, now - started)
+        whole = parent['budget']
+        budget['spent_tokens'] += max(0, whole['input'] + whole['output'] - budget['token_start'])
+
+
+def publication_pending(row, base=None):
+    """예약 뒤의 게시·복구는 외부 제어자가 끝낸다. 예산 종료가 반쪽 적용을 만들지 않는다."""
+    from restart_protocol import read_json
+    from runtime_utils import get_base_path
+    path = Path(base or get_base_path()) / 'data/system_ai_state/repair_sessions'
+    task = journal.key(row.get('staging_task_id') or row['task_id'])
+    session = read_json(path / (task + '.json')) or {}
+    return session.get('status') == 'apply_scheduled'
+
+
+def check_pending_budget(row, base=None):
+    if row.get('phase') not in {'execution', 'review', 'repair_apply', 'repair_active'}:
+        return  # 이미 시작한 활성화·복구·각인은 기존 완료 영수증까지 진행한다.
+    parent = parent_of(row, base)
+    reason = budget_reason(parent)
+    if reason and not publication_pending(row, base):
+        raise TimeoutError(reason)
 
 
 def implementation_unit(relative):
@@ -139,6 +220,13 @@ def request(handler, payload, context, *, framing_factory):
         return json.dumps({'success': True, 'pending_repair': True, 'key': parent['repair_child'], 'message': NOTICE}, ensure_ascii=False)
     if signature in parent.get('repair_signatures', []) or len(parent.get('repair_signatures', [])) >= 3:
         raise PermissionError('같은 수정의 반복 또는 원래 업무의 수리 시도 한도입니다')
+    allocation = allocate_budget(parent, turn.repair_limits)
+    if budget_reason(parent):
+        finish_budget(parent)
+        journal.save(parent)
+        return json.dumps({'success': False, 'pending_repair': False, 'applied': False,
+                           'reason': '수리에 쓸 몫이 없습니다. 기존 결과·대체 도구·일회성 코드로 남은 요구를 해결하세요.',
+                           'repair_budget': allocation}, ensure_ascii=False)
     key = 'work-repair-' + hashlib.sha256((parent['task_id'] + signature).encode()).hexdigest()[:28]
     execution = key.replace('work-repair-', 'work-exec-')
     limit = {'parent': parent['task_id'], 'root': key, 'paths': paths}
@@ -156,9 +244,12 @@ def request(handler, payload, context, *, framing_factory):
     # 원래 기준을 후보 적용의 조건으로 삼지 않는다. 수리 검사 뒤 부모가 실제 업무를 마친다.
     goal = ('원래 사용자 업무를 계속하기 위해 관측된 구현 결함을 수리하세요. 기존 공개 계약·권한·지침을 유지하고 '
             '사본에서 관련 검사를 수행해 self:patch apply로 반영하세요. 파일 범위를 넓히지 마세요. '
-            '수리 완료가 원래 업무 완료는 아니며 부모 실행자가 남은 일을 맡습니다.\n' + json.dumps(
+            '수리 완료가 원래 업무 완료는 아니며 부모 실행자가 남은 일을 맡습니다. '
+            '새 근거 없이 같은 실패를 반복하지 마세요. 검사·활성화까지 예산에 맞지 않거나 다른 방법이 유리하면 '
+            '후보와 근거를 보존하고 종료해 부모가 다른 도구·일회성 코드로 원래 요구를 해결하게 하세요. '
+            '후속 접수나 검사 생략으로 완료를 대신하지 마세요.\n' + json.dumps(
                 {'original_goal': parent['goal'], 'observed_defect': reason, 'implementations': paths,
-                 'diagnose_first': content is None}, ensure_ascii=False))
+                 'diagnose_first': content is None, 'repair_budget': allocation}, ensure_ascii=False))
     child = {'task_id': key, 'root_task_id': key, 'resume_task_id': execution, 'staging_task_id': execution,
              'task_scope': limit, 'status': 'waiting_execution', 'phase': 'execution', 'retry_at': 0,
              'authorized_origin': 'user', 'goal': goal, 'framing': framing_factory(goal), 'repair_policy': 2,
@@ -205,6 +296,40 @@ def inherit_budget(turn):
         raise PermissionError('수리 자식 실행 신원이 다릅니다')
     parent_tasks.restore_budget(turn, parent)
     turn.continuation_key = parent['task_id']
+    budget = parent.get('repair_budget')
+    if not budget or budget.get('started_at') is None:
+        return  # 구 판본 인계는 기존 계약으로 종료한다.
+    from providers.base import _turn_token_ledger
+    from runtime_utils import get_base_path
+    ledger = _turn_token_ledger.get()
+    base = get_base_path()
+    previous_cancel = turn.cancel_check
+    deadline = time.monotonic() + max(0, budget['deadline_at'] - time.time())
+    stopped = False
+
+    def cancelled():
+        nonlocal stopped
+        if previous_cancel and previous_cancel():
+            return True
+        used = ledger['input'] + ledger['output']
+        reason = budget_reason(parent, used=used, now=budget['deadline_at']
+                               if time.monotonic() >= deadline else budget['started_at'])
+        if not reason or publication_pending(row, base):
+            return False
+        if not stopped:
+            # 사용자의 취소 표식을 세우지 않는다. 부모의 한도·취소와 자식의 몫 종료는 별개다.
+            with parent_tasks._checkpoint_lock:
+                # CLI watchdog는 ContextVar가 없는 스레드에서도 이 콜백을 부른다.
+                # 포획한 같은 원장의 관측량만 갱신하고 부모의 전체 한도는 보존한다.
+                latest = journal.read(parent['task_id'], base)
+                latest['budget'].update({k: ledger.get(k, 0) for k in
+                                         ('input', 'output', 'cache_read', 'execution_calls')})
+                latest['repair_budget']['stop_reason'] = reason
+                journal.save(latest, base)
+            stopped = True
+        return True
+
+    turn.cancel_check = cancelled
 
 
 def advance_parent(row, base, completion_check):
@@ -229,8 +354,13 @@ def advance_parent(row, base, completion_check):
     session = read_json(Path(base) / 'data/system_ai_state/repair_sessions' /
                         (journal.key(child.get('staging_task_id') or child['task_id']) + '.json')) or {}
     passed, reason = completion_check(session, child, base)
+    limit_reason = budget_reason(row)
+    finish_budget(row)
     row.update(repair_result={'task': child['task_id'], 'success': passed, 'reason': reason,
-                              'failure': child.get('reason', '') if not passed else '',
+                              'failure': (limit_reason or child.get('reason', '')) if not passed else '',
+                              'worktree': child.get('worktree'), 'session_status': session.get('status'),
+                              'repair_budget': row.get('repair_budget'),
+                              'followup_scheduled': False,
                               'response': child.get('response', '')}, returning_from_repair=True)
     row.pop('repair_child', None)
     row.pop('repair_request', None)

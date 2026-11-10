@@ -158,3 +158,88 @@ def test_http_route_progress_is_visible_during_turn_and_cleared_after(http_chat,
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+# ── 대화 턴을 열지 못한 요청은 실행하지 않는다(무소유 실행 없음, 2026-11-11) ──
+
+def _running_turn(owner="rehearsal"):
+    store = sessions.SessionStore(memory.MEMORY_DB_PATH, "conversations", owner)
+    with sessions.connection(store.path) as conn:
+        sid = sessions.resolve(conn, store.path, owner, "conversations")
+    return store, store.begin(sid)
+
+
+@pytest.mark.parametrize("background", [False, True])
+def test_concurrent_request_on_the_same_conversation_is_409_before_any_work(http_chat, monkeypatch, background):
+    store, running = _running_turn()
+    monkeypatch.setattr(api.threading, "Thread", lambda target, **kw: SimpleNamespace(start=target))
+    try:
+        with pytest.raises(api.HTTPException) as refused:
+            api.chat_with_system_ai(api.ChatMessage(message="동시에 하나 더", origin="training", background=background))
+    finally:
+        store.finish(running)
+    assert refused.value.status_code == 409 and "이미 실행 중" in refused.value.detail
+    assert http_chat == []  # 모델 호출 0
+    with sqlite3.connect(memory.MEMORY_DB_PATH) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0  # 미리 만든 작업도 없다
+        assert conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0] == 0  # 진행 중인 대화에 글을 끼우지 않는다
+        assert conn.execute("SELECT COUNT(*) FROM conversation_turns WHERE state='running'").fetchone()[0] == 0
+    # 앞선 턴이 끝나면 같은 대화의 다음 요청은 정상 소유로 실행된다.
+    api.chat_with_system_ai(api.ChatMessage(message="이어서", origin="training"))
+    assert http_chat[0]["binding"].session_id == running.session_id and http_chat[0]["binding"].turn_id != running.turn_id
+
+
+def test_conversation_store_failure_is_a_retryable_503_not_an_unowned_run(http_chat, monkeypatch):
+    def broken(self, sid):
+        raise sqlite3.OperationalError("database is locked")
+    monkeypatch.setattr(sessions.SessionStore, "begin", broken)
+    with pytest.raises(api.HTTPException) as refused:
+        api.chat_with_system_ai(api.ChatMessage(message="저장소 장애", origin="training"))
+    assert refused.value.status_code == 503 and refused.value.headers == {"Retry-After": "5"}
+    assert http_chat == []
+    with sqlite3.connect(memory.MEMORY_DB_PATH) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0
+
+
+def test_failure_before_the_turn_scope_leaves_no_running_turn(http_chat, monkeypatch):
+    def broken(**kwargs):
+        raise RuntimeError("작업 원장 쓰기 실패")
+    monkeypatch.setattr(api, "create_system_ai_task", broken, raising=False)
+    monkeypatch.setattr(memory, "create_task", broken)
+    with pytest.raises(RuntimeError):
+        api.chat_with_system_ai(api.ChatMessage(message="접수 실패", origin="training"))
+    with sqlite3.connect(memory.MEMORY_DB_PATH) as conn:
+        rows = conn.execute("SELECT state,error FROM conversation_turns").fetchall()
+    assert rows == [("failed", "작업 원장 쓰기 실패")]
+
+
+def test_tool_reentry_adopts_the_parent_turn_instead_of_opening_a_conversation_turn(http_chat, monkeypatch):
+    """내부 IBL 재진입은 부모의 활성 binding 을 채택할 뿐 새 턴을 열지 않는다 — busy 로 막히면 안 된다."""
+    import execution_turn
+    import principal
+    import resident_pcs
+    seen = []
+
+    def respond(**kwargs):
+        conversation = sessions.current()
+        binding = execution_turn.Binding(None, "system_ai", tc.get_current_task_id(), aliases={"system_ai"},
+                                         context={}, conversation=conversation, principal=principal.current())
+        with execution_turn._lock:
+            execution_turn._sessions[binding.task] = binding
+        try:
+            def reenter():  # MCP→HTTP 재진입은 다른 스레드다
+                with execution_turn.adopt_session("system_ai", binding.task) as adopted:
+                    seen.append((adopted is binding, resident_pcs.attribution()))
+            worker = threading.Thread(target=reenter)
+            worker.start()
+            worker.join(5)
+        finally:
+            with execution_turn._lock:
+                execution_turn._sessions.pop(binding.task, None)
+        return "재진입 확인", []
+
+    monkeypatch.setattr(api, "process_system_ai_message", respond)
+    api.chat_with_system_ai(api.ChatMessage(message="도구를 쓰는 턴", origin="training"))
+    adopted, origin = seen[0]
+    assert adopted and origin["basis"] == "execution_turn" and origin["conversation"]["owner"] == "rehearsal"
+    assert origin["conversation"]["turn_id"]

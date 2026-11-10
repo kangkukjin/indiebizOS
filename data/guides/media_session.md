@@ -28,6 +28,8 @@ $s = [self:script]{op:"run", id:"미디어세션", args:{op:"create", kind:"exte
 ```
 
 - `create` 는 `request_id` 로 멱등(같은 내용=같은 세션, 다른 내용=`request_id_conflict`).
+- 확장 재생(`purpose:"playback"`) 세션 행에는 `relation_generation`(그 장치의 등록 세대)·`device_job`(장치에 접수한 원 작업의 task_ref)·`playback`(장치가 보고한 재생 관측)이 함께 온다. 장치 보고 전에는 `playback.observed:false` 다 — 접수·연결은 재생의 증명이 아니다. `playback.scope` 가 `player_state` 면 재생기(mpv)가 읽은 위치·일시정지·음량이고, `player_process`(afplay 등)는 프로세스 생존만 아는 범위라 진행·가청음을 확인한 것이 아니다. 같은 관측이 `observation`(resource=`media_session`)에도 실리며 사람이 소리를 들었다는 확인은 어느 경우에도 아니다.
+- 정지·일시정지는 같은 `session_id` 로 한다(`end`·`update`). 다음 요청에서 이어 제어할 때도 앞 결과의 세션을 가리키고 프로세스를 다시 찾지 않는다. 허브 재기동 등으로 세션이 사라졌으면(`end_reason:"unknown"`) 새 재생을 만들지 말고 `device_job` 을 `[self:task]{op:"cancel",ref:…}` 로 취소해 장치의 재생을 끝낸다.
 - 재생 전달은 **대상이 재생을 보고한 뒤**(`content.playing:true`) 원본을 멈춘다. 준비 실패면 원본 유지. `update` 로 `{content:{paused, position_s, volume}}`.
 - 통화 창은 사람이 조작한다(수락·음소거·카메라·종료). AI 는 의도(걸기·끊기·상태)만 표현한다 — 영상·음성 바이트는 IBL 결과에 오지 않는다.
 

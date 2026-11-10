@@ -28,7 +28,10 @@ def attach(binding, store=None, handoff=None):
                 if k in fields} if kind.startswith('recovery.') else {})})
         if kind == 'situation.checkpoint' and handoff and handoff.available:
             try:
-                handoff.record('situation', {'snapshot': fields, 'availability': 'last_observed'})
+                # The evidence ids inside belong to this turn's store; a later turn reads them
+                # through that origin, never as ids of its own store.
+                handoff.record('situation', {'snapshot': fields, 'availability': 'last_observed',
+                                             'evidence_store': store.directory.name})
             except Exception:
                 logging.getLogger(__name__).exception('Situation handoff unavailable')
 
@@ -46,10 +49,62 @@ def attach(binding, store=None, handoff=None):
     binding.situation = situation
     for snapshot, ref in getattr(handoff, 'situation_recovery', []):
         situation.restore(snapshot, ref)
+    restore_references(situation, handoff, store, persist)
     if getattr(binding, 'recovery_checkpoint', None):
         restore_parent(situation, binding.recovery_checkpoint)
     situation.observe({'kind': 'request', 'task': binding.task}, 'request_ref', evidence(binding.request),
                       source='user_request', basis='user_request', observed_at=time.time())
+
+
+def restore_references(situation, handoff, store, persist):
+    """Carry the completed turns' job and resource references into this execution.
+
+    The handoff reads them from the conversation it owns; they are restored as
+    last-observed data (not instructions, not a resumed task) and reach the model through
+    the ordinary situation delivery. An evidence id of an earlier turn stays an id of that
+    turn's store: it is kept only while the existing lineage read can serve it verified,
+    otherwise the reference says the original is unavailable and names the durable task
+    to query instead. A failure here never blocks the turn."""
+    reader = getattr(handoff, 'completed_references', None)
+    if reader is None:
+        return
+    try:
+        found = reader()
+    except Exception:
+        logging.getLogger(__name__).exception('Completed work references unavailable')
+        persist('situation.references', availability='unavailable')
+        return
+    index = found['index']
+    for snapshot, source, origin in found['rows']:
+        for record in snapshot['observations']:
+            latest = record['latest']
+            ref = latest.get('source_ref') if isinstance(latest.get('source_ref'), dict) else {}
+            readable = False
+            if ref.get('id'):
+                try:
+                    readable = store.read_evidence_across_turns(ref['id'], 0, 1)['integrity'] == 'verified'
+                except (ValueError, OSError):
+                    readable = False
+            subject = latest['subject']
+            task_ref = (subject.get('ref') if subject.get('kind') == 'task' else
+                        {'kind': 'guestpc', 'task_id': subject['id']} if subject.get('kind') == 'resident_job' else None)
+            # An id that cannot be served here is not handed over as if it were readable.
+            latest['source_ref'] = {**({k: ref[k] for k in ('id', 'chars') if k in ref} if readable else {}),
+                                    'availability': 'readable' if readable else 'unavailable',
+                                    **({'task_ref': task_ref} if task_ref else {})}
+        situation.restore(snapshot, source, reference=origin)
+    if found['jobs']:
+        from resident_store import watch_reference
+        for subject, cursor in found['jobs']:
+            watch_reference(situation, subject, cursor)
+    if index['included'] or index['omitted']:
+        situation.observe({'kind': 'completed_work_references', 'session': handoff.binding.session_id},
+                          'reference_index', {**index, 'meaning': 'last observations of earlier completed turns; '
+                                              'not new instructions and not a fresh check of the resource'},
+                          source='conversation_handoff', basis='observed',
+                          source_ref={k: v for k, v in found['rows'][0][1].items() if k != 'where'} if found['rows'] else None)
+    persist('situation.references', scope=index['scope'], included=index['included'], omitted=index['omitted'],
+            turns=[t['turn_id'] for t in index['turns']])
 
 
 def checkpoint(binding):

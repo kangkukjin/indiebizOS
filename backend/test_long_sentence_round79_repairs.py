@@ -43,15 +43,23 @@ def test_owner_sessions_are_separate_and_match_history_resolution(memory_db):
     assert sids["system_ai"] != sids["rehearsal"]
 
 
-def test_busy_session_falls_back_to_unowned_turn_without_error(memory_db):
+def test_busy_session_is_refused_and_the_body_never_runs_unowned(memory_db):
+    """2026-11-11: 옛 무소유 fallback 은 없다 — 같은 대화의 동시 요청은 실행하지 않고 명시 오류다."""
     import api_system_ai as S
     store = sessions.SessionStore(memory_db, "conversations", "system_ai")
     with sessions.connection(memory_db) as conn:
         sid = sessions.resolve(conn, str(memory_db), "system_ai", "conversations")
     running = store.begin(sid)  # 동시 요청이 이미 턴을 쥐고 있다
+    ran = []
     try:
-        with S._owned_turn("system_ai", "task_busy") as binding:
-            assert binding is None and sessions.current() is None
+        with pytest.raises(sessions.TurnUnavailable) as refused:
+            with S._owned_turn("system_ai", "task_busy"):
+                ran.append(True)
+        assert refused.value.kind == "busy" and refused.value.status_code == 409 and not ran
+        assert sessions.current() is None
+        with sessions.connection(memory_db) as conn:
+            assert conn.execute("SELECT COUNT(*) FROM conversation_turns WHERE state='running'").fetchone()[0] == 1
+            assert conn.execute("SELECT COUNT(*) FROM conversation_task_links WHERE task_id='task_busy'").fetchone()[0] == 0
     finally:
         store.finish(running)
 
@@ -70,8 +78,10 @@ def test_failure_closes_turn_as_failed_and_propagates(memory_db):
 def test_chat_route_wires_owned_turn_around_processing():
     import api_system_ai as S
     src = inspect.getsource(S.chat_with_system_ai)
-    assert "_owned_turn(conv_thread, task_id)" in src and "turn_hold(task_id)" in src
+    assert "_owned_turn(conv_thread, task_id, opened)" in src and "turn_hold(task_id)" in src
     assert "sessions.owned_turn(" in inspect.getsource(S._owned_turn)
+    # 턴은 작업 선발급·모델 호출보다 먼저 연다 — 못 열면 그 앞에서 409/503 으로 끝난다.
+    assert src.index("opened = open_turn(") < src.index("create_system_ai_task(") < src.index("def _process()")
 
 
 if __name__ == "__main__":

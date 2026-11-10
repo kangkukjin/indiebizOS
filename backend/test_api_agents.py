@@ -162,3 +162,62 @@ def test_update_conflict_is_http_409(tmp_path, monkeypatch):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+# ── 대화 턴을 열지 못한 명령은 실행하지 않는다(무소유 실행 없음, 2026-11-11) ──
+
+@pytest.mark.parametrize("background", [False, True])
+def test_concurrent_command_is_409_and_leaves_nothing_in_the_running_conversation(tmp_path, monkeypatch, background):
+    from fastapi import HTTPException
+    api, path = prepare(tmp_path, monkeypatch)
+    calls = []
+
+    def cognitive(command, history, **kwargs):
+        calls.append(sessions.current())
+        yield {"type": "final", "content": "done"}
+
+    runner = SimpleNamespace(config={"id": "a", "name": "agent"}, cognitive_stream=cognitive, ai=object())
+    monkeypatch.setattr(api, "agent_runners", {"p": {"a": {"runner": runner}}})
+    monkeypatch.setattr(api.threading, "Thread", lambda target, **kw: SimpleNamespace(start=target))
+    db = ConversationDB(str(path))
+    owner = sessions.pair_owner(db.get_or_create_agent("user", "human"), db.get_or_create_agent("agent", "ai_agent"))
+    store = sessions.SessionStore(path, "messages", owner)
+    with sessions.connection(path) as conn:
+        sid = sessions.resolve(conn, str(path), owner, "messages")
+    running = store.begin(sid)
+    try:
+        with pytest.raises(HTTPException) as refused:
+            api.send_agent_command("p", "a", api.AgentCommand(command="동시에 하나 더", background=background))
+    finally:
+        store.finish(running)
+    assert refused.value.status_code == 409 and calls == []
+    with sessions.connection(path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0] == 0   # 사용자 메시지도 남기지 않는다
+        assert conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 0
+    # 앞선 턴이 끝난 뒤의 명령은 같은 대화의 새 턴으로 실행된다.
+    api.send_agent_command("p", "a", api.AgentCommand(command="이어서", background=background))
+    assert calls[0].session_id == running.session_id and calls[0].turn_id != running.turn_id
+    with sessions.connection(path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM conversation_turns WHERE state='running'").fetchone()[0] == 0
+
+
+def test_direct_caller_without_a_turn_gets_an_explicit_error_not_an_unowned_run(tmp_path, monkeypatch):
+    api, path = prepare(tmp_path, monkeypatch)
+    calls = []
+    runner = SimpleNamespace(config={"id": "a", "name": "agent"},
+                             cognitive_stream=lambda *a, **k: calls.append(1) or iter(()))
+    db = ConversationDB(str(path))
+    owner = sessions.pair_owner(db.get_or_create_agent("user", "human"), db.get_or_create_agent("agent", "ai_agent"))
+    store = sessions.SessionStore(path, "messages", owner)
+    with sessions.connection(path) as conn:
+        sid = sessions.resolve(conn, str(path), owner, "messages")
+    running = store.begin(sid)
+    try:
+        with pytest.raises(sessions.TurnUnavailable):
+            api._run_agent_command("p", "a", runner, "겹친 요청", task_id="refused")
+    finally:
+        store.finish(running)
+    assert calls == []
+    with sessions.connection(path) as conn:
+        assert conn.execute("SELECT status FROM tasks WHERE task_id='refused'").fetchone()[0] == "failed"
+        assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0] == 0

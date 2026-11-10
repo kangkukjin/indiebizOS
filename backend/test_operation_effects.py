@@ -2,6 +2,7 @@
 import json
 
 import boot_paths  # noqa: F401
+import pytest
 from operation_effects import bind, collect, make, summaries, valid
 
 
@@ -104,3 +105,60 @@ def test_existing_verification_reuses_producer_time_and_step_identity():
     second = verified_result(value, **args)['observation']
     assert identity(first) == identity(second)
     assert first['observed_at'] == value['observed_at']
+
+
+# ── 허브 검증 결과의 운반 근거: 원 접수의 기기·세대·job, 장치 보고 결속과 구별 ──
+
+def test_hub_verification_keeps_original_job_and_is_distinct_from_device_report_binding():
+    from operation_effects import carried, verified_result
+    accepted = {'limb': 'pc-1', 'generation': 'gen-job', 'request_id': 'req-1',
+                'task_ref': {'kind': 'guestpc', 'task_id': 'job-1'}}
+    ledger = {'task_ref': accepted['task_ref'], 'limb': 'pc-1', 'generation': 'gen-job',
+              'request_id': 'req-1', 'result_received_at': 1700000000.5, 'state': 'succeeded'}
+    transport, conflict = carried(accepted, ledger)
+    assert conflict is None
+    assert transport == {'device_id': 'pc-1', 'generation': 'gen-job', 'job_id': 'job-1', 'request_id': 'req-1',
+                         'received_at': 1700000000.5, 'basis': 'hub_task_ledger',
+                         'result_ref': {'task_ref': accepted['task_ref']}}
+    value = verified_result({'verified': True, 'volume': 3}, driver='test', implementation=__file__,
+                            requested={'action': 'volume', 'value': 3}, request_id='req-1', target='pc-1',
+                            scope='os_setting', transport=transport,
+                            resource={'kind': 'audio_output', 'id': 'out-7'})
+    obs = value['observation']
+    assert valid(obs) and obs['status'] == 'confirmed'
+    assert obs['target'] == {'device_id': 'pc-1', 'generation': 'gen-job'}  # 조회 시점 등록값이 아니라 원 job 의 세대
+    assert obs['resource'] == {'kind': 'audio_output', 'id': 'out-7'}
+    assert obs['source']['driver'] == 'test' and obs['source']['method'] == 'existing_driver_verification'
+    # 장치의 원 보고를 결속하는 bind 의 basis 와 섞이지 않는다.
+    reported = bind({'observation': observation()}, device='pc-1', generation='gen-job', job_id='job-1',
+                    request_id='req-1', received_at=1.0)['observation']
+    assert reported['transport_ref']['basis'] == 'authenticated_job_report' != obs['transport_ref']['basis']
+
+
+@pytest.mark.parametrize('field,other', [('limb', 'pc-2'), ('generation', 'gen-new'), ('request_id', 'req-2'),
+                                         ('task_ref', {'kind': 'guestpc', 'task_id': 'job-2'})])
+def test_mixed_job_device_or_generation_is_a_conflict_not_a_merge(field, other):
+    from operation_effects import carried
+    accepted = {'limb': 'pc-1', 'generation': 'gen-job', 'request_id': 'req-1',
+                'task_ref': {'kind': 'guestpc', 'task_id': 'job-1'}}
+    ledger = {'task_ref': accepted['task_ref'], 'limb': 'pc-1', 'generation': 'gen-job', 'request_id': 'req-1',
+              field: other}
+    transport, conflict = carried(accepted, ledger)
+    assert conflict and conflict.startswith('transport_') and transport['basis'] == 'accepted_receipt'
+
+
+def test_receipt_without_generation_is_limited_evidence_and_action_name_is_not_an_identity():
+    from operation_effects import carried, verified_result
+    old = {'limb': 'pc-1', 'request_id': 'req-1', 'task_ref': {'kind': 'guestpc', 'task_id': 'job-1'}}
+    transport, conflict = carried(old)
+    assert conflict is None and transport['generation'] is None and transport['basis'] == 'accepted_receipt'
+    assert transport['received_at'] is None
+    obs = verified_result({'verified': None}, driver='test', implementation=__file__,
+                          requested={'action': 'clipboard'}, request_id='req-1', target='pc-1',
+                          scope='driver_postcondition', transport=transport)['observation']
+    assert obs['status'] == 'unknown' and obs['target']['generation'] is None  # 미검증을 confirmed 로 올리지 않는다
+    assert obs['resource'] == {'kind': 'device_control', 'id': None, 'action': 'clipboard',
+                               'identity': 'not_reported_by_driver'}
+    # 원장이 아는 세대는 구형 영수증의 빈 칸만 채운다.
+    filled, _ = carried(old, {'task_ref': old['task_ref'], 'generation': 'gen-job', 'result_received_at': 2.0})
+    assert filled['generation'] == 'gen-job' and filled['basis'] == 'hub_task_ledger'

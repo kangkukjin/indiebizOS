@@ -774,8 +774,28 @@ def _open_phone_video(video_id, title=''):
 
 
 @_feedback.operation("stop", lambda: globals())
-def stop_youtube() -> dict:
-    """현재 재생 중인 유튜브 중지 (큐도 모두 초기화)"""
+def stop_youtube(playback_id: str = None) -> dict:
+    """현재 재생 중인 유튜브 중지 (큐도 모두 초기화).
+
+    playback_id 를 주면 **그 재생이 지금도 현재 재생일 때만** 멈춘다. 이미 끝났거나 다른 재생(다음 곡·라디오 등)으로
+    바뀌었으면 아무것도 바꾸지 않고 stale 을 값으로 돌려준다 — 앞선 재생을 가리킨 제어가 새 재생을 끄지 않게 한다.
+    생략하면 종전대로 '지금 재생 중인 것'을 끈다(명시적인 현재 재생 정지)."""
+    if playback_id is not None:
+        if not isinstance(playback_id, str) or not playback_id.strip():
+            return {'success': False, 'error': 'playback_id는 play/queue 결과의 재생 ID 문자열입니다.'}
+        with _player_lock:
+            current = getattr(_player_process, 'playback_id', None)
+            # 큐가 다음 곡으로 넘어갔거나 다른 재생기가 자리를 가져갔는지는 재생기 자신에게 묻는다.
+            replaced = bool(current and _player_process.poll() is not None)
+            if current is None and _player_process is not None:
+                return {'success': False, 'control': 'unsupported',
+                        'error': 'PLAYBACK_ID_UNSUPPORTED: 이 재생기는 재생 ID를 내지 않습니다. '
+                                 '현재 재생을 끄려면 playback_id 없이 stop 하세요.'}
+            if current != playback_id or replaced:
+                return {'success': True, 'stopped': False, 'stale': True,
+                        'expected_playback_id': playback_id, 'current_playback_id': None if replaced else current,
+                        'video_id': _player_video_id,
+                        'message': '가리킨 재생은 이미 끝났거나 다른 재생으로 바뀌었습니다. 현재 재생과 대기열은 바꾸지 않았습니다.'}
     with _player_lock:
         vid = _player_video_id
         remaining = len(_player_queue)
@@ -794,6 +814,7 @@ def stop_youtube() -> dict:
             'success': True,
             'message': msg,
             'video_id': vid,
+            **({'stopped': True, 'playback_id': playback_id} if playback_id is not None else {}),
         }
     else:
         return {'success': True, 'message': '재생 중인 항목이 없습니다.'}
@@ -1025,6 +1046,9 @@ def get_queue() -> dict:
                 'title': _player_title or '',
                 'duration': int(_player_duration or 0),
                 'elapsed': int(elapsed),
+                # 이 곡의 재생 ID(폰 재생기) — 뒤에 이 재생만 가리켜 멈출 때 stop 의 playback_id 로 쓴다.
+                **({'playback_id': _player_process.playback_id}
+                   if getattr(_player_process, 'playback_id', None) else {}),
             }
 
         queue_list = []

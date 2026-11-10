@@ -73,6 +73,11 @@ return $r.result.value
 - 소리: `[limbs:radio]{op:"play",station_id:"…"}`를 하달하면 폰 스피커에서 재생한다.
   상태는 `op:"status"`, 정지는 `op:"stop"`이다. 방송국 ID는 먼저 조회한다.
   음악의 읽기 전용 상태는 `[limbs:youtube]{op:"queue"}`다. 상태 조회 성공은 재생 실증이 아니다.
+  `play` 결과와 `queue`의 `now_playing`에는 그 곡의 `playback_id`가 있다. 앞서 튼 **그 재생**만 멈출 때는
+  `[limbs:youtube]{op:"stop",playback_id:"…"}`를 쓴다. 이미 끝났거나 다른 재생(다음 곡·라디오)으로 바뀌었으면
+  `stale:true`를 돌려주고 현재 재생과 대기열은 바꾸지 않는다. 사용자가 지금 나오는 소리를 끄라고 하면
+  playback_id 없이 `stop` 한다. 이 인자는 새 APK 번들부터 받으며 구형 폰은 UNKNOWN_ARGUMENT로 거절한다 —
+  그때 무조건 stop으로 바꿔 보내지 말고 사용자의 뜻이 현재 재생 정지인지 확인한다.
 - 영상·마이크·스피커 연결은 [미디어 세션 가이드](media_session.md)의 기존 스크립트를 사용한다.
   지원 신고와 권한·대기 모드, 실제 프레임/음성 출력은 각각 확인한다.
 - 등록 해제는 `[self:limb]{op:"remove",target:"삼성1"}`, 자격 폐기는 `op:"revoke"`다.

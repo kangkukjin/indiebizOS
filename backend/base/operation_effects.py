@@ -154,21 +154,62 @@ def summaries(value, ref):
     return shown, omitted
 
 
-def verified_result(value, *, driver, implementation, requested, request_id, target, scope):
-    """Called only after a producer's existing receipt and readback checks."""
+def carried(accepted, observed=None):
+    """Carriage evidence for an effect the hub verified from an accepted job.
+
+    accepted is the original submission receipt and observed the ledger view the hub
+    read back by that receipt's task_ref; both come from the receipt-owning APIs, not
+    from a caller-supplied result. The generation is the job's own, never the device
+    registration at lookup time. bind() says which job returned a device's report;
+    this says which job a hub-side verification read, and its basis keeps them apart.
+    Returns (transport_ref, conflict): mixed jobs, devices or generations conflict.
+    A receipt older than these fields yields the limited basis 'accepted_receipt'."""
+    accepted = accepted if isinstance(accepted, dict) else {}
+    task_ref = accepted.get('task_ref') if isinstance(accepted.get('task_ref'), dict) else {}
+    ref = {'device_id': accepted.get('limb'), 'generation': accepted.get('generation'),
+           'job_id': task_ref.get('task_id'), 'request_id': accepted.get('request_id'),
+           'received_at': None, 'basis': 'accepted_receipt', 'result_ref': {'task_ref': task_ref or None}}
+    if not isinstance(observed, dict):
+        return ref, None
+    seen = {'device_id': observed.get('limb'), 'generation': observed.get('generation'),
+            'job_id': (observed.get('task_ref') or {}).get('task_id'), 'request_id': observed.get('request_id')}
+    for key, value in seen.items():
+        if value is None:
+            continue
+        if ref[key] is None:
+            ref[key] = value
+        elif ref[key] != value:
+            return ref, 'transport_' + key + '_conflict'
+    ref.update(received_at=observed.get('result_received_at'), basis='hub_task_ledger')
+    return ref, None
+
+
+def verified_result(value, *, driver, implementation, requested, request_id, target, scope,
+                    transport=None, resource=None):
+    """Called only after a producer's existing receipt and readback checks.
+
+    transport (from carried) keeps the original job with the verified effect. resource is
+    the producer's own instance reference; without one the action is recorded as the kind
+    of control only, and no identity is derived from output text, PIDs or file names."""
     # Avoid screenshots, native dumps and stream URLs in the compact observation.
     actual = {k: v for k, v in value.items() if isinstance(v, (str, int, float, bool, type(None)))
               and k not in {'url', 'stream_url', 'output', 'text', 'protocol', 'source_sha256'}}
     if len(json.dumps(actual, ensure_ascii=False)) > 3000:
         actual = {'verified': value.get('verified'), 'details': 'see_original_result'}
     matched = True if value.get('verified') is True else None
+    if not (isinstance(resource, dict) and isinstance(resource.get('kind'), str) and resource['kind']):
+        resource = {'kind': 'device_control', 'id': None, 'action': requested.get('action'),
+                    'identity': 'not_reported_by_driver'}
+    generation = transport.get('generation') if isinstance(transport, dict) else None
     observation = make(driver=driver, implementation=implementation,
-        resource={'kind': 'device_control', 'id': requested.get('action')}, scope=scope,
+        resource=resource, scope=scope,
         requested=requested, actual=actual,
         checks=[{'name': 'existing_driver_postcondition', 'matched': matched}],
         request_id=request_id, step_id=request_id + ':verification',
-        target={'device_id': target, 'generation': None}, method='existing_driver_verification',
+        target={'device_id': target, 'generation': generation}, method='existing_driver_verification',
         reason=None if matched else 'driver_did_not_verify_postcondition')
     if isinstance(value.get('observed_at'), str) and value['observed_at']:
         observation['observed_at'] = value['observed_at']
+    if isinstance(transport, dict):
+        observation['transport_ref'] = dict(transport)
     return {**value, 'observation': observation}

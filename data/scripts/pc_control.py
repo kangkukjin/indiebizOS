@@ -25,6 +25,13 @@ CONTRACT = {
     "targets": {"local": "__local__", "remote_adapter": "resident-v1",
                 "remote_service_scopes": ["user_login", "unknown"],
                 "unsupported": ["portable", "machine"]},
+    # 이 OS 제어 드라이버가 대상에서 쓰는 OS 도구. 헬퍼의 기본 기능(등록·셸·파일·전송·조회·취소)의
+    # 의존성이 아니며, 없으면 이 드라이버의 동작만 PC_RUNTIME_MISSING 으로 실패한다.
+    "requirements": {
+        "darwin": ["python3 (Xcode Command Line Tools 또는 사용자가 설치한 Python 3)"],
+        "windows": ["Windows PowerShell 5.1 (OS 기본 제공)"],
+        "scope": "os_control_driver_only",
+    },
     "audio_capabilities": {
         "scope": "os_api_support",
         "meaning": "can_set_volume·can_mute는 OS가 제공하는 제어 API의 지원 여부다. "
@@ -494,7 +501,35 @@ def recovery_hint(code):
         "YOUTUBE_PLAYBACK_TIMEOUT": "마지막 관측을 확인하고 필요하면 화면을 한 번 읽으세요. 같은 변경을 반복하지 마세요.",
         "YOUTUBE_NO_TAB": "사용할 브라우저에 유튜브 홈을 한 번 연 뒤 기존 탭을 사용하세요. 다른 작업 탭을 덮어쓰지 마세요.",
         "YOUTUBE_FOCUS_FAILED": "브라우저 창 상태를 확인하세요. 주소창 초점을 확인하지 못해 입력하지 않았습니다. 임의 좌표·키 입력으로 재시도하지 마세요.",
+        "PC_RUNTIME_MISSING": "macOS PC제어는 대상의 python3(Xcode Command Line Tools)를 사용합니다. 헬퍼의 기본 셸·파일·전송은 그대로 동작합니다. 설치 여부는 사용자에게 확인하고 같은 변경을 재전송하지 마세요.",
+        "TRANSPORT_CONFLICT": "원 접수 영수증과 원장의 작업이 다릅니다. 같은 작업의 task_ref로 다시 조회하고 다른 작업의 결과를 섞지 마세요.",
     }.get(code, "원 task_ref와 실행 영수증을 확인하세요. 변경을 재전송하지 마세요.")
+
+
+def resource_of(request, state):
+    """드라이버가 이미 읽어 온 인스턴스 신원만 자원 참조로 쓴다.
+
+    행동 이름은 자원의 종류일 뿐 신원이 아니다. 신원을 읽지 않는 동작은 None 을 돌려
+    관측에 '신원 없음'이 남게 하고, 출력 글·PID·파일 이름에서 신원을 지어내지 않는다."""
+    action = request["action"]
+    if action in {"volume", "mute"} and (state.get("device") or {}).get("id"):
+        return {"kind": "audio_output", "id": state["device"]["id"]}
+    if action == "brightness" and (state.get("display") or {}).get("id") is not None:
+        return {"kind": "display", "id": state["display"]["id"]}
+    if action in {"launch", "quit"} and (state.get("app") or {}).get("bundle_id"):
+        return {"kind": "app", "id": state["app"]["bundle_id"]}
+    if action == "youtube_replace" and (state.get("playback") or {}).get("video_id"):
+        return {"kind": "browser_playback", "id": state["playback"]["video_id"]}
+    if action in {"chrome_switch", "chrome_close"} and request.get("tab"):
+        return {"kind": "browser_tab", "id": request["tab"], "window_id": request.get("window_id"),
+                "revision": request.get("expected")}
+    return None
+
+
+def runtime_missing(result):
+    """macOS 드라이버의 실행기(python3)가 대상에 없을 때의 셸 결과. 기본 원격 셸·파일 기능과는 무관하다."""
+    text = str(result.get("output") or "") + str(result.get("error") or "")
+    return result.get("exit") == 127 or "xcode-select" in text or "python3: command not found" in text
 
 
 def verify_task(args, context):
@@ -521,12 +556,27 @@ def verify_task(args, context):
             or task.get("target") != job.get("limb")
             or job.get("request_id") != (plan.get("request") or {}).get("request_id")):
         return fail("원래 요청·대상·작업 참조와 다릅니다")
+    # Only the hub-side verifier imports the shared stdlib contract.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend' / 'base'))
+    from operation_effects import carried, verified_result
+    # 접수 영수증의 task_ref 로 허브가 회수한 원장 관측. 없으면(구형 문맥) 접수 영수증만의 제한된 근거다.
+    ledger = accepted.get("task") if isinstance(accepted.get("task"), dict) else None
+    transport, conflict = carried(job, ledger)
+    if conflict:
+        return fail("TRANSPORT_CONFLICT: 접수 영수증과 원 작업의 기기·세대·요청이 다릅니다 (" + conflict + ")")
     observation = args.get("observation")
     if observation is None:
         return {**out, "status": "pending"}
     if (observation.get("task_ref") != job.get("task_ref")
-            or observation.get("limb", job.get("limb")) != job.get("limb")):
+            or observation.get("limb", job.get("limb")) != job.get("limb")
+            or observation.get("request_id", job.get("request_id")) != job.get("request_id")
+            or None not in (observation.get("generation"), transport["generation"])
+            and observation["generation"] != transport["generation"]):
         return fail("다른 작업의 관측 결과입니다")
+    if ledger is not None:
+        # 호출자가 넘긴 결과는 같은 작업인지 대조만 한다. 판정의 근거는 원장의 상태·결과다.
+        observation = {**observation, "state": ledger.get("state"), "result": ledger.get("result"),
+                       "execution_result": ledger.get("execution_result")}
     state = observation.get("state")
     if state in {"queued", "running", "waiting", "accepted"}:
         return {**out, "status": "pending"}
@@ -536,17 +586,18 @@ def verify_task(args, context):
     if state != "succeeded" or not isinstance(result, dict):
         return fail("원격 결과가 아직 확정되지 않았습니다", result=result)
     if result.get("exit") != 0 or result.get("timeout") or result.get("error"):
+        if plan.get("platform") == "darwin" and runtime_missing(result):
+            return fail("PC_RUNTIME_MISSING: 대상 Mac에 python3(Xcode Command Line Tools)가 없어 이 OS 제어 동작을 실행하지 못했습니다",
+                        "failed", result)
         return fail("원격 실행이 정상 종료하지 않았습니다", "failed", result)
     try:
         value = decode(result.get("output"), plan)
     except (ValueError, TypeError, KeyError) as exc:
         return fail(str(exc), "failed", getattr(exc, "state", result))
-    # Only the hub-side verifier imports the shared stdlib contract.
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend' / 'base'))
-    from operation_effects import verified_result
     value = verified_result(value, driver="pc_control", implementation=__file__,
         requested=plan['request'], request_id=plan['request']['request_id'], target=job['limb'],
-        scope=value.get('verification_scope') or 'driver_postcondition')
+        scope=value.get('verification_scope') or 'driver_postcondition',
+        transport=transport, resource=resource_of(plan['request'], value))
     return {**out, "status": "completed", "verified": value.get("verified") is True, "result": value}
 
 

@@ -33,6 +33,12 @@ def effect_current():
     return _effect.get() or current()
 
 
+def scoped():
+    """명시적으로 세운 범위(scope)의 binding 과 효과 출처만 — task 신원으로 회수하는 fallback 없이. (binding, effect)."""
+    binding = _current.get()
+    return (None if binding is _UNBOUND else binding), _effect.get()
+
+
 @contextmanager
 def effect_scope(binding):
     token = _effect.set(binding)
@@ -51,6 +57,25 @@ def current():
     task = get_current_task_id()
     with _task_lock:
         return _task_bindings.get(task)
+
+
+def running_binding(claim):
+    """허브가 띄운 스크립트가 HTTP 로 되돌려준 binding 주장을 이 프로세스의 실행 중 턴과 대조한다.
+
+    맞으면 그 Binding, 아니면 None. 주장만으로 출처를 만들지 않는다 — 같은 저장소에 그 세션·소유자의
+    턴이 **지금 이 프로세스에서 실행 중**이어야 한다. 권한 증명이 아니라 실행 출처의 확인이다."""
+    try:
+        b = Binding(str(claim["db_path"]), str(claim["session_id"]), str(claim["owner"]),
+                    str(claim["turn_id"]), int(claim.get("revision") or 0))
+        if not b.turn_id or not Path(b.db_path).is_file():
+            return None
+        with connection(b.db_path) as conn:
+            row = conn.execute("""SELECT s.owner FROM conversation_turns t JOIN conversation_sessions s ON s.id=t.session_id
+                WHERE t.id=? AND t.session_id=? AND t.state='running' AND t.process=?""",
+                               (b.turn_id, b.session_id, _PROCESS)).fetchone()
+    except (KeyError, TypeError, ValueError, sqlite3.Error):
+        return None
+    return b if row and row[0] == b.owner else None
 
 
 def bind_task(task):
@@ -76,31 +101,63 @@ def scope(binding):
         _current.reset(token)
 
 
-@contextmanager
-def owned_turn(path, table, owner, task_id, on_skip=None):
-    """같은 소유자의 현재(legacy) 세션에 턴을 열어 그 범위를 current() 에 둔다(2026-10-19, 긴문장 79회차 L79-1).
+class TurnUnavailable(Exception):
+    """대화 턴을 열지 못했다 — 그 요청은 실행하지 않는다(무소유 실행 없음).
 
-    HTTP 채팅 같이 세션 id 를 받지 않는 표면이 데스크톱 채팅 세션 경로(store.begin + scope)와 같은
-    소유권을 갖게 하여 영수증(conversation_events)·작업 연결을 보존한다. 이미 실행 중인 턴이 있으면(동시 요청) 거절하지
-    않고 None 을 내어 옛 무소유 경로를 보존한다(on_skip 에 사유). 턴은 성공/실패로 닫는다."""
-    store = binding = None
+    kind 'busy': 같은 세션의 실행 중 턴·판본 잠금·소유 불일치. 세션 채팅 입구와 같은 409 다.
+    kind 'storage': 대화 저장소 장애. 다시 시도할 수 있는 서버 오류(503)다."""
+
+    def __init__(self, kind, reason):
+        super().__init__(reason)
+        self.kind = kind
+
+    @property
+    def status_code(self):
+        return 409 if self.kind == "busy" else 503
+
+
+def open_turn(path, table, owner):
+    """같은 소유자의 현재(legacy) 세션에 턴을 연다. 반환 (store, binding).
+
+    세션 id 를 받지 않는 표면(HTTP 채팅)이 모델 호출·작업 접수 **전에** 부른다. 새 자동 세션이나 별도 큐는 만들지 않는다."""
     try:
         store = SessionStore(path, table, owner)
         with connection(store.path) as conn:
             sid = resolve(conn, store.path, owner, table)
-        binding = store.begin(sid)
-    except (ValueError, sqlite3.Error) as exc:
-        if on_skip:
-            try:
-                on_skip(exc)
-            except Exception:
-                pass
-        yield None
-        return
+        return store, store.begin(sid)
+    except ValueError as exc:
+        raise TurnUnavailable("busy", str(exc)) from exc
+    except sqlite3.Error as exc:
+        raise TurnUnavailable("storage", "대화 저장소를 사용할 수 없습니다(" + (str(exc) or type(exc).__name__) + "). 잠시 뒤 다시 시도하세요.") from exc
+
+
+def abandon_turn(opened, reason):
+    """연 턴의 실행을 시작하지 못했다. 아직 실행 중으로 남아 있을 때만 닫는다(끝난 턴의 결말은 바꾸지 않는다)."""
+    store, binding = opened
+    try:
+        with connection(store.path) as conn:
+            conn.execute("UPDATE conversation_turns SET state='failed',finished_at=?,error=?,progress='' "
+                         "WHERE id=? AND state='running'", (now(), str(reason)[:2000], binding.turn_id))
+    except sqlite3.Error as exc:
+        print(f"[conversation_sessions] 턴 정리 실패({store.owner}): {exc}")
+
+
+@contextmanager
+def owned_turn(path, table, owner, task_id, opened=None):
+    """같은 소유자의 현재(legacy) 세션의 턴 안에서 실행하고 그 범위를 current() 에 둔다(2026-10-19, 긴문장 79회차 L79-1).
+
+    HTTP 채팅 같이 세션 id 를 받지 않는 표면이 데스크톱 채팅 세션 경로(store.begin + scope)와 같은
+    소유권을 갖게 하여 영수증(conversation_events)·작업 연결을 보존한다. opened 는 입구가 미리 연 턴(open_turn)이다.
+    턴을 열지 못하면 TurnUnavailable 을 올리고 본문을 실행하지 않는다 — 옛 무소유 실행 경로는 없다(2026-11-11).
+    턴은 성공/실패로 닫는다."""
+    store, binding = opened or open_turn(path, table, owner)
     error = None
     try:
         with scope(binding):
-            bind_task(task_id)
+            try:
+                bind_task(task_id)
+            except sqlite3.Error as exc:
+                raise TurnUnavailable("storage", "대화 작업 연결을 저장하지 못했습니다(" + (str(exc) or type(exc).__name__) + ").") from exc
             yield binding
     except BaseException as exc:
         error = str(exc) or type(exc).__name__
@@ -176,6 +233,8 @@ def ensure_schema(conn, table):
         id INTEGER PRIMARY KEY, session_id TEXT NOT NULL REFERENCES conversation_sessions(id),
         turn_id TEXT NOT NULL, created_at TEXT NOT NULL, payload TEXT NOT NULL)""")
     conn.execute("CREATE INDEX IF NOT EXISTS conversation_events_session ON conversation_events(session_id,id)")
+    # 한 턴의 사건만 읽는 조회(완료 작업 참조)가 대화 전체를 훑지 않게 한다.
+    conn.execute("CREATE INDEX IF NOT EXISTS conversation_events_turn ON conversation_events(turn_id,id)")
     conn.execute("""CREATE TABLE IF NOT EXISTS conversation_task_links (
         task_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, turn_id TEXT NOT NULL)""")
     if 'revision' not in {r[1] for r in conn.execute('PRAGMA table_info(conversation_task_links)')}:

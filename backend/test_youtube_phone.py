@@ -222,3 +222,67 @@ def test_every_new_track_preserves_device_volume(phone):
     module.Playback('https://example.test/first.m4a')
     module.Playback('https://example.test/second.m4a')
     assert [call[2] for call in calls if call[0] == 'play'] == [-1, -1]
+
+
+# ── 앞선 재생을 가리키는 정지: 재생 ID 가 현재일 때만, 교체된 재생은 건드리지 않는다 ──
+
+def test_stop_with_expected_playback_id_stops_only_that_playback(yt, phone):
+    _, state, calls = phone
+    yt._start_ffplay('https://example.test/music.m4a')
+    yt._player_video_id = 'track-a'
+    assert yt.get_queue()['now_playing']['playback_id'] == 'music-1'
+    done = yt.stop_youtube(playback_id='music-1')
+    assert done['success'] and done['stopped'] is True and done['playback_id'] == 'music-1'
+    assert not state['playing'] and calls[-1] == ('stop', 'music-1')
+    assert done['observation']['status'] == 'confirmed'
+
+
+def test_stale_playback_id_leaves_the_replacement_and_its_queue_untouched(yt, phone):
+    _, state, calls = phone
+    yt._start_ffplay('https://example.test/music.m4a')
+    yt._player_video_id = 'track-a'
+    yt._player_queue.append({'video_id': 'next', 'title': 'n', 'channel': 'c', 'duration': 0})
+    state['playback_id'] = 'radio-2'  # 다른 재생이 재생기를 가져갔다
+    before = len(calls)
+    stale = yt.stop_youtube(playback_id='music-1')
+    assert stale['success'] and stale['stale'] is True and stale['stopped'] is False
+    assert stale['expected_playback_id'] == 'music-1'
+    assert state['playing'] and state['playback_id'] == 'radio-2'      # 교체된 재생은 그대로다
+    assert len(yt._player_queue) == 1 and len(calls) == before          # 큐도, 네이티브 정지 호출도 없다
+    observation = stale['observation']
+    assert observation['status'] == 'mismatch' and observation['reason'] == 'playback_replaced_or_ended'
+    assert observation['resource'] == {'kind': 'playback', 'id': 'music-1'}
+    # '현재 재생을 꺼'라는 명시 의도는 재생 ID 없이 그대로 동작한다.
+    yt._player_process = None
+    yt._player_video_id = None
+    assert yt.stop_youtube()['success']
+
+
+def test_next_track_in_the_same_queue_is_a_different_playback(yt, phone):
+    _, state, _ = phone
+    yt._start_ffplay('https://example.test/a.m4a')
+    first = yt._player_process.playback_id
+    state['playback_id'] = 'music-2'          # 큐가 다음 곡으로 넘어가 새 재생이 시작됐다
+    yt._start_ffplay('https://example.test/b.m4a')
+    yt._player_video_id = 'track-b'
+    stale = yt.stop_youtube(playback_id=first)
+    assert stale['stale'] and stale['current_playback_id'] == 'music-2' and state['playing']
+
+
+def test_stop_op_passes_the_optional_playback_id_and_rejects_a_blank_one(yt, phone, monkeypatch):
+    handler = load_sibling(HANDLER, 'handler')
+    seen = []
+    fake = SimpleNamespace(stop_youtube=lambda **kw: seen.append(kw) or {'success': True})
+    assert handler._op_stop({}, fake) == {'success': True} and seen == [{}]
+    handler._op_stop({'playback_id': 'music-1'}, fake)
+    assert seen[-1] == {'playback_id': 'music-1'}
+    assert yt.stop_youtube(playback_id='  ')['success'] is False
+
+
+def test_player_without_playback_ids_refuses_a_conditional_stop(yt, monkeypatch):
+    process = SimpleNamespace(poll=lambda: None, terminate=lambda: None, wait=lambda timeout=None: 0, pid=4242)
+    monkeypatch.setattr(yt, '_player_process', process)
+    monkeypatch.setattr(yt, '_player_video_id', 'track-a')
+    refused = yt.stop_youtube(playback_id='4242')  # PID 는 재생 신원이 아니다
+    assert refused['success'] is False and refused['error'].startswith('PLAYBACK_ID_UNSUPPORTED')
+    assert yt._player_process is process

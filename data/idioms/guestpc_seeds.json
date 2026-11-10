@@ -56,7 +56,7 @@
     "source": "manual_seed",
     "tags": "manual,guestpc,helper,외부PC",
     "topic": "외부 PC 헬퍼",
-    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업실행]{PC:\"사무실PC\",명령:\"python --version\",작업폴더:\"C:/Users/Public\",요청ID:\"환경조회-예시-1\",대기:0}",
+    "ibl_code": "#!ibl edition=2\n[fn:외부PC작업실행]{PC:\"사무실PC\",명령:\"echo HELPER_OK\",작업폴더:\"C:/Users/Public\",요청ID:\"연결확인-예시-1\",대기:0}",
     "category": "composition"
   },
   {

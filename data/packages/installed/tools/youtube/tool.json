@@ -89,6 +89,10 @@
             "type": "string",
             "description": "유튜브 video_id (url 대신)"
           },
+          "playback_id": {
+            "type": "string",
+            "description": "[stop] 앞선 재생의 ID(play 결과·queue now_playing의 playback_id). 주면 그 재생이 현재일 때만 정지, 아니면 stale. 폰 재생기만 발급한다."
+          },
           "handle": {
             "type": "string",
             "description": "[channel] 채널 핸들 (@name 또는 name)"

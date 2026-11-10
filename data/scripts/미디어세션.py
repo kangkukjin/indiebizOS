@@ -48,6 +48,20 @@ def _norm(body, status):
     return {"success": False, "error": {"code": f"http_{status}", "message": msg}}
 
 
+def _origin():
+    """허브가 이 스크립트를 띄울 때 준 대화 binding(환경변수)을 그대로 되돌린다 — 허브가 실행 중 턴과 대조한다.
+    인자(args)로는 받지 않는다: 출처는 호출자가 적는 값이 아니다."""
+    out = {}
+    for key, name in (("conversation", "INDIEBIZ_CONVERSATION_BINDING"), ("effect", "INDIEBIZ_EFFECT_BINDING")):
+        try:
+            value = json.loads(os.environ.get(name) or "null")
+        except ValueError:
+            value = None
+        if isinstance(value, dict):
+            out[key] = value
+    return out
+
+
 def _safe_result(value):
     """AI receives intent/status, never SDP, TURN credentials or session bearer tokens."""
     if isinstance(value, list):
@@ -91,6 +105,9 @@ def main():
             body["camera"] = args["camera"]
         if body.get("purpose") == "playback":
             body.setdefault("delivery", "content")
+        origin = _origin()
+        if origin:
+            body["origin"] = origin
         out = _http("POST", "/media/sessions", body)
         res = {"success": out.get("success", False), "items": [out["session"]] if out.get("success") else [], "error": out.get("error")}
     elif op in ("status", "accept", "reject", "end", "update"):

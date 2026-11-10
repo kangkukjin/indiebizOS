@@ -208,7 +208,10 @@ def _op_queue(tool_input, yt):
 
 
 def _op_stop(tool_input, yt):
-    return yt.stop_youtube()
+    # playback_id(선택): 그 재생이 지금도 현재일 때만 정지. 생략 = 현재 재생·대기열 정지.
+    if tool_input.get('playback_id') is None:
+        return yt.stop_youtube()
+    return yt.stop_youtube(playback_id=tool_input['playback_id'])
 
 
 def _direct_search(tool_input, yt):

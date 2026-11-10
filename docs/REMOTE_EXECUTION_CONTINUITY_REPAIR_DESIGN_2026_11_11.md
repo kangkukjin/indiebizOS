@@ -1,6 +1,6 @@
 # 원격 실행의 작업 문맥·자원 제어 연속성 수리설계
 
-상태: **구현 전 설계**. 작성일: 2026-11-11.
+상태: **허브·스크립트·패키지 구현(2026-11-11, §14)** — 기기 배포·실기 측정은 미수행. 작성일: 2026-11-11.
 근거: 에피소드 6007의 [심층연구 보고서](../data/outputs/remote_execute_research_20261110/report.md),
 [측정 원자료](../data/outputs/remote_execute_research_20261110/metrics.json),
 [격리 재현](../data/outputs/remote_execute_research_20261110/isolated_probe_results.json).
@@ -326,3 +326,42 @@ system 묶음을 실행한다. 층·IBL 정합·Android 번들 파생을 확인�
 운영 코드·설정·관용구·등록부·기기 설치는 변경하지 않았다.
 사용자 조건인 **IndieBizOS 미설치 PC의 헬퍼 단독 동작**을 필수 계약과 인수 항목으로 포함했다.
 R0~R5의 구현·회귀·실기 배포와 시간/토큰 개선은 아직 완료하지 않았다.
+
+## 14. 구현 기록 (2026-11-11)
+
+§13 까지는 구현 전에 쓴 설계 본문이다. 아래는 그 설계를 구현한 범위와 남은 일이다.
+구조 계약의 구현과 관측한 성능 개선은 별개이며, 시간·토큰 개선은 측정하지 않았다.
+
+| 단계 | 구현한 것 | 주요 자리 | 시험 |
+| --- | --- | --- | --- |
+| R0 | 헬퍼 단독 인수 환경(OS 기본 경로·빈 홈), 기본 예제의 Python 전제 제거, macOS PC제어의 `python3` 의존성 신고·`PC_RUNTIME_MISSING` | `helper/resident_standalone_test.go`, `backend/test_helper_standalone.py`, `test_resident_pcs.helper_only_env`, `data/scripts/pc_control.py`, 가이드·`guestpc_seeds.json` | Go 3건, system 2건(+기존 네이티브 왕복을 격리 환경으로) |
+| R1 | 접수와 같은 트랜잭션의 `attribution` 사건(`submitted`/`reused`), 접수증의 `generation`·`relation`, 대화 연결 저장 실패 시 접수 유지 | `resident_store.accept/attributions`, `resident_pcs.attribution/submit` | `test_resident_pcs` |
+| R2 | 허브 검증 효과의 운반 근거(`carried`, basis `hub_task_ledger`/`accepted_receipt`), 원장 관측을 검증기에 공급, 드라이버 자원 참조, 충돌=unknown | `operation_effects.carried/verified_result`, `ibl_v2_adapters._with_task`, `pc_control.py`·`android_control.py` | `test_operation_effects`, `test_pc_control` |
+| R3 | `owned_turn` 의 무소유 fallback 제거, 입구가 작업 접수 전에 턴 확보(409/503), 실패 경로의 실행 중 표시 정리 | `conversation_sessions.open_turn/TurnUnavailable/abandon_turn`, `conversation_entry`, `api_system_ai`, `api_agents` | `test_api_system_ai`, `test_api_agents`, `test_long_sentence_round79_repairs` |
+| R4 | 완료 턴의 접수·효과 관측을 다음 턴 상황에 참조로 복원(소유 접수증·원장 출처 확인, 체크포인트 제외, 상한·생략 수, 원문 가용성 표시, 원장 추적) | `conversation_handoff.completed_references`, `situation_evidence.restore_references`, `execution_situation.restore`, `resident_store.watch_reference` | `test_remote_execution_continuity` |
+| R5 | 재생 세션 투영에 원 장치 작업·실제 재생 관측·효과 보고, 스크립트 경유 출처 연결, 폰 `stop` 의 선택 `playback_id`(stale) | `media_sessions._playback_view`, `api_media.create`, `미디어세션.py`, youtube 패키지 | `test_media_sessions`, `test_youtube_phone` |
+
+설계와 다르게 정한 점과 그 이유:
+- 완료 참조의 상한은 관측 6건(그중 끝난 작업의 영수증 3건)·최근 완료 턴 4개다. 한 턴이 상주 작업을 10~20건 남기는
+  실제 기록에서 전부 싣면 baseline 예산의 절반을 넘기 때문이다. 넘친 것은 `reference_index.omitted` 와 원 사건 참조로 남는다.
+- 이전 턴 증거 ID 는 기존 lineage 읽기(같은 행위자·대화의 최근 8턴, 무결성 확인)가 닿을 때만 넘기고, 닿지 않으면
+  `availability:"unavailable"` 과 원 작업의 `task_ref` 만 남긴다. 다른 저장소를 여는 새 읽기 경로는 만들지 않았다.
+- 상주 작업 참조는 스냅숏 값만 싣지 않고 허브 원장의 그 행을 다시 따라간다(로컬 읽기, 장치 접촉·재접수 없음).
+- 연구 thread 는 이번 참조를 지원하지 않는다(`scope:"unsupported_surface"` 로 진단에 남김).
+- PC·Android 검증기의 관측은 접수 영수증의 task_ref 로 허브가 읽은 원장 투영을 근거로 한다. 관용구가 넘기는
+  `observation` 인자는 같은 작업인지 대조하는 용도로만 남겼다(관용구·등록부 계약 불변).
+
+실제 반영 범위:
+- **허브**: 위 코드는 정본에 저장됐고 봉인 세대 교체로 현역에 들어간다. 커밋은 하지 않았다.
+- **PC 헬퍼**: Go 실행 코드를 바꾸지 않았다(시험 파일만 추가). 재빌드·서명·교체가 필요 없다.
+- **폰**: youtube 패키지와 어휘(`stop` 의 `playback_id`)는 APK 번들에 들어가야 폰에 닿는다. APK 를 다시 빌드·설치하지
+  않았으므로 등록된 폰은 아직 옛 계약이며 새 인자를 `UNKNOWN_ARGUMENT` 로 거절한다. Android 엔진 번들 파생(`--check`)은 일치한다.
+- **해마 용례**: `guestpc_seeds.json` 의 예제는 고쳤으나 라이브 해마(`ibl_usage.db`)에 이미 등록된 같은 뜻의 옛 용례
+  (`python --version` 을 쓰는 외부PC작업실행 2행)는 바꾸지 않았다. 등록 반영은 별도 절차다.
+
+하지 않은 것:
+- §12 의 실제 효과 측정(같은 모델·기어·자원 초기 상태에서 첫 요청과 생략 후속 요청의 시간·도구 호출·토큰 비교).
+- 실기 확인: 실제 PC·폰에서의 재생→다음 요청 정지, 플레이어가 없는 PC, Windows·Linux 헬퍼 단독 인수.
+- 지속 셸(`remote_process_sessions`)·창/탭·파일 판본을 참조로 싣는 생산자 쪽 연결 — 이들이 `operation-effect/1`
+  이나 소유 접수증을 내면 같은 전달 경계를 그대로 쓰지만, 이번에 새로 연결한 생산자는 상주 작업·미디어 세션·PC/Android 제어다.
+

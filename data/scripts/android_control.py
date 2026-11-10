@@ -371,13 +371,27 @@ def verify_task(args, context):
                 or task.get("task_ref") != job.get("task_ref") or task.get("target") != job.get("limb")
                 or job.get("request_id") != plan["request_id"]):
             return fail("원래 요청·대상·작업 참조와 다릅니다.")
+        # Only the hub-side verifier imports the shared stdlib contract.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend' / 'base'))
+        from operation_effects import carried, verified_result
+        # 접수 영수증의 task_ref 로 허브가 회수한 원장 관측. 없으면(구형 문맥) 접수 영수증만의 제한된 근거다.
+        ledger = accepted.get("task") if isinstance(accepted.get("task"), dict) else None
+        transport, conflict = carried(job, ledger)
+        if conflict:
+            return fail("TRANSPORT_CONFLICT: 접수 영수증과 원 작업의 기기·세대·요청이 다릅니다 (" + conflict + ")")
         observation = args.get("observation")
         if observation is None:
             return {**out, "status": "pending"}
         if (observation.get("task_ref") != job["task_ref"]
                 or observation.get("limb", job["limb"]) != job["limb"]
-                or observation.get("request_id", plan["request_id"]) != plan["request_id"]):
+                or observation.get("request_id", plan["request_id"]) != plan["request_id"]
+                or None not in (observation.get("generation"), transport["generation"])
+                and observation["generation"] != transport["generation"]):
             return fail("다른 작업의 관측 결과입니다.")
+        if ledger is not None:
+            # 호출자가 넘긴 결과는 같은 작업인지 대조만 한다. 판정의 근거는 원장의 상태·결과다.
+            observation = {**observation, "state": ledger.get("state"), "result": ledger.get("result"),
+                           "execution_result": ledger.get("execution_result")}
         state = observation.get("state")
         if state in {"queued", "running", "waiting", "accepted"}:
             return {**out, "status": "pending"}
@@ -401,14 +415,11 @@ def verify_task(args, context):
         verified = readback(plan["request"], value)
         if not completion_allowed(plan["request"], value, verified):
             return fail("POSTCONDITION_FAILED: 결과 재검증에 실패했습니다.", value, "failed")
-        # Only the hub-side verifier imports the shared stdlib contract.
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'backend' / 'base'))
-        from operation_effects import verified_result
         value = {**value, "verified": verified, "condition": condition(action, plan["request"]),
                  "verification_scope": condition(action, plan["request"])["verification_scope"]}
         value = verified_result(value, driver="android_control", implementation=__file__,
             requested=plan['request'], request_id=plan['request_id'], target=job['limb'],
-            scope=value['verification_scope'])
+            scope=value['verification_scope'], transport=transport)
         return {**out, "status": "completed", "verified": verified, "result": value}
     except (KeyError, TypeError, AttributeError, ValueError):
         return fail("준비·접수·관측 근거의 형식이 불완전합니다.")

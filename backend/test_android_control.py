@@ -371,3 +371,34 @@ def test_version_mismatch_selects_legacy_before_submission(flow):
     assert result['status'] == 'completed'
     submissions = [p for key, p in state['calls'] if key == 'limbs:guestpc']
     assert len(submissions) == 1 and submissions[0]['op'] == 'python'
+
+
+def test_verified_effect_keeps_original_job_generation_and_rejects_mixed_evidence():
+    """허브 검증 결과에 원 접수의 기기·세대·작업을 결속한다. 다른 세대·작업의 근거는 섞지 않는다."""
+    source = 'def run(args): return dict(success=True, hardware_control=1, screen_on=True, locked=False, battery=80, capabilities={})'
+    plan = pc.run({'op': 'prepare', 'request': {'action': 'status'}, 'source': source})
+    scope = {}
+    exec(plan['code'], scope)
+    value = scope['result']
+    job = {'limb': 'phone', 'task_ref': {'kind': 'guestpc', 'task_id': 'one'}, 'request_id': plan['request_id'],
+           'generation': 'gen-job'}
+    task = {'target': 'phone', 'task_ref': job['task_ref'],
+            'verification': {k: plan[k] for k in ('request', 'request_id', 'platform', 'source_sha256')}}
+    result = {'success': True, 'value': value}
+    ledger = {'task_ref': job['task_ref'], 'state': 'succeeded', 'result': result, 'execution_result': None,
+              'limb': 'phone', 'request_id': plan['request_id'], 'generation': 'gen-job', 'result_received_at': 12.5}
+    context = {'receipts': {'plan_ref': {'available': True, 'producer': 'Android제어부품', 'value': plan},
+                            'job_ref': {'available': True, 'action': 'limbs:guestpc', 'value': job, 'task': ledger}}}
+    observation = {'task_ref': job['task_ref'], 'state': 'succeeded', 'result': result}
+    out = pc.verify_task({'task': task, 'observation': observation}, context)
+    effect = out['result']['observation']
+    assert out['verified'] and effect['target'] == {'device_id': 'phone', 'generation': 'gen-job'}
+    assert effect['transport_ref']['job_id'] == 'one' and effect['transport_ref']['basis'] == 'hub_task_ledger'
+    assert effect['transport_ref']['received_at'] == 12.5 and effect['source']['driver'] == 'android_control'
+    # 원장이 아직 실행 중이면 호출자가 넘긴 결과로 확정하지 않는다.
+    context['receipts']['job_ref']['task'] = {**ledger, 'state': 'running', 'result': None}
+    assert pc.verify_task({'task': task, 'observation': observation}, context)['status'] == 'pending'
+    for change in ({'generation': 'gen-new'}, {'limb': 'other-phone'}):
+        context['receipts']['job_ref']['task'] = {**ledger, **change}
+        mixed = pc.verify_task({'task': task, 'observation': observation}, context)
+        assert mixed['status'] == 'unknown' and not mixed['verified'] and mixed['failure']['code'] == 'TRANSPORT_CONFLICT'

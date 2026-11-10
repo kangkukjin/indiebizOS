@@ -193,6 +193,48 @@ def _update_helper(target, *, expected=None):
     return {**receipt, "state": "updating", "sha256": status["latest"]}
 
 
+def attribution():
+    """Provenance of the current, verified execution context for a remote submission.
+
+    Read only from the active execution turn (MCP re-entry adopts the same binding) and
+    the transport-established principal. Nothing here comes from command arguments or
+    from what a model wrote, and it is a reference of origin, never a permission.
+    Callers without a conversation (scheduler, cockpit) record principal/task only."""
+    import principal
+    from execution_turn import current as turn, resolve_session
+    from thread_context import execution_key
+    actor = principal.current()
+    binding = turn()
+    if binding is None:
+        try:
+            binding = resolve_session(*execution_key())
+        except ValueError:
+            binding = None
+    import conversation_sessions
+
+    def conversation(value):
+        if value is None or not getattr(value, "session_id", ""):
+            return None
+        return {"db_path": str(value.db_path), "session_id": value.session_id, "owner": value.owner,
+                "turn_id": value.turn_id, "revision": value.revision}
+    scope, origin = conversation_sessions.scoped()
+    if binding is None or binding.principal != actor:
+        out = {"principal": actor.key(), "basis": "direct_call"}
+        # A service entered with a conversation scope the hub verified (a registered script's
+        # call back into the hub) has no execution turn of its own but does have an origin.
+        own = conversation(scope)
+    else:
+        out = {"principal": actor.key(), "basis": "execution_turn", "agent": binding.agent, "task": binding.task}
+        own = conversation(binding.conversation)
+    if own:
+        out["conversation"] = own
+    # A delegated worker acts for the conversation that requested it; receipts are owned there.
+    effect = conversation(origin)
+    if effect and effect != own:
+        out["effect_conversation"] = effect
+    return out
+
+
 def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False,
            allow_media=False, allow_phone_update=False, update_expected=None):
     rec = resolve(target)
@@ -299,14 +341,27 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
             require_update_binding(rec, update_expected, latest)
             command = {**command, "update_binding": update_expected}
         request_id = request_id or uuid.uuid4().hex
-        jid = resident_store.submit(rec, command, request_id)
+        accepted = resident_store.accept(rec, command, request_id, attribution=attribution())
+    jid = accepted["id"]
     import task_receipts
-    return task_receipts.receipt("guestpc", jid, state=task_receipts.QUEUED,
-                                 limb=rec["device_id"], limb_name=rec["alias"],
-                                 helper_mode="resident", op=op, job_id=jid,
-                                 preflight_contract=rec['registration'].get('capabilities', {}).get('preflight_contract', 0),
-                                 request_id=request_id, cwd=command.get("cwd"),
-                                 shell=command.get("shell"))
+    # generation is the job's installation generation, not the registration at a later lookup.
+    # relation tells a recovered job ('reused': no new effect was accepted) from a new one.
+    fields = dict(limb=rec["device_id"], limb_name=rec["alias"], helper_mode="resident", op=op, job_id=jid,
+                  preflight_contract=rec['registration'].get('capabilities', {}).get('preflight_contract', 0),
+                  request_id=request_id, cwd=command.get("cwd"), shell=command.get("shell"),
+                  generation=accepted["generation"], relation=accepted["relation"])
+    try:
+        return task_receipts.receipt("guestpc", jid, state=task_receipts.QUEUED, **fields)
+    except Exception as exc:  # noqa: BLE001 — the conversation link is a second store
+        # The job and its origin are already committed. Failing this call would invite the
+        # same effect under a new request id; the same request_id recovers job and link.
+        import logging
+        logging.getLogger(__name__).exception("resident receipt link unavailable: %s", jid)
+        return {"success": True, "accepted": True, "task_ref": task_receipts.ref("guestpc", jid),
+                "state": task_receipts.QUEUED, "accepted_at": task_receipts.stamp(), **fields,
+                "conversation_link": "unrecorded",
+                "note": "접수는 확정됐으나 대화 연결 기록에 실패했습니다(" + type(exc).__name__ + "). "
+                        "새 요청 ID로 다시 접수하지 말고 같은 request_id 또는 task_ref로 조회하세요."}
 
 
 def media_sessions_end(device_id, reason):

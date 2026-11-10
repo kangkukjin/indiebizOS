@@ -47,7 +47,31 @@ def _event(db, device, job, event_id, kind, payload, occurred=None):
                                           json.dumps(payload, ensure_ascii=False)))
 
 
-def submit(rec, command, request_id, owner=None):
+def _attribute(db, device, jid, relation, source):
+    """One event per job+origin+relation. A later reference never rewrites the first origin."""
+    payload = {"relation": relation, **source}
+    key = hashlib.sha256(json.dumps([jid, payload], sort_keys=True, ensure_ascii=False,
+                                    default=str).encode()).hexdigest()
+    _event(db, device, jid, "attribution:" + key, "attribution", payload)
+
+
+def submit(rec, command, request_id, owner=None, attribution=None):
+    return accept(rec, command, request_id, owner, attribution)["id"]
+
+
+def accept(rec, command, request_id, owner=None, attribution=None):
+    """Create or recover the job and record its origin in the same ledger transaction.
+
+    attribution is execution provenance captured by the calling service (principal,
+    central task, conversation turn). It is not authority and never reaches the device:
+    the delivered envelope and the idempotency fingerprint are unchanged. A job found
+    by its request id is returned as-is; the caller is recorded as 'reused', leaving
+    the 'submitted' origin intact. Jobs created before this record stay unattributed."""
+    if attribution is not None:
+        if not isinstance(attribution, dict) or len(json.dumps(attribution, ensure_ascii=False,
+                                                              default=str).encode()) > 4096:
+            raise ValueError("invalid_attribution")
+        attribution = json.loads(json.dumps(attribution, ensure_ascii=False, default=str))
     reg = rec["registration"]
     if reg["state"] != "active" or reg.get("paused") or rec.get("revoked"):
         raise ValueError("registration_unavailable")
@@ -62,30 +86,60 @@ def submit(rec, command, request_id, owner=None):
         if old:
             if old["fingerprint"] != fingerprint:
                 raise ValueError("request_id_conflict")
-            _watch_situation(rec, old['id'])
-            return old["id"]
-        jid = uuid.uuid4().hex
-        now = time.time()
-        envelope = {**command, "resident": True, "generation": reg["generation"]}
-        # Secret stdin and environment are not copied into the history or events.
-        summary = {k: v for k, v in command.items() if k not in {"stdin", "env"}}
-        db.execute("INSERT INTO jobs(id,device,code,agent,created,updated,state) VALUES(?,?,?,?,?,?,'queued')",
-                   (jid, rec["device_id"], json.dumps(envelope, ensure_ascii=False), owner, now, now))
-        db.execute("INSERT INTO resident_tasks VALUES(?,?,?,?,?,?,?,'queued',NULL,0)",
-                   (jid, rec["device_id"], reg["generation"], request_id, fingerprint,
-                    json.dumps(summary, ensure_ascii=False), now))
-        _event(db, rec["device_id"], jid, "submitted:" + jid, "queued", summary)
-    phone_jobs._wake()
+            jid = old["id"]
+            if attribution is not None:
+                _attribute(db, rec["device_id"], jid, "reused", attribution)
+        else:
+            jid = uuid.uuid4().hex
+            now = time.time()
+            envelope = {**command, "resident": True, "generation": reg["generation"]}
+            # Secret stdin and environment are not copied into the history or events.
+            summary = {k: v for k, v in command.items() if k not in {"stdin", "env"}}
+            db.execute("INSERT INTO jobs(id,device,code,agent,created,updated,state) VALUES(?,?,?,?,?,?,'queued')",
+                       (jid, rec["device_id"], json.dumps(envelope, ensure_ascii=False), owner, now, now))
+            db.execute("INSERT INTO resident_tasks VALUES(?,?,?,?,?,?,?,'queued',NULL,0)",
+                       (jid, rec["device_id"], reg["generation"], request_id, fingerprint,
+                        json.dumps(summary, ensure_ascii=False), now))
+            _event(db, rec["device_id"], jid, "submitted:" + jid, "queued", summary)
+            if attribution is not None:
+                _attribute(db, rec["device_id"], jid, "submitted", attribution)
+    if not old:
+        phone_jobs._wake()
     _watch_situation(rec, jid)
-    return jid
+    return {"id": jid, "generation": reg["generation"], "relation": "reused" if old else "submitted"}
+
+
+def attributions(job):
+    """Recorded origins of one job, oldest first. Empty for jobs older than this record."""
+    with phone_jobs._db() as db:
+        schema(db)
+        rows = db.execute("SELECT payload,occurred FROM resident_events WHERE job=? AND kind='attribution' "
+                          "ORDER BY cursor", (job,)).fetchall()
+    return [{**json.loads(row["payload"]), "recorded_at": row["occurred"]} for row in rows]
 
 
 def _watch_situation(rec, jid):
     from execution_situation import current
     situation = current()
-    if not situation:
-        return
-    device, generation = rec['device_id'], rec['registration']['generation']
+    if situation:
+        _watch(situation, rec['device_id'], rec['registration']['generation'], jid)
+
+
+def watch_reference(situation, subject, cursor=None):
+    """Keep following a job this conversation already references (carried from a completed turn).
+
+    A local read of the job's own ledger row by device, generation and id: no device is
+    contacted and nothing is submitted. Only the receipt is refreshed; a result that was
+    already delivered in its own turn is not attached again as new tool output. cursor is
+    the ledger position the carried observation was made at: nothing is re-read into the
+    turn while the job has not moved past it."""
+    if subject.get('kind') == 'resident_job' and all(
+            isinstance(subject.get(k), str) and subject[k] for k in ('device', 'generation', 'id')):
+        _watch(situation, subject['device'], subject['generation'], subject['id'],
+               publish_result=False, known_cursor=cursor)
+
+
+def _watch(situation, device, generation, jid, *, publish_result=True, known_cursor=None):
     subject = {'kind': 'resident_job', 'device': device, 'generation': generation, 'id': jid}
     seen = [None]
 
@@ -93,10 +147,13 @@ def _watch_situation(rec, jid):
         with phone_jobs._db() as db:
             row = db.execute('SELECT state,result,summary,request_id FROM resident_tasks WHERE id=? AND device=? AND generation=?',
                              (jid, device, generation)).fetchone()
-            event = db.execute('SELECT cursor,occurred,received FROM resident_events WHERE job=? AND device=? '
-                               'ORDER BY cursor DESC LIMIT 1', (jid, device)).fetchone()
+            event = db.execute("SELECT cursor,occurred,received FROM resident_events WHERE job=? AND device=? "
+                               "AND kind!='attribution' ORDER BY cursor DESC LIMIT 1", (jid, device)).fetchone()
         signature = (tuple(row) if row else None, tuple(event) if event else None)
-        if signature == seen[0]:
+        unmoved = seen[0] is None and known_cursor is not None and event and event['cursor'] == known_cursor
+        # A carried reference whose row this ledger cannot read keeps its last observation as it is.
+        if signature == seen[0] or unmoved or (row is None and not publish_result):
+            seen[0] = signature
             return
         seen[0] = signature
         result = json.loads(row['result']) if row and row['result'] else None
@@ -110,7 +167,7 @@ def _watch_situation(rec, jid):
                           'cwd': summary.get('cwd')}, source='resident_store:' + jid,
                           source_cursor=event['cursor'] if event else None,
                           observed_at=event['occurred'] if event else None, source_ref=ref)
-        if result is not None and situation.on_result:
+        if result is not None and situation.on_result and publish_result:
             if summary.get('op') == 'shell' and isinstance(result, dict):
                 from preflight_feedback import publish
                 report = result.get('diagnostics') or result.get('preflight') or {
@@ -295,10 +352,14 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False, include_i
                 task["state"] = current[0]
             times = {}
             for kind in ("started", "result"):
-                event = db.execute("SELECT occurred FROM resident_events WHERE job=? AND kind=? "
+                event = db.execute("SELECT occurred,received FROM resident_events WHERE job=? AND kind=? "
                                    "ORDER BY cursor LIMIT 1", (task["id"], kind)).fetchone()
                 times[kind] = event[0] if event else None
-            latest = db.execute("SELECT MAX(cursor), MAX(occurred), MAX(CASE WHEN kind='log' THEN occurred END) "
+                if kind == "result":
+                    # When the hub ingested the authenticated report; occurred is the device's clock.
+                    task["result_received_at"] = event[1] if event else None
+            latest = db.execute("SELECT MAX(cursor), MAX(CASE WHEN kind!='attribution' THEN occurred END), "
+                                "MAX(CASE WHEN kind='log' THEN occurred END) "
                                 "FROM resident_events WHERE job=?", (task["id"],)).fetchone()
             task["last_event_cursor"], task["last_event_at"], task["last_progress_at"] = tuple(latest)
             task["started_at"], task["ended_at"] = times["started"], times["result"]

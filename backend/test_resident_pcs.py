@@ -273,15 +273,16 @@ def test_bundle_uses_direct_tunnel_and_contains_executable(registry, monkeypatch
         assert archive.read('SHA256SUMS').decode().startswith(
             hashlib.sha256(archive.read('indiebiz-helper-mac-amd64')).hexdigest())
 
-@pytest.mark.system
-def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
-    """Uses an isolated hub and built binary; never installs an OS autostart service."""
+def helper_only_env(home):
+    """헬퍼만 설치된 PC 의 환경: OS 기본 경로와 빈 홈. 개발 PC 의 PATH·HOME(가상환경·저장소·Homebrew)을
+    물려주지 않아, 그 런타임이 우연히 있어서 통과하는 일이 없게 한다(R0)."""
+    home.mkdir(parents=True, exist_ok=True)
+    return {'PATH': '/usr/bin:/bin', 'HOME': str(home), 'TMPDIR': str(home), 'LANG': 'en_US.UTF-8'}
+
+
+def native_helper_binary():
+    """이 OS·아키텍처의 빌드된 헬퍼 실행파일. 없거나 POSIX 가 아니면 그 시험을 건너뛴다."""
     import platform
-    import time
-    import threading
-    import socket
-    import subprocess
-    import uvicorn
     root = Path(__file__).resolve().parents[1]
     if platform.system() == 'Darwin':
         binary_name = 'indiebiz-helper-mac-arm64' if platform.machine() == 'arm64' else 'indiebiz-helper-mac-amd64'
@@ -291,6 +292,18 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
         pytest.skip('POSIX native binary integration fixture')
     if not (root / 'helper/dist' / binary_name).is_file():
         pytest.skip('build helper binaries first')
+    return root / 'helper/dist' / binary_name
+
+
+@pytest.mark.system
+def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
+    """Uses an isolated hub and built binary; never installs an OS autostart service."""
+    import time
+    import threading
+    import socket
+    import subprocess
+    import uvicorn
+    binary = native_helper_binary()
     work = tmp_path
     monkeypatch.setenv('INDIEBIZ_RUNTIME_STATE_DIR', str(work))
     monkeypatch.setattr(limb_keys, '_store_path', lambda: work / 'keys.json')
@@ -313,7 +326,6 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
     # Optional setup failure remains diagnosable after the minimal helper connects.
     warning = 'test fixture: login autostart unavailable; current connection remains usable'
     (worker / 'installation_warnings.json').write_text(json.dumps([warning]))
-    binary = root / 'helper/dist' / binary_name
     proc = None
 
     def wait(jid, timeout=15):
@@ -329,7 +341,8 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
             if server.started:
                 break
             time.sleep(0.02)
-        proc = subprocess.Popen([str(binary)], cwd=worker, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        proc = subprocess.Popen([str(binary)], cwd=worker, env=helper_only_env(work / 'home'),
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         start = time.monotonic()
         job = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'printf resident-ok', 'timeout': 10}, 'smoke-once')
         got = wait(job['job_id'])
@@ -400,7 +413,8 @@ def test_resident_binary_roundtrip_crash(tmp_path, monkeypatch):
         proc.wait(timeout=5)
         time.sleep(3.2)
         assert not marker.exists(), 'child survived worker crash'
-        proc = subprocess.Popen([str(binary)], cwd=worker, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        proc = subprocess.Popen([str(binary)], cwd=worker, env=helper_only_env(work / 'home'),
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         assert wait(crash['job_id'])['state'] == 'unknown'
         print(json.dumps({'shell_first_result_ms': latency, 'binary_roundtrip_bytes': len(payload), 'dedup': True, 'crash_children_reaped': True, 'restart_state': 'unknown', 'work_dir': str(work)}, ensure_ascii=False))
     finally:
@@ -681,3 +695,114 @@ def test_protected_enrollment_cannot_reissue_key_from_public_installation_id(reg
         assert rejected.status_code == 403
         assert rec['key'] not in rejected.text
     assert limb_keys.resident_auth(rec['key'], body['installation_id'])['device_id'] == rec['device_id']
+
+
+# ── 실행 출처(attribution): 접수와 같은 트랜잭션, 전송 봉투 불변, 재사용은 최초 출처를 바꾸지 않는다 ──
+
+@pytest.fixture
+def turn(tmp_path):
+    """검증된 실행 문맥. 대화 binding 은 서비스가 읽는 값이며 명령 인자에서 오지 않는다."""
+    import conversation_sessions as sessions
+    import execution_turn
+    import principal
+
+    def enter(session='s-1', turn_id='t-1', task='task-1', agent='agent-1'):
+        conversation = sessions.Binding(str(tmp_path / 'conv.db'), session, 'system_ai', turn_id, 3)
+        binding = execution_turn.Binding(None, agent, task, aliases={agent}, context={},
+                                         conversation=conversation, principal=principal.current())
+        return execution_turn._current.set(binding)
+    tokens = []
+    yield lambda **kw: tokens.append(enter(**kw))
+    for token in reversed(tokens):
+        execution_turn._current.reset(token)
+
+
+def test_submission_records_origin_atomically_and_never_sends_it_to_the_device(registry, turn):
+    rec = registry()
+    turn()
+    command = {'op': 'shell', 'cmd': 'echo hi', 'stdin': 'secret-input', 'env': {'TOKEN': 'secret-env'}}
+    receipt = pcs.submit(rec['device_id'], command, 'origin-1')
+    assert receipt['generation'] == rec['registration']['generation'] and receipt['relation'] == 'submitted'
+    rows = resident_store.attributions(receipt['job_id'])
+    assert [r['relation'] for r in rows] == ['submitted']
+    assert rows[0]['basis'] == 'execution_turn' and rows[0]['task'] == 'task-1' and rows[0]['agent'] == 'agent-1'
+    assert rows[0]['conversation'] == {'db_path': rows[0]['conversation']['db_path'], 'session_id': 's-1',
+                                       'owner': 'system_ai', 'turn_id': 't-1', 'revision': 3}
+    assert 'secret' not in json.dumps(rows)
+    # 장치에 전달하는 봉투와 멱등 지문은 출처와 무관하다.
+    delivered = json.loads(pcs.sync(rec['key'], 'a' * 32)['jobs'][0]['code'])
+    assert 'attribution' not in delivered and 'conversation' not in json.dumps(delivered)
+    kinds = [e['kind'] for e in resident_store.history(job=receipt['job_id'])['events']]
+    assert kinds[:2] == ['queued', 'attribution']
+
+
+def test_reuse_by_another_conversation_keeps_first_origin_and_is_idempotent(registry, turn):
+    rec = registry()
+    command = {'op': 'shell', 'cmd': 'echo once'}
+    turn(session='s-1', turn_id='t-1', task='task-1')
+    first = pcs.submit(rec['device_id'], command, 'shared')
+    turn(session='s-2', turn_id='t-9', task='task-9')
+    for _ in range(3):
+        again = pcs.submit(rec['device_id'], command, 'shared')
+        assert again['job_id'] == first['job_id'] and again['relation'] == 'reused'
+    rows = resident_store.attributions(first['job_id'])
+    assert [(r['relation'], r['conversation']['session_id']) for r in rows] == [('submitted', 's-1'), ('reused', 's-2')]
+    # 같은 요청 ID 의 다른 명령은 충돌이며 출처 사건을 남기지 않는다.
+    with pytest.raises(ValueError, match='request_id_conflict'):
+        pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo other'}, 'shared')
+    assert len(resident_store.attributions(first['job_id'])) == 2
+    assert len(pcs.sync(rec['key'], 'a' * 32)['jobs']) == 1  # 새 효과 0
+
+
+def test_call_without_conversation_records_principal_only_and_old_jobs_stay_unattributed(registry, turn):
+    rec = registry()
+    legacy = resident_store.submit(rec, {'op': 'info', 'mode': 'background'}, 'before-record')  # 출처 기록 이전의 작업
+    assert resident_store.attributions(legacy) == []
+    direct = pcs.submit(rec['device_id'], {'op': 'info'}, 'cockpit')
+    assert resident_store.attributions(direct['job_id'])[0] == {
+        'relation': 'submitted', 'principal': 'owner', 'basis': 'direct_call',
+        'recorded_at': resident_store.attributions(direct['job_id'])[0]['recorded_at']}
+    turn()
+    assert pcs.submit(rec['device_id'], {'op': 'info'}, 'before-record')['job_id'] == legacy
+    # 과거 작업의 최초 출처를 소급 추정하지 않는다. 이번 참조만 남는다.
+    assert [r['relation'] for r in resident_store.attributions(legacy)] == ['reused']
+
+
+def test_origin_of_another_principal_is_not_adopted(registry, turn, monkeypatch):
+    import principal
+    rec = registry()
+    turn()
+    monkeypatch.setattr(principal, 'current', lambda: principal.Principal(kind='member', id='m-1'))
+    assert pcs.attribution() == {'principal': 'member:m-1', 'basis': 'direct_call'}
+
+
+def test_conversation_link_failure_after_commit_returns_the_job_and_same_request_restores_it(registry, turn, monkeypatch):
+    import task_receipts
+    rec = registry()
+    turn()
+    linked = []
+
+    def broken(value):
+        raise RuntimeError('conversation store unavailable')
+    monkeypatch.setattr(task_receipts, '_RECEIPT_SINK', broken)
+    lost = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo effect'}, 'link-1')
+    assert lost['accepted'] and lost['conversation_link'] == 'unrecorded' and lost['task_ref']['task_id'] == lost['job_id']
+    assert resident_store.attributions(lost['job_id'])[0]['relation'] == 'submitted'
+    monkeypatch.setattr(task_receipts, '_RECEIPT_SINK', linked.append)
+    again = pcs.submit(rec['device_id'], {'op': 'shell', 'cmd': 'echo effect'}, 'link-1')
+    assert again['job_id'] == lost['job_id'] and 'conversation_link' not in again
+    assert linked[0]['task_ref'] == lost['task_ref']
+    assert len(pcs.sync(rec['key'], 'a' * 32)['jobs']) == 1  # 저장 오류가 같은 효과를 다시 접수하지 않는다
+
+
+def test_provenance_bookkeeping_does_not_move_job_observation_time(registry, turn):
+    rec = registry()
+    turn(session='s-1')
+    first = pcs.submit(rec['device_id'], {'op': 'info'}, 'observed')
+    pcs.sync(rec['key'], 'a' * 32, [event(first['job_id'], payload={'exit': 0, 'output': 'ok'})])
+    before = resident_store.history(job=first['job_id'])['tasks'][0]
+    turn(session='s-2')
+    pcs.submit(rec['device_id'], {'op': 'info'}, 'observed')
+    after = resident_store.history(job=first['job_id'])['tasks'][0]
+    assert after['last_event_at'] == before['last_event_at'] and after['state'] == 'succeeded'
+    assert after['result_received_at'] is not None and after['generation'] == rec['registration']['generation']

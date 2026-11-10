@@ -127,9 +127,15 @@ def projection_row(group, compact):
     latest = record['latest']
     fields = ('id', 'subject', 'facet', 'value', 'source', 'source_ref', 'subject_revision',
               'observed_at', 'basis', 'relation')
+    if record.get('reference'):
+        # A reference is addressed by its subject and origin; the bounded input omits the rest.
+        fields = tuple(k for k in fields if k not in {'id', 'source'})
     row = {'latest': {k: copy.deepcopy(latest[k]) for k in fields
                       if latest.get(k) is not None and (k != 'relation' or latest[k])},
            'availability': record['availability']}
+    if record.get('reference'):
+        # The turn that produced it and how that turn ended, apart from the resource state above.
+        row['origin'] = {k: record['reference'][k] for k in ('turn_id', 'turn_state') if k in record['reference']}
     limit = 120 if compact else 320
     row['latest']['value'] = short_value(row['latest']['value'], limit)
     # A cleared diagnostic must not carry the old errors back into the next input.
@@ -285,8 +291,12 @@ class Situation:
             except Exception as exc:
                 self.persist('situation.source_unavailable', error=type(exc).__name__)
 
-    def restore(self, snapshot, source_ref, *, resume_recovery=False):
-        """Only the owning conversation handoff may supply this data. No automatic task resumption."""
+    def restore(self, snapshot, source_ref, *, resume_recovery=False, reference=None):
+        """Only the owning conversation handoff may supply this data. No automatic task resumption.
+
+        reference marks an observation carried from a completed turn: its origin (turn and
+        that turn's state) stays with the record, apart from the resource state it reports.
+        Requests, recovery actions and delivery cursors of the old turn are never restored."""
         if resume_recovery and snapshot.get('recovery'):
             self.recovery.restore(snapshot['recovery'])
         with self.lock:
@@ -300,6 +310,8 @@ class Situation:
                 self.revision += 1
                 self.records[key] = {**copy.deepcopy(record), 'revision': self.revision,
                                      'restored_from': source_ref}
+                if reference:
+                    self.records[key]['reference'] = {**reference, **(record.get('reference') or {})}
                 self.seen.update([record['first']['id'], row['id']])
             self.snapshot_ref = None
             self.persist('situation.restored', source_ref=source_ref, projection_revision=self.revision)
@@ -481,7 +493,9 @@ class Situation:
                     continue
                 row = copy.deepcopy(record)
                 latest = row['latest']
-                row['availability'] = 'last_observed_before_resume' if row.get('restored_from') else 'last_observed'
+                # A carried reference is the last observation of a completed turn, not an interrupted one.
+                row['availability'] = ('last_observed_before_resume'
+                                       if row.get('restored_from') and not row.get('reference') else 'last_observed')
                 if 'conflict' in row:
                     row['availability'] = 'conflict'
                 # Keep the tested version even after an input changes; never revoke unrelated checks.

@@ -625,3 +625,93 @@ def test_each_sweep_is_tracked_and_new_sweeps_defer_during_drain(monkeypatch):
     reg.gate("DRAINING")
     assert ms.sweep(now=2) is None
     assert len(seen) == observations and reg.snapshot()["owners"] == []
+
+
+# ── 지속 자원 제어의 연속성: 세션·관계 세대·원 장치 job·실제 재생 관측을 한 결과로 ──
+
+def _play(hub, tmp_path, **body):
+    media = tmp_path / 'song.mp3'
+    media.write_bytes(b'0123456789' * 10)
+    return hub.post('/media/sessions', json={'kind': 'extension', 'purpose': 'playback', 'delivery': 'content',
+                                             'content': {'path': str(media)}, **body}).json()['session']
+
+
+def _report(hub, rec, session, content):
+    task = resident_store.history(device=rec['device_id'])['tasks'][0]
+    auth = {'key': rec['key'], 'installation_id': rec['registration']['installation_id'], 'grant': task['summary']['grant']}
+    with hub.websocket_connect(f"/limb/resident/media/{session['session_id']}") as dev:
+        dev.send_json(auth)
+        assert dev.receive_json()['type'] == 'ready'
+        dev.send_json(sig.new_frame(session['session_id'], 'device', 'hub', 'state', {'state': 'active', 'content': content}, seq=1))
+        for _ in range(40):
+            current = ms.status(session['session_id'])
+            if current['playback'].get('observed'):
+                return current
+            time.sleep(0.05)
+    raise AssertionError('device report was not applied')
+
+
+def test_playback_result_carries_session_generation_device_job_and_real_observation(hub, tmp_path):
+    import operation_effects
+    rec = _device('spk')
+    created = _play(hub, tmp_path, target='spk')
+    job = resident_store.history(device=rec['device_id'])['tasks'][0]
+    assert created['device_job'] == {'kind': 'guestpc', 'task_id': job['id']}
+    assert created['relation_generation'] == rec['registration']['generation']
+    # 접수·연결은 재생의 증명이 아니다: 장치 보고 전에는 관측도 효과 보고도 없다.
+    assert created['playback'] == {'observed': False, 'reason': 'no_device_report_yet'} and 'observation' not in created
+    # 허브의 요청값(update)은 장치 관측으로 섞이지 않는다.
+    hub.post(f"/media/sessions/{created['session_id']}/update",
+             json={'expected_revision': created['revision'], 'changes': {'content': {'volume': 30}}})
+    assert ms.status(created['session_id'])['playback']['observed'] is False
+
+    playing = _report(hub, rec, created, {'playing': True, 'position_s': 4.0, 'control': True})
+    assert playing['playback']['scope'] == 'player_state' and playing['playback']['audible_sound_verified'] is False
+    effect = playing['observation']
+    assert operation_effects.valid(effect) and effect['status'] == 'confirmed'
+    assert effect['resource'] == {'kind': 'media_session', 'id': created['session_id']}
+    assert effect['target'] == {'device_id': rec['device_id'], 'generation': rec['registration']['generation']}
+    assert effect['transport_ref']['job_id'] == job['id'] and effect['transport_ref']['basis'] == 'media_session_device_report'
+    assert operation_effects.collect({'success': True, 'items': [playing]})[0][0][1] == effect  # 래퍼 결과에서 그대로 수집된다
+
+    # 정지는 같은 세션을 대상으로 하고 그 세션의 장치 job 을 취소한다 — 프로세스 목록 재탐색이 없다.
+    ended = hub.post(f"/media/sessions/{created['session_id']}/end").json()['session']
+    assert ended['state'] == 'ended' and ended['device_job']['task_id'] == job['id']
+    assert resident_store.history(job=job['id'])['tasks'][0]['cancel_requested'] == 1
+    assert len(resident_store.history(device=rec['device_id'])['tasks']) == 1  # 새 재생을 만들지 않는다
+
+
+def test_process_only_playback_is_not_reported_as_verified_progress(hub, tmp_path):
+    rec = _device('mac-afplay')
+    created = _play(hub, tmp_path, target='mac-afplay')
+    coarse = _report(hub, rec, created, {'playing': True, 'position_s': 2.0, 'control': False})
+    assert coarse['playback']['scope'] == 'player_process'
+    assert coarse['observation']['status'] == 'unknown' and coarse['observation']['reason'] == 'process_only_observation'
+
+
+def test_script_origin_links_the_device_job_to_the_running_conversation_turn(hub, tmp_path):
+    import sqlite3
+    from dataclasses import asdict
+    import conversation_sessions as sessions
+    rec = _device('spk')
+    path = tmp_path / 'conversations.db'
+    with sqlite3.connect(path) as conn:
+        conn.execute('CREATE TABLE conversations(id INTEGER PRIMARY KEY, role TEXT, content TEXT, source TEXT)')
+    store = sessions.SessionStore(path, 'conversations', 'system_ai')
+    binding = store.begin(store.create()['id'])
+    try:
+        created = _play(hub, tmp_path, target='spk', origin={'conversation': asdict(binding)})
+    finally:
+        store.finish(binding)
+    job = created['device_job']['task_id']
+    origin = resident_store.attributions(job)[0]
+    assert origin['relation'] == 'submitted' and origin['basis'] == 'direct_call'
+    assert origin['conversation']['session_id'] == binding.session_id and origin['conversation']['turn_id'] == binding.turn_id
+    with sessions.connection(path) as conn:
+        assert conn.execute('SELECT task_id FROM conversation_owned_receipts WHERE session_id=?',
+                            (binding.session_id,)).fetchone()[0] == job
+    # 실행 중이 아닌 턴·없는 저장소의 주장은 출처가 되지 않는다(요청은 그대로 처리된다).
+    for claim in (asdict(binding), {**asdict(binding), 'db_path': str(tmp_path / 'absent.db')}, {'session_id': 'x'}):
+        other = _device('spk-' + uuid.uuid4().hex[:6])
+        session = _play(hub, tmp_path, target=other['alias'], origin={'conversation': claim})
+        assert 'conversation' not in resident_store.attributions(session['device_job']['task_id'])[0]

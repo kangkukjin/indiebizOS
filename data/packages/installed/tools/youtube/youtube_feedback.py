@@ -13,6 +13,10 @@ def operation(op, state):
             with s['_player_lock']:
                 previous = s['_player_process']
                 result = fn(*args, **kwargs)
+                # 시작한 재생의 ID 를 결과에 싣는다 — 뒤의 제어가 '그 재생'을 가리킬 수 있게(stop 의 playback_id).
+                started = getattr(s['_player_process'], 'playback_id', None)
+                if started and op != 'stop' and result.get('success') is not False and not result.get('queued'):
+                    result.setdefault('playback_id', started)
                 try:
                     result['observation'] = observe(op, result, s, previous)
                 except Exception as exc:
@@ -38,6 +42,15 @@ def observe(op, result, s, previous):
     scope, resource_id = 'player_state', getattr(process or previous, 'playback_id', None)
     reason = None
     status = None
+    if result.get('stale'):
+        # 가리킨 재생이 현재가 아니다: 아무것도 바꾸지 않았고, 그 사실을 관측으로 남긴다.
+        native = phone.stream_status() if phone.is_phone() else {}
+        return make(driver='youtube_player', implementation=s['__file__'],
+                    resource={'kind': 'playback', 'id': result.get('expected_playback_id')}, scope='player_state',
+                    requested={'operation': op, 'playback_id': result.get('expected_playback_id'), 'playing': False},
+                    actual={**actual, **native},
+                    checks=[{'name': 'expected_playback_is_current', 'matched': False}],
+                    reason='playback_replaced_or_ended')
     if result.get('queued'):
         position = result.get('queue_position')
         entry = s['_player_queue'][position - 1] if type(position) is int and 0 < position <= queue_length else {}

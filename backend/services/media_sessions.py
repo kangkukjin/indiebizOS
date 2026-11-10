@@ -106,6 +106,8 @@ class Session:
     remote_attached: bool = False
     local_attached: bool = False
     content_state: Dict = field(default_factory=dict)
+    playback_report: Dict = field(default_factory=dict)   # 장치가 보고한 재생 상태만(허브의 요청값과 섞지 않는다)
+    playback_reported_at: Optional[float] = None
     quality_profile: Dict = field(default_factory=dict)
     disconnected_at: Optional[float] = None
     out_seq: int = 0                 # 허브 → 장치 keepalive 순번
@@ -132,7 +134,40 @@ class Session:
             "peer": self.peer, "device": self.device, "device_alias": self.device_alias,
             "created_at": self.created_at, "ended_at": self.ended_at, "end_reason": self.end_reason,
             "remote_attached": self.remote_attached, "local_attached": self.local_attached,
+            # 후속 제어가 같은 세션·같은 장치 작업을 가리키도록: 원 장치 job 과 실제 재생 관측을 세션과 함께 낸다.
+            "device_job": {"kind": "guestpc", "task_id": self.device_job} if self.device_job else None,
+            **_playback_view(self),
         }
+
+
+def _playback_view(s: "Session") -> Dict:
+    """재생 세션의 장치 관측. 접수·연결은 재생의 증명이 아니므로 장치 보고가 오기 전에는 관측 없음으로 둔다.
+
+    mpv IPC 가 읽은 상태는 player_state, 프로세스 생존만 아는 경로(afplay, control:false)는 player_process 범위다.
+    어느 쪽도 사람이 실제 소리를 들었다는 확인은 아니다."""
+    if s.kind != "extension" or s.purpose != "playback":
+        return {}
+    report = dict(s.playback_report)
+    if not report:
+        return {"playback": {"observed": False, "reason": "no_device_report_yet"}}
+    coarse = report.get("control") is False
+    playing = report.get("playing") is True and not coarse
+    view = {"observed": True, "reported_at": s.playback_reported_at, **report,
+            "scope": "player_process" if coarse else "player_state", "audible_sound_verified": False}
+    from datetime import datetime, timezone
+    from operation_effects import make
+    observation = make(
+        driver="media_session", implementation=__file__, resource={"kind": "media_session", "id": s.id},
+        scope=view["scope"], requested={"purpose": "playback"}, actual=report,
+        checks=[{"name": "device_reported_playing", "matched": True if playing else None}],
+        request_id="media-" + s.id, step_id="media-" + s.id + ":playback",
+        target={"device_id": s.device, "generation": s.relation_generation}, method="device_state_report",
+        reason=None if playing else ("process_only_observation" if coarse else "player_not_reported_playing"))
+    observation["observed_at"] = datetime.fromtimestamp(s.playback_reported_at or s.created_at, timezone.utc).isoformat()
+    observation["transport_ref"] = {"device_id": s.device, "generation": s.relation_generation, "job_id": s.device_job,
+                                    "request_id": "media-" + s.id, "received_at": s.playback_reported_at,
+                                    "basis": "media_session_device_report"}
+    return {"playback": view, "observation": observation}
 
 
 # ── 구독·통지 ────────────────────────────────────────────────────────────────────
@@ -871,10 +906,15 @@ def _apply_state_report(s: Session, payload: Dict) -> None:
     if payload.get("path") in ("direct", "relay"):
         s.path = payload["path"]
     _CONTENT_KEYS = ("playing", "position_s", "paused", "volume", "duration_s", "ended", "control", "has_video", "video_visible", "needs_display", "width", "height", "requested_volume", "player_gain")
+    reported = {}
     if isinstance(payload.get("content"), dict):
-        s.content_state.update({k: v for k, v in payload["content"].items() if k in _CONTENT_KEYS})
+        reported.update({k: v for k, v in payload["content"].items() if k in _CONTENT_KEYS})
     if s.content and any(k in payload for k in _CONTENT_KEYS):   # 장치가 최상위에 실어 보내는 모양도 받는다
-        s.content_state.update({k: payload[k] for k in _CONTENT_KEYS if k in payload})
+        reported.update({k: payload[k] for k in _CONTENT_KEYS if k in payload})
+    if reported:
+        s.content_state.update(reported)
+        s.playback_report.update(reported)
+        s.playback_reported_at = _now()
     if state == "needs_local_action":
         action = payload.get("needs_local_action")
         action = action if isinstance(action, dict) else payload

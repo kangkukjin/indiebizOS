@@ -39,6 +39,11 @@ def _run(fn, *args, **kwargs):
         return _fail("invalid_request", str(exc))
 
 
+def _no_scope():
+    from contextlib import nullcontext
+    return nullcontext()
+
+
 # ── REST ────────────────────────────────────────────────────────────────────────
 @router.get("/media/capabilities")
 def capabilities(target: Optional[str] = None):
@@ -71,10 +76,17 @@ def history(limit: int = 50, peer: Optional[str] = None, device: Optional[str] =
 
 @router.post("/media/sessions")
 def create(req: dict):
-    return _run(ms.create, str(req.get("kind") or ""), str(req.get("purpose") or ""), str(req.get("target") or ""),
-                tracks=req.get("tracks"), delivery=str(req.get("delivery") or "realtime"),
-                request_id=req.get("request_id"), content=req.get("content"), want_mic=bool(req.get("want_mic")),
-                camera=req.get("camera"))
+    # 등록 스크립트(미디어세션)가 허브로부터 받은 대화 binding 을 되돌려 주면, 지금 실행 중인 그 턴과 대조한 뒤
+    # 그 범위에서 세션을 연다 — 장치 job 의 출처와 접수증 소유가 그 대화에 남는다. 확인되지 않은 주장은 무시한다.
+    import conversation_sessions as sessions
+    origin = req.get("origin") if isinstance(req.get("origin"), dict) else {}
+    binding = sessions.running_binding(origin.get("conversation") or {})
+    effect = sessions.running_binding(origin.get("effect") or {}) if binding else None
+    with sessions.scope(binding) if binding else _no_scope(), sessions.effect_scope(effect or binding):
+        return _run(ms.create, str(req.get("kind") or ""), str(req.get("purpose") or ""), str(req.get("target") or ""),
+                    tracks=req.get("tracks"), delivery=str(req.get("delivery") or "realtime"),
+                    request_id=req.get("request_id"), content=req.get("content"), want_mic=bool(req.get("want_mic")),
+                    camera=req.get("camera"))
 
 
 @router.get("/media/sessions/{sid}")

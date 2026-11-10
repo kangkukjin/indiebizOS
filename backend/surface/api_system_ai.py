@@ -202,15 +202,12 @@ def _images_from_response_paths(text: str, since_ts: float, cap: int = 2) -> lis
 
 # ============ 채팅 API ============
 
-def _owned_turn(owner: str, task_id: str):
-    """HTTP 채팅 턴의 대화 소유권(2026-10-19, 긴문장 79회차 L79-1) — 같은 소유자('system_ai'/'rehearsal')의
-    세션에 턴을 열어 영수증과 작업 연결의 소유권을 보존한다. 동시 요청으로 못 열면 옛 무소유 경로로 가고 사건만 남긴다."""
+def _owned_turn(owner: str, task_id: str, opened=None):
+    """HTTP 채팅 턴의 대화 소유권(79회차 L79-1) — 같은 소유자('system_ai'/'rehearsal') 세션의 턴 안에서만 실행해
+    영수증과 작업 연결의 소유권을 보존한다. 턴을 못 열면 무소유로 실행하지 않는다(conversation_entry.open_turn 이 409/503)."""
     import conversation_sessions as sessions
     from system_ai_memory import MEMORY_DB_PATH
-    from episode_logger import record_trajectory_event
-    return sessions.owned_turn(MEMORY_DB_PATH, "conversations", owner, task_id,
-        on_skip=lambda exc: record_trajectory_event("conversation.binding_skipped",
-            {"surface": "system-ai/chat", "owner": owner, "reason": str(exc) or type(exc).__name__}))
+    return sessions.owned_turn(MEMORY_DB_PATH, "conversations", owner, task_id, opened)
 
 
 @router.post("/system-ai/chat", response_model=ChatResponse)
@@ -270,16 +267,19 @@ def chat_with_system_ai(chat: ChatMessage):
 
     # 작업 선발급(2026-10-05): 실행을 시작하기 **전에** task 를 영속 저장한다 — background 접수증이
     # 돌려주는 task_id 로 즉시 조회할 수 있고, 워커가 시작 전에 죽어도 실패 상태를 남길 자리가 있다.
+    # 대화 턴을 먼저 연다(2026-11-11): 못 열면 작업도 만들지 않고 409/503 으로 끝낸다 — 모델 호출·원격 제출 전이다.
+    from conversation_entry import open_turn, abandon
+    import system_ai_memory as _memory
+    _memory.init_memory_db()
+    opened = open_turn(_memory.MEMORY_DB_PATH, "conversations", conv_thread, "system-ai/chat")
     task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
     ws_client_id = chat.context.get("ws_client_id") if chat.context else None
-    create_system_ai_task(
-        task_id=task_id,
-        requester="user@gui",
-        requester_channel="gui",
-        original_request=chat.message,
-        delegated_to="system_ai",
-        ws_client_id=ws_client_id
-    )
+    try:
+        create_system_ai_task(task_id=task_id, requester="user@gui", requester_channel="gui",
+                              original_request=chat.message, delegated_to="system_ai", ws_client_id=ws_client_id)
+    except Exception as exc:
+        abandon(opened, exc)
+        raise
     from delegation_tasks import SYSTEM_OWNER, status_url as _status_url
     _url = _status_url(SYSTEM_OWNER, task_id)
 
@@ -288,7 +288,7 @@ def chat_with_system_ai(chat: ChatMessage):
         # 대화 소유권(79회차 L79-1): 이 HTTP 턴도 같은 소유자 세션의 턴으로 열어 영수증·작업 연결이 닿게 한다.
         from steer_inbox import turn_hold
         with turn_hold(task_id):
-            with _owned_turn(conv_thread, task_id):
+            with _owned_turn(conv_thread, task_id, opened):
                 response, completed = _process_turn()
             # 완료 조회 직후의 후속 턴이 저장된 답변과 해제된 소유권을 함께 보게 한다.
             # 위임 중인 작업의 완료는 기존 자식 결과 처리자가 소유한다.
@@ -419,6 +419,7 @@ def chat_with_system_ai(chat: ChatMessage):
         from logging_utils import mask_secrets
         from system_ai_memory import fail_task
         error = mask_secrets(str(exc)) or exc.__class__.__name__
+        abandon(opened, error)  # 턴 범위에 들어가기 전의 실패도 실행 중 표시를 남기지 않는다
         try:
             fail_task(task_id, error)
         except Exception as store_err:
@@ -437,7 +438,11 @@ def chat_with_system_ai(chat: ChatMessage):
                 import traceback
                 traceback.print_exc()
                 _record_failure(exc)
-        threading.Thread(target=_worker, daemon=True).start()
+        try:
+            threading.Thread(target=_worker, daemon=True).start()
+        except Exception as exc:
+            _record_failure(exc)
+            raise HTTPException(status_code=503, detail="작업 실행기를 시작하지 못했습니다.") from exc
         return ChatResponse(
             response="작업을 시작했습니다.",
             timestamp=datetime.now().isoformat(),

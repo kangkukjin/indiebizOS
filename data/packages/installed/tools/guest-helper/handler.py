@@ -1111,6 +1111,7 @@ def task_status(ref: dict) -> dict:
         view = T.view(ref, state, result=task["result"], progress=events,
                       limb=task["device"], helper_mode="resident",
                       op=task["summary"].get("op"), request_id=task["request_id"],
+                      generation=task["generation"], result_received_at=task.get("result_received_at"),
                       cwd=task["summary"].get("cwd"), shell=task["summary"].get("shell"),
                       progress_scope="recent_5_events" if cursor is None else "after_cursor",
                       history_cursor=history["cursor"],

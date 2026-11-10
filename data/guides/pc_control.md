@@ -63,6 +63,8 @@ return [fn:PC제어]{대상:"선택한 device_id",요청:{action:"volume",device
 ## 본체 OS 조작면 (macOS·Windows)
 
 원격 PC 에도 같은 OS 실행 파일(`pc_control_mac.py`·`pc_control_windows.ps1`)이 가므로 본체·원격의 동작은 같다.
+macOS 대상은 그 PC 의 `python3`(Xcode Command Line Tools 또는 사용자가 설치한 Python 3)으로, Windows 는 OS 기본 PowerShell 5.1 로 실행한다(`op:"contract"` 의 `requirements`). 이 도구가 없는 Mac 은 PC제어만 `PC_RUNTIME_MISSING` 으로 실패하고 헬퍼의 기본 셸·파일·전송은 그대로 동작한다.
+확인 결과의 `observation` 에는 원 접수의 기기·설치 세대·작업(`transport_ref`)과 드라이버가 읽은 자원(`resource`: 출력 장치·화면·앱·탭 등)이 함께 남는다. 자원 신원을 읽지 않는 동작은 `identity:"not_reported_by_driver"` 다.
 두 OS 가 같은 동작 이름·결과 모양을 쓰고, OS 가 공개 API 로 못 읽는 값은 `null` 과 `*_basis` 로 남긴다(거짓 0 없음).
 이 절의 OS 동작은 사용자 세션에서 배경 API로 실행한다. Windows 관리자 권한이 필요한 조회 항목은 아래 표에 따로 표시한다. 뒤의 유튜브 UI 제어는 별도 계약이며 앞 창을 사용할 수 있다. 읽기는 OS 조회값
 그대로이고, 쓰기는 변경 뒤 같은 조회로 재확인한 것만 `verified:true` 다. 동작별 `shared_state`(사용자와 공유하는

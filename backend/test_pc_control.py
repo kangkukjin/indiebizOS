@@ -632,3 +632,90 @@ def test_verify_failure_carries_code_slot_like_android():
     assert pc.failure_code("앱을 찾지 못했거나 실행이 거절됐습니다") is None
     failure = pc.verify_task({"task": {}}, {})["failure"]
     assert set(failure) == {"stage", "code", "message", "next"} and failure["code"] is None
+
+
+# ── 최종 효과에 원 작업 결속: 접수 영수증·원장 관측이 근거, 호출자가 넘긴 결과는 대조만 ──
+
+def _bound_fixture(generation="gen-job"):
+    plan, state = youtube_fixture()
+    job = {"task_ref": {"kind": "guestpc", "task_id": "job"}, "limb": "pc",
+           "request_id": plan["request"]["request_id"], "generation": generation, "job_id": "job"}
+    task = {"target": "pc", "task_ref": job["task_ref"], "verification": {
+        key: plan[key] for key in ("request", "platform", "source_sha256")}}
+    output = {"exit": 0, "output": pc.MARKER + json.dumps(state)}
+    ledger = {"task_ref": job["task_ref"], "state": "succeeded", "result": output, "execution_result": None,
+              "limb": "pc", "request_id": job["request_id"], "generation": generation,
+              "result_received_at": 1794000000.25}
+    context = {"receipts": {"plan_ref": {"available": True, "producer": "PC제어부품", "value": plan},
+                            "job_ref": {"available": True, "action": "limbs:guestpc", "value": job, "task": ledger}}}
+    return plan, job, task, output, ledger, context
+
+
+def test_verified_effect_carries_original_job_generation_and_reported_resource():
+    plan, job, task, output, ledger, context = _bound_fixture()
+    result = pc.verify_task({"task": task, "observation": {"task_ref": job["task_ref"], "state": "succeeded",
+                                                             "result": output}}, context)
+    assert result["status"] == "completed" and result["verified"] is True
+    observation = result["result"]["observation"]
+    assert observation["target"] == {"device_id": "pc", "generation": "gen-job"}
+    assert observation["transport_ref"] == {
+        "device_id": "pc", "generation": "gen-job", "job_id": "job", "request_id": job["request_id"],
+        "received_at": 1794000000.25, "basis": "hub_task_ledger", "result_ref": {"task_ref": job["task_ref"]}}
+    assert observation["resource"] == {"kind": "browser_playback", "id": "abcdefghijk"}
+    assert observation["source"]["driver"] == "pc_control"
+
+
+def test_ledger_result_decides_and_a_callers_result_cannot_confirm_a_running_job():
+    plan, job, task, output, ledger, context = _bound_fixture()
+    context["receipts"]["job_ref"]["task"] = {**ledger, "state": "running", "result": None}
+    forged = {"task_ref": job["task_ref"], "state": "succeeded", "result": output}
+    assert pc.verify_task({"task": task, "observation": forged}, context)["status"] == "pending"
+
+
+@pytest.mark.parametrize("change,message", [
+    ({"generation": "gen-reinstalled"}, "TRANSPORT_CONFLICT"),
+    ({"limb": "other-pc"}, "TRANSPORT_CONFLICT"),
+    ({"task_ref": {"kind": "guestpc", "task_id": "other-job"}}, "TRANSPORT_CONFLICT"),
+])
+def test_mixed_job_or_generation_evidence_is_unknown_and_never_verified(change, message):
+    plan, job, task, output, ledger, context = _bound_fixture()
+    context["receipts"]["job_ref"]["task"] = {**ledger, **change}
+    result = pc.verify_task({"task": task, "observation": {"task_ref": job["task_ref"], "state": "succeeded",
+                                                             "result": output}}, context)
+    assert result["status"] == "unknown" and result["verified"] is False and result["result"] is None
+    assert result["failure"]["code"] == message and "재전송" not in result["failure"]["next"].replace("재전송하지", "")
+
+
+def test_observation_of_another_job_or_generation_is_rejected():
+    plan, job, task, output, ledger, context = _bound_fixture()
+    for wrong in ({"task_ref": {"kind": "guestpc", "task_id": "false"}}, {"generation": "gen-other"},
+                  {"request_id": "another-request"}):
+        observation = {"task_ref": job["task_ref"], "state": "succeeded", "result": output, **wrong}
+        result = pc.verify_task({"task": task, "observation": observation}, context)
+        assert result["status"] == "unknown" and "다른 작업" in result["failure"]["message"]
+
+
+def test_receipt_older_than_generation_field_is_limited_evidence_not_a_rejection():
+    plan, job, task, output, ledger, context = _bound_fixture()
+    del job["generation"]
+    del context["receipts"]["job_ref"]["task"]  # 구형 문맥: 접수 영수증만
+    result = pc.verify_task({"task": task, "observation": {"task_ref": job["task_ref"], "state": "succeeded",
+                                                             "result": output, "generation": "gen-job"}}, context)
+    transport = result["result"]["observation"]["transport_ref"]
+    assert result["verified"] is True and transport["basis"] == "accepted_receipt"
+    assert transport["generation"] is None and transport["received_at"] is None
+
+
+def test_missing_mac_runtime_is_named_without_blocking_basic_helper_functions():
+    plan = pc.prepare({"platform": "darwin", "source": "native", "request": {"action": "status"}})
+    job = {"task_ref": {"kind": "guestpc", "task_id": "job"}, "limb": "mac", "request_id": plan["request"]["request_id"]}
+    task = {"target": "mac", "task_ref": job["task_ref"], "verification": {
+        key: plan[key] for key in ("request", "platform", "source_sha256")}}
+    context = {"receipts": {"plan_ref": {"available": True, "producer": "PC제어부품", "value": plan},
+                            "job_ref": {"available": True, "action": "limbs:guestpc", "value": job}}}
+    missing = {"exit": 1, "output": "xcode-select: note: No developer tools were found, requesting install."}
+    result = pc.verify_task({"task": task, "observation": {"task_ref": job["task_ref"], "state": "succeeded",
+                                                             "result": missing}}, context)
+    assert result["status"] == "failed" and result["failure"]["code"] == "PC_RUNTIME_MISSING"
+    assert "셸·파일" in result["failure"]["next"] and result["result"] == missing
+    assert pc.run({"op": "contract"})["requirements"]["darwin"]

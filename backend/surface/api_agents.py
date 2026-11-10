@@ -254,13 +254,29 @@ def _command_origin(origin):
     return origin or "user"
 
 
+def _command_owner(db, runner, agent_id, origin):
+    import conversation_sessions as sessions
+    owner = sessions.pair_owner(db.get_or_create_agent("user", "human"),
+                                db.get_or_create_agent(runner.config.get("name", agent_id), "ai_agent"))
+    return "rehearsal:" + owner if _command_origin(origin) == "training" else owner
+
+
+def _open_command_turn(project_id: str, agent_id: str, runner, origin):
+    """명령 턴을 작업 접수·모델 호출 전에 연다. 못 열면 409/503 이며 대화에 아무것도 남기지 않는다."""
+    from conversation_db import ConversationDB
+    from conversation_entry import open_turn
+    db = ConversationDB(str(project_manager.get_project_path(project_id) / "conversations.db"))
+    return open_turn(db.db_path, "messages", _command_owner(db, runner, agent_id, origin), "agents/command")
+
+
 def _run_agent_command(project_id: str, agent_id: str, runner, command: str, origin=None, *, continuation=None, images=None,
-                       task_id=None):
+                       task_id=None, opened=None):
     """에이전트 명령 처리 코어 — 동기/백그라운드 양쪽이 공유.
 
     응답 텍스트를 반환하고, 사용자/AI 메시지를 conversations.db에 저장한다.
     백그라운드 경로에서는 자체 스레드에서 돌므로 스레드 컨텍스트를 여기서 설정/정리한다.
     task_id 를 주면(백그라운드 접수의 선발급) 그 작업을 쓴다 — 이미 행이 있으면 다시 만들지 않는다.
+    opened 는 HTTP 입구가 미리 연 대화 턴이다. 없으면 여기서 열며, 못 열면 실행하지 않고 올린다(무소유 실행 없음).
     """
     from conversation_db import ConversationDB
     from thread_context import (set_current_agent_id, set_current_agent_name,
@@ -312,6 +328,15 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         user_id = db.get_or_create_agent("user", "human")
         target_agent_id = db.get_or_create_agent(agent_name, "ai_agent")
 
+        # 대화 턴 확보 — 사용자 메시지 저장·모델 호출보다 먼저다(2026-11-11). 과제 실행자·수리 재개는 부모 턴을 잇는다.
+        import conversation_sessions as sessions
+        from component_continuation import is_task
+        from task_repair import scope
+        own_turn = not ((is_task(continuation) or scope(continuation)) and sessions.current())
+        owner = _command_owner(db, runner, agent_id, origin)
+        if own_turn and opened is None:
+            opened = sessions.open_turn(db.db_path, "messages", owner)
+
         # 히스토리 로드
         history = db.get_history_for_ai(target_agent_id, user_id, rehearsal=rehearsal)
 
@@ -334,22 +359,10 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
         # 기어 동기화도 파이프라인 0단계라 여기서 따로 부르지 않는다.
         from agent_pipeline import drain_stream
         from repair_continuation import resume_context, cancelled as repair_cancelled
-        import conversation_sessions as sessions
-        owner = sessions.pair_owner(user_id, target_agent_id)
-        if rehearsal:
-            owner = "rehearsal:" + owner
         # HTTP도 같은 대화의 후속 턴과 과제 실행자 소유권을 연결한다.
-        from episode_logger import record_trajectory_event
         from contextlib import nullcontext
-        from component_continuation import is_task
-        from task_repair import scope
-        turn_scope = nullcontext(sessions.current()) if (is_task(continuation) or scope(continuation)) and sessions.current() else sessions.owned_turn(
-            db.db_path, "messages", owner, task_id,
-            on_skip=lambda exc: record_trajectory_event("conversation.binding_skipped", {
-                "surface": "agents/command", "owner": owner,
-                "reason": str(exc) or type(exc).__name__,
-            }),
-        )
+        turn_scope = (sessions.owned_turn(db.db_path, "messages", owner, task_id, opened) if own_turn
+                      else nullcontext(sessions.current()))
         with turn_scope:
             result = drain_stream(runner.cognitive_stream(
                 command, history, images=images, agent_name=agent_name,
@@ -380,15 +393,21 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str, ori
                     "cancelled": result.get("cancelled"), "error": result.get("error")}
         return response
     except Exception as exc:
+        if opened is not None:
+            import conversation_sessions as _sessions
+            _sessions.abandon_turn(opened, exc)  # 턴 범위에 들어가기 전의 실패도 실행 중 표시를 남기지 않는다
         if db is not None:
             from logging_utils import mask_secrets
+            import conversation_sessions as _sessions
             error = mask_secrets(str(exc))
+            # 턴을 열지 못한 요청은 실행되지 않았다 — 진행 중인 다른 턴의 대화에 실패 글을 끼워 넣지 않는다.
+            refused = isinstance(exc, _sessions.TurnUnavailable)
             with db.get_connection() as conn:
                 conn.execute("UPDATE tasks SET status='failed', result=?, completed_at=CURRENT_TIMESTAMP WHERE task_id=?",
                              (error, task_id))
                 # 백그라운드 명령의 호출자는 대화 폴링으로 응답을 받는다.
                 # 실패 상태와 사용자에게 보일 응답을 같은 트랜잭션에 남긴다.
-                if user_id is not None and target_agent_id is not None and not response_saved:
+                if user_id is not None and target_agent_id is not None and not response_saved and not refused:
                     conn.execute("INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type) "
                                  "VALUES (?, ?, ?, ?)",
                                  (target_agent_id, user_id,
@@ -429,6 +448,9 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         raise HTTPException(status_code=400, detail="에이전트 AI가 준비되지 않았습니다.")
 
     image_args = {"images": [image.model_dump() for image in cmd.images]} if cmd.images else {}
+    # 대화 턴을 먼저 연다(2026-11-11): 실행 중인 턴이 있으면 409, 저장소 장애면 503 — 작업 접수·모델 호출 전이다.
+    opened = _open_command_turn(project_id, agent_id, runner, cmd.origin)
+    from conversation_entry import abandon
     if cmd.background:
         # 작업 선발급(2026-10-05): 접수증에 task_id·status_url 을 싣는다. 실행 전에 행을 남겨
         # 즉시 조회가 되고, 워커의 예외는 _run_agent_command 가 failed 로 기록한다.
@@ -440,22 +462,28 @@ def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
             db.create_task(task_id, "user@gui", "rehearsal" if cmd.origin == "training" else "gui",
                            cmd.command, runner.config.get("name", agent_id))
         except Exception as exc:
+            abandon(opened, exc)
             raise HTTPException(status_code=500, detail=f"작업 접수 실패: {exc}")
 
         def _worker():
             try:
-                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, task_id=task_id, **image_args)
+                _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, task_id=task_id,
+                                   opened=opened, **image_args)
             except Exception:
                 import traceback
                 traceback.print_exc()
-        threading.Thread(target=_worker, daemon=True).start()
+        try:
+            threading.Thread(target=_worker, daemon=True).start()
+        except Exception as exc:
+            abandon(opened, exc)
+            raise HTTPException(status_code=503, detail="작업 실행기를 시작하지 못했습니다.") from exc
         from delegation_tasks import status_url
         return {"status": "started", "accepted": True, "task_id": task_id, "state": "queued",
                 "task_ref": {"owner": project_id, "task_id": task_id},
                 "status_url": status_url(project_id, task_id, agent_id)}
 
     try:
-        response = _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, **image_args)
+        response = _run_agent_command(project_id, agent_id, runner, cmd.command, cmd.origin, opened=opened, **image_args)
         return {"response": response}
     except Exception as e:
         import traceback

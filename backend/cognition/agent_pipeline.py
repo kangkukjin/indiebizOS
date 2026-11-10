@@ -371,6 +371,11 @@ class CognitivePipelineMixin:
                             if _execution and _execution.situation:
                                 from recovery_observation import configure
                                 configure(_execution.situation, _supervisor.recovery if _supervisor else None)
+                        else:
+                            # 설정을 몰래 켜지 않는다. 이 실행은 기존 history 만 쓰며 완료 작업 참조는 전달되지 않는다.
+                            from episode_logger import record_trajectory_event
+                            record_trajectory_event("cognition.situation_delivery", {
+                                "enabled": False, "completed_work_references": "not_delivered"})
                     else:
                         from episode_logger import record_trajectory_event
                         record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})

@@ -220,6 +220,22 @@ def _partial_message(raw, truncation):
 _LEGACY_TEXT_ERROR_PREFIXES = ("Error:",)
 
 
+def _with_task(receipt):
+    """A receipt naming a task also carries the hub's current view of it, read through the
+    task registry. A script then verifies against that view instead of a result its caller
+    passed in. Unknown or unreadable tasks stay absent; the receipt itself is unchanged."""
+    value = receipt.get("value") if receipt.get("available") else None
+    ref = value.get("task_ref") if isinstance(value, dict) else None
+    if not (isinstance(ref, dict) and ref.get("kind") and ref.get("task_id")):
+        return receipt
+    try:
+        import task_receipts
+        view = task_receipts.status(task_receipts.ref(ref["kind"], ref["task_id"], ref.get("owner")))
+    except Exception:  # noqa: BLE001 — verification falls back to its limited evidence
+        return receipt
+    return receipt if view.get("state") == "unknown" else {**receipt, "task": view}
+
+
 def decode_envelope(raw, adapter, input_values=None):
     from ibl_honesty import completion_evidence, truncation_evidence, markers_of
     if isinstance(raw, str):
@@ -485,7 +501,7 @@ def load_registry(project_path=".", agent_id=None):
                         from ibl_run_journal import receipt_value
                         nested = params.get("args") or {}
                         params["_ibl_context"] = {"receipts": {
-                            name: receipt_value(runtime.journal.root, nested[name])
+                            name: _with_task(receipt_value(runtime.journal.root, nested[name]))
                             if runtime.journal else {"available": False, "reason": "no_journal"}
                             for name in receipt_inputs if name in nested}}
 

@@ -33,7 +33,7 @@ nodes:
           queue_membership은 큐 추가 확인이고 재생 확인이 아니다. process_state는 PC 프로세스 상태까지만 확인한다.
           unknown/mismatch는 실제값과 이유를 보고 필요하면 읽기만 수행하며 변경을 무조건 재전송하지 않는다.
  seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션).
-          relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음.
+          relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue — 파라미터 없음. stop — playback_id(선택): play 결과·queue의 now_playing이 준 그 재생이 지금도 현재일 때만 정지하고, 교체·종료됐으면 stale:true(현재 재생 불변)를 돌려준다. 생략하면 현재 재생과 대기열을 정지한다.
           skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
 
           실행 위치: 검색·재생·큐는 현재 기기(폰도 자체 실행), info/transcript/languages/channel/summarize/download/relay는 PC. 폰에서 PC 전용 op는 허브로
@@ -242,6 +242,9 @@ tool_json:
         video_id:
           type: string
           description: 유튜브 video_id (url 대신)
+        playback_id:
+          type: string
+          description: '[stop] 앞선 재생의 ID(play 결과·queue now_playing의 playback_id). 주면 그 재생이 현재일 때만 정지, 아니면 stale. 폰 재생기만 발급한다.'
         handle:
           type: string
           description: '[channel] 채널 핸들 (@name 또는 name)'

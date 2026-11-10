@@ -16,6 +16,8 @@
 `PC`는 별칭 또는 device_id다. 반복 대상은 준비 결과의 device_id로 고정할 수 있다.
 `대기`는 한 호출의 0~240초 대기이며 실행 제한과 다르다. 셸·재생 실행 제한은 1~86400초다.
 `요청ID`와 인자가 같으면 기존 접수증을 반환한다. 같은 ID에 다른 인자는 충돌이며 새 ID는 별도 실행이다. 실행 관용구의 `환경초기화`는 휴대형 전용이다.
+상주형 접수증의 `relation:"reused"`는 같은 요청ID의 기존 작업을 회수한 것이며 새 효과는 접수되지 않았다(`submitted`=새 접수). `generation`은 그 작업의 설치 세대다. 응답을 잃었거나 `conversation_link:"unrecorded"`면 새 ID를 만들지 말고 같은 요청ID·task_ref로 조회한다.
+기본 연결·셸·파일 확인은 OS 기본 명령(`echo`·`dir`/`ls`)과 `info`·`list`로 한다. 대상 PC에 Python·Node·IndieBizOS 저장소가 있다고 가정하지 않는다 — 헬퍼만 설치된 PC가 기준이며, 그런 런타임은 사용자가 요청한 프로그램의 의존성일 때만 따로 확인한다.
 상주형의 `환경`은 해당 작업에만 적용된다.
 
 ### 준비 → 셸 실행 → 확인 → 마무리
@@ -156,6 +158,13 @@ mpv가 필요하며 Mac의 로컬 오디오는 afplay도 쓴다. 상주 헬퍼�
 플레이어 부재는 결과의 `needs_media_player`로 확인한다. 상태 확인은 반환값을 작업확인에
 넘기거나 재생 관용구의 `작업`으로 전달한다. 중지는 그 접수증을 사용한다.
 
+대상이 미디어 세션의 playback을 신고하면(`미디어세션` 스크립트의 `op:"capabilities"`) 재생은 [미디어 세션](media_session.md)의
+`purpose:"playback"`으로 연다. 결과 한 행에 `session_id`·`relation_generation`·`device_job`(원 장치 작업)·`playback`(장치가 보고한
+실제 재생 관측)이 함께 오고, 일시정지·위치·음량은 `update`, 정지는 같은 `session_id`의 `end`다. 다음 요청에서 이어 제어할 때도
+그 세션·작업을 가리키며 프로세스 목록·PID·IPC 경로를 다시 찾지 않는다. 세션을 신고하지 않는 구형·휴대형 헬퍼는 위 재생
+관용구와 접수증 취소를 그대로 쓴다. 검색·스트림 해소는 중앙에서 하고 대상에는 파일(파일보내기)이나 재생 가능한 주소만
+전달한다. 중앙이 얻은 주소가 대상의 IP에서도 열린다고 가정하지 않으며, 실패하면 원 결과를 남기고 파일 전달로 바꾼다.
+
 <!-- example:guestpc_stop -->
 ```ibl
 #!ibl edition=2
@@ -169,7 +178,7 @@ PC 가 10분 안에 끌어가지 않은 명령(꺼짐·끊김)은 `failed` 에 `
 ## 3. 기본 어휘·GUI·작업 기록
 
 ```ibl
-[limbs:guestpc]{op:"shell",limb:"사무실PC",cmd:"python --version",cwd:"C:/Users/Public",background:true,request_id:"파이썬확인-예시-1"}
+[limbs:guestpc]{op:"shell",limb:"사무실PC",cmd:"echo HELPER_OK",cwd:"C:/Users/Public",background:true,request_id:"연결확인-예시-1"}
 [limbs:guestpc]{op:"info",limb:"사무실PC"}
 [limbs:guestpc]{op:"list",limb:"사무실PC",path:"C:/Downloads"}
 [limbs:guestpc]{op:"read",limb:"사무실PC",path:"C:/note.txt"}

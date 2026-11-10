@@ -1311,7 +1311,17 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 같은 상대의 다음 명령에서 `worker_ref` 후속을 사용할 수 있다. `origin:training`은
 별도 실행 세션을 사용하며 기존 훈련 메시지의 히스토리 분리를 유지한다. 모델이 먼저
 응답해도 소유 자식이 남으면 부모는 `waiting_children`으로 기다렸다가 자식 종료 후 마감된다.
-동시 턴 등으로 세션을 연결하지 못하면 `conversation.binding_skipped` 사건이 남는다.
+대화 턴을 열지 못한 요청은 실행하지 않는다(2026-11-11, 무소유 실행 경로 폐지). `/system-ai/chat`·에이전트 `command`
+입구는 작업 접수·모델 호출 **전에** 턴을 열고, 같은 대화에 실행 중인 턴이 있으면 HTTP 409, 대화 저장소 장애면 재시도
+가능한 503 으로 끝내며 `conversation.binding_refused` 사건을 남긴다(진행 중인 대화에는 아무것도 쓰지 않는다).
+내부 IBL 재진입(`/ibl/execute`)은 부모 턴의 binding 을 채택할 뿐 새 턴을 열지 않으므로 이 거절의 대상이 아니다.
+
+원격 작업의 실행 출처도 이 턴에서 나온다. 상주 작업 접수(`resident_pcs.submit`)는 검증된 실행 문맥의
+principal·agent·중앙 task·대화(session·turn·revision)를 접수와 같은 트랜잭션에 `attribution` 사건으로 남기고,
+같은 요청 ID 의 재접수는 원 작업을 돌려주며 `reused` 로만 기록한다(최초 `submitted` 출처는 바뀌지 않는다).
+출처는 참조의 근거이지 권한이 아니며 장치로 가는 봉투에는 실리지 않는다. 턴이 끝날 때 남는 상황 기록의
+접수·효과 관측은 같은 대화의 다음 턴에 **완료 작업 참조**(`origin.turn_state:"completed"`, `last_observed`)로
+복원되어 기존 상황 전달로 모델 입력에 실린다 — 새 지시가 아니라 관측 자료이고, 원 작업을 다시 접수하지 않는다.
 
 ```ibl
 $a = [others:delegate]{scope:"task", request_id:"sources-a", message:"자료 A의 근거를 검토해줘"}

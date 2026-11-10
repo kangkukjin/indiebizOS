@@ -77,7 +77,9 @@ export async function askSystemAI(message: string): Promise<string> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
   });
-  const d = await res.json();
+  const d = await res.json().catch(() => ({}));
+  // 같은 대화에 실행 중인 턴이 있으면 허브가 실행하지 않고 409 로 거절한다 — 빈 답으로 삼키지 않는다.
+  if (!res.ok) throw new Error(String(d?.detail || `HTTP ${res.status}`));
   if (d?.edition === 2) {
     const error = iblOutcomeError(d);
     if (error) throw new Error(error);

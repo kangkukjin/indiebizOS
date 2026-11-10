@@ -60,6 +60,19 @@
 응답 봉투: 성공 `{"success": true, "session": {...}}`, 실패 `{"success": false, "error": {"code","message"}}` (HTTP 200·400 모두 같은 모양).
 IBL 로 묶을 때는 `{items:[session]}`.
 
+확장 재생 세션의 연속성 칸(2026-11-11, docs/REMOTE_EXECUTION_CONTINUITY_REPAIR_DESIGN_2026_11_11.md R5) — 후속 제어가
+같은 세션·같은 장치 작업을 가리키도록 세션 투영에 함께 싣는다.
+- `device_job` `{kind:"guestpc", task_id}` — 장치에 접수한 원 작업. 세션이 사라진 뒤에도 이 작업을 취소해 재생을 끝낼 수 있다.
+- `relation_generation` — 그 장치 등록의 설치 세대(기존 칸).
+- `playback` — **장치가 보고한** 재생 관측만(`observed`, `reported_at`, `playing`·`paused`·`position_s`·`volume`…, `scope`).
+  허브가 `update` 로 요청한 값은 여기에 섞이지 않는다. 보고 전에는 `{observed:false}` — 접수·연결은 재생의 증명이 아니다.
+  `scope` 는 재생기 IPC 가 읽은 `player_state` 또는 프로세스 생존만 아는 `player_process`(`control:false` 경로)이며
+  어느 쪽도 `audible_sound_verified:false` 다.
+- `observation` — 같은 관측의 `operation-effect/1`(resource=`media_session`, target=장치·세대, `transport_ref`=원 작업,
+  basis `media_session_device_report`). `player_process` 범위는 `confirmed` 로 올리지 않는다.
+- `create` 본문의 `origin` — 등록 스크립트(미디어세션)가 허브에서 받은 대화 binding 을 되돌려 주는 칸. 허브는 그 턴이 지금
+  이 프로세스에서 실행 중인지 대조한 뒤에만 장치 작업의 출처·접수증 소유를 그 대화에 남긴다. 확인되지 않은 주장은 무시한다.
+
 ## 3. 시그널 메시지 (전송 방식 무관)
 
 ```json

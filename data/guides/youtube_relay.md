@@ -43,7 +43,9 @@ play/skip/stop의 `observation`은 `operation-effect/1` 계약이다. `status:co
 ```
 
 오디오는 기존 대기열·다음 곡·위치 이동을 사용한다. 라디오 등 다른 재생이 시작되면
-이전 음악 대기열이 새 재생을 정지하거나 덮어쓰지 않는다. 영상은 폰의 유튜브 앱 또는
+이전 음악 대기열이 새 재생을 정지하거나 덮어쓰지 않는다. `play` 결과·`queue`의 `now_playing`이 주는
+`playback_id`를 `stop`에 넘기면 그 재생이 현재일 때만 멈추고, 바뀌었으면 `stale:true`(현재 재생 불변)다.
+곡이 바뀌면 재생 ID도 바뀐다 — 재생 ID는 한 곡의 재생이지 대기열 전체의 소유가 아니다. 영상은 폰의 유튜브 앱 또는
 브라우저에 연다. `opened:true, playing:null, control:"external"`은 열기 결과이며
 영상 재생 확인이 아니다. 외부 영상 앱의 정지·건너뛰기는 해당 앱에서 한다.
 

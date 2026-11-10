@@ -136,6 +136,16 @@ Windows의 내부 점검·셸·화면 캡처/입력·작업 취소는 콘솔 창
 `python -m pytest backend/test_resident_pcs.py`(마지막 system 검사는 OS 설치 없이 임시 중앙 서버와
 빌드한 네이티브 실행파일을 연결한다). 실기기 설치·제거·WOL 시험은 별도로 필요하다.
 
+**헬퍼 단독 기준(2026-11-11).** 대상 PC 에 IndieBizOS 저장소·백엔드·Python 가상환경·Node 가 없어도 등록·연결·`info`·
+파일 list/read/write·전송·OS 셸·작업 조회/취소는 동작해야 한다. 이 기준은 개발 PC 의 PATH·HOME 을 물려받지 않는
+환경(OS 기본 경로 `/usr/bin:/bin` 과 빈 홈)에서 확인한다 — 가상환경·Homebrew·저장소가 우연히 있어 통과하는 일이 없게.
+`go test -run 'TestResidentBaseline|TestHelperSourcesDoNotAssume' .`(Go 단위·소스 관문)와
+`python -m pytest backend/test_helper_standalone.py -m system`(빌드한 실행파일 + 격리 허브)이 그 인수 검사다.
+`backend/test_resident_pcs.py` 의 네이티브 왕복 검사도 같은 격리 환경에서 헬퍼를 띄운다. mpv·ffmpeg 같은 선택
+구성요소의 고정 설치 위치(`/opt/homebrew/bin` 등)는 PATH·HOME 과 무관하게 탐색되므로, 플레이어 부재의 실기 확인은
+그 구성요소가 실제로 없는 계정·기기에서 해야 한다. macOS 의 OS 앱 제어(PC제어)는 대상의 `python3` 를 쓰는
+드라이버의 선택 의존성이며 헬퍼 기본 기능의 조건이 아니다(없으면 그 동작만 `PC_RUNTIME_MISSING`).
+
 셸이 정상 종료해도 백그라운드 자식이 출력 파이프를 잡고 있으면 2초 뒤 수집을 끝내고 exit:0과 output_incomplete·warning을 돌려준다. 다시 실행하지 말고 자식 상태를 확인한다. 장기 자식은 `nohup command >server.log 2>&1 </dev/null &`로 입출력을 분리한다.
 
 

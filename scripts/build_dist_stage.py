@@ -9,8 +9,10 @@ build_dist_stage.py — 설치 파일에 담을 `data/` 를 **git 추적 집합*
 
 해결: 경계를 하나로 — 배포에 딸려오는 것 = git 이 추적하는 것(core_manifest 와 같은 정의,
 CI 의 fresh clone 빌드와 같은 결과). 이 스크립트가 `git ls-files data` 를
-`frontend/.dist_stage/data/` 에 하드링크(실패 시 복사)로 펼치고, package.json 의 data 항목은
+`frontend/.dist_stage/data/` 에 독립된 파일로 복사하고, package.json 의 data 항목은
 `from: ".dist_stage/data"` 를 본다. 기존 필터(secret·크러프트 제외)는 그 위에 그대로 걸린다.
+정본과 스테이지는 inode를 공유하지 않는다. 하드링크는 문서 수리의 쓰기 검사를 막고,
+한쪽의 직접 쓰기·권한 변경이 다른 쪽까지 바꾸므로 배포 사본에 사용하지 않는다.
 미추적 코어 자산(임베딩 모델 data/models)은 애초에 미번들·첫 실행 다운로드(hippocampus_provision)라
 빠지는 게 맞다 — 프로덕션 번들의 resources/data/models 는 비어 있어야 한다(ibl_usage_db 주석).
 
@@ -19,7 +21,6 @@ CI 의 fresh clone 빌드와 같은 결과). 이 스크립트가 `git ls-files d
     python3 scripts/build_dist_stage.py --check   # package.json 이 스테이지를 보는지 + gitignore (0=OK)
 """
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -56,7 +57,7 @@ def build_stage() -> int:
     if STAGE_ROOT.exists():
         shutil.rmtree(STAGE_ROOT)
     STAGE_DATA.mkdir(parents=True)
-    linked = copied = missing = 0
+    copied = missing = 0
     total_bytes = 0
     for rel in tracked_data_files():
         src = DATA_DIR / rel
@@ -65,15 +66,11 @@ def build_stage() -> int:
             missing += 1  # 인덱스엔 있는데 작업 트리엔 없음(로컬 이동·삭제) — 정직하게 셈만 한다
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            os.link(src, dst)
-            linked += 1
-        except OSError:
-            shutil.copy2(src, dst)
-            copied += 1
+        shutil.copy2(src, dst)
+        copied += 1
         total_bytes += src.stat().st_size
-    print(f"[dist-stage] {STAGE_DATA.relative_to(REPO_ROOT)}: 추적 파일 {linked + copied}개 "
-          f"(하드링크 {linked} · 복사 {copied} · 작업트리 부재 {missing}) · {total_bytes / 1e6:.1f}MB")
+    print(f"[dist-stage] {STAGE_DATA.relative_to(REPO_ROOT)}: 추적 파일 {copied}개 "
+          f"(독립 복사 {copied} · 작업트리 부재 {missing}) · {total_bytes / 1e6:.1f}MB")
     if missing:
         print(f"[dist-stage] ⚠ 인덱스에만 있는 파일 {missing}개는 담지 않았다 — 로컬에서 옮기거나 지운 것(커밋 전이면 배치를 확인)")
     return 0

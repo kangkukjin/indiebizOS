@@ -1,5 +1,6 @@
 """연구 실행 신원과 자료 관측 콜백. snapshot/restore가 병렬 작업에도 운반한다."""
 from contextlib import contextmanager
+import time
 import uuid
 import threading
 from pathlib import Path
@@ -62,8 +63,27 @@ def scope(context):
         thread_context._thread_local.research = old
 
 
-def observe(config, params, result):
+def _call_started(params, begin=False):
+    """호출이 시작된 시각. 그 뒤에 바뀐 파일이 이 호출이 써낸 것이다. 중첩 호출은 인자 객체로 짝짓는다."""
+    stack = getattr(thread_context._thread_local, 'research_calls', None)
+    if stack is None:
+        stack = thread_context._thread_local.research_calls = []
+    if begin:
+        del stack[:-32]  # 예외로 짝을 잃은 시작 표식이 쌓이지 않게 한다.
+        stack.append((id(params), time.time()))
+        return None
+    for index in range(len(stack) - 1, -1, -1):
+        if stack[index][0] == id(params):
+            started = stack[index][1]
+            del stack[index:]
+            return started
+    return None
+
+
+def observe(config, params, result, started=None):
     context = current()
+    if started is None:
+        started = _call_started(params)
     if not context or not _capture:
         return result
     if config.get('research_capture') is False:
@@ -71,16 +91,26 @@ def observe(config, params, result):
     if config.get('router') not in {'handler', 'driver', 'api_engine', 'system'}:
         return result
     try:
+        # 보존 콜백의 인자 계약은 그대로 둔다. 호출 시작 시각은 보존하는 동안만 곁에 둔다.
+        thread_context._thread_local.research_call_started = started
         return _capture(context, config, params, result, uuid.uuid4().hex)
     except Exception:
         context['capture_failed'] = True
         raise
+    finally:
+        thread_context._thread_local.research_call_started = None
+
+
+def call_started():
+    """지금 보존 중인 호출이 시작된 시각. 알 수 없으면 None."""
+    return getattr(thread_context._thread_local, 'research_call_started', None)
 
 
 def before(config, params):
     context = current()
     if not context:
         return
+    _call_started(params, begin=True)
     if context.get('capture_failed'):
         raise RuntimeError('자료 보존 실패로 조사를 멈췄습니다. 저장 공간과 권한을 확인하세요')
     if config.get('research_local') and params.get('project_ref') != context.get('project_uid'):
@@ -135,13 +165,18 @@ def capture_stream(events, *, attached_only=False):
     calls = {}
     observed = set()
     generations = {}
+    starts = {}
+    seen = time.time()
     for event in events:
+        # 짧은 호출은 완료만 통지된다. 직전 통지 시각이 이 호출이 시작될 수 있었던 가장 이른 때다.
+        earliest, seen = seen, time.time()
         if attached_only and not (current() or {}).get('attached'):
             yield event
             continue
         kind = event.get('type')
         if kind == 'tool_start':
             calls[event.get('id')] = event
+            starts[event.get('id')] = earliest
             generations[event.get('id')] = generations.get(event.get('id'), 0) + 1
         elif kind == 'tool_result' and not event.get('is_error'):
             start = calls.get(event.get('id'), {})
@@ -160,8 +195,10 @@ def capture_stream(events, *, attached_only=False):
                 params = start.get('input') or {}
                 if isinstance(params, dict) and params.get('file_path') and not params.get('path'):
                     params = {**params, 'path': params['file_path']}
-                observe({'router': 'handler', 'tool': name, 'research_coverage': 'unknown'},
-                        params if isinstance(params, dict) else {}, event.get('result', ''))
+                # IBL 밖 도구의 결과는 실행자가 작업대에서 낸 출력이다. 확보한 자료로 세지 않는다.
+                observe({'router': 'handler', 'tool': name, 'research_coverage': 'produced'},
+                        params if isinstance(params, dict) else {}, event.get('result', ''),
+                        started=starts.get(event.get('id'), earliest))
         yield event
 
 

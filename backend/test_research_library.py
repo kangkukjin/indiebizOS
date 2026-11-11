@@ -504,3 +504,191 @@ def test_disjoint_read_revisions_and_question_anchors_are_not_fused(lib):
     assert all(s['quote'] == originals[s['extraction_revision']][s['start']:s['end']] for s in row['segments'])
     assert result['evidence_chars'] <= 2400 and row['semantic_status'] == 'unreviewed'
     assert lib.citation_review(f'[자료:{vid}:p1]', 'unread', question_evidence=links)['valid'][0]['extraction_revisions'] == [1]
+
+
+def _acquire(lib, monkeypatch, coverage, params, result):
+    """한 번의 도구 획득을 보존 경로로 흘린다. 색인은 테스트가 직접 돌린다."""
+    import research_capture
+    monkeypatch.setattr(research_capture, 'schedule_index', lambda *a: None)
+    tid = lib.store.create_thread('교육')['id']; run, _ = lib.store.begin_run(tid, '조사', '1')
+    ctx = dict(project_uid=lib.store.uid, epoch=lib.store.epoch, path=str(lib.store.path), thread_id=tid, run_id=run)
+    out = research_capture.capture(ctx, {'router': 'handler', 'tool': 'crawl', 'research_coverage': coverage}, params, result, '1')
+    return ResearchLibrary(lib.store, tid), [r['version_ref'] for r in out['research_materials']]
+
+
+def _web_copy(body):
+    from common.spill import spill_write
+    payload = {'text': body, 'resolved_url': 'https://example.org/p', 'method': 'curl'}
+    return payload, spill_write(json.dumps(payload, ensure_ascii=False), tag='crawl_source')['ref']
+
+
+def test_expiring_copy_with_same_body_is_preserved_but_indexed_once(lib, monkeypatch):
+    from pathlib import Path
+    body = '\n\n'.join(f'교육 원문의 {i}번째 문단은 수집 사본과 같은 내용입니다. ' * 6 for i in range(1, 5))
+    payload, ref = _web_copy(body)
+    try:
+        local, (main, copy) = _acquire(lib, monkeypatch, 'full', {'url': 'https://example.org/p'}, {**payload, 'source_ref': ref})
+    finally:
+        Path(ref['path']).unlink()
+    lib.index_pending()
+    hits = local.search('교육', 12)['items']
+    assert hits and {h['version_ref'] for h in hits} == {main}
+    assert len({h['loc'] for h in hits}) == len(hits)  # 같은 문단이 두 번 나오지 않는다.
+    found = local.search('교육')
+    assert local.version(copy)['index_state'] == 'preserved' and found['pending'] == 0
+    assert '1번째 문단' in local.read(copy)['text']  # 보존 사본은 그대로 읽고 인용한다.
+    assert next(s for s in local.sources()['items'] if s['version_ref'] == copy)['index_label'].startswith('보존')
+
+
+def test_full_copy_of_truncated_result_stays_searchable(lib, monkeypatch):
+    from pathlib import Path
+    full = '앞부분 교육 원문입니다. ' * 30 + '\n\n' + '뒷부분에만 있는 쇠뜨기표본 문단입니다. ' * 30
+    payload, ref = _web_copy(full)
+    try:
+        local, (main, copy) = _acquire(lib, monkeypatch, 'full', {'url': 'https://example.org/p'},
+                                       {'text': full[:200], 'source_ref': ref})
+    finally:
+        Path(ref['path']).unlink()
+    lib.index_pending()
+    assert local.version(copy)['index_state'] == 'ready'
+    assert local.search('쇠뜨기표본')['items'][0]['version_ref'] == copy
+
+
+def test_search_excerpts_and_their_copies_stay_out_of_body_search(lib, monkeypatch):
+    from pathlib import Path
+    from common.spill import spill_write
+    doc = lib.capture('교육 정책 본문의 문단입니다. ' * 20, title='보고서', origin='https://example.org/doc')
+    listing = {'items': [{'title': '교육 정책', 'summary': '교육 정책 검색 요약', 'url': 'https://example.org/doc'}],
+               'query': '교육 정책 본문'}
+    ref = spill_write(json.dumps({**listing, 'raw': '교육 정책 원시 응답'}, ensure_ascii=False))['ref']
+    try:
+        local, (found, copy) = _acquire(lib, monkeypatch, 'snippet', {'query': '교육 정책 본문'}, {**listing, 'ref': ref})
+    finally:
+        Path(ref['path']).unlink()
+    lib.index_pending()
+    assert {h['version_ref'] for h in lib.search('교육 정책')['items']} == {doc['version_ref']}
+    assert not local.search('교육 정책')['items']
+    assert {local.version(v)['index_state'] for v in (found, copy)} == {'preserved'}
+    assert local.version(copy)['coverage'] == 'snippet'
+    assert '검색 요약' in local.read(found)['text']
+
+
+def test_already_indexed_duplicates_leave_search_and_then_the_index(lib, monkeypatch):
+    from pathlib import Path
+    body = '\n\n'.join(f'교육 원문의 {i}번째 문단입니다. ' * 6 for i in range(1, 4))
+    payload, ref = _web_copy(body)
+    try:
+        local, (main, copy) = _acquire(lib, monkeypatch, 'full', {'url': 'https://example.org/p'}, {**payload, 'source_ref': ref})
+    finally:
+        Path(ref['path']).unlink()
+    with monkeypatch.context() as legacy:  # 관문이 없던 시절의 색인을 재현한다.
+        legacy.setattr(ResearchLibrary, '_search_exclusion', lambda self, version: '')
+        lib.index_pending()
+        assert {h['version_ref'] for h in local.search('교육')['items']} == {main, copy}
+    with lib.store.connect(True) as db:
+        db.execute("DELETE FROM research_migrations WHERE name='search-pool-bodies-v1'")
+    assert {h['version_ref'] for h in local.search('교육')['items']} == {main}
+    with lib.store.connect() as db:
+        assert db.execute('SELECT index_source FROM research_jobs WHERE version_id=?', (copy,)).fetchone()[0] is not None
+    assert lib.sweep_index() == 1 and lib.sweep_index() == 0
+    with lib.store.connect() as db:
+        assert db.execute('SELECT index_source FROM research_jobs WHERE version_id=?', (copy,)).fetchone()[0] is None
+    assert {h['version_ref'] for h in local.search('교육')['items']} == {main}
+    assert '1번째 문단' in local.read(copy)['text']
+
+
+def _research_scope(lib, monkeypatch):
+    import research_capture
+    monkeypatch.setattr(research_capture, 'schedule_index', lambda *a: None)
+    tid = lib.store.create_thread('교육')['id']; run, _ = lib.store.begin_run(tid, '조사', '1')
+    return tid, dict(project_uid=lib.store.uid, epoch=lib.store.epoch, path=str(lib.store.path), thread_id=tid, run_id=run)
+
+
+def _file_coverage(lib, path):
+    with lib.store.connect() as db:
+        return [r[0] for r in db.execute('SELECT v.coverage FROM research_versions v JOIN research_sources s ON s.id=v.source_id '
+                                         "WHERE s.kind='file' AND s.origin=?", (str(path.resolve()),))]
+
+
+def test_workbench_output_and_written_files_are_products_not_sources(lib, monkeypatch):
+    import os, time
+    from research_context import capture_stream
+    tid, ctx = _research_scope(lib, monkeypatch)
+    folder = lib.store.path / 'outputs'; folder.mkdir()
+    document = folder / '받은문서.md'; document.write_text('교육 원문은 전부터 있던 문서의 본문입니다. ' * 12)
+    os.utime(document, (time.time() - 3600,) * 2)
+    report = folder / '보고서.md'
+
+    def events():
+        yield {'type': 'tool_start', 'id': '1', 'name': 'shell', 'input': {'command': 'python3 calc.py'}}
+        yield {'type': 'tool_result', 'id': '1', 'name': 'shell', 'result': '교육 통계의 계산 출력입니다. ' * 12}
+        report.write_text('교육 보고서는 실행자가 방금 쓴 글입니다. ' * 12)  # 짧은 쓰기는 완료만 통지된다.
+        yield {'type': 'tool_start', 'id': '2', 'name': 'apply_patch', 'input': {}}
+        yield {'type': 'tool_result', 'id': '2', 'name': 'apply_patch', 'result': json.dumps(
+            {'type': 'file_change', 'status': 'completed', 'changes': [{'path': str(report), 'kind': 'add'}]})}
+        yield {'type': 'tool_start', 'id': '3', 'name': 'Read', 'input': {'file_path': str(document)}}
+        yield {'type': 'tool_result', 'id': '3', 'name': 'Read', 'result': '교육 원문은 전부터 있던 문서의 본문입니다.'}
+
+    with scope(ctx):
+        assert len(list(capture_stream(events()))) == 6
+    assert _file_coverage(lib, report) == ['produced'] and _file_coverage(lib, document) == ['full']
+    lib.index_pending(limit=20)
+    local = ResearchLibrary(lib.store, tid)
+    hits = local.search('교육', 12)['items']
+    assert hits and {h['title'] for h in hits} == {'받은문서.md'}  # 실행자의 출력·보고서는 후보가 아니다.
+    listed = {s['title']: s for s in local.sources()['items']}
+    assert listed['shell']['coverage'] == 'produced' and listed['보고서.md']['coverage_label'].startswith('실행 산출물')
+    assert '방금 쓴 글' in local.read(listed['보고서.md']['version_ref'])['text']  # 읽기·인용은 그대로다.
+
+
+def test_files_written_during_a_call_are_products_unless_the_action_acquires(lib, monkeypatch):
+    import os, time
+    from research_context import before, observe
+    tid, ctx = _research_scope(lib, monkeypatch)
+    folder = lib.store.path / 'outputs'; folder.mkdir()
+
+    def call(config, params, write, result_key='path', age=0):
+        target = folder / params['name']
+        with scope(ctx):
+            before(config, params)
+            target.write_text(write)
+            if age:
+                os.utime(target, (time.time() - age,) * 2)
+            observe(config, params, {'success': True, result_key: str(target)})
+        return _file_coverage(lib, target)
+
+    plain = {'router': 'handler', 'tool': 'write_file'}
+    assert call(plain, {'name': '초안.md'}, '실행자가 쓴 초안') == ['produced']
+    assert call(plain, {'name': '기존.md'}, '전부터 있던 문서', age=3600) == ['full']  # 읽기만 한 파일
+    assert call(plain, {'name': '첨부.bin'}, '내려받은 첨부', result_key='saved_path') == ['full']
+    assert call({**plain, 'tool': 'fetch', 'research_coverage': 'full'}, {'name': '논문.txt'}, '수집한 논문') == ['full']
+
+
+def test_products_preserved_before_the_gate_are_relabelled_from_stored_facts(lib, monkeypatch):
+    import os, time
+    tid, ctx = _research_scope(lib, monkeypatch)
+    local = ResearchLibrary(lib.store, tid)
+    folder = lib.store.path / 'outputs'; folder.mkdir()
+    with lib.store.connect(True) as db:  # 이행이 아직 없던 시절로 둔다.
+        db.execute("INSERT OR IGNORE INTO research_migrations(name) VALUES ('search-pool-produced-v1')")
+    report = folder / '옛보고서.md'; report.write_text('교육 보고서는 관문 이전에 실행자가 쓴 글입니다. ' * 12)
+    old = folder / '옛문서.md'; old.write_text('교육 원문은 오래전부터 있던 문서입니다. ' * 12)
+    os.utime(old, (time.time() - 3600,) * 2)
+    run = ctx['run_id']
+    output = local.capture(json.dumps('교육 통계의 옛 계산 출력입니다. ' * 12, ensure_ascii=False), title='shell',
+                           kind='tool:shell:', mime='application/json', coverage='unknown', run=run, call='a')
+    envelope = local.capture(json.dumps({'items': [{'값': '교육 통계 봉투'}]}, ensure_ascii=False), title='rows',
+                             kind='tool:rows:', mime='application/json', coverage='unknown', run=run, call='b')
+    local.capture(json.dumps({'success': True}), title='write_file', kind='tool:write_file:', mime='application/json',
+                  coverage='unknown', run=run, call='c')
+    written = local.add_file(report, run=run, call='c', item='file:0')
+    local.capture(json.dumps({'ok': True}), title='read_op', kind='tool:read_op:', mime='application/json',
+                  coverage='unknown', run=run, call='d')
+    kept = local.add_file(old, run=run, call='d', item='file:0')
+    lib.index_pending(limit=20)
+    assert {h['title'] for h in local.search('교육', 12)['items']} >= {'shell', '옛보고서.md', '옛문서.md'}
+    with lib.store.connect(True) as db:
+        db.execute("DELETE FROM research_migrations WHERE name='search-pool-produced-v1'")
+    assert {h['title'] for h in local.search('교육', 12)['items']} == {'옛문서.md', 'rows'}
+    assert [local.version(r['version_ref'])['coverage'] for r in (output, written, kept, envelope)] == ['produced', 'produced', 'full', 'unknown']
+    assert lib.sweep_index() == 2

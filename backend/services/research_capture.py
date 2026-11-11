@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 from research_store import ResearchStore, json_text
 from research_library import ResearchLibrary
-from research_context import install_capture, install_review
+from research_context import install_capture, install_review, call_started
 
 _locks = {}
 _guard = threading.Lock()
@@ -48,6 +48,7 @@ def sanitize(value):
 
 def capture(context, config, params, result, call):
     lib = library(context)
+    started = call_started()
     obj = result
     if isinstance(obj, str):
         try:
@@ -66,7 +67,10 @@ def capture(context, config, params, result, call):
         return json_text(obj) if isinstance(result, str) else obj
     url = next((params[k] for k in ('url', 'path') if isinstance(params.get(k), str)), '')
     title = str(content.get('title') or content.get('name') or config.get('tool') or '조사 결과') if isinstance(content, dict) else str(config.get('tool') or '조사 결과')
-    coverage = 'partial' if isinstance(obj, dict) and (obj.get('truncated') or obj.get('partial')) else config.get('research_coverage', 'unknown')
+    declared = config.get('research_coverage', 'unknown')
+    # 실행 산출물은 확보의 완전성을 따질 대상이 아니다. 잘림 표시가 있어도 확보한 일부 본문으로 올리지 않는다.
+    coverage = declared if declared == 'produced' else (
+        'partial' if isinstance(obj, dict) and (obj.get('truncated') or obj.get('partial')) else declared)
     source = clean_url(url) if url else ''
     ctx = dict(thread=context['thread_id'], run=context['run_id'], call=call)
     paragraphs = None
@@ -87,6 +91,7 @@ def capture(context, config, params, result, call):
     receipts = [receipt]
     # 호출자가 명시한 읽기 파일 또는 프로젝트 안의 실제 다운로드 파일만 스냅샷한다.
     paths = []
+    fetched = set()
     if url and not url.startswith(('http://', 'https://')):
         p = Path(url).expanduser()
         paths.append(p if p.is_absolute() else lib.store.path / p)
@@ -97,12 +102,15 @@ def capture(context, config, params, result, call):
                     p = Path(item).expanduser()
                     if p.is_absolute() and p.resolve().is_relative_to(lib.store.path):
                         paths.append(p)
+                        if key in {'download_path', 'saved_path'}:
+                            fetched.add(p)
                 elif isinstance(item, (dict, list)):
                     artifacts(item)
         elif isinstance(value, list):
             for item in value:
                 artifacts(item)
     artifacts(obj)
+    copies = set()
     if isinstance(obj, dict):
         from common.spill import spill_dir
         for refkey in ('source_ref', 'ref'):
@@ -111,9 +119,20 @@ def capture(context, config, params, result, call):
                 p = Path(ref['path']).resolve()
                 if p.is_relative_to(Path(spill_dir()).resolve()):
                     paths.append(p)
+                    copies.add(p)
+    # 검색 발췌는 내용의 성격이다. 그 결과의 만료 사본도 본문이 아니라 검색 발췌로 남긴다.
+    # 수집을 선언한 액션이 남긴 파일은 확보한 사본이다. 그 밖의 호출이 실행 중에 써낸 파일은
+    # 실행자의 산출물이다. 전부터 있던 파일(읽기만 한 문서)은 확보한 자료로 남는다.
+    authoring = declared in {'unknown', 'produced'} and started is not None
     for index, path in enumerate(dict.fromkeys(paths)):
         if path.is_file() and not path.resolve().is_relative_to(lib.store.root):
-            receipts.append(lib.add_file(path, item='file:' + str(index), **ctx))
+            if path in copies:
+                extra = {'coverage': 'snippet'} if declared == 'snippet' else {}
+            elif authoring and path not in fetched and path.stat().st_mtime >= int(started):
+                extra = {'coverage': 'produced'}
+            else:
+                extra = {}
+            receipts.append(lib.add_file(path, item='file:' + str(index), **extra, **ctx))
     schedule_index(lib.store.path)
     if isinstance(obj, dict):
         obj['research_materials'] = receipts
@@ -213,6 +232,7 @@ def schedule_index(path):
             with project_lock(key):
                 lib = ResearchLibrary(ResearchStore(key))
                 lib.prepare_index()
+                lib.sweep_index()
             while True:
                 with lib.store.connect() as db:
                     pending = db.execute("SELECT COUNT(*) FROM research_jobs WHERE state='pending'").fetchone()[0]

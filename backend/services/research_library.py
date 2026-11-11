@@ -3,14 +3,17 @@ import hashlib
 import json
 import mimetypes
 import re
+from datetime import datetime
 from pathlib import Path
 
 from notebook_store import NotebookStore, CHUNK_HARD_MAX, extract_file, _paragraphs_with_loc
 from research_store import ResearchStore, ResearchConflict, identifier, json_text, now
 
 
-COVERAGE_LABELS = {'full': '확보한 본문', 'partial': '일부 본문', 'snippet': '검색 발췌', 'unknown': '확보 범위 미확인'}
-INDEX_LABELS = {'pending': '검색 준비 중', 'ready': '검색 가능', 'failed': '검색 준비 실패', 'unsupported': '텍스트 추출 불가'}
+COVERAGE_LABELS = {'full': '확보한 본문', 'partial': '일부 본문', 'snippet': '검색 발췌', 'unknown': '확보 범위 미확인',
+                   'produced': '실행 산출물(확보한 자료 아님)'}
+INDEX_LABELS = {'pending': '검색 준비 중', 'ready': '검색 가능', 'failed': '검색 준비 실패', 'unsupported': '텍스트 추출 불가',
+                'preserved': '보존·읽기 전용(본문 검색 제외)'}
 
 
 def citation_chunks(paragraphs):
@@ -46,7 +49,7 @@ class ResearchLibrary:
 
     def capture(self, data, *, title, origin='', kind='text', mime='text/plain', coverage='full',
                 thread=None, run=None, call=None, item='0', paragraphs=None, acquired_result=None):
-        if coverage not in {'full', 'partial', 'snippet', 'unknown'}:
+        if coverage not in COVERAGE_LABELS:
             raise ValueError('잘못된 확보 범위')
         if isinstance(data, str):
             data = data.encode('utf-8')
@@ -188,9 +191,116 @@ class ResearchLibrary:
             return paras, 1
         raise ValueError('원본은 보존됐지만 텍스트를 추출하지 못했습니다')
 
+    def _search_exclusion(self, version):
+        """본문 검색에 넣지 않을 이유(없으면 빈 문자열). 보존·읽기·인용은 그대로이고 색인만 하지 않는다.
+
+        본문 검색은 확보한 원문에서 찾는다. 검색 발췌는 본문이 아니고, 실행자가 이번 일에서 만든
+        것(작업대 출력·써낸 파일)은 확보한 자료가 아니다. 한 번의 획득에서 주 자료와 추출 본문이 같은
+        부산물(만료되는 원본의 보존 사본)은 주 자료가 대표한다. 같은 문단이 두 번 나와 후보 자리를
+        차지하지 않는다. 본문이 다른 부산물(주 자료가 잘린 경우의 전문 사본 등)은 그대로 검색 대상이다.
+        """
+        latest = '(SELECT e.blob FROM research_extractions e WHERE e.version_id={}.version_id ORDER BY e.revision DESC LIMIT 1)'
+        with self.store.connect() as db:
+            row = db.execute('SELECT coverage FROM research_versions WHERE id=?', (version,)).fetchone()
+            if row and row['coverage'] in {'snippet', 'produced'}:
+                return row['coverage']
+            captures = db.execute(
+                f"SELECT c.item_key,{latest.format('c')} AS body,{latest.format('p')} AS primary_body "
+                'FROM research_captures c LEFT JOIN research_captures p ON p.run_id=c.run_id AND p.call_id=c.call_id '
+                "AND p.item_key='0' AND p.version_id!=c.version_id WHERE c.version_id=?", (version,)).fetchall()
+        if captures and all(c['item_key'] != '0' and c['body'] and c['body'] == c['primary_body'] for c in captures):
+            return 'duplicate'
+        return ''
+
+    def _unindex(self, version):
+        """색인 조각만 지운다. 원문·추출 판본·읽기 원장·과거 인용은 남는다."""
+        if self.index.db_path.exists():
+            import notebook_store as core
+            with self.index.scope():
+                nb = core.get_notebook(self.store.uid)
+                old = None
+                if nb:
+                    conn = core._connect()
+                    try:
+                        old = conn.execute('SELECT id FROM sources WHERE notebook_id=? AND path=?', (nb['id'], version)).fetchone()
+                    finally:
+                        conn.close()
+                if old:
+                    core.remove_source(self.store.uid, old['id'])
+        with self.store.connect(True) as db:
+            self.store.check_epoch(db)
+            db.execute('UPDATE research_jobs SET index_source=NULL WHERE version_id=?', (version,))
+
+    def sweep_index(self, limit=200):
+        """보존 전용이 된 판본의 남은 색인 조각을 지운다. 검색은 이미 그 판본을 후보에서 뺀다."""
+        with self.store.connect() as db:
+            versions = [r[0] for r in db.execute(
+                "SELECT version_id FROM research_jobs WHERE state='preserved' AND index_source IS NOT NULL LIMIT ?", (limit,))]
+        for vid in versions:
+            self._unindex(vid)
+        return len(versions)
+
+    def _upgrade_search_pool(self):
+        """이미 색인된 검색 발췌·같은 획득의 중복 사본을 본문 검색에서 내린다. 원문·추출 판본·과거 인용은 보존한다."""
+        migration = 'search-pool-bodies-v1'
+        with self.store.connect() as db:
+            if db.execute('SELECT 1 FROM research_migrations WHERE name=?', (migration,)).fetchone():
+                return
+            versions = [r[0] for r in db.execute(
+                "SELECT j.version_id FROM research_jobs j JOIN research_versions v ON v.id=j.version_id WHERE j.state='ready' "
+                "AND (v.coverage='snippet' OR EXISTS (SELECT 1 FROM research_captures c WHERE c.version_id=v.id AND c.item_key!='0'))")]
+        held = [vid for vid in versions if self._search_exclusion(vid)]
+        with self.store.connect(True) as db:
+            self.store.check_epoch(db)
+            for vid in held:
+                db.execute("UPDATE research_jobs SET state='preserved',updated_at=? WHERE version_id=? AND state='ready'", (now(), vid))
+            db.execute('INSERT OR IGNORE INTO research_migrations(name) VALUES (?)', (migration,))
+
+    def _upgrade_produced(self):
+        """관문 이전에 보존된 실행 산출물의 표지를 저장된 사실로만 바로잡는다. 가릴 수 없는 것은 그대로 둔다.
+
+        작업대 출력은 IBL 통화(봉투)가 아닌 맨 문자열로 보존됐다. 써낸 파일은 수집을 선언하지 않은
+        호출의 부산물로 처음 보존됐고, 디스크에 남은 같은 바이트가 그 보존 직전에 쓰였다.
+        """
+        migration = 'search-pool-produced-v1'
+        with self.store.connect() as db:
+            if db.execute('SELECT 1 FROM research_migrations WHERE name=?', (migration,)).fetchone():
+                return
+            outputs = db.execute("SELECT v.id,v.blob FROM research_versions v JOIN research_sources s ON s.id=v.source_id "
+                                 "WHERE s.kind LIKE 'tool:%' AND v.mime='application/json' AND v.coverage='unknown'").fetchall()
+            files = db.execute(
+                'SELECT v.id,v.blob,s.origin,c.created_at FROM research_versions v JOIN research_sources s ON s.id=v.source_id '
+                'JOIN research_captures c ON c.rowid=(SELECT MIN(x.rowid) FROM research_captures x WHERE x.version_id=v.id) '
+                "JOIN research_captures p ON p.run_id=c.run_id AND p.call_id=c.call_id AND p.item_key='0' "
+                'JOIN research_versions pv ON pv.id=p.version_id '
+                "WHERE s.kind='file' AND v.coverage='full' AND c.item_key!='0' AND pv.coverage='unknown'").fetchall()
+        produced = []
+        for row in outputs:
+            try:
+                if self.store.blob(row['blob'])[:1] == b'"':
+                    produced.append(row['id'])
+            except (OSError, ValueError):
+                continue
+        for row in files:
+            try:
+                path = Path(row['origin'])
+                waited = datetime.fromisoformat(row['created_at']).timestamp() - path.stat().st_mtime
+                if -1 <= waited <= 10 and hashlib.sha256(path.read_bytes()).hexdigest() == row['blob']:
+                    produced.append(row['id'])
+            except (OSError, ValueError):
+                continue
+        with self.store.connect(True) as db:
+            self.store.check_epoch(db)
+            for vid in produced:
+                db.execute("UPDATE research_versions SET coverage='produced' WHERE id=?", (vid,))
+                db.execute("UPDATE research_jobs SET state='preserved',updated_at=? WHERE version_id=? AND state='ready'", (now(), vid))
+            db.execute('INSERT OR IGNORE INTO research_migrations(name) VALUES (?)', (migration,))
+
     def prepare_index(self):
         self._upgrade_web_snapshots()
         self._upgrade_script_selections()
+        self._upgrade_search_pool()
+        self._upgrade_produced()
         # 추출 판본·원문·과거 인용은 그대로 둔다. 옛 문단 합성 색인만 다시 만든다.
         migration = 'citation-paragraph-chunks-v1'
         with self.store.connect() as db:
@@ -277,6 +387,10 @@ class ResearchLibrary:
         for vid in versions:
             try:
                 paras, revision = self.paragraphs(vid)
+                if self._search_exclusion(vid):
+                    self._unindex(vid)
+                    self._job_state(vid, 'preserved')
+                    continue
                 chunks = citation_chunks(paras)
                 v = self.version(vid)
                 # 버전마다 안정적인 가상 path. 재시도는 같은 소스에 다시 색인한다.
@@ -373,7 +487,7 @@ class ResearchLibrary:
                 'JOIN research_versions v ON v.id=j.version_id JOIN research_sources s ON s.id=v.source_id '
                 f"WHERE j.state='ready' AND {visible} AND {excluded}=0 AND v.rowid=(SELECT MAX(x.rowid) FROM research_versions x WHERE x.source_id=s.id AND {latest})",
                 (*args, *excluded_args, *latest_args))}
-            pending = db.execute(f"SELECT COUNT(*) FROM research_jobs j JOIN research_versions v ON v.id=j.version_id WHERE state!='ready' AND {visible}", args).fetchone()[0]
+            pending = db.execute(f"SELECT COUNT(*) FROM research_jobs j JOIN research_versions v ON v.id=j.version_id WHERE state NOT IN ('ready','preserved') AND {visible}", args).fetchone()[0]
         # 후보 선정 전에 제한한다. 다른 대화의 상위 결과가 현재 대화 자료를 밀어내지 않는다.
         out = self.index.call('search_chunks', self.store.uid, query, top_k=limit,
                               source_ids=[sid for sid in mapping if sid is not None])

@@ -63,6 +63,22 @@ def test_auto_open_reuses_saved_copy_and_unsaved_session(setup):
     assert app.open(source)['document']['id'] == row['id']
 
 
+def test_conversion_copy_without_hardlinks_preserves_source_and_reuses_result(setup, monkeypatch):
+    import errno
+    app, source, calls = setup
+    before = source.read_bytes()
+    def deny(*args):
+        raise OSError(errno.EOPNOTSUPP, 'hardlinks unsupported')
+    monkeypatch.setattr(document_imports.os, 'link', deny)
+    first = app.open(source)
+    row = first['document']
+    copy = Path(row['source_uri'])
+    assert 'Converted 한글' == Document(copy).paragraphs[0].text
+    assert copy.stat().st_nlink == 1 and source.read_bytes() == before
+    assert app.open(source)['document']['id'] == row['id']
+    assert len(calls) == 1
+
+
 def test_source_change_keeps_working_copy_until_refresh(setup):
     app, source, calls = setup
     first = app.open(source)

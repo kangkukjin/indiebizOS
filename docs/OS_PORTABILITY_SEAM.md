@@ -30,6 +30,7 @@ indiebizOS를 새 OS(윈도우/리눅스)에 깔 때 **다시 개발할 필요 �
 | 파일 | 무엇을 OS별로 바인딩 | 윈도우/리눅스 시 |
 |---|---|---|
 | `runtime_utils.py` | detect_body + 번들 런타임 경로 | Win 경로 이미 있음·detect 자기감지 ✓ |
+| `base/output_publish.py` | 하드링크 미지원 시 완성 파일의 원자적 무덮어쓰기 게시 | macOS `renamex_np(RENAME_EXCL)`, Linux/Android `renameat2(RENAME_NOREPLACE)`, Windows `os.rename`. 폰 전송도 같은 rename을 사용. macOS 실호출·경합·실패 복구 검사, Windows/Linux 실기 재검증은 별도 |
 | `services/control_launcher.py` | 승인된 제어 기반의 프로세스 exec 인수 | Windows CRT 인용, POSIX argv 보존. 공백·한글 경로와 특수 인수의 실제 Windows 자식 실행 검증(2026-11-01) |
 | `ibl_executors.py` | 파일/URL 열기·클립보드·탐색기 | Darwin/Windows/Linux 3분기 이미 있음 ✓ |
 | `api_pcmanager.py` | 드라이브/볼륨 열거·열기 | 3 OS 분기 있음 ✓ |

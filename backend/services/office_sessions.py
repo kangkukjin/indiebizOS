@@ -252,7 +252,8 @@ class OfficeSessions:
                     os.fsync(stream.fileno())
                 # Atomic, exclusive publication. A concurrent creator wins;
                 # neither the original nor an existing destination is replaced.
-                os.link(temporary, path)
+                from output_publish import publish_exclusive
+                publish_exclusive(temporary, path)
                 sync_directory(path.parent)
                 if digest(read_bytes(path)) != s["blob"]:
                     raise DocumentConflict("생성된 사본이 외부에서 변경됐습니다. 초안을 보존했습니다")

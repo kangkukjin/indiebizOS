@@ -52,6 +52,49 @@ def test_rename_race_keeps_every_file(tmp_path):
     assert {p.read_text() for p in tmp_path.iterdir()} == {str(i) for i in range(12)}
 
 
+@pytest.mark.parametrize('policy', ['fail', 'rename'])
+def test_no_hardlinks_concurrent_publication_keeps_complete_winner(tmp_path, monkeypatch, policy):
+    import errno
+    import output_publish
+    def deny(*args):
+        raise OSError(errno.EOPNOTSUPP, 'hardlinks unsupported')
+    monkeypatch.setattr(output_publish.os, 'link', deny)
+    def write(i):
+        try:
+            return publish_file(tmp_path / 'x.txt', lambda p: p.write_text(str(i)), if_exists=policy)[1]
+        except FileExistsError:
+            return None
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(write, range(12)))
+    saved = [r for r in results if r]
+    assert len(saved) == (1 if policy == 'fail' else 12)
+    assert len(list(tmp_path.iterdir())) == len(saved)
+    assert len({Path(r['path']).read_text() for r in saved}) == len(saved)
+    assert all(Path(r['path']).stat().st_nlink == 1 for r in saved)
+
+
+@pytest.mark.parametrize('kind', ['file', 'directory', 'symlink'])
+def test_native_no_replace_preserves_any_existing_target(tmp_path, kind):
+    from output_publish import rename_no_replace
+    source, target = tmp_path / 'source', tmp_path / 'target'
+    source.write_text('NEW')
+    if kind == 'directory':
+        target.mkdir()
+    elif kind == 'symlink':
+        target.symlink_to(tmp_path / 'absent')
+    else:
+        target.write_text('OLD')
+    with pytest.raises(FileExistsError):
+        rename_no_replace(source, target)
+    assert source.read_text() == 'NEW'
+    if kind == 'file':
+        assert target.read_text() == 'OLD'
+    elif kind == 'directory':
+        assert target.is_dir()
+    else:
+        assert target.is_symlink() and not target.exists()
+
+
 def test_fill_failure_and_explicit_policy(tmp_path, monkeypatch):
     office = module('office_ops')
     source, target = tmp_path / 'template.docx', tmp_path / 'filled.docx'

@@ -86,7 +86,39 @@ def test_destination_race_never_overwrites(work, monkeypatch):
     assert app.detail(d["id"])["text"] == "고친 초안\r\n"
 
 
-def test_crash_after_publication_recovers_without_rewrite(work, monkeypatch):
+@pytest.mark.parametrize('race', [False, True])
+def test_copy_without_hardlinks_preserves_original_draft_and_competing_file(work, monkeypatch, race):
+    import errno
+    app, path, d, s = edit(work)
+    before = path.read_bytes()
+    target = path.with_name('copy.txt')
+    def deny(src, dst):
+        if race:
+            Path(dst).write_bytes(b'OTHER WRITER')
+        raise OSError(errno.EOPNOTSUPP, 'hardlinks unsupported')
+    monkeypatch.setattr(storage.os, 'link', deny)
+    assert app.capabilities(d['id'])['export_copy']
+    if race:
+        with pytest.raises(FileExistsError):
+            app.export_copy(**args(d, s), operation_id='no-link', filename=target.name)
+        assert target.read_bytes() == b'OTHER WRITER'
+    else:
+        result = app.export_copy(**args(d, s), operation_id='no-link', filename=target.name)
+        assert result['state'] == 'copy_saved'
+        assert target.read_bytes() == '고친 초안\r\n'.encode('cp949')
+        assert target.stat().st_nlink == 1
+    assert path.read_bytes() == before
+    assert app.detail(d['id'])['text'] == '고친 초안\r\n'
+    assert not list(path.parent.glob('.indiebiz-document-*'))
+
+
+@pytest.mark.parametrize('no_links', [False, True])
+def test_crash_after_publication_recovers_without_rewrite(work, monkeypatch, no_links):
+    if no_links:
+        import errno
+        def deny(*args):
+            raise OSError(errno.EOPNOTSUPP, 'hardlinks unsupported')
+        monkeypatch.setattr(storage.os, 'link', deny)
     app, path, d, s = edit(work)
     def crash(op):
         raise OSError("simulated database outage")
@@ -97,6 +129,25 @@ def test_crash_after_publication_recovers_without_rewrite(work, monkeypatch):
     assert app.recover(d["id"])["items"][0]["state"] == "copy_saved"
     assert app.export_copy(**args(d, s), operation_id="copy", filename="copy.txt")["state"] == "copy_saved"
     assert len(app.store.events(d["id"])) == 2
+
+
+def test_copy_rename_failure_keeps_draft_and_leaves_no_empty_destination(work, monkeypatch):
+    import errno
+    import output_publish
+    app, path, d, s = edit(work)
+    before = path.read_bytes()
+    def deny(*args):
+        raise OSError(errno.EOPNOTSUPP, 'hardlinks unsupported')
+    def fail(*args):
+        raise OSError(errno.EIO, 'publication failed')
+    monkeypatch.setattr(storage.os, 'link', deny)
+    monkeypatch.setattr(output_publish, 'rename_no_replace', fail)
+    with pytest.raises(OSError, match='publication failed'):
+        app.export_copy(**args(d, s), operation_id='failed-copy', filename='copy.txt')
+    assert not path.with_name('copy.txt').exists()
+    assert path.read_bytes() == before
+    assert app.recover(d['id'])['items'][0]['state'] == 'not_written'
+    assert app.detail(d['id'])['text'] == '고친 초안\r\n'
 
 
 def test_disk_failure_keeps_draft_and_original(work, monkeypatch):

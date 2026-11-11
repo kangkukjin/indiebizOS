@@ -135,6 +135,37 @@ def test_repository_root_has_no_single_mutable_owner():
     assert status['success'] and status['items'][0]['route'] == 'unmanaged'
 
 
+@pytest.mark.parametrize('kind', ['file', 'parent', 'dangling', 'outside'])
+@pytest.mark.parametrize('absolute', [False, True])
+def test_path_status_rejects_the_same_links_as_candidate_paths(tmp_path, kind, absolute):
+    from program_boundary import path_status
+    from test_repair_workspace_completion import module
+    root = tmp_path / 'repo'
+    folder = root / 'data/guides'
+    folder.mkdir(parents=True)
+    target = folder / 'actual.md'
+    target.write_text('KEEP')
+    alias = folder / 'alias.md'
+    if kind == 'parent':
+        alias = root / 'outputs'
+        alias.symlink_to(folder, target_is_directory=True)
+        alias /= 'actual.md'
+    else:
+        dest = target if kind == 'file' else folder / 'missing.md'
+        if kind == 'outside':
+            dest = tmp_path / 'outside.md'
+            dest.write_text('OUTSIDE')
+        alias.symlink_to(dest)
+    relative = alias.relative_to(root).as_posix()
+    status = path_status(str(alias) if absolute else relative, root)
+    assert not status['success'], status
+    with pytest.raises(ValueError, match='심볼릭 링크'):
+        module('repair_candidate').target(root, relative)
+    direct = path_status(str(target), root)
+    assert direct['success'] and direct['items'][0]['mutable']
+    assert target.read_text() == 'KEEP'
+
+
 def test_test_maintenance_and_managed_outputs_follow_their_owners():
     from program_boundary import change
     stamp = {'sha': 'exact', 'mode': 420}

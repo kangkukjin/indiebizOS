@@ -314,13 +314,15 @@ def file_call(handler, payload, context):
     for field, (relative, path) in paths.items():
         # The existing candidate validator also rejects symlinked parents.
         path = st._candidate.target(root, relative)
-        if writing and path.is_file() and path.stat().st_nlink != 1:
+        writes_path = writing and not (name == 'copy_path' and field in {'src', 'source'})
+        if writes_path and path.is_file() and path.stat().st_nlink != 1:
             raise PermissionError('하드 링크를 통한 문서 변경은 지원하지 않습니다')
         if writing and path.is_dir():
             for child in path.rglob('*'):
                 rel = child.relative_to(root).as_posix()
                 st._candidate.target(root, rel)
-                if (describe(rel) or {}).get('route') != 'file' or (child.is_file() and child.stat().st_nlink != 1):
+                if ((describe(rel) or {}).get('route') != 'file'
+                        or (writes_path and child.is_file() and child.stat().st_nlink != 1)):
                     raise PermissionError('폴더 안에 다른 소유자의 대상이 있습니다: ' + rel)
         mapped[field] = str(path)
     from copy import copy

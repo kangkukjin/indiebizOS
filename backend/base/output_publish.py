@@ -3,6 +3,7 @@ import errno
 import os
 from pathlib import Path
 import tempfile
+import sys
 
 
 def collision_policy(value, default='fail'):
@@ -12,9 +13,47 @@ def collision_policy(value, default='fail'):
     return policy
 
 
-def _link_or_reserve(temp, target):
-    """같은 폴더 안 하드링크로 발행한다. 하드링크를 금지하는 파일시스템(Android 앱 샌드박스 등, 73회차 L73-4)
-    에서는 O_EXCL 로 대상 이름을 먼저 예약한 뒤 replace 한다 — 경쟁 작성자의 파일을 덮어쓰지 않는 성질은 유지한다."""
+def rename_no_replace(source, destination):
+    """Publish a completed sibling file atomically, without replacing any target.
+
+    No empty reservation is exposed. Unsupported filesystems fail with the source
+    intact, rather than falling back to a check-then-replace race.
+    """
+    if sys.platform == 'win32':
+        os.rename(source, destination)  # Windows rename fails if destination exists.
+        return
+    import ctypes
+    libc = ctypes.CDLL(None, use_errno=True)
+    src, dst = ctypes.c_char_p(os.fsencode(source)), ctypes.c_char_p(os.fsencode(destination))
+    if sys.platform == 'darwin':
+        call = getattr(libc, 'renamex_np', None)
+        if call is None:
+            raise OSError(errno.ENOSYS, 'atomic_no_replace_unsupported')
+        call.restype = ctypes.c_int
+        result = call(src, dst, ctypes.c_uint(4))  # RENAME_EXCL, <sys/stdio.h>
+    elif sys.platform == 'linux':
+        args = (ctypes.c_int(-100), src, ctypes.c_int(-100), dst, ctypes.c_uint(1))
+        call = getattr(libc, 'renameat2', None)
+        if call is not None:
+            call.restype = ctypes.c_int
+            result = call(*args)  # RENAME_NOREPLACE
+        else:
+            # Android API 28 may have the kernel call without the libc wrapper.
+            import platform
+            number = {'aarch64': 276, 'armv7l': 382, 'armv8l': 382, 'x86_64': 316}.get(platform.machine())
+            if number is None:
+                raise OSError(errno.ENOSYS, 'atomic_no_replace_unsupported')
+            libc.syscall.restype = ctypes.c_long
+            result = libc.syscall(ctypes.c_long(number), *args)
+    else:
+        raise OSError(errno.ENOSYS, 'atomic_no_replace_unsupported')
+    if result != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error), str(destination))
+
+
+def publish_exclusive(temp, target):
+    """Publish complete bytes; caller cleans temp if link publication retains it."""
     try:
         os.link(temp, target)
         return
@@ -23,9 +62,7 @@ def _link_or_reserve(temp, target):
             raise
         if getattr(error, 'errno', None) not in (errno.EPERM, errno.EACCES, errno.EXDEV, errno.EOPNOTSUPP, errno.ENOTSUP):
             raise
-    fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
-    os.close(fd)
-    os.replace(temp, target)
+    rename_no_replace(temp, target)
 
 
 def publish_file(destination, writer, *, if_exists='fail', guard=None):
@@ -68,7 +105,7 @@ def publish_file(destination, writer, *, if_exists='fail', guard=None):
                 if policy == 'overwrite':
                     os.replace(temp, target)
                 else:
-                    _link_or_reserve(temp, target)
+                    publish_exclusive(temp, target)
                 break
             except FileExistsError:
                 if policy != 'rename':

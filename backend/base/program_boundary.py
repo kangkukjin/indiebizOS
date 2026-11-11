@@ -347,6 +347,20 @@ def source_artifact(relative):
         or PurePosixPath(relative).name in {'ibl_actions.yaml', 'tool.json', 'package.json'})
 
 
+def checked_path(root, relative):
+    """Keep the requested path identity; status and execution reject links alike."""
+    from pathlib import Path
+    root, rel = Path(root).resolve(), Path(relative)
+    if rel.is_absolute() or '..' in rel.parts:
+        raise ValueError('정본 내부의 상대 경로가 필요합니다: ' + str(relative))
+    path = root / rel
+    if not path.resolve().is_relative_to(root):
+        raise ValueError('수리 경로의 심볼릭 링크가 사본 밖을 가리킵니다: ' + str(relative))
+    if any(p.is_symlink() for p in [path, *path.parents] if p != root and p.is_relative_to(root)):
+        raise ValueError('수리 변경에 심볼릭 링크를 사용할 수 없습니다. 실제 경로를 지정하세요: ' + str(relative))
+    return path
+
+
 def path_status(raw, repo):
     """Read-only ownership query for self:patch status; never create a workspace."""
     from pathlib import Path
@@ -354,10 +368,10 @@ def path_status(raw, repo):
     try:
         path = Path(expand_body_path(raw))
         root = Path(repo).resolve()
-        relative = path.resolve().relative_to(root).as_posix() if path.is_absolute() else raw
-        if not canonical(relative) or not (root / relative).resolve().is_relative_to(root):
+        relative = path.relative_to(root).as_posix() if path.is_absolute() else raw
+        if not canonical(relative):
             raise ValueError('정본 내부의 정규 경로가 필요합니다')
-        relative = (root / relative).resolve().relative_to(root).as_posix()
+        checked_path(root, relative)
         item = describe(relative) or {'kind': 'unmanaged', 'mutable': False, 'activation': None,
                                      'route': 'unmanaged', 'completion': None}
         return {'success': True, 'items': [{'path': relative, **item,

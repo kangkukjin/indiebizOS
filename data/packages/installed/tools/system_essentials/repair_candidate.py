@@ -20,20 +20,11 @@ def digest(value):
 
 
 def target(root, relative, *, read_only=False):
-    root = Path(root).resolve()
-    rel = Path(relative)
-    from program_boundary import readable_runtime_state
+    from program_boundary import checked_path, readable_runtime_state
     private = any(relative == p or relative.startswith(p + '/') for p in PRIVATE)
-    if (rel.is_absolute() or ".." in rel.parts
-            or private and not (read_only and readable_runtime_state(relative))):
+    if private and not (read_only and readable_runtime_state(relative)):
         raise ValueError("수리 경로가 보호 영역 또는 사본 밖입니다: " + relative)
-    path = root / rel
-    if not path.resolve().is_relative_to(root):
-        raise ValueError("수리 경로의 심볼릭 링크가 사본 밖을 가리킵니다: " + relative)
-    # 파일뿐 아니라 부모 링크도 거절한다. 적용 시 부모를 바꿔 다른 곳에 쓰지 않는다.
-    if any(p.is_symlink() for p in [path, *path.parents] if p != root and p.is_relative_to(root)):
-        raise ValueError("수리 변경에 심볼릭 링크를 사용할 수 없습니다: " + relative)
-    return path
+    return checked_path(root, relative)
 
 
 def fingerprint(path):

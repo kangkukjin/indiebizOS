@@ -125,6 +125,9 @@ def repair(tmp_path, monkeypatch, supervisor):
     monkeypatch.setattr(handler, '_red_grant_active', lambda: True)
     monkeypatch.setattr(handler, '_staging_key', lambda: 'script-repair')
     monkeypatch.setattr(st, '_repair_owner', lambda: 'owner')
+    # Bind the real accessor before patching runtime_utils: a first lazy import
+    # inside this fixture must not retain its temporary repository after teardown.
+    monkeypatch.setattr('model_resolver.get_base_path', lambda: repo)
     for name in ('get_base_path', 'get_source_root', 'get_code_root'):
         monkeypatch.setattr('runtime_utils.' + name, lambda: repo)
     monkeypatch.setattr(workflow_store, '_get_workflows_path', lambda: functions)
@@ -468,6 +471,45 @@ def test_document_route_checks_scope_links_and_mixed_moves_before_writing(repair
     assert not result['success'], result
     assert (repo / path).read_text() == 'OLD GUIDE'
     assert not (repo / 'backend/moved.py').exists()
+
+
+@pytest.mark.parametrize('directory', [False, True])
+@pytest.mark.parametrize('source_key,dest_key', [('src', 'dest'), ('source', 'destination')])
+def test_copy_reads_hardlinked_source_without_granting_writes(repair, directory, source_key, dest_key):
+    import os
+    repo, wt, st, controller, call = repair
+    source = repo / 'outputs/reports/source'
+    source.mkdir()
+    original = source / 'value.txt'
+    original.write_text('ORIGINAL')
+    alias = repo / 'outputs/reports/snapshot.txt'
+    os.link(original, alias)
+    requested = source if directory else original
+    destination = repo / 'outputs/reports/copied'
+    payload = {source_key: str(requested), dest_key: str(destination)}
+    result = call('copy_path', payload)
+    assert result['success'], result
+    copied = destination / 'value.txt' if directory else destination
+    assert copied.read_text() == 'ORIGINAL' and copied.stat().st_nlink == 1
+    assert call('write_file', {'path': str(copied), 'content': 'INDEPENDENT'})['success']
+    assert original.read_text() == alias.read_text() == 'ORIGINAL'
+    assert not call('write_file', {'path': str(original), 'content': 'BAD'})['success']
+    assert not call('move_path', {**payload, dest_key: str(destination) + '-moved'})['success']
+    denied = call('copy_path', {source_key: str(copied), dest_key: str(alias), 'if_exists': 'overwrite'})
+    assert not denied['success'], denied
+    assert original.read_text() == alias.read_text() == 'ORIGINAL'
+
+
+def test_copy_source_directory_still_checks_protected_children_before_writes(repair):
+    repo, wt, st, controller, call = repair
+    source = repo / 'outputs/reports/source'
+    source.mkdir()
+    (source / 'a.txt').write_text('NORMAL')
+    (source / 'AGENTS.md').write_text('PROTECTED')
+    destination = repo / 'outputs/reports/copied'
+    result = call('copy_path', {'src': str(source), 'dest': str(destination)})
+    assert not result['success'], result
+    assert not destination.exists()
 
 
 def test_explicit_candidate_artifact_stays_staged(repair):

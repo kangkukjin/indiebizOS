@@ -65,7 +65,8 @@ def _finish(app, job):
             stream.flush()
             os.fsync(stream.fileno())
         try:
-            os.link(temporary, path)
+            from output_publish import publish_exclusive
+            publish_exclusive(temporary, path)
         except FileExistsError:
             pass
         finally:

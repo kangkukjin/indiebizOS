@@ -44,7 +44,9 @@ def _resolve_limb(target: str):
             return r["device_id"], r["alias"], None
         if len(registered) > 1:
             return None, None, "PC 이름이 중복입니다. device_id를 지정하세요."
-    live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
+    # 한 PC 에 딸린 통로(관리 서비스)는 손발 수에 넣지 않는다 — 손발은 하드웨어 단위다.
+    live = [e for e in dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
+            if not limb_keys.hardware_of(e.get("device_id"))]
     if target:
         for e in live:
             if e.get("device_id") == target or e.get("alias") == target:
@@ -460,7 +462,8 @@ def _op_shell(tool_input: dict) -> dict:
     if to is None and resident and tool_input.get("request_id"):
         import resident_pcs
         import resident_store
-        previous = resident_store.find_request(resident_pcs.resolve(device_id), tool_input["request_id"])
+        previous = resident_store.find_request(
+            resident_pcs.channel_for(resident_pcs.resolve(device_id), envelope), tool_input["request_id"])
         if previous:
             # Preserve defaults captured before upgrade when recovering an old request.
             to = previous["summary"].get("timeout")
@@ -843,7 +846,11 @@ def _limb_list(tool_input: dict) -> dict:
     if limb_filter is not None:
         if not isinstance(limb_filter, str) or not limb_filter.strip():
             return {"success": False, "error": "limb 은 손발의 device_id 또는 별칭 문자열입니다."}
-        rows = [r for r in rows if r.get("device_id") == limb_filter or r.get("alias") == limb_filter]
+        named = [r for r in rows if r.get("device_id") == limb_filter or r.get("alias") == limb_filter]
+        # 이름으로 좁혀도 그 PC 에 딸린 통로(관리 서비스)는 같은 행에 함께 보인다.
+        owned = {r["device_id"] for r in named}
+        rows = named + [r for r in rows if r["device_id"] not in owned
+                        and (r.get("registration") or {}).get("attached_to") in owned]
     for r in rows:
         r["connected"] = r["device_id"] in live_ids
         if r.get("registration") and (r["registration"].get("kind") != "phone"):
@@ -866,6 +873,8 @@ def _limb_list(tool_input: dict) -> dict:
             r["env"] = {k: env.get(k) for k in
                         ("os", "os_version", "hostname", "user", "admin", "gui")
                         if env.get(k) is not None}
+    # 손발은 하드웨어 단위다 — 같은 PC 의 관리 서비스는 그 PC 행의 channels 로 접는다.
+    rows = limb_keys.fold_channels(rows)
     import hardware_registry
     from hardware_driver_status import describe
     rows.extend({**h, "drivers": describe(h)} for h in hardware_registry.devices()
@@ -922,7 +931,7 @@ def _resident_operation(tool_input):
     try:
         if op == "history":
             return {"success": True, **resident_store.history(
-                device=resident_pcs.resolve(target, active=False)["device_id"] if target else None,
+                device=resident_pcs.hardware_devices(target) if target else None,
                 job=tool_input.get("job"), cursor=tool_input.get("cursor", 0))}
         if op == "cancel":
             return {"success": True, "cancel_requested": resident_store.cancel(tool_input.get("job"))}
@@ -958,6 +967,17 @@ def _limb_update(tool_input):
             updated = phone_updates.submit(rec["device_id"])
         else:
             updated = resident_pcs.update_helper(rec["device_id"])
+            # 같은 PC 의 관리 서비스도 제 설치본을 따로 가진다 — 하드웨어 단위 교체는 통로마다 접수한다.
+            import limb_keys
+            extra = []
+            for channel in limb_keys.channels(rec["device_id"]):
+                try:
+                    extra.append({"device_id": channel["device_id"],
+                                  **resident_pcs.update_helper(channel["device_id"])})
+                except (ValueError, PermissionError, OSError, KeyError) as exc:
+                    extra.append({"device_id": channel["device_id"], "success": False, "error": str(exc)})
+            if extra:
+                updated = {**updated, "channels": extra}
         return {**updated, "op": "update", "target": rec["device_id"]}
     except (ValueError, PermissionError, OSError, KeyError) as exc:
         return {"success": False, "op": "update", "target": target.strip(), "error": str(exc)}
@@ -981,9 +1001,8 @@ def _resident_registration(tool_input):
                 target, remove=op == "remove", paused=bool(tool_input.get("paused", True)))}
         if op == "remove":
             return {"success": True, "registration": resident_pcs.remove(target)}
-        rec = resident_pcs.resolve(target, active=False)
-        return {"success": True, "registration": limb_keys.resident_update(
-            rec["device_id"], paused=bool(tool_input.get("paused", True)))}
+        return {"success": True, "registration": resident_pcs.set_paused(
+            target, bool(tool_input.get("paused", True)))}
     except ValueError as exc:
         return {"success": False, "error": str(exc)}
 

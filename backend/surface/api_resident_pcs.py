@@ -122,11 +122,13 @@ def state(req: dict):
                        paused=req.get('paused'))
     if req.get('remove'):
         return checked(pcs.remove, req.get('target'))
-    rec = checked(pcs.resolve, req.get('target'), active=False)
-    out = checked(limb_keys.resident_update, rec['device_id'], paused=bool(req.get('paused')))
-    if req.get('paused'):
-        pcs.media_sessions_end(rec['device_id'], 'relation_paused')
-    return out
+    return checked(pcs.set_paused, req.get('target'), req.get('paused'))
+
+
+@router.post('/remote-pcs/attach')
+def attach(req: dict):
+    """관리 서비스 등록을 같은 PC의 손발에 묶거나(primary) 푼다(primary 없음). 주인의 확인이 곧 결합 근거다."""
+    return checked(pcs.attach, req.get('target'), req.get('primary'))
 
 
 @router.put('/remote-pcs/context')

@@ -106,11 +106,14 @@ workspace는 기본 위치이며 절대 cwd/path로 OS가 허용한 모든 경�
 일반 헬퍼의 shell `elevate:true`는 원격 PC의 OS 인증창에서 이번 명령을 승인한다.
 인증은 대상 OS 창에서 처리하며 UAC 보안 화면은 헬퍼로 조작할 수 없다.
 
-Windows **무인 관리 서비스**는 최초 관리자 등록 후 로그인 없이 설치·설정을 실행한다.
-`info.resident`의 `service_scope:machine`, `elevation_unattended:true`를 확인한다.
-이 대상의 shell은 LocalSystem이며 매번 UAC를 띄우지 않는다. 일반 사용자용 앱·화면은
-사용자 세션 헬퍼로, 시스템 설치·설정은 관리 서비스로 보낸다. 설치기는 무인 옵션을 쓴다.
-일반 사용자 헬퍼에는 이 무인 관리 권한이 없다.
+Windows **무인 관리 서비스**는 같은 PC의 손발에 딸린 통로이며 별도 손발이 아니다. 손발 목록에서는
+그 PC 행의 `channels`로, 소개 행에서는 `elevate="unattended"`로 보인다. 그 PC 이름으로 보낸 배경 shell에
+`elevate:true`가 있으면 허브가 관리 통로로 넘겨 LocalSystem으로 인증창 없이 실행한다(로그인 없이도).
+접수증의 `channel:"machine"`·`execution_account`가 이를 알린다. 통로가 없거나 끊겼으면 위의 인증창 경로다.
+`elevate` 없는 명령과 화면·터미널은 사용자 세션이 맡으며, 사용자 세션이 끊겼다고 관리 통로가 대신 받지 않는다.
+사용자 프로필(HKCU·사용자 폴더)의 일은 사용자 세션으로, 시스템 설치·설정은 `elevate:true`로 보내고
+설치기에는 무인·시스템 전체 옵션을 명시한다. 통로를 직접 지명해야 하는 작업은 `channels`의 `device_id`를 대상으로 쓴다.
+아직 묶이지 않은 관리 서비스는 별도 행으로 남는다. 묶기는 주인이 조종실 손발 목록에서 확인한다.
 등록·보호·해제·플랫폼 범위는 `helper/README.md`의 무인 관리 서비스를 따른다.
 
 

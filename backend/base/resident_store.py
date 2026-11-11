@@ -336,8 +336,10 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False, include_i
         schema(db)
         where, params = [], []
         if device:
-            where.append("device=?")
-            params.append(device)
+            # 한 하드웨어의 통로 여럿(사용자 세션·관리 서비스)은 목록으로 받아 한 이력으로 읽는다.
+            devices = [device] if isinstance(device, str) else list(device)
+            where.append("device IN (" + ",".join("?" * len(devices)) + ")")
+            params.extend(devices)
         if job:
             where.append("id=?")
             params.append(job)
@@ -371,10 +373,12 @@ def history(device=None, job=None, cursor=0, limit=100, *, tail=False, include_i
                 task["result"] = _image_summary(task["result"], task["id"])
             task.pop("fingerprint", None)
         ev_where, ev_params = ["cursor> ?"], [max(0, int(cursor))]
-        for key, value in (("device", device), ("job", job)):
-            if value:
-                ev_where.append(key + "=?")
-                ev_params.append(value)
+        if device:
+            ev_where.append("device IN (" + ",".join("?" * len(devices)) + ")")
+            ev_params.extend(devices)
+        if job:
+            ev_where.append("job=?")
+            ev_params.append(job)
         events = [dict(r) for r in db.execute("SELECT * FROM resident_events WHERE " +
                     " AND ".join(ev_where) + (" ORDER BY cursor DESC LIMIT ?" if tail else " ORDER BY cursor LIMIT ?"), (*ev_params, limit))]
         if tail:

@@ -435,6 +435,100 @@ def resident_enroll(invitation, installation_id, alias=None, kind="pc", adapter=
         return dict(bound)
 
 
+# === 하드웨어 묶음 — 한 PC 의 여러 설치를 손발 하나로 (2026-11-11) ===
+#
+# Windows 는 화면을 다루는 프로세스(사용자 세션)와 로그인 없이 관리자 권한으로 도는 프로세스
+# (LocalSystem 서비스)를 하나로 만들 수 없고, 권한이 다른 둘은 열쇠도 따로 가진다. 그래서 설치
+# 등록은 둘이지만 그것은 안쪽 사정이다 — 주인과 AI 가 보는 단위는 하드웨어 하나다.
+# 관리 서비스 등록의 registration.attached_to 가 같은 PC 의 사용자 세션 등록(주 등록)을 가리킨다.
+# 이 칸은 허브가 주인 결정으로만 쓴다. 헬퍼가 보고한 값(호스트 이름 등)으로 자동 결합하지 않는다 —
+# 유출된 등록 자격으로 남의 PC 이름을 대고 그 PC 의 관리자 명령을 가로채는 길이 되기 때문이다.
+
+def _alive(rec) -> bool:
+    reg = (rec or {}).get("registration") or {}
+    return bool(reg) and not rec.get("revoked") and reg.get("state") != "removed"
+
+
+def _primary_locked(data, rec):
+    """딸린 통로의 주 등록. 주 등록이 사라졌으면 None — 고아 통로는 독립 손발로 다시 보인다."""
+    primary = ((rec or {}).get("registration") or {}).get("attached_to")
+    if not primary:
+        return None
+    owner = next((r for r in data["keys"].values() if r.get("device_id") == primary), None)
+    return owner if _alive(owner) else None
+
+
+def hardware_of(device_id: str) -> Optional[str]:
+    """이 등록이 다른 손발에 딸린 통로면 그 주 등록의 device_id, 아니면 None."""
+    with _lock:
+        data = _load()
+        rec = next((r for r in data["keys"].values() if r.get("device_id") == device_id), None)
+        owner = _primary_locked(data, rec) if _alive(rec) else None
+        return owner["device_id"] if owner else None
+
+
+def channels(device_id: str) -> List[Dict]:
+    """주 등록에 딸린 살아 있는 통로들(내부용 사본, key 포함)."""
+    with _lock:
+        data = _load()
+        return [dict(r) for r in data["keys"].values()
+                if _alive(r) and r["registration"].get("attached_to") == device_id
+                and _primary_locked(data, r)]
+
+
+def fold_channels(rows: List[Dict]) -> List[Dict]:
+    """표시용 행에서 딸린 통로를 주 등록 행의 channels 로 접는다.
+
+    주 등록이 같은 목록에 살아 있을 때만 접는다. 그렇지 않은 통로는 그대로 남아 눈에 보인다."""
+    by_id = {r.get("device_id"): r for r in rows if _alive(r)}
+    out = []
+    for row in rows:
+        owner = by_id.get(((row.get("registration") or {}).get("attached_to")))
+        if _alive(row) and owner is not None and owner is not row:
+            owner.setdefault("channels", []).append(row)
+        else:
+            out.append(row)
+    return out
+
+
+def resident_attach(device, primary):
+    """관리 서비스 등록을 같은 PC 의 사용자 세션 등록에 딸린 통로로 묶는다. primary=None 이면 푼다."""
+    with _lock:
+        data = _load()
+        rec = _find_locked(data, device)
+        if not _alive(rec):
+            raise ValueError("resident_not_found")
+        reg = rec["registration"]
+        if primary is None:
+            reg.pop("attached_to", None)
+            _save()
+            return _public(rec)
+        owner = _find_locked(data, primary)
+        if not _alive(owner) or owner is rec:
+            raise ValueError("묶을 대상 PC를 찾지 못했습니다")
+        owned = owner["registration"]
+        caps, owner_caps = reg.get("capabilities") or {}, owned.get("capabilities") or {}
+        if reg["state"] != "active" or owned["state"] != "active":
+            raise ValueError("등록이 활성 상태인 PC만 묶을 수 있습니다")
+        if (reg.get("adapter"), owned.get("adapter")) != ("resident-v1", "resident-v1"):
+            raise ValueError("PC 헬퍼 등록만 묶을 수 있습니다")
+        if caps.get("service_scope") != "machine" or owner_caps.get("service_scope") == "machine":
+            raise ValueError("관리 서비스를 사용자 세션 헬퍼에 묶습니다. 방향이나 종류가 맞지 않습니다")
+        if owned.get("attached_to"):
+            raise ValueError("대상이 이미 다른 PC에 딸린 통로입니다")
+        if not caps.get("hostname") or caps.get("hostname") != owner_caps.get("hostname"):
+            raise ValueError("두 헬퍼가 보고한 컴퓨터 이름이 다릅니다. 같은 PC인지 확인하세요")
+        if any(_alive(r) and r is not rec and r["registration"].get("attached_to") == owner["device_id"]
+               for r in data["keys"].values()):
+            raise ValueError("이 PC에는 이미 관리 서비스가 묶여 있습니다")
+        if any(_alive(r) and r["registration"].get("attached_to") == rec["device_id"]
+               for r in data["keys"].values()):
+            raise ValueError("다른 통로가 딸려 있는 등록은 묶을 수 없습니다")
+        reg["attached_to"] = owner["device_id"]
+        _save()
+        return _public(rec)
+
+
 def resident_update(device, **changes):
     allowed = {"state", "paused", "wake", "capabilities", "last_seen", "removal_receipt", "context", "observations"}
     if changes.keys() - allowed:

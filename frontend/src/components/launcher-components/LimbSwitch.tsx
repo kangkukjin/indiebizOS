@@ -13,13 +13,14 @@ type Registration = {
   kind?: 'pc' | 'phone' | 'tv';          // phone = IndieBiz OS 를 설치하며 등록한 폰(헬퍼 없음, 봉투=IBL) — 2026-10-13
   adapter?: string;
   paused?: boolean;
-  capabilities?: { os?: string; hostname?: string; desktop_stream?: number; media_session?: MediaCapability };
+  capabilities?: { os?: string; hostname?: string; desktop_stream?: number; media_session?: MediaCapability; service_scope?: string };
 };
 type Helper = { state: string; rolled_back?: boolean };
 type PhoneUpdate = { state: string; current_version?: number; latest_version?: number; current_version_name?: string; latest_version_name?: string; message?: string };
 type DriverComponent = { id: string; location: string; drivers: string[]; generation?: string; installed?: string; approval?: string; binding?: Record<string, unknown>; update?: PhoneUpdate & Helper & { phase?: string; latest?: string; sha256?: string; target_sha256?: string; verification?: string } };
 type Drivers = { items: { id: string; file: string; surfaces: string[] }[]; components: DriverComponent[]; conflicts: string[] };
-type PC = { drivers?: Drivers; phone_update?: PhoneUpdate; alias: string; device_id: string; connected: boolean | null; revoked?: boolean; registration: Registration; helper?: Helper };
+// channels = 같은 PC 에 딸린 통로(Windows 관리 서비스). 손발 한 줄은 하드웨어 하나다.
+type PC = { drivers?: Drivers; phone_update?: PhoneUpdate; alias: string; device_id: string; connected: boolean | null; revoked?: boolean; registration: Registration; helper?: Helper; channels?: PC[]; attach_candidate?: { device_id: string; alias: string } };
 type USB = { folder: string; ready: boolean };
 type PCList = { items: PC[]; usb: USB };
 
@@ -47,11 +48,13 @@ export function LimbSwitch() {
     setLoading(true);
     try {
       const data = await api.request<PCList>('/remote-pcs');
-      setPCs(data.items.map((pc) => {
+      const withUnit = (pc: PC): PC => {
         const unit = pc.drivers?.components.find((c) => c.location === 'device' && c.binding);
-        return unit?.update ? { ...pc, ...(pc.registration.kind === 'phone'
+        const own = unit?.update ? { ...pc, ...(pc.registration.kind === 'phone'
           ? { phone_update: unit.update } : { helper: unit.update }) } : pc;
-      }));
+        return own.channels ? { ...own, channels: own.channels.map(withUnit) } : own;
+      };
+      setPCs(data.items.map(withUnit));
       setUSB(data.usb);
       setErr(null);
     } catch (e) {
@@ -92,12 +95,28 @@ export function LimbSwitch() {
     } catch (e) { setErr(e instanceof Error ? e.message : '등록 해제 실패'); }
     finally { setBusy(null); }
   };
+  // 한 PC 의 사용자 세션 헬퍼와 관리 서비스는 설치본이 따로다 — 교체는 새 판이 있는 통로마다 접수한다.
+  const units = (pc: PC) => [pc, ...(pc.channels || [])];
   const updateHelper = async (pc: PC) => {
     setBusy(pc.device_id); setErr(null);
     try {
-      await api.request(pc.registration.kind === 'phone' ? '/remote-pcs/phone-update' : '/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id, expected: pc.drivers?.components.find((c) => c.binding)?.binding }) });
+      if (pc.registration.kind === 'phone') {
+        await api.request('/remote-pcs/phone-update', { method: 'POST', body: JSON.stringify({ target: pc.device_id, expected: pc.drivers?.components.find((c) => c.binding)?.binding }) });
+      } else {
+        for (const unit of units(pc).filter((u) => u.helper?.state === 'available' && u.connected)) {
+          await api.request('/remote-pcs/helper-update', { method: 'POST', body: JSON.stringify({ target: unit.device_id, expected: unit.drivers?.components.find((c) => c.binding)?.binding }) });
+        }
+      }
       await load();
     } catch (e) { setErr(e instanceof Error ? e.message : '기기 업데이트 요청 실패'); }
+    finally { setBusy(null); }
+  };
+  const attach = async (pc: PC, primary: string | null) => {
+    setBusy(pc.device_id); setErr(null);
+    try {
+      await api.request('/remote-pcs/attach', { method: 'POST', body: JSON.stringify({ target: pc.device_id, primary }) });
+      await load();
+    } catch (e) { setErr(e instanceof Error ? e.message : '기기 묶음 변경 실패'); }
     finally { setBusy(null); }
   };
   const revokeUSB = async () => {
@@ -121,11 +140,19 @@ export function LimbSwitch() {
     return ` · ${labels[u.state] || u.state}${installed ? ` · 설치 ${installed}` : ''}${published ? ` · 중앙 배포 ${published}` : ''}${u.message ? ` · ${u.message}` : ''}`;
   };
   const updatePhase: Record<string, string> = { queued: '전달 대기', replacing: '교체 중', awaiting_reconnect: '재접속 확인 대기' };
+  // 헬퍼 판 표시는 하드웨어 단위 — 통로 가운데 손이 가장 필요한 상태를 보인다.
+  const helps =(pc: PC, state: string) => units(pc).some((u) => u.helper?.state === state);
   const helperNote = (pc: PC) => pc.registration.state !== 'active' ? ''
-    : pc.helper?.state === 'updating' ? ' · 헬퍼 교체 중'
-    : pc.helper?.state === 'current' ? ' · 헬퍼 최신'
-    : pc.helper?.state === 'manual' ? ' · 새 헬퍼 있음(이 PC는 직접 교체)'
-    : pc.helper?.state === 'available' ? (pc.helper.rolled_back ? ' · 지난 교체가 되돌려짐' : ' · 새 헬퍼 있음') : '';
+    : helps(pc, 'updating') ? ' · 헬퍼 교체 중'
+    : helps(pc, 'available') ? (units(pc).some((u) => u.helper?.state === 'available' && u.helper.rolled_back) ? ' · 지난 교체가 되돌려짐' : ' · 새 헬퍼 있음')
+    : helps(pc, 'manual') ? ' · 새 헬퍼 있음(이 PC는 직접 교체)'
+    : helps(pc, 'current') ? ' · 헬퍼 최신' : '';
+  const isService = (pc: PC) => pc.registration.capabilities?.service_scope === 'machine';
+  const service = (pc: PC) => pc.channels?.find(isService);
+  const serviceNote = (pc: PC) => isService(pc) ? ' · 관리 서비스 (화면 없음)'
+    : !service(pc) ? ''
+    : service(pc)?.registration.state !== 'active' ? ' · 관리 서비스 해제 중'
+    : service(pc)?.connected ? ' · 관리 서비스 연결됨' : ' · 관리 서비스 오프라인';
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white/60 text-[12px]">
@@ -174,21 +201,27 @@ export function LimbSwitch() {
             <span className={`h-2 w-2 shrink-0 rounded-full ${pc.connected && pc.registration.state === 'active' ? 'bg-emerald-500' : 'bg-stone-300'}`} />
             <div className="min-w-0 flex-1">
               <div className="break-all font-medium text-stone-700">{pc.alias}</div>
-              <div className="text-[10px] text-stone-400">{status(pc)}{isNetwork(pc) ? ' · TV (네트워크 제어)' : isPhone(pc) ? ' · 폰 (IndieBiz OS)' : ''}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{isPhone(pc) ? phoneNote(pc) : helperNote(pc)}</div>
+              <div className="text-[10px] text-stone-400">{status(pc)}{isNetwork(pc) ? ' · TV (네트워크 제어)' : isPhone(pc) ? ' · 폰 (IndieBiz OS)' : ''}{pc.registration.capabilities?.os ? ` · ${pc.registration.capabilities.os}` : ''}{serviceNote(pc)}{isPhone(pc) ? phoneNote(pc) : helperNote(pc)}</div>
             </div>
+            {pc.attach_candidate && pc.registration.state === 'active' &&
+              <button onClick={() => void attach(pc, pc.attach_candidate!.device_id)} disabled={busy !== null}
+                title="같은 PC의 관리 서비스입니다. 합치면 손발 하나로 보이고, 관리자 권한 작업은 그 PC 이름으로 보내면 이 통로가 맡습니다."
+                className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">
+                {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : null}{`${pc.attach_candidate.alias}에 합치기`}
+              </button>}
             {isPhone(pc) && pc.registration.state === 'active' && ['available', 'failed'].includes(pc.phone_update?.state || '') &&
               <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !pc.connected || pc.registration.paused}
                 title="중앙의 APK를 폰으로 전송하여 설치합니다. Android가 확인을 요구하면 폰에 표시됩니다."
                 className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-600 disabled:opacity-50">
                 {busy === pc.device_id ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}앱 업데이트
               </button>}
-            {pc.registration.state === 'active' && (pc.helper?.state === 'available' || pc.helper?.state === 'updating') &&
-              <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !pc.connected || pc.helper.state === 'updating'}
+            {pc.registration.state === 'active' && !isPhone(pc) && units(pc).some((u) => u.helper?.state === 'available' || u.helper?.state === 'updating') &&
+              <button onClick={() => void updateHelper(pc)} disabled={busy !== null || !units(pc).some((u) => u.helper?.state === 'available' && u.connected)}
                 title="중앙의 최신 헬퍼로 교체합니다. 다시 연결되지 않으면 이전 헬퍼로 되돌립니다."
                 className="flex items-center gap-1 rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-600 hover:text-emerald-700 disabled:opacity-50">
-                {busy === pc.device_id || pc.helper.state === 'updating' ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}헬퍼 교체
+                {busy === pc.device_id || units(pc).some((u) => u.helper?.state === 'updating') ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpCircle size={12} />}헬퍼 교체
               </button>}
-            {(isPhone(pc) || ['darwin', 'windows', 'linux'].includes(pc.registration.capabilities?.os || '')) && <button onClick={() => void openDesktop(pc)} disabled={pc.registration.state !== 'active' || desktopOpening !== null} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">{desktopOpening === pc.device_id ? '연결 중…' : '화면 공유'}</button>}
+            {!isService(pc) && (isPhone(pc) || ['darwin', 'windows', 'linux'].includes(pc.registration.capabilities?.os || '')) && <button onClick={() => void openDesktop(pc)} disabled={pc.registration.state !== 'active' || desktopOpening !== null} className="rounded border border-stone-200 px-2 py-1 text-[11px] text-stone-700 disabled:opacity-50">{desktopOpening === pc.device_id ? '연결 중…' : '화면 공유'}</button>}
             {isNetwork(pc) && <button disabled={busy !== null} onClick={async () => {
               setBusy(pc.device_id); setErr(null);
               try { await api.request('/remote-pcs/state', { method: 'POST', body: JSON.stringify({ target: pc.device_id, paused: !pc.registration.paused }) }); await load(); }
@@ -202,7 +235,13 @@ export function LimbSwitch() {
           </div>
           {pc.drivers && <details className="mt-1.5 pl-4 text-[11px] text-stone-500">
             <summary className="cursor-pointer">드라이버 구성과 업데이트</summary>
-            {pc.drivers.components.map((c) => <div key={c.id} className="mt-1 break-all">
+            {(pc.channels || []).filter(isService).map((channel) => <div key={channel.device_id} className="mt-1 flex flex-wrap items-center gap-2">
+              <span>관리 서비스 통로 · 로그인 없이 관리자 권한 작업을 맡습니다</span>
+              <button onClick={() => void attach(channel, null)} disabled={busy !== null}
+                title="묶음을 풀어 관리 서비스를 별도 손발로 되돌립니다. 설치는 그대로 둡니다."
+                className="rounded border border-stone-200 px-1.5 py-0.5 text-stone-500 disabled:opacity-50">분리</button>
+            </div>)}
+            {units(pc).flatMap((u) => u.drivers?.components || []).map((c) => <div key={c.id} className="mt-1 break-all">
               {c.id} · {c.location === 'hub' ? '허브 실행' : '대상 기기 설치'} · {c.update?.phase ? (updatePhase[c.update.phase] || c.update.phase) : c.update?.state || '미확인'}
               {c.installed && <span title={c.installed}> · 판본 {c.installed.slice(0, 12)}</span>}
               {c.generation && <span title={c.generation}> · 설치 세대 {c.generation.slice(0, 8)}</span>}

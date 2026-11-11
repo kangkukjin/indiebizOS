@@ -385,12 +385,14 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                           and (r.get("registration") or {}).get("adapter") != "network-api")
         rows, names, references = [], [], {}
 
-        def introduce(name, device_id, kind, platform, adapter, context="", scope="unknown"):
-            drivers = [d for d in catalog["drivers"] if driver_matches(
-                d, platform=str(platform), adapter=adapter, service_scope=scope)]
+        def introduce(name, device_id, kind, platform, adapter, context="", scope="unknown", channel_scopes=()):
+            # 손발은 하드웨어 단위다 — 같은 PC 에 딸린 통로(관리 서비스)의 드라이버도 이 한 행에 싣는다.
+            drivers = [d for d in catalog["drivers"] if any(driver_matches(
+                d, platform=str(platform), adapter=adapter, service_scope=s) for s in (scope, *channel_scopes))]
             references.update((d["id"], d) for d in drivers)
             attrs = {"name": name, "device_id": device_id, "kind": kind, "os": platform,
-                     "adapter": adapter, "drivers": ",".join(d["id"] for d in drivers)}
+                     "adapter": adapter, "drivers": ",".join(d["id"] for d in drivers),
+                     "elevate": "unattended" if "machine" in channel_scopes else ""}
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
             rows.append(f"  <limb {attr_text}>{escape(context)}</limb>")
             names.append(name)
@@ -405,11 +407,15 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                 continue
             seen.add(device_id)
             reg = rec.get("registration") or {}
+            if reg.get("attached_to") in records:
+                continue  # 다른 손발에 딸린 통로 — 그 하드웨어의 행에서 소개한다
             caps = reg.get("capabilities") or rec.get("env") or {}
             platform = caps.get("os") or ("android" if reg.get("kind") == "phone" or caps.get("sdk") else "")
+            attached = [((r.get("registration") or {}).get("capabilities") or {}).get("service_scope", "unknown")
+                        for r in records.values() if (r.get("registration") or {}).get("attached_to") == device_id]
             introduce(e.get("alias") or device_id, device_id, reg.get("kind"), platform,
                       reg.get("adapter") or ("resident-v1" if reg else "portable"),
-                      reg.get("context") or "", caps.get("service_scope", "unknown"))
+                      reg.get("context") or "", caps.get("service_scope", "unknown"), tuple(attached))
         for identifier, driver in references.items():
             attrs = {"id": identifier, "guide": driver["file"],
                      "surfaces": ",".join(driver.get("surfaces", []))}

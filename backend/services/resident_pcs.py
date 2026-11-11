@@ -30,15 +30,89 @@ def resolve(target, active=True):
     return rec
 
 
+CONNECTED_WITHIN = 90
+
+
+def _connected(registration, now=None):
+    return (registration["state"] != "removed"
+            and (now or time.time()) - (registration.get("last_seen") or 0) < CONNECTED_WITHIN)
+
+
+def machine_channel(rec):
+    """이 PC 에 딸린 관리 서비스 통로 — 지금 무인 관리자 실행을 맡길 수 있을 때만 돌려준다."""
+    for channel in limb_keys.channels(rec["device_id"]):
+        reg = channel["registration"]
+        caps = reg.get("capabilities") or {}
+        if (reg["state"] == "active" and not reg.get("paused") and caps.get("service_scope") == "machine"
+                and caps.get("elevation_unattended") and _connected(reg)):
+            return channel
+    return None
+
+
+def channel_for(rec, command):
+    """한 하드웨어 안에서 이 작업을 맡을 등록. 관리자 권한을 명시한 배경 셸만 관리 통로로 간다.
+
+    권한이 바뀌는 길은 명령이 요구했을 때만 고른다 — 사용자 세션이 끊겼다고 같은 명령을 말없이
+    LocalSystem 으로 돌리지 않는다. 관리 통로가 없거나 끊겼으면 종전대로 사용자 세션의 인증창 경로다."""
+    if (command.get("op", "shell") == "shell" and command.get("elevate") is True
+            and command.get("mode", "background") == "background"):
+        return machine_channel(rec) or rec
+    return rec
+
+
 def devices():
     from hardware_driver_status import describe
     from phone_updates import status as phone_update_status
     now = time.time()
-    rows = [{**r, "connected": r["registration"]["state"] != "removed" and now - (r["registration"].get("last_seen") or 0) < 90,
+    rows = [{**r, "connected": _connected(r["registration"], now),
              "helper": helper_status(r),
              **({"phone_update": phone_update_status(r)} if r["registration"].get("kind") == "phone" else {})}
             for r in limb_keys.list_keys() if r.get("registration")] + hardware_registry.devices()
-    return [{**r, "drivers": describe(r)} for r in rows]
+    rows = limb_keys.fold_channels([{**r, "drivers": describe(r)} for r in rows])
+    return [{**r, **_attach_candidate(r, rows)} for r in rows]
+
+
+def _attach_candidate(row, rows):
+    """아직 묶이지 않은 관리 서비스에, 같은 컴퓨터 이름의 사용자 세션 등록이 하나뿐이면 그것을 제안한다.
+
+    제안일 뿐이다 — 묶는 것은 주인의 확인(resident_attach)이다."""
+    reg = row.get("registration") or {}
+    caps = reg.get("capabilities") or {}
+    if (row.get("revoked") or reg.get("state") != "active" or reg.get("attached_to")
+            or caps.get("service_scope") != "machine" or not caps.get("hostname")):
+        return {}
+    same = [r for r in rows if r is not row and not r.get("revoked") and not r.get("channels")
+            and (r.get("registration") or {}).get("state") == "active"
+            and (r["registration"].get("adapter") or "resident-v1") == "resident-v1"
+            and (r["registration"].get("capabilities") or {}).get("hostname") == caps["hostname"]
+            and (r["registration"].get("capabilities") or {}).get("service_scope") != "machine"]
+    return {"attach_candidate": {"device_id": same[0]["device_id"], "alias": same[0]["alias"]}} if len(same) == 1 else {}
+
+
+def attach(target, primary):
+    """관리 서비스를 같은 PC 의 손발에 묶거나 푼다. 권한이 다른 통로를 잇는 일이라 주인만 한다."""
+    import principal
+    import member_runtime
+    if not principal.is_owner() or member_runtime.is_member():
+        raise PermissionError("hardware_attach_owner_required")
+    return limb_keys.resident_attach(target, primary)
+
+
+def hardware_devices(target):
+    """이 하드웨어에 속한 등록들의 device_id — 주 등록과 딸린 통로. 이력처럼 PC 단위로 읽을 때 쓴다."""
+    rec = resolve(target, active=False)
+    return [rec["device_id"]] + [c["device_id"] for c in limb_keys.channels(rec["device_id"])]
+
+
+def set_paused(target, paused):
+    """작업 중지·허용. 하드웨어의 주 등록이면 딸린 통로도 같이 바꾼다."""
+    rec = resolve(target, active=False)
+    out = limb_keys.resident_update(rec["device_id"], paused=bool(paused))
+    for channel in limb_keys.channels(rec["device_id"]):
+        limb_keys.resident_update(channel["device_id"], paused=bool(paused))
+    if paused:
+        media_sessions_end(rec["device_id"], "relation_paused")
+    return out
 
 
 def update_binding(rec, release_sha256):
@@ -237,7 +311,8 @@ def attribution():
 
 def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False,
            allow_media=False, allow_phone_update=False, update_expected=None):
-    rec = resolve(target)
+    hardware = resolve(target)
+    rec = channel_for(hardware, command)
     allowed = {"shell", "read", "write", "list", "info", "screen", "click", "move", "type",
                "key", "scroll", "drag", "transfer", "media", "wake"}
     if allow_update:  # only update_helper(); raw remote commands cannot select update payloads
@@ -346,10 +421,14 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
     import task_receipts
     # generation is the job's installation generation, not the registration at a later lookup.
     # relation tells a recovered job ('reused': no new effect was accepted) from a new one.
-    fields = dict(limb=rec["device_id"], limb_name=rec["alias"], helper_mode="resident", op=op, job_id=jid,
+    fields = dict(limb=rec["device_id"], limb_name=hardware["alias"], helper_mode="resident", op=op, job_id=jid,
                   preflight_contract=rec['registration'].get('capabilities', {}).get('preflight_contract', 0),
                   request_id=request_id, cwd=command.get("cwd"), shell=command.get("shell"),
                   generation=accepted["generation"], relation=accepted["relation"])
+    if rec["device_id"] != hardware["device_id"]:
+        # 같은 PC 의 관리 통로가 맡았다. 실행 계정이 사용자와 다르므로 접수증에 남긴다.
+        fields.update(hardware=hardware["device_id"], channel="machine",
+                      execution_account=(rec["registration"].get("capabilities") or {}).get("execution_account"))
     try:
         return task_receipts.receipt("guestpc", jid, state=task_receipts.QUEUED, **fields)
     except Exception as exc:  # noqa: BLE001 — the conversation link is a second store
@@ -377,13 +456,19 @@ def remove(target):
     rec = resolve(target, active=False)
     if rec["registration"]["state"] == "removed":
         return rec["registration"]
+    # 하드웨어를 해제하면 그 PC 에 딸린 통로도 함께 해제한다 — 보이지 않는 등록을 남기지 않는다.
+    attached = limb_keys.channels(rec["device_id"])
     out = limb_keys.resident_update(rec["device_id"], state="removal_pending")
     media_sessions_end(rec["device_id"], "relation_revoked")
-    with phone_jobs._db() as db:
-        resident_store.schema(db)
-        pending = [row[0] for row in db.execute("SELECT id FROM resident_tasks WHERE device=? AND result IS NULL", (rec["device_id"],))]
-    for jid in pending:
-        resident_store.cancel(jid, rec["device_id"])
+    for member in [rec] + attached:
+        if member is not rec:
+            limb_keys.resident_update(member["device_id"], state="removal_pending")
+        with phone_jobs._db() as db:
+            resident_store.schema(db)
+            pending = [row[0] for row in db.execute(
+                "SELECT id FROM resident_tasks WHERE device=? AND result IS NULL", (member["device_id"],))]
+        for jid in pending:
+            resident_store.cancel(jid, member["device_id"])
     phone_jobs._wake()
     return out
 

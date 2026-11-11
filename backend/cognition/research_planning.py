@@ -6,19 +6,31 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 GUIDE = "deep_research.md"
+EXECUTION_GUIDE = "research_execution.md"
 
-PLANNING_PROMPT = """당신은 연구를 설계하는 의식 에이전트다.
+PLANNING_PROMPT = """이번 출력은 실행자가 읽고 바로 첫 조사를 시작할 수 있는 짧은 착수 메모다.
+보통 한 화면에서 읽을 수 있는 몇 문단의 산문으로, 가장 중요한 판단 갈림길과 첫 확인에 집중한다.
+사용자가 상세 설계를 명시한 경우에만 연구 프로토콜 수준으로 펼친다. 계획만 요청했다는 이유로
+상세 제안서·방법론 교과서·가능한 모든 분석의 목록을 작성하지 않는다.
+질문·가설·근거·방법을 여러 절에서 되풀이하지 말고 같은 판단의 연결 안에서 한 번 설명한다.
+당신은 연구를 설계하는 의식 에이전트다.
 사용자 원래 목적·명시 조건과 관련 맥락을 기준으로 제공된 심층연구 가이드를 읽고,
 해당 분야 전문가라면 이 문제를 어떻게 구성하고 조사할지 생각해 연구계획을 작성한다.
-방법 이름 하나나 도구 목록에 머물지 말고 질문의 분해, 경쟁 설명·대안, 판단을 바꿀 증거,
-자료 선정·분석·종합 방식과 그 이유를 이번 문제에 맞게 연결한다. 불필요한 항목은 만들지 않는다.
+핵심 질문·불확실성, 경쟁 설명을 가를 증거와 바뀌는 판단, 첫 조사를 이유와 함께 간결하게 연결한다.
+전달된 접근 힌트는 유효한 내용을 계획에 통합하고 반복하지 않는다. 방법 이름·절차 목록으로 대신하지 않는다.
 기존 계획·확보한 근거·진행을 보존하며 필요한 부분만 고친다. 전문가의 접근은 잠정 설계이며
 사용자 요구나 추가 합격 조건이 아니다. 모르는 방법·자료 접근성은 예비 조사의 질문으로 남긴다.
+요청 규정·기준에 AI가 덧붙인 방법 목록이 있어도 사용자 원문의 요구와 구별해 잠정 후보로 판단한다.
 아직 수행하지 않은 조사·열람·검증을 완료했다고 쓰지 않는다. 계획만 요청했으면 수행을 지시하지 않는다.
 저장 자료만 모드에서는 기존 자료 안에서 계획한다. 계획이 새로운 권한을 부여하지 않는다.
-실행자는 저장된 계획으로 조사하고 세부 방법·진행을 갱신한다. 작은 조정은 재승인받지 않는다.
+실행자는 첫 자료를 본 뒤 방법·조사 범위·멈춤을 판단한다. 사용자 명시 조건은 유지한다.
+미확인 출처·지표는 후보로 남기고, 보고서 목차·표 형식·상세 후속 절차는 필요할 때만 정한다.
+자료가 확보되기 전의 추정 모형·통제변수·강건성 검사까지 설계하지 말고, 어느 자료 조건이면
+어떤 접근이 유효할지 판단의 이유를 남긴다. 사용자가 상세 설계를 명시한 경우에는 그 범위를 따른다.
+일반 실행·표기 규칙은 실행자에게 직접 제공되므로 계획에 옮겨 적지 않는다.
+중요한 발견·변경은 같은 계획에 갱신하며 작은 조정은 재승인받지 않는다.
 현재 요청에 맞는 계획 본문만 Markdown으로 반환한다. JSON·출력용 코드펜스·파일 저장 주장은 불필요하다.
-계획의 목적·접근과 이유·질문별 증거와 판단·종합·멈춤 조건·미확인을 연결하되 고정 서식은 없다.
+필요한 답의 수준과 중요한 공백을 드러내되 고정된 절·질문 수나 분량은 없다.
 """
 
 
@@ -130,6 +142,8 @@ def prepare(agent, framing, input_text, *, supervisor=None, project_path=None,
                             project_path=project_path, topic=topic,
                             previous={**receipt, "sha256": current["sha256"]} if previous else None,
                             cancelled=cancelled)
+        # 새 계획이 접근을 통합했다. 재사용 턴의 새 하위 질문 힌트는 그대로 보존한다.
+        framing.pop("capability_focus", None)
     framing["_research_plan"] = receipt
     if topic:
         framing["_research_topic"] = {"mode": topic["mode"]}
@@ -238,11 +252,17 @@ def execution_block(framing):
     receipt = (framing or {}).get("_research_plan")
     if not receipt:
         return ""
+    from prompt_builder import get_prompt_builder
+    guide = get_prompt_builder()._guide_block(EXECUTION_GUIDE)
+    if not guide:
+        guide = (f"연구 실행 지침 미제공: read_guide로 {EXECUTION_GUIDE}를 확인한다. "
+                 "읽지 못한 지침을 확인했다고 말하지 않는다.")
     library = (framing.get("_research_topic") or {}).get("mode") == "library"
     instruction = ("저장 자료만 모드다. 기존 자료로 답하고 파일 쓰기·외부 획득은 하지 않는다." if library else
-                   "전달된 연구계획을 따라 조사하고 같은 문서에 근거·세부 방법·진행을 갱신한다. "
+                   "전달된 연구계획을 출발점으로 첫 자료를 확인하고 방법·범위·멈춤을 조정한다. "
+                   "사용자 명시 조건을 보존하고 중요한 발견·변경을 같은 문서에 갱신한다. "
                    "계획을 처음부터 중복 작성하거나 작은 방법 조정마다 재승인받지 않는다. "
                    "전체 목적·접근을 다시 설계해야 할 때는 근거와 함께 reframe으로 의식에 전달한다. "
                    "현재 사용자 요청에 필요한 범위만 수행하며 계획만 요청했으면 계획을 전달하고 마친다.")
     return ("연구계획(사용자 요구를 대체하지 않는 잠정 설계·진행 기록):\n"
-            + json.dumps(receipt, ensure_ascii=False) + "\n" + instruction)
+            + json.dumps(receipt, ensure_ascii=False) + "\n" + instruction + "\n\n" + guide)

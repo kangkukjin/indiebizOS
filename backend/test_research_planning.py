@@ -19,11 +19,15 @@ def planner():
 @pytest.fixture
 def workspace(tmp_path, monkeypatch):
     monkeypatch.setattr('runtime_utils.get_base_path', lambda: tmp_path)
+    monkeypatch.setattr('prompt_builder.get_base_path', lambda: tmp_path)
+    monkeypatch.setattr('guide_registry.record_use', lambda *a: None)
+    monkeypatch.setattr('guide_registry.mark_injected', lambda *a: None)
     monkeypatch.setattr('member_runtime.is_member', lambda: False)
     monkeypatch.setattr('episode_logger.record_trajectory_event', lambda *a: None)
     guide = tmp_path / 'data/guides/deep_research.md'
     guide.parent.mkdir(parents=True)
     guide.write_text('분야의 연구방식을 참고하여 증거·분석·종합을 계획한다.')
+    guide.with_name(rp.EXECUTION_GUIDE).write_text('실행 지침: 핵심 주장을 실제 읽은 원문과 대조한다.')
     monkeypatch.setattr('consciousness_agent.call_oneshot_provider', lambda *a, **kw: PLAN)
     return tmp_path
 
@@ -62,7 +66,8 @@ def test_only_deep_research_adds_one_consciousness_plan_call(workspace, monkeypa
     assert len(calls) == (2 if deep else 1)
     assert ('_research_plan' in out) is deep
     command = compile_user_command('교육을 연구해줘', out)
-    assert command.count(out['capability_focus']['hint']) == 1
+    hint = '비교 조건을 맞추면 경쟁 설명을 구별할 수 있다'
+    assert command.count(hint) == (0 if deep else 1)
     if deep:
         assert out['_research_plan']['author'] == 'consciousness'
         assert PLAN.strip() in out['_research_plan']['body']
@@ -70,8 +75,27 @@ def test_only_deep_research_adds_one_consciousness_plan_call(workspace, monkeypa
         assert 'deep_research.md' not in out.get('guide_files', [])
         planning_input = calls[1][0][1]
         assert 'research_planning_guide' in planning_input
-        assert out['capability_focus']['hint'] in planning_input
+        assert hint in planning_input
+        assert 'capability_focus' not in out
+        assert '실행 지침: 핵심 주장을 실제 읽은 원문과 대조한다.' in command
+        assert '실행 지침: 핵심 주장을 실제 읽은 원문과 대조한다.' not in planning_input
         assert calls[1][1]['step_role'] == 'consciousness'
+
+
+def test_reused_plan_keeps_new_question_hint_and_current_execution_guide(workspace):
+    prior = rp.prepare(planner(), draft(), '', project_path=workspace)['_research_plan']
+    hint = '이번 하위 질문은 표본의 연령 차이를 확인한다'
+    out = rp.prepare(None, draft(capability_focus={'hint': hint}), '',
+                     project_path=workspace, previous_plan=prior)
+    assert hint in compile_user_command('연령별로 설명해줘', out)
+    guide = workspace / 'data/guides' / rp.EXECUTION_GUIDE
+    guide.write_text('새 실행 지침: 연령·기간·분모를 맞춘다.')
+    # 같은 프로세스의 후속·명시 실행 인계도 현재 지침을 받는다.
+    assert '새 실행 지침: 연령·기간·분모를 맞춘다.' in rp.execution_block(out)
+    assert rp.execution_block(draft()) == ''
+    guide.unlink()
+    assert '연구 실행 지침 미제공: read_guide' in rp.execution_block(out)
+    assert Path(prior['path']).read_text() == prior['body']
 
 
 @pytest.mark.parametrize('mode', ['research', 'library'])

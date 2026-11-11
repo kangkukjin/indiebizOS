@@ -13,7 +13,7 @@ from typing import Dict, List, Any, Optional
 
 from result_read_contract import read_result_schema
 from vocabulary_state import (LOCK, active_paths, inventory, inventory_scope,
-                              package_path, read_state, require_tool_active)
+                              package_path, require_tool_active)
 
 
 # 패키지 ID -> 핸들러 모듈 캐시 (같은 패키지의 도구들이 모듈 인스턴스를 공유)
@@ -77,6 +77,9 @@ def _scan_tool_json_mtimes() -> Dict[str, float]:
 @inventory_scope()
 def build_tool_package_map(force: bool = False) -> Dict[str, str]:
     """재고·선택 판본이 바뀌었을 때만 활성 도구의 매핑을 원자적으로 교체한다."""
+    # active_paths도 vocabulary_state의 현재 공급자로 선택을 읽는다. import 시점의
+    # 별칭을 캐시 기준에만 붙들면 임시 선택으로 만든 매핑을 원래 선택의 결과로 저장한다.
+    from vocabulary_state import read_state
     global _tool_to_package_map, _tool_map_source
     with LOCK:
         root = get_base_path()

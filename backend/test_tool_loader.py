@@ -111,6 +111,34 @@ def test_mapping_uses_inventory_paths_without_a_second_root_probe(packages, monk
     assert loader.build_tool_package_map() is observed
 
 
+@pytest.mark.parametrize('warm', [False, True])
+def test_mapping_and_selection_use_same_state_provider_after_restore(packages, monkeypatch, warm):
+    import copy
+    selected = copy.deepcopy(state.read_state())
+    selected['active']['awake'] = False
+    if warm:
+        assert loader.build_tool_package_map() == {'a': 'awake', 'b': 'awake', 'base': 'base'}
+
+    # 회원 시험처럼 원장 공급자만 잠깐 바꾼다. 파일의 mtime이나 revision은
+    # 그대로여도 캐시 기준과 active_paths의 실제 필터는 같은 선택을 봐야 한다.
+    with monkeypatch.context() as member:
+        member.setattr(state, 'read_state', lambda root=None: selected)
+        narrowed = loader.build_tool_package_map()
+        assert narrowed == {'base': 'base'}
+        assert loader.build_tool_package_map() is narrowed
+        assert loader.load_tool_schema('a') is None
+        with pytest.raises(ValueError, match='잠들어'):
+            loader.load_tool_handler('a')
+
+    # 공급자 복원 후 clear_cache/force 없이 다음 소비자에게 원래 능력이 보인다.
+    restored = loader.build_tool_package_map()
+    assert restored == {'a': 'awake', 'b': 'awake', 'base': 'base'}
+    assert loader.build_tool_package_map() is restored
+    assert narrowed == {'base': 'base'}, '이미 취득한 매핑은 바꾸지 않는다'
+    assert loader.load_tool_schema('a') == {'name': 'a'}
+    assert loader.load_tool_handler('a').execute({}, None) == 1
+
+
 def test_mapping_rebuild_and_clear_are_serialized(packages, monkeypatch):
     import threading
     entered, release, clear_started, cleared = (threading.Event() for _ in range(4))

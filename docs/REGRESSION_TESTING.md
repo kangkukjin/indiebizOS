@@ -98,6 +98,38 @@ import 그래프의 전이 소비자와, 변경 경로를 문자열로 가리키
 순서 의존 실패는 실패 항목 단독 통과로 닫지 않고 원래 순서/선행 테스트와 함께 확인한다.
 변경·새 실패·미해결 우려가 없다면 이미 통과한 범위를 반복하지 않는다.
 
+### 도구 로더의 선택 공급자 복원 (2026-11-11)
+
+일반 병렬 회귀의 한 워커에서 발생한 로더 오류 26건은 테스트 순서에 따른
+캐시 오염이었다. `test_program_runtime`의 도구 로더 시험은 캐시를 비우고,
+뒤의 `test_member_defaults_and_delivery` 회원 IBL 시험은 `vocabulary_state.read_state`를
+임시 교체했다. `active_paths`는 교체된 공급자로 패키지를 걸렀지만,
+`tool_loader`의 캐시 기준은 모듈 import 때 붙든 원래 `read_state`를 호출했다.
+축소된 46개 매핑을 원래 131개 선택의 결과로 저장해, 공급자를 복원해도 캐시가
+적중했다. 법령 액션의 인자 계약과 주식 핸들러 조회 등 후속 소비자들이 실패했다.
+
+캐시 기준의 `read_state`를 호출 시점에 같은 소유 모듈에서 가져오도록 수정했다.
+시험마다 캐시를 무조건 지우거나 실패 검사를 제외하지 않는다. 소유자의 임시 상태를
+관측하고 복원 후 다시 원래 선택으로 돌아오는 계약을 `backend/test_tool_loader.py`의
+`test_mapping_and_selection_use_same_state_provider_after_restore`가 확인한다.
+캐시가 빈 경우와 이미 채워진 경우, 도구 스키마·실제 핸들러 접근을 함께 검증한다.
+
+축소 재현 순서는 다음과 같다. 전체 원인 검증에서는 마지막 두 파일 대신 최초에
+실패한 26개 node ID를 같은 프로세스에서 실행했다. 수정 전 **26 실패·선행 2 통과**,
+수정 후 같은 순서 **28 통과**다. 새 회귀 2건도 수정 전 각각 실패함을 확인했다.
+
+수정 후 관련 로더·회원·프로그램 검사 51건이 통과했다. 시스템 검사를 포함한
+`pytest backend/ -n auto --dist loadfile` 전수는 **13,010 통과·24 건너뜀·실패 0**
+(449.69초)이며, `build_ibl_nodes.py --check`도 통과했다.
+
+```bash
+.venv/bin/python3 -m pytest \
+  backend/test_program_runtime.py::test_existing_tool_loader_uses_new_submodules_without_cache_reset \
+  backend/test_member_defaults_and_delivery.py::test_real_member_ibl_write_uses_member_device_and_rejects_hub_target \
+  backend/test_tool_radio.py::test_favorite_play_uses_only_available_identifier \
+  backend/test_stock_history_fallback.py
+```
+
 ## 시험 파일의 자리 (2026-10-04)
 
 재발을 막는 시험은 **모듈명 파일**(`backend/test_<모듈>.py`)에 둔다. 회차·에피소드·날짜 이름

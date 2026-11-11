@@ -103,7 +103,6 @@ actions:
         scope: Unknown
         source: Unknown
         start_month: Unknown
-        target: Unknown
         type: Unknown
         year_month: Unknown
       open_params: false

@@ -16,7 +16,6 @@
             project_id: Text
             items: Unknown
             criteria: Unknown
-            target: Unknown
             op: Unknown
             role: Text
             allowed: List|Text

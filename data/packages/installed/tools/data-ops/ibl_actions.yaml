@@ -175,7 +175,6 @@ actions:
         project_id: Unknown
         scope: Unknown
         size: Unknown
-        target: Unknown
         text: Unknown
       open_params: false
       required: []
@@ -318,7 +317,6 @@ actions:
         op: Unknown
         project_id: Unknown
         scope: Unknown
-        target: Unknown
       aliases: {mapping: map}
       open_params: false
       required: []
@@ -369,7 +367,6 @@ actions:
         op: Unknown
         project_id: Unknown
         scope: Unknown
-        target: Unknown
       open_params: false
       required: []
       result: Record
@@ -414,7 +411,6 @@ actions:
         op: Unknown
         project_id: Unknown
         scope: Unknown
-        target: Unknown
       open_params: false
       required: []
       result: Record
@@ -465,7 +461,6 @@ actions:
         peek: Unknown
         project_id: Unknown
         scope: Unknown
-        target: Unknown
         watch: Unknown
       open_params: false
       required: []
@@ -520,7 +515,6 @@ actions:
         op: Unknown
         project_id: Unknown
         scope: Unknown
-        target: Unknown
       open_params: false
       required: []
       result: Record

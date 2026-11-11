@@ -49,6 +49,10 @@ return $결과
 `warnings`의 `UNOBSERVED_FIELD`는 fixture·실사용에서 관측된 반환 필드(`data/ibl_return_shapes.json`) 밖의 이름을 읽는다는 뜻이다. 선언이 아니라 흔적과의 불일치이므로 오류가 아니며, `describe`나 작은 실행으로 실제 필드를 확인한다.
 `preflight`는 선언된 AI 방문 상한과 미상을 구분한다. `source_hash`는 제출 원문, `plan_hash`는 의존 계획의 지문이다.
 검사·실행은 같은 컴파일러를 사용하며 검사 결과를 실행 승인 토큰으로 쓰지 않는다.
+액션 인자는 해당 액션의 선언으로 검사한다. `target`은 공용 기기 지정 인자가 아니며,
+실제로 읽는 액션의 스키마·params·별칭에 선언된 경우에만 받는다. 미선언 인자는
+`UNKNOWN_ARGUMENT`로 거절한다. `@별칭`의 몸 주소 지정과 등록 손발을 호출하는
+`[limbs:guestpc]{limb:...}`는 별도의 실행 경로이며 업무 인자 `target`과 혼동하지 않는다.
 통과 응답의 `execute_args`는 검사한 원문과 `inputs`·`budget`·`edition`·`value_protocols`를
 보관한 `$checked:` 참조다. 그대로 호출하면 다시 작성하지 않고 실행하며, 명시한 인자는
 해당 인자 전체를 교체한다. 입력의 `$ref`는 출처 참조로 보존하고 실행 시 다시 검증한다.

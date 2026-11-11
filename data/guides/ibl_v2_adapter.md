@@ -5,6 +5,10 @@
 
 어휘를 새로 늘리지 않고 원천 YAML의 `callable_contract`에 version/params/required/pipe_input/result/effects/adapter를 선언한다.
 빌더와 런타임은 같은 validator를 사용한다. callable_contract는 현재 IBL이 소비한다. 기존 returns/flow는 저장 원문 호환 실행을 위해 유지한다.
+인자는 해당 액션이 실제로 읽는 키만 선언한다. `target`도 액션 고유 인자이며 공용 실행 대상이 아니다.
+스키마·params·aliases·target_key로 선언하고, 명시 callable_contract에 소비하지 않는 키를 복사하지 않는다.
+다른 액션의 인자와 공용 키처럼 보이는 미선언 인자가 검사·실행 모두에서 거절되는지 확인한다.
+정적으로 확인되는 미선언 인자는 앞선 부작용 호출까지 실행되기 전에, 동적 인자는 해당 호출 전에 거절되어야 한다.
 두 판본의 입력 의미가 달라지는 경우 하나를 다른 하나로 자동 파생하지 않는다(예: where 문자열과 순수 Callable).
 도구 성공·실패·원천 절단을 선언된 외부 봉투에서만 해석하고 사용자 value/items 안의 동명 키는 건드리지 않는다.
 JSON 봉투를 선언한 도구는 실패도 `success:false,error,error_type`으로 반환한다. 예외를 평문으로 바꾸면 어댑터가 실제 실패를 형식 오류로 오진한다. `error_type`·`errno`는 TOOL 진단의 details로 보존하고 permission은 폴백으로 삼키지 않는다. 본문 속 `Error:` 문자열은 오류로 추측하지 않는다.

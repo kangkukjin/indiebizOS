@@ -26,6 +26,7 @@ nodes:
           relay: string
           cursor: integer
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          limb: [target]    # _guestpc_begin·_detach가 이미 읽는 대상 별칭
           limit: [display]
           job: [job_id]      # shell 응답 필드명 그대로 되넣는 관습어
         returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.

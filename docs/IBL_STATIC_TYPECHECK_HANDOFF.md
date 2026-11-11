@@ -262,3 +262,36 @@ typecheck `error` 0. 추론기의 어떤 규칙도 이 관문을 통과해야 �
 공통 모듈 변경에 따라 record-ops 의존 지문도 재감사했다. 관리 기록 조회는
 객체/AND 목록만 허용하고 `_match`의 기존 객체 비교를 사용한다. 접근 정책·필드
 권한 검사와 값 비교 구현은 유지되며 관리 기록/API 회귀를 함께 확인한다.
+
+### 액션이 소비하는 인자만 허용 (2026-11-11)
+
+에피소드 6017의 `limbs:youtube` 호출은 `target:"삼성0"`을 받았지만 핸들러가
+읽지 않아 로컬에서 재생했다. 원인은 `target`을 모든 액션의 보편 허용 키로
+추가한 계약 추론이었다. 이를 제거하고 스키마·params·별칭·target_key로
+선언한 액션만 받도록 했다. 액션 이름별 검사 분기는 추가하지 않는다.
+
+전체 카탈로그 171개를 대조했다. 실제 소비자는 `sense:legal`, `self:limb`,
+`self:ledger`, `engines:web`, `limbs:guestpc`다. `guestpc`의 기존 입력 호환은
+`target → limb` 별칭으로 명시했다. 부동산·위임·AI 표 변환·표 연산의
+10개 명시 계약에서도 미소비 `target`을 제거했다. 공용 실행 메타와 `@별칭`
+몸 라우팅은 기존 계약을 따른다.
+
+용례 61개의 guestpc 인자 전달을 재검토했다. 실행기억 #3920의 `os_open`
+미소비 인자는 `path`로 수리하고 재색인했다. 원문·출처를 보존하고 SQLite
+백업은 `data/_backups/2026-11-11_142650_target_contract/`에 남겼다.
+실제 배포·브라우저 열기는 실행하지 않았다.
+
+회귀는 `backend/test_ibl_param_vocab.py`가 소유한다. 전체 계약의 인자 소유,
+잘못된 정적 인자의 전체 프로그램 실행 전 거절, 동적 펼침 인자의 호출 전
+거절, 실제 소비자와 guestpc 별칭 전달, 별도 몸 라우팅을 확인한다.
+
+검증 결과: 새 회귀 31건을 포함한 일반 backend 종합 회귀 **12,812 통과·9 건너뜀**,
+관련 시스템 묶음(`test_python_libraries`, `test_vocabulary_archive`,
+`test_vocabulary_bundle_split`) **77 통과**. IBL 빌드 정합과 Android 번들 재생성을
+확인했다. 실행 중인 서버의 `/ibl/validate`에서도 문제의 YouTube 호출은
+`UNKNOWN_ARGUMENT: target`, `executed:false`이고 guestpc 별칭은 유효했다.
+
+최초 종합 회귀는 27건 실패했다. 1건은 기존 `others:ask` 시험의 미소비 `target`을
+현행 인자 `to`로 고쳐 전달까지 확인했다. 나머지 26건은 한 워커에서 도구 조회와
+계약 자원 검증 오류가 이어진 사례다. 관련 묶음 91건과 읽기 전용 워커 상태 추적을
+붙인 종합 재검사에서는 모두 통과했으며, 이 실행 순서 문제의 원인은 미확정이다.

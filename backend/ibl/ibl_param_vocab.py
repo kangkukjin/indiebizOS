@@ -1,24 +1,14 @@
 """
 ibl_param_vocab.py - 인자(파라미터) 층 어휘 검사 (2026-07-03)
 
-동사(node:action)는 미존재 시 시끄럽게 실패하고 op 는 enum 으로 어휘화됐지만,
-인자는 열린 dict 라 오타·미인식 키가 핸들러 .get() 기본값으로 조용히 흡수된다
-(예: deposit_max 를 deposit 으로 불러도 무필터 전체 결과가 "성공"으로 반환).
-여기서는 스키마 강제(거부) 대신 *가시화*를 택한다 — 에이전트 루프(평가 3라운드)와
-조종실 dry-run 이 이미 재시도 기계이므로, 미인식 키를 경고+최근접 제안으로
-소리 나게 만들면 다음 턴 자가교정이 된다. 침묵 인자 드리프트는 증류를 타고
-코퍼스(몸)에 박제되므로, 이 검사는 해마 위생 장치이기도 하다.
+액션별 선언(input_schema·params·aliases·target_key)에 공용 실행 메타를 더해
+허용 인자를 계산한다. 스키마 없는 핸들러만 패키지 읽기키(AST)로 보완한다.
+target은 보편 인자가 아니며, 이를 읽는 액션이 자기 의미로 선언해야 한다.
 
-허용집합 — 오탐 회피가 우선 (자주 틀리는 경고는 침묵보다 나쁘다. 실측:
-input_schema 단독은 알려진-정상 코퍼스에서 79키 오경보):
-  패키지 .py 읽기키(AST) ∪ tool.json input_schema ∪ aliases ∪ target_key ∪ 보편키
-scripts/build_ibl_nodes.py 의 코퍼스 param 정합 검사와 같은 수 — 추출기와 상수를
-여기서 단일 소유하고 빌드가 import 한다 (tool.json 파생화와 같은 결).
-
-검사 대상: router=handler + tool 매핑 액션만 (그 외 라우터는 스킵 = 보수적).
-탈출구: 액션 정의(src yaml)에 open_params: true — 자유 키를 정당하게 받는 액션용.
-소비처: ibl_engine(실행 경고) · api_ibl /validate(dry-run) · ibl_usage_rag(증류 게이트)
-        · vocab_crystallization(마찰 신호 D — data/param_friction.jsonl).
+판본 2 계약은 이 허용집합을 사용해 미인식 인자를 검사·실행 전에 거절한다.
+check_params는 같은 집합으로 경고·최근접 제안을 반환하며, 코퍼스·증류·빌드도
+이를 공유한다. 비핸들러는 명시적 닫힌 params를 사용하고, open_params:true는
+자유 키를 실제로 받는 액션의 선언이다.
 """
 
 import ast
@@ -32,8 +22,8 @@ from typing import Any, Dict, List, Optional, Set
 
 # === 어휘 상수 (빌드의 코퍼스 정합 검사와 공유 — 단일 소스) ===
 
-# 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
-UNIVERSAL_PARAM_KEYS = {"op", "target"}
+# op 디스패치 키. 업무 인자(target 포함)는 액션별 선언에서만 허용한다.
+UNIVERSAL_PARAM_KEYS = {"op"}
 
 # 런타임 메타 키 — 핸들러 인자가 아니라 라우팅/엔진이 읽는 키.
 #   project_id: ibl_routing.resolve_project_path · scope: ibl_routing scope 해소

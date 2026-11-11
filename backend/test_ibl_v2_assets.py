@@ -131,17 +131,18 @@ def test_declared_handler_bridge_keeps_whole_record_and_does_not_pipe_guess(memo
     assert typo['status'] == 'invalid'
 
 
-def test_core_router_and_open_params_remain_explicit_runtime_boundaries(memory, monkeypatch):
+def test_core_router_declared_params_remain_explicit_runtime_boundaries(memory, monkeypatch):
     import ibl_engine
     seen = []
     def execute(request, *a, **k):
         seen.append(request)
         return {'success': True, 'items': []}
     monkeypatch.setattr(ibl_engine, 'execute_ibl', execute)
-    checked = handle_request({'edition': 2, 'code': '[others:ask]{target:"fixture",message:"x"}', 'check': True})
+    checked = handle_request({'edition': 2, 'code': '[others:ask]{to:"fixture",message:"x"}', 'check': True})
     assert checked['status'] == 'incomplete' and seen == []
-    result = handle_request({'edition': 2, 'code': '[others:ask]{target:"fixture",message:"x"}'})
+    result = handle_request({'edition': 2, 'code': '[others:ask]{to:"fixture",message:"x"}'})
     assert result['success'] and seen[0]['params']['message'] == 'x'
+    assert seen[0]['params']['to'] == 'fixture'
     private = handle_request({'edition': 2, 'code': '[others:ask]{_prev_result:{},message:"x"}', 'check': True})
     assert private['status'] == 'invalid'
 

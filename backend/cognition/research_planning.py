@@ -34,6 +34,21 @@ PLANNING_PROMPT = """이번 출력은 실행자가 읽고 바로 첫 조사를 �
 """
 
 
+def planning_prompt(agent):
+    """계획 작성도 요청을 다시 쓸 때와 같은 원칙을 읽는다. 원칙의 정본은 의식 역할 파일 하나다.
+
+    다른 역할 프롬프트로 도는 의식(허브 회원 등)에는 섞지 않는다. 그 의식의 첫 판단이 읽지 않은
+    원칙을 계획 단계에서만 새로 들이면 두 호출이 서로 다른 기준으로 일하게 된다.
+    """
+    principles = getattr(agent, "_principles", "") or ""
+    role = getattr(agent, "_supervisor_prompt", "") or ""
+    if not principles or principles not in role:
+        return PLANNING_PROMPT
+    return (PLANNING_PROMPT + "\n아래는 의식의 공통 원칙이다. 요청을 다시 쓸 때와 같은 원칙으로 계획을 쓴다. "
+            "출력 형식과 분량은 위 지시를 따른다.\n<consciousness_principles>\n" + principles
+            + "\n</consciousness_principles>\n")
+
+
 def topic_context(project_path, project_uid, thread_id, run_id):
     """직전 턴 캐시 대신 대화의 영속 계획과 실행자가 갱신한 실제 본문을 회수한다."""
     from research_store import ResearchStore
@@ -170,9 +185,10 @@ def plan_once(agent, framing, input_text, *, supervisor, project_path, topic, pr
               + "\n</research_planning_guide>")
     record_trajectory_event("research.guide_supplied", {
         "recipient": "consciousness", "sha256": hashlib.sha256(guide.encode()).hexdigest()})
+    instructions = planning_prompt(agent)
     try:
-        body = (supervisor.plan(prompt, PLANNING_PROMPT, completion=True) if supervisor else
-                call_oneshot_provider(agent._provider, prompt, system_prompt=PLANNING_PROMPT,
+        body = (supervisor.plan(prompt, instructions, completion=True) if supervisor else
+                call_oneshot_provider(agent._provider, prompt, system_prompt=instructions,
                                       role="research_plan", step_role="consciousness"))
     except Exception as exc:
         from consciousness_agent import ConsciousnessCallSkipped

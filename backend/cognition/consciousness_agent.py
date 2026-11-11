@@ -61,6 +61,18 @@ def validate_framing_focus(value):
             raise ValueError("capability_focus.hint는 문자열이어야 합니다")
 
 
+def role_principles(role_text):
+    """역할 파일에서 원칙 본문(제목 줄 뒤부터 첫 '## ' 제목 앞까지)을 꺼낸다.
+
+    요청을 다시 쓰는 첫 판단과 연구계획 작성이 같은 원칙을 읽게 하려는 것이다. 정본은 역할 파일
+    하나이며, 낱말이 아니라 문서 구조로 가른다(원칙 문구는 사용자가 계속 고친다).
+    """
+    lines = (role_text or "").split("\n## ", 1)[0].split("\n")
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    return "\n".join(lines).strip()
+
+
 class FramingContractError(ValueError):
     """의식 출력 정정 실패. 기준을 버린 일반 실행으로 폴백하면 안 된다."""
 
@@ -83,6 +95,7 @@ class ConsciousnessAgent:
     def __init__(self):
         self._provider = None
         self._prompt = None
+        self._principles = ""
         self._prompt_path = None
         self._prompt_mtime = None
         self._init_provider()
@@ -164,9 +177,11 @@ class ConsciousnessAgent:
         self._prompt_mtime = self._file_mtime(role_path)
         if role_path.exists():
             self._prompt = role_path.read_text(encoding='utf-8')
+            self._principles = role_principles(self._prompt)
         else:
             logger.warning(f"[ConsciousnessAgent] 프롬프트 파일 없음: {role_path}")
             self._prompt = self._default_prompt()
+            self._principles = ""
 
         # 시스템 구조 문서(정체성 코어)만 항상 주입 — 디렉토리/파일 트리는
         # codebase_map 가이드로 분리(get_system_structure_core)

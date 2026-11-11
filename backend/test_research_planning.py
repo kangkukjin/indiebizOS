@@ -291,3 +291,31 @@ def test_process_does_not_fall_back_to_execution_on_plan_handoff_failure(workspa
     expected = ConsciousnessCallSkipped if isinstance(error, ConsciousnessCallSkipped) else FramingContractError
     with pytest.raises(expected):
         agent.process('연구해줘', [], '', project_path=workspace)
+
+
+def test_role_principles_are_the_role_text_before_the_first_section():
+    from consciousness_agent import role_principles
+    role = '# 의식 에이전트\n\n요청을 명료하게 쓴다.\n\n세상의 방식을 살핀다.\n\n## 입력\n\n형식 안내\n\n## 출력\n'
+    assert role_principles(role) == '요청을 명료하게 쓴다.\n\n세상의 방식을 살핀다.'
+    assert role_principles('') == '' and role_principles('제목 없는 한 줄') == '제목 없는 한 줄'
+
+
+def test_live_role_file_yields_principles_without_format_sections():
+    from consciousness_agent import role_principles
+    live = Path(__file__).resolve().parent.parent / 'data/common_prompts/consciousness_prompt.md'
+    principles = role_principles(live.read_text(encoding='utf-8'))
+    # 원칙이 통째로 사라지거나(구조 개편) 입력·출력 형식 절이 계획 지시문에 섞이지 않는다.
+    assert len(principles) > 200 and '## ' not in principles and '```' not in principles
+
+
+@pytest.mark.parametrize('shared', [True, False])
+def test_plan_writing_reads_the_same_principles_as_the_first_judgment(workspace, shared):
+    principles = '세상이 이미 푼 방식을 먼저 살핀다.'
+    agent = SimpleNamespace(_provider=object(), _principles=principles,
+                            _supervisor_prompt=('# 의식\n\n' + principles + '\n\n## 입력') if shared else '회원용 다른 역할')
+    calls = []
+    supervisor = SimpleNamespace(plan=lambda prompt, system, **kw: calls.append(system) or PLAN, cancelled=lambda: False)
+    rp.prepare(agent, draft(), '사용자 원문', supervisor=supervisor, project_path=workspace)
+    assert calls[0].startswith(rp.PLANNING_PROMPT)
+    assert (principles in calls[0]) is shared  # 첫 판단이 읽지 않은 원칙을 계획 단계에서만 들이지 않는다.
+    assert (calls[0] == rp.PLANNING_PROMPT) is (not shared)

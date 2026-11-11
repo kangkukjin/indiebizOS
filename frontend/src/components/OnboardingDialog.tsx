@@ -22,7 +22,7 @@ interface Props {
   onClose: (completed: boolean) => void;
 }
 
-const KEY_PROVIDERS = ['google', 'anthropic', 'openai', 'deepseek', 'openrouter'];
+const KEY_PROVIDERS = ['google', 'anthropic', 'openai', 'deepseek', 'exaone', 'openrouter'];
 const NO_KEY_PROVIDERS = ['claude_code', 'codex', 'ollama'];
 
 function sourceLabel(c: Candidate): string {

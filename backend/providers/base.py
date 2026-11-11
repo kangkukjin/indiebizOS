@@ -206,7 +206,7 @@ def normalize_usage(usage) -> Optional[Dict[str, int]]:
              "cache_read": _first(fam["cache_read"]), "cache_create": _first(fam["cache_create"])}
         n["cache_read"] = min(n["cache_read"], n["input"])
         reasoning = _usage_get(usage, "output_tokens_details.thinking_tokens|output_tokens_details.reasoning_tokens|"
-                               "completion_tokens_details.reasoning_tokens|thoughts_token_count|thoughtsTokenCount")
+                               "completion_tokens_details.reasoning_tokens|thoughts_token_count|thoughtsTokenCount|reasoning_tokens")
         if reasoning is not None:
             n["reasoning"] = int(reasoning)  # output에 이미 포함되어 있다. 합산하지 않는다.
         return n

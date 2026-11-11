@@ -384,7 +384,8 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 합성 과제의 재독 범위 측정과 실제 모델의 시간·토큰 절감은 구분한다.
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
-`backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code · codex
+`backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · exaone · openrouter · ollama · claude_code · codex
+- **EXAONE**: `EXAONE_API_KEY`를 루트 `.env`에 저장하고 모델 티어·도구 AI에서 `exaone` / `k-exaone_v2.5`를 선택한다. OpenAI 호환 `https://api.exaone.ai/v1` 경로로 스트리밍·도구 호출·추론 이력을 전달한다. 텍스트 전용, 입력+출력 한도 524,288 토큰. 항상 추론하는 모델이므로 원샷/off 요청은 `reasoning_effort=low`, 일반 호출은 서버 기본값을 사용한다. 추론 토큰은 출력의 부분집합으로 기록한다. [API 문서](https://docs.exaone.ai/ko/docs/k-exaone-2.5).
 - **Anthropic Claude** / **OpenAI GPT** / **Google Gemini**(HTTP 경량 경로 `gemini_http` 포함 — 폰도 쓰는 키-only 경로) / **DeepSeek**(V4 Pro·Flash, OpenAI 호환 API, 2026-07-22 신설) / **OpenRouter** / **Ollama**(로컬) / **claude_code**·**codex**(하네스 렌트)
 - **아웃오브프로세스 CLI 프로바이더 두 종**(`claude_code`·`codex`, 2026-08-31 codex 신설): CLI 를 subprocess 로 띄워 JSONL 을 내부 이벤트 어휘로 번역한다. 몸통은 `providers/cli_provider.py` 의 `CliSubprocessProvider` 공유 — 세션 영속(resume·명시 리셋·유실 복구)·신원 전파(episode/run/task/origin/agent_id 를 env·헤더로)·지도 봉투 재주입·정직 표지 요약·resume 실패 폴백·과부하 backoff 가 전부 거기 산다. 벤더 파일에는 바이너리 탐지·인증 격리·이벤트 번역·도구 정책만 남는다. 둘 다 **구독 인증**이라 API 키가 없다(`model_resolver._NO_KEY_PROVIDERS`; 판정은 `provider_needs_api_key()` 한 곳에서만 — 손복사 집합은 관문 `test_cli_provider_gates` 가 금지한다). 도구 브리지는 같은 `mcp_server.py`(execute_ibl·read_guide)를 공유하며 실명도 `mcp__indiebizos__*` 로 같다.
   - **셸·파일 도구와 IBL의 공존**(2026-10-14): IBL은 셸·도구 사이의 값 전달·실패 처리·재개를 조합해 추가 모델 호출을 줄이기 위한 언어다. 비슷한 어휘가 있다는 이유로 셸이나 네이티브 파일 작업을 강제 변환하지 않는다. 단독 명령은 그 의미를 보존해 직접 실행하고, 조합·재사용이 왕복과 토큰을 줄이는 곳에서 IBL을 선택한다. 자기수리 격리·대상 권한·위험 명령 승인은 실행 수단과 별도로 유지한다. Claude Code는 Read·Grep·Glob·Bash·Write/Edit와 MCP IBL을 함께 제공하고 네이티브 호출의 감독 경계는 유지한다. Codex도 셸·패치를 허용한다. 웹 획득의 기존 브리지 정책은 유지한다. `shell_shadow_gate.py`는 이미 시작된 CLI의 옛 훅을 통과시키는 호환 입구만 남기며, 새 CLI와 run_command는 이 관문을 호출하지 않는다. 도구 정책 지문 변경으로 다음 실행은 이전 강제 정책의 세션을 재사용하지 않는다.
@@ -450,10 +451,10 @@ PYTHONPATH=backend .venv/bin/python3 scripts/migrate_forage_evidence.py --backup
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(123) → `datastore`(97) → `ibl`(100) → `cognition`(97) → `services`(113) → `surface`(103). `.py` 총 709개(test 제외).
+  `base`(123) → `datastore`(97) → `ibl`(100) → `cognition`(97) → `services`(113) → `surface`(103). `.py` 총 710개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더 바로 아래에 둔다. `scripts/check_backend_layers.py`가 실제 경로에서 소속을 파생하며 동명·중첩·잘못된 위치를 거절한다. 독립 스크립트는 맨 위에 `import boot_paths`.
-  - 층 밖 공용: `backend/common/`(32) · `backend/providers/`(14, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
+  - 층 밖 공용: `backend/common/`(32) · `backend/providers/`(15, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/{installed,not_installed}/tools/`: 보유 도구 패키지 (**51개** — op 분기 **34개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/{installed,not_installed}/extensions/`: 백엔드 코어 모듈 (**5개**)

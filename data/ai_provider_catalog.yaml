@@ -68,6 +68,12 @@ providers:
     env: DEEPSEEK_API_KEY
     default_model: deepseek-v4-flash
     signup_url: https://platform.deepseek.com
+  - name: exaone
+    label: EXAONE API
+    kind: api
+    env: EXAONE_API_KEY
+    default_model: k-exaone_v2.5
+    signup_url: https://exaone.ai
   - name: openrouter
     label: OpenRouter
     kind: api

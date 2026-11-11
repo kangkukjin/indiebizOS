@@ -25,7 +25,7 @@ from model_resolver import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-_MODEL_PROVIDERS = ("google", "anthropic", "openai", "openrouter", "deepseek",
+_MODEL_PROVIDERS = ("google", "anthropic", "openai", "openrouter", "deepseek", "exaone",
                     "claude_code", "codex")
 
 

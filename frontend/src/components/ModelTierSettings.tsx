@@ -45,6 +45,7 @@ export function ModelTierSettings({ title, description, settings, showApiKey, on
                     <option value="openai">OpenAI (GPT)</option>
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
                     <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
+                    <option value="exaone">EXAONE</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
                     <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
                   </select>

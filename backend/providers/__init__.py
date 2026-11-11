@@ -8,6 +8,7 @@ IndieBiz OS Core
 - Google (Gemini)
 - OpenRouter (650+ 모델, 무료 포함)
 - DeepSeek (V4 Pro/Flash, OpenAI 호환)
+- EXAONE (OpenAI 호환)
 - Ollama (로컬 LLM)
 - Claude Code (CLI subprocess, Max 플랜 사용)
 - Codex (CLI subprocess, ChatGPT 구독 사용)
@@ -23,6 +24,7 @@ from .openai import OpenAIProvider
 from .gemini import GeminiProvider
 from .openrouter import OpenRouterProvider
 from .deepseek import DeepSeekProvider
+from .exaone import ExaoneProvider
 from .ollama import OllamaProvider
 from .claude_code import ClaudeCodeProvider
 from .codex import CodexProvider
@@ -39,6 +41,7 @@ __all__ = [
     'GeminiProvider',
     'OpenRouterProvider',
     'DeepSeekProvider',
+    'ExaoneProvider',
     'OllamaProvider',
     'ClaudeCodeProvider',
     'CodexProvider',
@@ -57,6 +60,7 @@ def get_provider(provider_name: str, **kwargs):
         'gemini': GeminiProvider,
         'openrouter': OpenRouterProvider,
         'deepseek': DeepSeekProvider,
+        'exaone': ExaoneProvider,
         'ollama': OllamaProvider,
         'claude_code': ClaudeCodeProvider,
         'claude-code': ClaudeCodeProvider,

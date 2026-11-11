@@ -4,6 +4,10 @@
 router_vendors: {openai: openai, anthropic: anthropic, google: gemini, deepseek: deepseek}
 fallback_tokens: {openai: 128000, openrouter: 128000, anthropic: 200000, gemini: 1048576, deepseek: 128000, ollama: 4096}
 rules:
+  - providers: [exaone]
+    models: [k-exaone_v2.5]
+    tokens: 524288
+    source: https://docs.exaone.ai/ko/docs/k-exaone-2.5
   - providers: [openai]
     models: [gpt-6-astra]
     tokens: 1050000

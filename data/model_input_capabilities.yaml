@@ -4,6 +4,10 @@
 # 2026-09-10: 현재 사용 모델의 문서·로컬 이미지 경로를 확인했다.
 image_transport_disabled: [deepseek_http, deepseek-http]
 rules:
+  - providers: [exaone]
+    models: [k-exaone_v2.5]
+    image: false
+    source: https://docs.exaone.ai/ko/docs/k-exaone-2.5
   - providers: [deepseek]
     models: [deepseek-v4-flash-vision-exp]
     image: true

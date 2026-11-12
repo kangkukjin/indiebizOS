@@ -116,6 +116,7 @@
       "tv_epg.py",
       "web_page_check.py",
       "webapp_work.py",
+      "work_market_scan.py",
       "나레이션생성.py",
       "나레이션원고추출.py",
       "미디어세션.py",

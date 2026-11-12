@@ -1821,3 +1821,8 @@ python_libraries:
   interpreter: python
   registered_at: '2026-11-06T18:00:00'
   timeout: 40
+일감공고수집:
+  description: 위시켓 공개 모집 최신 3쪽과 나라장터 최근 24시간 용역 표본을 읽는다. args의 source는 wishket 또는 g2b. track(선택, 기본 false)이 true면 출처별 날짜 표본을 저장하고 직전 조사일 대비 new_to_sample을 표시한다. 나라장터 API 장애 시 NIA 발주기관 원문으로 범위를 좁히고 warnings에 기록한다. items의 title·url·price_text·posted와 범위 scope를 함께 사용한다.
+  file: work_market_scan.py
+  interpreter: python
+  timeout: 240

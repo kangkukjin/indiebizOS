@@ -30,6 +30,7 @@ modes:
           - {value: "~workspace/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
           - {value: "~workspace/outputs/housing_reports",   label: 부동산 발굴 보고서}
           - {value: "~workspace/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
+          - {value: "~workspace/outputs/money_reports", label: 돈되는 보고서}
     # 최신 1건 = 찾기 >> 제목 내림차순 >> 1건; 없으면 빈 blocks 로 끝(empty 문구). [self:read] 는 Document{text,blocks,data}
     action: '$f = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub; $l = $f.items >> [table:sort]{by: "title", descending: true} >> [table:take]{n: 1}; [if: len($l) == 0] { return {blocks: [], items: []} } [self:read]{path: $l[0].url}@hub'
     view:
@@ -58,6 +59,7 @@ modes:
           - {value: "~workspace/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
           - {value: "~workspace/outputs/housing_reports",   label: 부동산 발굴 보고서}
           - {value: "~workspace/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
+          - {value: "~workspace/outputs/money_reports", label: 돈되는 보고서}
     action: '$f = [self:file_find]{pattern: "*report_*.md", path: $folder}@hub; {items: $f.items >> [table:sort]{by: "title", descending: true}}'
     view:
       - type: card_list
@@ -87,6 +89,7 @@ modes:
           - {value: "~workspace/data/guides/ai_startup_report.md", label: AI 창업·응모 정보 보고서 가이드}
           - {value: "~workspace/data/guides/housing_report.md",   label: 부동산 발굴 보고서 가이드}
           - {value: "~workspace/data/guides/youtube_ai_tips_report.md", label: 유튜브 AI 팁 보고서 가이드}
+          - {value: "~workspace/data/guides/money_report.md", label: 돈되는 보고서 가이드}
     action: '[self:read]{path: $guide}@hub'
     view:
       - type: blocks
@@ -104,3 +107,5 @@ modes:
         action: '[others:delegate]{scope: "system", message: "부동산 발굴 보고서 써줘", from_agent: "정기보고앱"}'
       - label: ✍ 새 유튜브 AI 팁 보고서 작성
         action: '[others:delegate]{scope: "system", message: "유튜브 AI 팁 보고서 써줘", from_agent: "정기보고앱"}'
+      - label: 돈되는 보고서 작성·발행
+        action: '[others:delegate]{scope: "system", message: "돈되는 보고서를 data/guides/money_report.md에 따라 오늘 날짜로 작성하고 공유창고 HTML까지 발행해줘.", from_agent: "정기보고앱"}'

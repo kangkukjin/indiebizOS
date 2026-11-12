@@ -103,7 +103,7 @@ def test_status_가_running_행에_progress_를_싣는다(tmp_path, monkeypatch)
 
 def _remote_code():
     src = (_ROOT / "data" / "scripts" / "나레이션생성.py").read_text(encoding="utf-8")
-    return re.search(r"REMOTE = r'''(.*?)'''", src, re.S).group(1)
+    return re.search(r"MODAL_APP = r'''(.*?)'''", src, re.S).group(1)
 
 
 def test_나레이션_원격코드_프롬프트_1회_배치_진행줄():
@@ -116,13 +116,13 @@ def test_나레이션_원격코드_프롬프트_1회_배치_진행줄():
     assert len(gen) == 1
     kws = {k.arg for k in gen[0].keywords}
     assert "voice_clone_prompt" in kws and "ref_audio" not in kws, "호출마다 ref_audio 를 다시 주면 프롬프트 재계산"
-    # 프롬프트 생성은 루프 밖(모듈 최상위)이어야 한다
-    top = {type(n) for n in tree.body}
-    prompt_assign = [n for n in tree.body if isinstance(n, ast.Assign)
-                     and any(isinstance(t, ast.Name) and t.id == "prompt" for t in n.targets)]
-    assert prompt_assign, "prompt = create_voice_clone_prompt(...) 가 최상위에 있어야 한다"
+    # 프롬프트 생성은 조각 루프 밖이어야 한다 (2026-11-12 Modal 이주: 컨테이너당 1회)
+    loops = [n for n in ast.walk(tree) if isinstance(n, (ast.While, ast.For, ast.AsyncFor))]
+    inside = [c for loop in loops for c in ast.walk(loop) if isinstance(c, ast.Call)
+              and isinstance(c.func, ast.Attribute) and c.func.attr == "create_voice_clone_prompt"]
+    assert not inside, "create_voice_clone_prompt 가 루프 안에 있으면 조각마다 다시 인코딩한다"
     src = _remote_code()
-    assert 'job.get("batch")' in src and "out.tar" in src and "모델 적재 완료" in src
+    assert "items[i:i + batch]" in src and '"event": "batch"' in src and "모델 적재 완료" in src
 
 
 def test_나레이션_예산은_글자수_실측속도_캡_이고_감시는_무소식(monkeypatch):
@@ -135,22 +135,84 @@ def test_나레이션_예산은_글자수_실측속도_캡_이고_감시는_무�
                                       next(n for n in ast.parse(Path(N.__file__).read_text(encoding="utf-8")).body
                                            if isinstance(n, ast.FunctionDef) and n.name == "main"))
     assert "SEC_PER_CHAR * total_chars" in main_src and "len(jobs)" not in main_src.split("cap = ")[1].split("\n")[0]
-    assert "run_exec_streaming" in main_src
+    assert "run_modal_streaming" in main_src
     pieces = N.split_sentences("가. 나. 다.", max_chars=5)
     assert pieces == ["가. 나.", "다."]
 
 
-def test_나레이션_토큰갱신은_회수_앞과_정리_앞에_있다(monkeypatch):
-    """09-10 실사고: 세션 토큰 1시간 만료 → 55분 생성 뒤 download·정리·stop 전부 401. VM 은 켜진 채 남았다.
-    갱신 호출이 (a) 회수(download) 앞 (b) finally 의 정리·stop 앞에 있어야 한다 — 순서를 소스 위치로 본다."""
+def test_나레이션_자원반납은_finally_에서_이_실행의_앱만_확인한다():
+    """09-10 실사고(콜랩): 정지 실패로 VM 이 켜진 채 과금됐다. Modal 이주(2026-11-12) 뒤에도 같은 불변식:
+    실행이 어떻게 끝나든 finally 에서 앱이 멈췄는지 보고, 멈추는 대상은 이 실행의 app_id 하나뿐이다."""
     src = (_ROOT / "data" / "scripts" / "나레이션생성.py").read_text(encoding="utf-8")
     main_src = src[src.index("def main("):]
-    i_refresh = main_src.index("refresh_session_token()")
-    i_download = main_src.index('"download"')
-    assert i_refresh < i_download, "회수 앞에 토큰 갱신이 없다"
-    fin = main_src[main_src.index("finally:"):]
-    assert fin.index("refresh_session_token()") < fin.index('"stop"'), "정지 앞에 토큰 갱신이 없다"
-    assert "list_assignments" in src and "token_expires_in_seconds" in src
+    assert "release_modal_app(" in main_src[main_src.index("finally:"):], "finally 에 자원 반납 확인이 없다"
+    rel = src[src.index("def release_modal_app("):src.index("def retime(")]
+    assert 'r.get("app_id") == app_id' in rel and '"stop"' in rel and "if not app_id" in rel
+
+
+_STUB_MODAL = '''\
+import json, os, sys, time
+from pathlib import Path
+state = Path(os.environ["STUB_STATE"])
+args = sys.argv[1:]
+if args[:1] == ["run"]:
+    out = Path(args[args.index("--out") + 1])
+    print("View run at https://modal.com/apps/x/main/ap-STUBSTUBSTUB0001", flush=True)
+    if os.environ.get("STUB_MODE") == "hang":
+        time.sleep(120)
+    print("NARR " + json.dumps({"event": "loaded", "shard": 1, "gpu": "stub", "ready_s": 1}), flush=True)
+    (out / "out_0000.wav").write_bytes(b"RIFF")
+    print("NARR " + json.dumps({"event": "batch", "shard": 1, "done": 1, "total": 1, "audio_s": 1.0}), flush=True)
+    print("NARR " + json.dumps({"event": "end", "shard": 1, "gen_s": 2.5, "prompt_s": 1.0}), flush=True)
+elif args[:2] == ["app", "list"]:
+    print((state / "apps.json").read_text())
+elif args[:2] == ["app", "stop"]:
+    with open(state / "stopped.txt", "a") as f:
+        f.write(args[-1] + "\\n")
+'''
+
+
+def _narration_with_stub(tmp_path, monkeypatch):
+    """나레이션 스크립트 모듈 + 가짜 modal 실행 파일(계정에 닿지 않는다)."""
+    spec3 = importlib.util.spec_from_file_location("narr_stub_t", _ROOT / "data" / "scripts" / "나레이션생성.py")
+    N = importlib.util.module_from_spec(spec3)
+    spec3.loader.exec_module(N)
+    stub = tmp_path / "modal"
+    stub.write_text(f"#!{sys.executable}\n" + _STUB_MODAL, encoding="utf-8")
+    stub.chmod(0o755)
+    monkeypatch.setenv("STUB_STATE", str(tmp_path))
+    return N, str(stub)
+
+
+def test_나레이션_원격실행은_진행줄을_읽고_무소식이면_스스로_끝낸다(tmp_path, monkeypatch):
+    """Modal 이주(2026-11-12): 조각은 오는 대로 로컬에 쌓이고, 컨테이너가 안 뜨면 무소식 기준으로 끊는다
+    (실측: gpu L4 가 10분 동안 배정되지 않았을 때 이 경로로 끝났다). 끊을 때 `modal run` 도 같이 끝내야 한다."""
+    N, stub = _narration_with_stub(tmp_path, monkeypatch)
+    out = tmp_path / "out"
+    out.mkdir()
+    info = N.new_run_info()
+    N.run_modal_streaming(stub, tmp_path / "app.py", tmp_path / "job.json", out, info)
+    assert info["app_id"] == "ap-STUBSTUBSTUB0001" and info["loaded"] == 1 and info["done"] == 1
+    assert info["returncode"] == 0 and info["stalled"] is None and info["gen_s"] == 2.5
+    assert (out / "out_0000.wav").exists()
+    monkeypatch.setenv("STUB_MODE", "hang")
+    info, t0 = N.new_run_info(), time.time()
+    N.run_modal_streaming(stub, tmp_path / "app.py", tmp_path / "job.json", out, info, stall_load=1, stall_gen=1)
+    assert info["stalled"] and info["app_id"] and info["returncode"] not in (None, 0)
+    assert time.time() - t0 < 40, "무소식인데 자식 프로세스를 끝내지 못하고 기다렸다"
+
+
+def test_나레이션_자원반납_확인은_멈춘_앱은_두고_남의_앱은_건드리지_않는다(tmp_path, monkeypatch):
+    N, stub = _narration_with_stub(tmp_path, monkeypatch)
+    apps = [{"app_id": "ap-MINE", "state": "stopped"}, {"app_id": "ap-OTHER", "state": "ephemeral"}]
+    (tmp_path / "apps.json").write_text(json.dumps(apps), encoding="utf-8")
+    assert N.release_modal_app(stub, "ap-MINE") == "released"
+    assert not (tmp_path / "stopped.txt").exists(), "이미 멈춘 앱에 정지 명령을 보냈다"
+    apps[0]["state"] = "ephemeral"
+    (tmp_path / "apps.json").write_text(json.dumps(apps), encoding="utf-8")
+    assert N.release_modal_app(stub, "ap-MINE") == "released"
+    assert (tmp_path / "stopped.txt").read_text().split() == ["ap-MINE"], "이 실행의 앱만 멈춰야 한다"
+    assert N.release_modal_app(stub, None) == "not_started"
 
 
 if __name__ == "__main__":

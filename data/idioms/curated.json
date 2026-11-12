@@ -16,7 +16,10 @@
     "최신범위읽기": "2026-09-14 사용자 지정 교체: 09-12~14 호출 0회. 좁혀서읽기를 상시 소개하고 이 정의는 명시 호출용으로 유지한다.",
     "묶어순위내기": "2026-09-14 사용자 지정 교체: 09-12~14 호출 0회. 고치고확인하기를 상시 소개하고 이 정의는 명시 호출용으로 유지한다.",
     "고치고확인하기": "2026-09-21 사용자 지정: 최근 72시간 호출 0회. 한 파일 치환 뒤 같은 파일 패턴 확인이 필요한 때 명시 호출하며 전역 소개에서는 제외한다.",
-    "미처리만고르기": "2026-09-21 사용자 지정: 최근 72시간 호출 0회. 동일 키의 처리 이력 제외가 명시된 작업에서 호출하며 전역 소개에서는 제외한다."
+    "미처리만고르기": "2026-09-21 사용자 지정: 최근 72시간 호출 0회. 동일 키의 처리 이력 제외가 명시된 작업에서 호출하며 전역 소개에서는 제외한다.",
+    "좁혀서읽기": "2026-11-12 사용자 지정: 10-29~11-12 사용 에피소드 362건에서 호출 0회(코드 검색은 실행자의 셸 검색으로 이뤄졌다). 명시 호출용으로 유지한다.",
+    "열추려보기": "2026-11-12 사용자 지정: 10-29~11-12 호출 0회(select 직접 사용 407회). 명시 호출용으로 유지한다.",
+    "정렬해추리기": "2026-11-12 사용자 지정: 10-29~11-12 호출 0회(sort 자체가 6회). 명시 호출용으로 유지한다."
   },
   "idioms": [
     {
@@ -72,7 +75,7 @@
       "body": "$hits = [self:grep]{pattern: \"${패턴}\", path: \"${루트}\", file_pattern: \"${파일패턴}\", limit: 6}; $return = $hits >> [table:take]{n: 3} >> [table:each]{do: \"[self:read]{path: '$it.파일', start_line: $it.줄번호, limit: 30}\", keep: [\"파일\", \"줄번호\"], collect: true}",
       "inputs": "패턴: 찾을 문자열, 루트: 검색 경로, 파일패턴: 글롭. 반환 items에 파일·줄번호를 보존한다. 읽은 본문은 value 열에 모은다. 지정한 모든 대상의 확인·미확인이 필요하면 대상별좁혀읽기를 describe한 뒤 대상:[{name,pattern}]·루트로 호출한다.",
       "example": "[fn:좁혀서읽기]{패턴: \"TODO\", 루트: \"src\", 파일패턴: \"*.py\"} >> [table:brief]{instruction: \"미완성 작업을 정리\"}",
-      "always_on": true
+      "always_on": false
     },
     {
       "name": "고치고확인하기",
@@ -180,11 +183,11 @@
     {
       "name": "주소마다읽기",
       "always_on": true,
-      "when": "url 열이 있는 목록에서 중복 URL을 빼고 앞 개수개 페이지의 원문 문단을 모을 때. 출처와 실패를 보존하며 요약·평가·AI 호출은 하지 않는다.",
+      "when": "여러 웹 주소의 본문을 한 번에 읽을 때. 주소 문자열 목록이나 url 행을 받아 병렬로 수집하고 주소별 성공·실패를 함께 돌려준다. 길이를 주면 페이지마다 앞부분만 한 행씩 훑는다. 요약·판단은 하지 않는다.",
       "topic": "수집",
       "body": "$준비 = $목록 >> [self:script]{op:\"run\",id:\"수집관용구\",args:{op:\"urls\",source:$목록,limit:$개수}}\n$본문 = $준비.items >> [table:each]{keep:[\"title\",\"url\"],limit:$개수,collect:true,on_error:\"keep\"} {\n  [sense:crawl]{url:$it.url}\n}\n$완료 = [self:script]{op:\"run\",id:\"수집관용구\",args:{op:\"finish\",selection:$준비.collection,result:{items:$본문.items,error_count:$본문.error_count,ok_count:$본문.ok_count,errors:\"${본문.errors?}\",row_honesty:\"${본문.row_honesty?}\",truncated:\"${본문.truncated?}\",truncations:\"${본문.truncations?}\",partial:\"${본문.partial?}\",rows_requested:$본문.rows_requested,rows_processed:$본문.rows_processed,rows_unprocessed:\"${본문.rows_unprocessed?}\",parallel:\"${본문.parallel?}\",rows_replaced:\"${본문.rows_replaced?}\"}}}\n$return = $완료 >> [table:take]{n:$완료.count}",
-      "inputs": "앞 통화 또는 목록: url 열이 있는 items 또는 JSON 행 목록(변수 자체 전달), title은 선택. 파이프가 있으면 목록 인자만 생략할 수 있다. 둘 다 주면 명시한 목록이 우선하며 빈 목록도 그대로 보존한다. 둘 다 없으면 입력 누락 오류다. 검색 결과가 link 열이면 먼저 rename으로 url에 맞춘다. 개수: 읽을 고유 URL 수(0 이상). 성공은 문단 단위 items(type·text 등)에 url·원래 title을 붙이고, 실패는 _error 행으로 남긴다. 같은 URL은 첫 행을 보존한다. 개수는 페이지 수이며 반환 문단 수는 더 많을 수 있다. 원문은 전문 보관하고 큰 결과는 모델에만 미리보기로 보인다. 저장 변수에서 더 읽으며 같은 URL은 캐시를 재사용한다. 접근 제한·원문 추출 한계는 그대로다. URL은 대소문자·경로·쿼리를 포함한 문자열이 완전히 같은 정상 행만 중복 제거한다. 원천 실패 행은 중복 제거·개수 제한 밖에서 보존하며 재크롤하지 않는다.",
-      "example": "[sense:search]{query:\"도서관 소식\"} >> [fn:주소마다읽기]{개수:3}",
+      "inputs": "목록은 주소 문자열 목록 또는 url 행 목록, 개수는 읽을 고유 주소 수다. 길이를 생략하면 문단 행 전체를 돌려주어 본문에서찾기로 잇고, 길이를 주면 페이지당 한 행(앞 길이자 text·chars·clipped·source_path)이다. 반환 Record의 ok·sources에서 주소별 성공·실패·저장본 경로를 읽는다. 실패한 주소는 _error 행으로 남고 호출은 실패하지 않는다. 입력 목록 자체가 실패·잘림이면 거절한다. 주소 문자열이 같은 행만 중복 제거한다.",
+      "example": "[fn:주소마다읽기]{목록:[\"https://example.com/\",\"https://www.iana.org/help/example-domains\"],개수:2,길이:1500}",
       "examples": [
         {
           "intent": "학습 자료의 URL 목록에서 중복을 빼고 앞 5개 원문과 출처를 JSON으로 모아줘",
@@ -198,7 +201,7 @@
     },
     {
       "name": "열추려보기",
-      "always_on": true,
+      "always_on": false,
       "topic": "목록 다루기",
       "when": "목록에서 필요한 열만 골라 지정 개수의 행을 볼 때. 원래 행 순서를 유지하며 요약·판단·저장은 하지 않는다.",
       "body": "$추림 = $목록 >> [table:select]{columns: $열}\n$return = $추림 >> [table:take]{n: $개수}",
@@ -217,7 +220,7 @@
     },
     {
       "name": "정렬해추리기",
-      "always_on": true,
+      "always_on": false,
       "topic": "목록 다루기",
       "when": "목록을 가격·거리·점수·날짜 같은 열로 정렬해 지정 개수의 행과 필요한 열만 볼 때. 그룹 집계·단위 환산·의미 평가는 하지 않는다.",
       "body": "$정렬 = $목록 >> [table:sort]{by: $기준, desc: $내림차순}\n$추림 = $정렬 >> [table:take]{n: $개수}\n$return = $추림 >> [table:select]{columns: $열}",

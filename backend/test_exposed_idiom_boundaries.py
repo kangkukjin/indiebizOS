@@ -91,9 +91,44 @@ def test_selection_cannot_hide_preexisting_source_truncation(call, name):
     assert out["diagnostic"]["code"] == "PARTIAL_SOURCE"
 
 
-def test_real_crawl_failure_is_not_a_successful_selection(call):
-    out = call("주소마다읽기", params("주소마다읽기", [{"url": "https://fixture.test/bad"}], 1))
-    assert not out["success"] and not out["source_complete"]
+def test_real_crawl_failure_is_reported_per_url_without_hiding_successes(call):
+    """수집 단계의 실패는 주소별로 보고한다(2026-11-12). 입력 원천의 실패·잘림은 위 시험대로 거절한다."""
+    rows = [{"url": "https://fixture.test/bad"}, {"url": "https://fixture.test/good"}]
+    out = call("주소마다읽기", params("주소마다읽기", rows, 2))
+    assert out["success"], out.get("error")
+    value = out["value"]
+    assert value["ok"] is False and value["error_count"] == 1 and value["partial"] is True
+    assert [(row["url"], row["ok"]) for row in value["sources"]] == [
+        ("https://fixture.test/bad", False), ("https://fixture.test/good", True)]
+    assert value["sources"][0]["error"]
+    assert [row["url"] for row in value["items"] if row.get("_error")] == ["https://fixture.test/bad"]
+    assert [row["text"] for row in value["items"] if not row.get("_error")] == ["본문"]
+
+
+def test_url_strings_are_candidates_like_url_rows(call):
+    urls = ["https://fixture.test/A", "https://fixture.test/B", "https://fixture.test/A"]
+    out = call("주소마다읽기", params("주소마다읽기", urls, 5))
+    assert out["success"] and out["source_complete"], out.get("error")
+    assert sorted(call.calls["crawl"]) == ["https://fixture.test/A", "https://fixture.test/B"]
+    assert out["value"]["ok"] is True and len(out["value"]["sources"]) == 2
+
+
+def test_length_returns_one_clipped_row_per_page_and_marks_the_selection(call):
+    out = call("주소마다읽기", {"목록": ["https://fixture.test/A", "https://fixture.test/B"], "개수": 2, "길이": 1})
+    assert out["success"] and out["source_complete"], out.get("error")
+    value = out["value"]
+    assert [(row["url"], row["text"], row["chars"], row["clipped"]) for row in value["items"]] == [
+        ("https://fixture.test/A", "본", 2, True), ("https://fixture.test/B", "본", 2, True)]
+    assert all(row["page_title"] == "title" and "source_path" in row for row in value["items"])
+    marker = [m for m in value["truncations"] if m.get("source") == "collect.head"]
+    assert marker == [{"scope": "selection", "source": "collect.head", "unit": "chars",
+                       "retained": 1, "clipped_rows": 2}]
+
+
+def test_envelope_nested_in_items_names_the_mistake(call):
+    out = call("주소마다읽기", params("주소마다읽기", {"items": {"items": ROWS}}, 1))
+    assert not out["success"]
+    assert "봉투가 한 번 더" in json.dumps(out, ensure_ascii=False)
 
 
 @pytest.mark.parametrize("pattern", ["TODO", "할일"])

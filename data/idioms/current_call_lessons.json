@@ -16,14 +16,14 @@
     {
       "name": "주소마다읽기",
       "source_edition": 2,
-      "source_sha256": "db0ff350911756275efdf0e9e522a2aaf6a310425679635dd6d87a4b6051abf0",
-      "inputs": "url을 가진 목록과 0 이상 개수를 명시한다. 반환 Record에 items와 수집 진단이 있다. 원천 누락은 실패·partial 증거로 전달된다. URL 문자열이 같은 정상 행만 중복 제거하고 원천 실패 행은 개수 밖에서 보존한다.",
-      "example": "#!ibl edition=2\nreturn [fn:주소마다읽기]{목록:[{title:\"참고 문서\",url:\"https://example.com/\"}],개수:1}",
+      "source_sha256": "f08ac2e5cd04a9503f3f91489ea70e343d708bebcff7b316d0eb6af4f2e87590",
+      "inputs": "목록은 주소 문자열 목록 또는 url 행 목록, 개수는 읽을 고유 주소 수다. 길이를 생략하면 문단 행 전체를 돌려주어 본문에서찾기로 잇고, 길이를 주면 페이지당 한 행(앞 길이자 text·chars·clipped·source_path)이다. 반환 Record의 ok·sources에서 주소별 성공·실패·저장본 경로를 읽는다. 실패한 주소는 _error 행으로 남고 호출은 실패하지 않는다. 입력 목록 자체가 실패·잘림이면 거절한다. 주소 문자열이 같은 행만 중복 제거한다.",
+      "example": "#!ibl edition=2\nreturn [fn:주소마다읽기]{목록:[\"https://example.com/\",\"https://www.iana.org/help/example-domains\"],개수:2,길이:1500}",
       "returns": "Record",
-      "intent": "url 열이 있는 목록에서 중복 URL을 빼고 앞 개수개 페이지의 원문 문단을 모을 때. 출처와 실패를 보존하며 요약·평가·AI 호출은 하지 않는다.",
+      "intent": "여러 웹 주소의 본문을 한 번에 읽을 때. 주소 문자열 목록이나 url 행을 받아 병렬로 수집하고 주소별 성공·실패를 함께 돌려준다. 길이를 주면 페이지마다 앞부분만 한 행씩 훑는다. 요약·판단은 하지 않는다.",
       "topic": "수집",
       "runtime_success_claimed": false,
-      "seed_intent": "목록 [{title:\"참고 문서\",url:\"https://example.com/\"}]에서 중복 URL을 제거하고 앞 1개 페이지의 원문과 수집 진단을 돌려줘."
+      "seed_intent": "https://example.com/ 과 https://www.iana.org/help/example-domains 두 페이지를 한 번에 읽어 앞 1500자씩과 주소별 성공 여부를 돌려줘."
     },
     {
       "name": "열추려보기",
@@ -72,6 +72,18 @@
       "topic": "웹 검색·크롤링",
       "runtime_success_claimed": false,
       "seed_intent": "Python 공식 문서에서 Python 또는 documentation에 맞는 앞 3개 대목을 문맥 폭 1로 발췌해 요청 번호·본문을 추리고, 성공 여부와 요청별 오류 근거도 보존해줘."
+    },
+    {
+      "name": "검색묶음추리기",
+      "source_edition": 2,
+      "source_sha256": "39ac8328c1e251e1e7e15c5c031f64acc248de91609e00688d604fbb6fe7da00",
+      "inputs": "질의들은 {source,query} 목록이며 section·type·sort·days를 더할 수 있다. 기간은 모든 질의에 적용할 일수이고 생략·0이면 기간 제한이 없다. 게시일을 주지 않는 출처는 기간을 받지 못하므로 날짜가 필요한 질의에만 days를 준다. 개수는 질의당 상한(기본 6)이다. 반환 Record의 items는 section·source·query·title·url·summary·dates 행, queries는 질의별 ok·received·shown·error, failed는 실패한 질의 수다. 한 질의의 실패가 다른 질의를 막지 않는다.",
+      "example": "#!ibl edition=2\nreturn [fn:검색묶음추리기]{질의들:[{source:\"naver\",query:\"도서관 휴관일\",type:\"news\",days:30},{source:\"ddg\",query:\"library closed days\"}],개수:5}",
+      "returns": "Record",
+      "intent": "출처가 다른 여러 질의를 한 번에 검색해 제목·주소·요약·날짜를 같은 열로 모으고 질의별 성공·실패를 볼 때. 같은 출처의 여러 질의는 search의 queries로 충분하다. 요약·판정은 하지 않는다.",
+      "topic": "웹 검색·크롤링",
+      "runtime_success_claimed": false,
+      "seed_intent": "네이버 뉴스에서 최근 30일의 도서관 휴관일을, ddg에서 library closed days를 한 번에 검색해 질의당 5건씩 같은 열로 모으고 질의별 성공 여부를 알려줘."
     }
   ]
 }

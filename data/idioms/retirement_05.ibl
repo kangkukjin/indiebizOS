@@ -1,12 +1,31 @@
 #!ibl edition=2
-[def:주소마다읽기]($목록,$개수) {
+[def:주소마다읽기]($목록,$개수,$길이=0) {
   $준비 = [self:script]{id:"수집관용구",args:{op:"urls",source:$목록,limit:$개수}}
   $대상 = $준비.items
-  $수집 = $대상 >> [table:each]{on_error:"collect"} { return [sense:crawl]{url:$it.url} }
+  $수집 = $대상 >> [table:each]{parallel:4,on_error:"collect"} { return [sense:crawl]{url:$it.url} }
   $값 = $수집 >> [table:each]{} {
     [if:is_ok($it)] { return {ok:true,source:$대상[$i],value:unwrap($it)} }
     return {ok:false,source:$대상[$i],error:error_of($it)}
   }
-  $결과 = [self:script]{id:"수집관용구",args:{op:"collect",results:$값,keep:["title", "url"]}}
-  return [self:script]{id:"수집관용구",args:{op:"finish",selection:$준비.collection,result:$결과}}
+  $관측 = $값 >> [table:select]{columns:($행)=>{
+    url:$행.source.url,ok:$행.ok,
+    title:get(get($행,"value",{}),"title",null),
+    chars:get(get($행,"value",{}),"length",null),
+    source_path:get(get(get($행,"value",{}),"source_ref",{}),"path",null),
+    error:get(get($행,"error",{}),"message",null),
+    reason:get(get(get($행,"error",{}),"details",{}),"reason",null)
+  }}
+  $모음 = [try] {
+    [self:script]{id:"수집관용구",args:{op:"collect",results:$값,keep:["title", "url"],head:$길이}}
+  } [catch] {
+    assert $error.code=="PARTIAL_SOURCE" and $error.has_partial,"수집 취합 실패",{error:$error}
+    $error.partial
+  }
+  $마무리 = [try] {
+    [self:script]{id:"수집관용구",args:{op:"finish",selection:$준비.collection,result:$모음}}
+  } [catch] {
+    assert $error.code=="PARTIAL_SOURCE" and $error.has_partial,"수집 마무리 실패",{error:$error}
+    $error.partial
+  }
+  return {**$마무리,ok:$마무리.error_count==0,sources:$관측}
 }

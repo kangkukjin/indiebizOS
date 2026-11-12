@@ -123,9 +123,30 @@ def test_batch_empty_and_invalid_inputs_do_not_search():
     out = run("search_batch_view.ibl", '[fn:검색묶음추리기]{질의들:[]}',
               adapters={"sense:search": unexpected})
     assert out["success"] and out["value"]["ok"] and out["value"]["items"] == []
-    out = run("search_batch_view.ibl", '[fn:검색묶음추리기]{질의들:[{source:"gnews",query:"q"}],기간:0}',
+    out = run("search_batch_view.ibl", '[fn:검색묶음추리기]{질의들:[{source:"gnews",query:"q"}],기간:-1}',
               adapters={"sense:search": unexpected})
     assert out["success"] and not out["value"]["ok"]
+
+
+def test_period_is_optional_and_a_query_can_override_it():
+    """게시일이 없는 출처는 days를 받지 못한다(2026-11-12 라이브: ddg 거절). 0·생략은 제한 없음이다."""
+    seen = []
+
+    def search(rt, args):
+        seen.append(dict(args))
+        return {"items": [{"title": "t", "url": "u"}]}
+
+    queries = [dict(source="ddg", query="a"), dict(source="gnews", query="b", days=3)]
+    for call in ('[fn:검색묶음추리기]{질의들:$queries}', '[fn:검색묶음추리기]{질의들:$queries,기간:0}'):
+        seen.clear()
+        out = run("search_batch_view.ibl", call, {"queries": queries}, {"sense:search": search})
+        assert out["success"] and out["value"]["ok"], out
+        by = {a["query"]: a for a in seen}
+        assert "days" not in by["a"] and by["b"]["days"] == 3
+    seen.clear()
+    out = run("search_batch_view.ibl", '[fn:검색묶음추리기]{질의들:$queries,기간:7}', {"queries": queries}, {"sense:search": search})
+    by = {a["query"]: a for a in seen}
+    assert by["a"]["days"] == 7 and by["b"]["days"] == 3
 
 
 def test_batch_marks_requested_selection_without_silently_dropping_rows():
@@ -162,19 +183,28 @@ def test_batch_forwards_optional_type_and_sort_only_when_given():
     assert out["value"]["queries"][3]["error"]["code"] == "TYPE_CONTRACT"
 
 
-def test_seeds_are_current_and_not_always_on():
+def _seed_code(seed):
+    """정의 본문은 .ibl 파일이 단일 원천이다. source_file 시드는 본문을 복제해 들지 않는다."""
+    if seed.get("source_file"):
+        return (ROOT / "data/idioms" / seed["source_file"]).read_text().strip()
+    return seed["ibl_code"]
+
+
+def test_seeds_are_current_and_only_the_search_batch_is_always_on():
+    """검색묶음추리기는 2026-11-12 상시 소개로 올렸다. 재등록이 그 선택을 되돌리지 않게 시드가 같은 값을 든다."""
     seeds = json.loads((ROOT / "data/idioms/ai_trend_seeds.json").read_text())
     names = {"AI동향준비읽기": "ai_trend_prepare.ibl", "검색묶음추리기": "search_batch_view.ibl"}
     for seed in seeds:
-        assert seed["always_on"] is False
+        assert seed["always_on"] is (seed.get("alias") == "검색묶음추리기")
         if seed.get("alias"):
-            assert seed["ibl_code"] == (ROOT / "data/idioms" / names[seed["alias"]]).read_text().strip()
+            assert _seed_code(seed) == (ROOT / "data/idioms" / names[seed["alias"]]).read_text().strip()
+            assert seed.get("source_file", names[seed["alias"]]) == names[seed["alias"]]
 
 
 def test_guide_calls_compile_and_run_with_fixed_sources():
     import re
     seeds = json.loads((ROOT / "data/idioms/ai_trend_seeds.json").read_text())
-    library = {s["alias"]: s["ibl_code"] for s in seeds if s.get("alias")}
+    library = {s["alias"]: _seed_code(s) for s in seeds if s.get("alias")}
     registry = load_registry()
     fixtures = {"self:list": lambda rt, a: [],
                 "self:read": lambda rt, a: {"text": "rules", "blocks": [], "data": {}},

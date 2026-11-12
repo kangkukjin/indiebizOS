@@ -1211,11 +1211,14 @@ python_libraries:
     integers:
     - limit
     - context
+    - head
     minimum:
       context: 0
+      head: 0
       limit: 0
     params:
       context: Number
+      head: Number
       keep: List<Text>
       limit: Number
       op: Text
@@ -1258,13 +1261,73 @@ python_libraries:
       when:
         op: collect
     version: 1
+  created_at: null
   description: URL 중복 제거(urls), 수집 결과 복원(finish), 출처 경계 안에서 본문·문맥 검색(match), 행 결과
-    취합(collect). 주소마다읽기·본문에서찾기 등의 공용 값 연산이다. urls에 limit을 주면 앞 개수개 정상 후보와 collection을
-    반환하고 실패 행은 finish에서 복원한다. collect는 값·실패·원천 잘림을 보존하며 펼친다. 의도한 선별은 truncations.scope=selection으로
+    취합(collect). 주소마다읽기·본문에서찾기 등의 공용 값 연산이다. urls는 url 행과 주소 문자열을 같은 후보로 받고, limit을
+    주면 앞 개수개 정상 후보와 collection을 반환하며 실패 행은 finish에서 복원한다. collect는 값·실패·원천 잘림을 보존하며
+    펼치고, head를 주면 페이지 수집을 문단 행 대신 페이지당 한 행(앞 head자·전체 글자 수·저장본 경로)으로 낸다. 의도한 선별은 truncations.scope=selection으로
     원천 잘림과 구별한다. 모델·외부 API를 호출하지 않는다.
   file: collection_idioms.py
   interpreter: python
   registered_at: '2026-09-21T21:58:24'
+  registration_updated_at: '2026-11-12T01:20:52.027066+00:00'
+  timeout: 30
+수집원문:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - read_external
+    enums:
+      op:
+      - info
+      - find
+      - range
+    integers:
+    - context
+    - limit
+    - start
+    - end
+    minimum:
+      context: 0
+      end: 1
+      limit: 0
+      start: 1
+    params:
+      context: Number
+      end: Number
+      limit: Number
+      op: Text
+      paths: List<Text>
+      pattern: Text
+      start: Number
+    required:
+    - op
+    - paths
+    result:
+      count: Number
+      failed: Number
+      items: List<Record>
+      ok: Bool
+      sources: List<Record>
+    variants:
+    - required:
+      - op
+      - paths
+      - pattern
+      when:
+        op: find
+    version: 1
+  created_at: '2026-11-12T01:32:06.111767+00:00'
+  description: '수집한 웹 원문의 저장본(crawl의 source_ref.path, 주소마다읽기 sources의 source_path)을
+    다시 읽는다. args.op: info=저장본별 주소·제목·문단 수·글자 수, find=pattern(정규식)에 맞는 문단과 앞뒤 context(기본
+    0)를 저장본마다 limit(기본 8)개까지, range=문단 번호 start~end. paths는 저장본 경로 목록. items의 각 행에
+    source_path·url·paragraph_index·text, sources에 저장본별 결과가 있고 열지 못한 저장본은 ok:false와
+    이유로 남는다. 저장본은 약 하루 보존되며 만료되면 같은 주소를 다시 수집한다. 네트워크·모델을 호출하지 않는다.'
+  file: collected_source.py
+  interpreter: python
+  registered_at: '2026-11-12T01:32:06.111759+00:00'
+  registration_updated_at: '2026-11-12T01:32:06.111768+00:00'
   timeout: 30
 스프레드시트후속검증:
   description: '시트 후속 검증: args.root=정본 또는 그 .worktrees 경로, mode=unit/build/live/gates'
@@ -1451,6 +1514,51 @@ python_libraries:
   interpreter: python
   registered_at: '2026-09-24T14:07:05'
   timeout: 660
+웹화면확인:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - unknown
+    integers:
+    - wait_ms
+    - timeout_ms
+    minimum:
+      timeout_ms: 1000
+      wait_ms: 0
+    nonempty:
+    - url
+    params:
+      evaluate: List<Text>
+      full_page: Bool
+      screenshot: Bool
+      timeout_ms: Number
+      url: Text
+      viewport: Text
+      wait_function: Text
+      wait_ms: Number
+      webgl: Bool
+    required:
+    - url
+    result:
+      clean: Bool
+      console_errors: List<Text>
+      loaded: Bool
+      page_errors: List<Text>
+      results: List<Record>
+    version: 1
+  created_at: '2026-11-12T01:33:37.575110+00:00'
+  description: '웹 화면을 한 번 열어 오류·관측값·화면을 받는다. args: url(http(s)·file), viewport("1280x800"
+    꼴, 기본 1280x800), wait_function(참이 될 때까지 기다릴 자바스크립트 식), wait_ms(추가 대기, 기본 500),
+    timeout_ms(기본 30000), evaluate(평가할 식 목록), screenshot(true면 data/outputs/web_checks에
+    PNG 저장), full_page, webgl(WebGL 화면이면 GPU 렌더). 반환: loaded·http_status·title·page_errors·console_errors·results[{expr,ok,value|error}]·screenshot
+    경로·clean(열림+오류 0+모든 식 성공). 클릭·입력 같은 조작과 합격 판정은 하지 않는다 — 조작은 limbs:browser, 화면의
+    뜻은 직접 본다.'
+  file: web_page_check.py
+  interpreter: python
+  registered_at: '2026-11-12T01:33:37.575103+00:00'
+  registration_updated_at: '2026-11-12T01:33:37.575112+00:00'
+  timeout: 180
 음성받아쓰기:
   description: '[sense:listen]{path, op:"transcribe"} 호환 래퍼. 새 작업은 listen으로 파일을 직접
     듣는다. args: path, out, segment_seconds, prompt, instruction(전사 지침), model. 공통 모델

@@ -24,6 +24,8 @@ def rows(value):
         if value.get("success") is False or value.get("error"):
             raise ValueError("실패한 입력을 수집 자료로 사용할 수 없습니다.")
         value = value.get("items")
+        if isinstance(value, dict) and isinstance(value.get("items"), list):
+            raise ValueError("items 안에 봉투가 한 번 더 들어 있습니다. 봉투나 행 목록을 그대로 넘기세요.")
     if not isinstance(value, list) or any(not isinstance(r, dict) for r in value):
         raise ValueError("items 행 목록이 필요합니다.")
     return value
@@ -46,9 +48,22 @@ def selection_markers(result, total, selected):
         result["truncations"] = markers
 
 
+def url_candidates(value):
+    """주소 문자열은 url 행과 같은 후보다. 하나·목록·봉투의 items 모두 같은 규칙으로 받는다."""
+    if isinstance(value, str) and value.strip().startswith(("http://", "https://")):
+        return [{"url": value.strip()}]
+    value = decode(value)
+    wrap = lambda items: [{"url": row} if isinstance(row, str) else row for row in items]
+    if isinstance(value, list):
+        return wrap(value)
+    if isinstance(value, dict) and isinstance(value.get("items"), list):
+        return {**value, "items": wrap(value["items"])}
+    return value
+
+
 def urls(args):
     """URL은 주소 문자열 그대로 비교한다. 일반 텍스트의 느슨한 동등성을 쓰지 않는다."""
-    original = decode(args["source"])
+    original = url_candidates(args["source"])
     source = rows(original)
     seen, unique, failures, ordered = set(), [], [], []
     for row in source:
@@ -143,6 +158,8 @@ def match_context(args):
 def collect_values(args):
     """명시적으로 수집한 행 결과를 펼친다. 실행·재시도·구문 해석은 하지 않는다."""
     collected = rows(args['results'])
+    head = integer(args['head'], '길이') if args.get('head') is not None else 0
+    clipped_pages = 0
     items, failures, markers, displays, row_markers = [], [], [], [], []
     renamed = {}
     for row in collected:
@@ -159,6 +176,13 @@ def collect_values(args):
         elif isinstance(value, dict) and isinstance(value.get('items'), list):
             children = value['items']
             markers.extend(truncation_evidence(value).get('truncations', []))
+            if head and isinstance(value.get('text'), str):
+                # 페이지 훑기: 문단 행 대신 페이지당 한 행. 전문은 source_path의 저장본에 남는다.
+                text = value['text']
+                clipped_pages += len(text) > head
+                children = [{'page_title': value.get('title') or '', 'text': text[:head],
+                             'chars': len(text), 'clipped': len(text) > head,
+                             'source_path': (value.get('source_ref') or {}).get('path')}]
         else:
             # 읽기·심사처럼 Record를 반환하는 생산자는 행 하나로 보존한다.
             children = [value]
@@ -167,7 +191,7 @@ def collect_values(args):
             honesty = markers_of(value)
             if honesty:
                 row_markers.append({'row': len(displays) + 1, 'markers': honesty})
-        displays.append(value.get('_display') if isinstance(value, dict) and isinstance(value.get('items'), list) else None)
+        displays.append(value.get('_display') if isinstance(value, dict) and isinstance(value.get('items'), list) and not head else None)
         for child in children:
             if not isinstance(child, dict):
                 raise ValueError('수집 결과의 행은 Record여야 합니다.')
@@ -185,6 +209,10 @@ def collect_values(args):
            'ok_count': len(collected) - len(failures),
            'rows_requested': len(collected), 'rows_processed': len(collected),
            'partial': bool(failures)}
+    if clipped_pages:
+        # 호출자가 고른 길이다. 원천 잘림과 구별되도록 selection으로 표시한다.
+        markers.append({'scope': 'selection', 'source': 'collect.head', 'unit': 'chars',
+                        'retained': head, 'clipped_rows': clipped_pages})
     if markers:
         out.update(truncated=True, truncations=markers)
     from common.currency import collected_item_display

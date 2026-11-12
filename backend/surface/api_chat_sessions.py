@@ -21,6 +21,10 @@ class Steering(Target):
     request_id: str = Field(min_length=1, max_length=128)
 
 
+class Cancel(Target):
+    turn_id: str | None = Field(default=None, max_length=128)
+
+
 class Change(Target):
     title: str | None = Field(default=None, max_length=120)
 
@@ -105,8 +109,8 @@ async def steer(sid: str, req: Steering):
 
 
 @router.post("/{sid}/cancel")
-def cancel(sid: str, req: Target):
+def cancel(sid: str, req: Cancel):
     try:
-        return {"cancelled": service.cancel(get_store(req.target, req.project_id, req.agent_id)[0], sid)}
+        return {"cancelled": service.cancel(get_store(req.target, req.project_id, req.agent_id)[0], sid, req.turn_id)}
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc

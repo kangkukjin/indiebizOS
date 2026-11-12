@@ -61,13 +61,14 @@ def detach(run):
         _running.pop(key(binding), None)
 
 
-def cancel(store, sid):
+def cancel(store, sid, turn_id=None):
     with sessions.connection(store.path) as conn:
         store.require(conn, sid)
     run = _running.get((str(Path(store.path).resolve()), sid))
-    if run:
-        run.cancelled.set()
-    return bool(run)
+    if not run or (turn_id and run.session_binding.turn_id != turn_id):
+        return False
+    run.cancelled.set()
+    return True
 
 
 def steering_history(store, sid):
@@ -119,17 +120,27 @@ def steer(store, sid, turn_id, request_id, message):
     return {**receipt, "accepted": True}
 
 
+def visible_turn(conn, sid, turn):
+    """대화 되감기 이전의 요청은 텍스트·음성 화면에 다시 표시하지 않는다."""
+    if turn:
+        cut = conn.execute(
+            "SELECT MAX(json_extract(body,'$.completed_at')) FROM conversation_rewinds "
+            "WHERE session_id=? AND json_extract(body,'$.mode')!='files' "
+            "AND json_extract(body,'$.state')='completed'", (sid,)).fetchone()[0]
+        from datetime import datetime
+        if cut and datetime.fromisoformat(turn['started_at']).timestamp() < cut:
+            return None
+    return turn
+
+
 def snapshot(store, sid, before=None):
     result = store.history(sid, before)
     with sessions.connection(store.path) as conn:
         turn = conn.execute("SELECT * FROM conversation_turns WHERE session_id=? ORDER BY started_at DESC,id DESC LIMIT 1", (sid,)).fetchone()
         from turn_checkpoints import revision
         result['revision'] = revision(conn, sid)
-        if result['revision'] and turn:
-            cut = conn.execute("SELECT MAX(json_extract(body,'$.completed_at')) FROM conversation_rewinds WHERE session_id=? AND json_extract(body,'$.mode')!='files' AND json_extract(body,'$.state')='completed'", (sid,)).fetchone()[0]
-            from datetime import datetime
-            if cut and datetime.fromisoformat(turn['started_at']).timestamp() < cut:
-                turn = None
+        if result['revision']:
+            turn = visible_turn(conn, sid, turn)
         result["turn"] = dict(turn) if turn else None
         if result["turn"] is not None:
             result["turn"]["progress"] = _progress_view(result["turn"].get("progress"))

@@ -1,5 +1,6 @@
 /* ===== 표면 토글 ===== */
 function setSurface(s){
+  if(s!=='autopilot' && typeof apStopVoice==='function')apStopVoice();
   surface=s;
   /* 포식은 표면 탭이 아니라 앱모드의 앱 — 탭 하이라이트는 '앱'에 매핑, 탭 없는 표면은 건너뜀 */
   const hl=(s==='forage')?'app':s;

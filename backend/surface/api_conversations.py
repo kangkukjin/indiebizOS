@@ -13,7 +13,9 @@ from conversation_db import ConversationDB
 
 router = APIRouter()
 from api_chat_sessions import router as sessions_router
+from api_voice_chat import router as voice_router
 router.include_router(sessions_router)
+router.include_router(voice_router)
 
 # 매니저 인스턴스
 project_manager = None

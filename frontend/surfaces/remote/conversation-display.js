@@ -1,6 +1,7 @@
 function apSessionDay(value){return getConversation().day(value)}
 function apSessionControls(s){
  if(!apSessionLive(s))return;
+ document.getElementById('apVoiceControls').hidden=Boolean(IS_PHONE)||!s.id||!s.loaded;
  const item=s.items.find(x=>x.id===s.id),pending=s.pending.has(s.id);
  document.getElementById('apSend').disabled=!s.id||!s.loaded||s.running||pending;
  document.getElementById('apSessionStop').hidden=!s.running;

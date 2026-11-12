@@ -3,7 +3,8 @@ from surface_assets import read_asset
 
 
 def load_autopilot_js():
-    return read_asset('remote/launcher_autopilot_js.js') + read_asset('remote/launcher_sessions_js.js')
+    voice = read_asset('shared/chat-voice.js').split('/* --- ESM export', 1)[0]
+    return voice + read_asset('remote/launcher_autopilot_js.js') + read_asset('remote/launcher_sessions_js.js')
 
 
 def __getattr__(name):

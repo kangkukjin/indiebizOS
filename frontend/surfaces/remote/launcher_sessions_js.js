@@ -11,7 +11,7 @@ async function apResearchHistory(){
 function apSessionsEnabled(){return ['system','agent'].includes(apChat.type)}
 function apOpenSessionHistory(){if(apChat.type==='research'){apResearchHistory();return}const d=document.getElementById('apSessionHistory');d.showModal()}
 function apCloseSessionHistory(){document.getElementById('apSessionHistory').close()}
-function apStopSessions(){apCloseSessionHistory();if(apSessionContext)clearTimeout(apSessionContext.timer);apSessionContext=null}
+function apStopSessions(){apStopVoice();document.getElementById("apVoiceControls").hidden=true;apCloseSessionHistory();if(apSessionContext)clearTimeout(apSessionContext.timer);apSessionContext=null}
 function apSessionLive(s,id){return apSessionContext===s&&(id===undefined||s.id===id)}
 
 async function apSessionRequest(s,path='',method='GET',body={}){
@@ -39,7 +39,7 @@ async function apSessionSnapshot(s,id,before){
 }
 async function apSelectSession(id,preserveDraft=false){
  const s=apSessionContext;if(!s)return;
- apCloseSessionHistory();s.generation=(s.generation||0)+1;s.id=id;s.messages=[];s.loaded=false;s.running=false;s.older=false;s.reading=false;s.snapshot=null;s.signature='';s.rendered=false;
+ apStopVoice();apCloseSessionHistory();s.generation=(s.generation||0)+1;s.id=id;s.messages=[];s.loaded=false;s.running=false;s.older=false;s.reading=false;s.snapshot=null;s.signature='';s.rendered=false;
  try{localStorage.setItem(s.key,id)}catch(e){}
  if(!preserveDraft){document.getElementById('apInput').value='';apImages=[];apRenderChips();}document.getElementById('apMsgs').replaceChildren();
  apRenderSessionList();apSessionControls(s);apSessionError(s,null);
@@ -88,4 +88,31 @@ async function apStartSessions(){
   try{await apSessionList(s);if(s.id)await apSessionSnapshot(s,s.id)}catch(e){apSessionError(s,e)}
   if(apSessionLive(s))s.timer=setTimeout(poll,1500);
  };if(apSessionLive(s))s.timer=setTimeout(poll,1500);
+}
+
+
+let apVoiceCall = null;
+function apStopVoice() {
+  apVoiceCall?.stop();
+  apVoiceCall = null;
+  document.getElementById('apVoiceNotice').textContent = '';
+}
+function apToggleVoice() {
+  if (apVoiceCall) {apStopVoice(); return;}
+  const s = apSessionContext;
+  if (!s || !s.id || !s.loaded) return;
+  const id = s.id;
+  const call = createChatVoice((path, method, body) => {
+    if (!apSessionLive(s,id)) throw Error('대화가 변경되었습니다.');
+    return apSessionRequest(s, '/' + encodeURIComponent(id) + path, method, body);
+  }, (phase, message) => {
+    if (apVoiceCall !== call) return;
+    const button = document.getElementById('apVoice');
+    button.textContent = phase === 'off' ? '음성대화 시작' : phase === 'starting' ? '연결 취소' : '음성대화 종료';
+    button.setAttribute('aria-pressed', String(phase !== 'off'));
+    document.getElementById('apVoiceNotice').textContent = message;
+    if (phase === 'off') apVoiceCall = null;
+  });
+  apVoiceCall = call;
+  void call.start();
 }

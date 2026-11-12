@@ -13,7 +13,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const digest = value => createHash('sha256').update(value).digest('hex');
 function files(dir) { return fs.readdirSync(path.join(root,dir),{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(dir+'/'+e.name):[dir+'/'+e.name]); }
 export function ownerInputs() {
-  return [...files('src').filter(f=>/\.(tsx?|css|json)$/.test(f)), 'package-lock.json', 'scripts/owner-display.mjs', 'scripts/ui-compiler.mjs','scripts/ui-static-values.mjs','i18n/runtime.mjs','electron/preload.js','surfaces/shared/navigation.json','surfaces/shared/conversation.json','surfaces/shared/conversation.js'].sort();
+  return [...files('src').filter(f=>/\.(tsx?|css|json)$/.test(f)), 'package-lock.json', 'scripts/owner-display.mjs', 'scripts/ui-compiler.mjs','scripts/ui-static-values.mjs','i18n/runtime.mjs','electron/preload.js','surfaces/shared/navigation.json','surfaces/shared/conversation.json','surfaces/shared/conversation.js','surfaces/shared/chat-voice.js'].sort();
 }
 export function ownerHost() {
   const contract = ownerInputs().filter(f=>!views.includes(f)&&!f.endsWith('.css')&&!['surfaces/shared/conversation.js','surfaces/shared/conversation.json','surfaces/shared/navigation.json'].includes(f));

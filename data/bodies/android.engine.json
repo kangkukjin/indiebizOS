@@ -576,6 +576,7 @@
     "surface/api_task_repair",
     "surface/api_tunnel",
     "surface/api_vocabulary",
+    "surface/api_voice_chat",
     "surface/api_warehouse_feed",
     "surface/api_websocket",
     "surface/api_xray",
@@ -655,8 +656,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 644,
-    "engine": 612,
+    "total": 645,
+    "engine": 613,
     "blocklist": 32
   }
 }

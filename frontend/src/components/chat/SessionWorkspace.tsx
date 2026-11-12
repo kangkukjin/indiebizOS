@@ -5,6 +5,7 @@ import { ChatPane, type ChatViewProps } from './ChatView';
 import { sessionCall, sessionQuery, useConversationSession, type SavedSession, type SessionTarget } from './useConversationSession';
 import { SessionHistory } from './SessionHistory';
 import { RewindDialog } from './RewindDialog';
+import { VoiceConversation } from './VoiceConversation';
 import { ProcessSessionsPanel } from './ProcessSessionsPanel';
 function SessionPane({ item,target,active,initialMessage,...props }: ChatViewProps & {item:SavedSession;target:SessionTarget}) {
  const session = useConversationSession(item.id,target,active !== false); const sent = useRef<string | undefined>(undefined);
@@ -58,6 +59,7 @@ export function SessionWorkspace(props:ChatViewProps) {
  const content = <div className="flex flex-col flex-1 min-w-0 min-h-0 h-full overflow-hidden">
 
   {!selected && <div className="flex justify-end p-2">{sessionMenu}</div>}
+  {selected && <VoiceConversation key={selected} sid={selected} target={stableTarget}/>}
   <div className="flex flex-col flex-1 min-w-0 min-h-0">{error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
    {visited.map(id => {const item = items.find(s => s.id === id);return item && <div key={id} className={id === selected ? 'flex flex-1 min-h-0' : 'hidden'}><SessionPane {...props} headerActions={<>{props.headerActions}<button onClick={()=>setRewind(true)} className="text-xs px-2 py-1.5">되돌리기</button><button onClick={()=>setProcesses(true)} className="text-xs px-2 py-1.5">프로세스</button></>} headerItems={sessionItems} datedHistory item={item} target={stableTarget} active={id === selected && props.show !== false} initialMessage={id === initialRecipient.current.id ? props.initialMessage : undefined}/></div>;})}
    {!selected && <div className="m-auto text-[#8B7355]">새 세션을 시작하거나 히스토리에서 대화를 선택하세요.</div>}

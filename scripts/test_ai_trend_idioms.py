@@ -201,34 +201,28 @@ def test_seeds_are_current_and_only_the_search_batch_is_always_on():
             assert seed.get("source_file", names[seed["alias"]]) == names[seed["alias"]]
 
 
-def test_guide_calls_compile_and_run_with_fixed_sources():
+def test_guide_introduces_idioms_with_their_real_parameters():
+    """가이드는 완성 문장 없이 `이름{인자}`로 관용구를 소개한다. 그 이름과 인자가 실제 정의와 같아야 한다.
+
+    옛 검사는 가이드의 ibl 코드 블록 셋을 컴파일·실행했다. 2026-11-06에 그 블록들이 가이드에서
+    빠진 뒤로는 소개와 정의의 어긋남을 여기서 잡는다. 개별 관용구의 실행은 위의 검사들이 맡는다.
+    """
     import re
-    seeds = json.loads((ROOT / "data/idioms/ai_trend_seeds.json").read_text())
-    library = {s["alias"]: _seed_code(s) for s in seeds if s.get("alias")}
-    registry = load_registry()
-    fixtures = {"self:list": lambda rt, a: [],
-                "self:read": lambda rt, a: {"text": "rules", "blocks": [], "data": {}},
-                "sense:search": lambda rt, a: {"items": [{"title": "fixture", "url": "fixture"}]}}
-    for key, fn in fixtures.items():
-        registry[key] = Adapter(registry[key].contract, fn)
     guide = (ROOT / "data/guides/ai_trend_report.md").read_text()
-    blocks = re.findall(r"```ibl\n(.*?)```", guide, re.S)
-    assert len(blocks) == 3
-    event = {"event_id": "e1", "label": "NEW", "verified": True, "date": "2026-09-30"}
-    gate = {"사건들": [event, dict(event), dict(event, event_id="e2", date="2026-09-01"),
-                    dict(event, event_id="e3", verified=False)],
-            "하한": "2026-09-17", "오늘": "2026-10-01"}
-    for code in blocks:
-        inputs = gate if "$사건들" in code else {}
-        plan = compile_program(code, registry, inputs, definitions=library)
-        assert not plan.issues, plan.report()
-        out = Runtime(plan, inputs).run()
-        assert out["success"], out
-        if "검색묶음추리기" in code:
-            assert out["value"]["ok"] and len(out["value"]["queries"]) == 2
-            assert 'source:"naver",type:"news"' in code
-        if inputs:
-            assert out["value"]["new_count"] == 1 and out["value"]["publish"] is True
+    introduced = re.findall(r"`([가-힣A-Za-z0-9_]+)\{([^}`]*)\}`", guide)
+    assert introduced, "가이드가 이름{인자}로 소개한 관용구가 없습니다"
+    defined = {}
+    for path in sorted((ROOT / "data/idioms").iterdir()):
+        if path.suffix in (".ibl", ".json"):
+            for name, params in re.findall(r"\[def:([^\]]+)\]\(([^)]*)\)", path.read_text()):
+                names = {p.split("=")[0].strip().lstrip("$") for p in params.split(",") if p.strip()}
+                defined.setdefault(name, []).append((path.name, names))
+    for name, args in introduced:
+        assert name in defined, f"가이드가 소개한 관용구의 정의가 없습니다: {name}"
+        wanted = {a.strip() for a in args.split(",") if a.strip()}
+        for file, names in defined[name]:
+            # 호출은 이름 붙인 인자를 쓰므로 순서는 보지 않는다.
+            assert names == wanted, f"{name}: 가이드 {sorted(wanted)} / {file} {sorted(names)}"
 
 
 if __name__ == "__main__":

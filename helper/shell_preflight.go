@@ -48,10 +48,14 @@ func shellPreflight(parent context.Context, candidate *exec.Cmd) map[string]inte
 	if len(source) > 65536 {
 		return fail("PREFLIGHT_LIMIT", "source exceeds 64 KiB")
 	}
-	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	ps := name == "powershell" || name == "pwsh"
+	timeout := 5 * time.Second
+	if ps {
+		timeout = 30 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 	var parser *exec.Cmd
-	ps := name == "powershell" || name == "pwsh"
 	if ps {
 		const script = `$OutputEncoding = [Console]::OutputEncoding = [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
 $src = [Console]::In.ReadToEnd(); $tokens=$null; $errors=$null
@@ -85,8 +89,12 @@ $null=[System.Management.Automation.Language.Parser]::ParseInput($src,[ref]$toke
 	parser.Stdout = &output
 	parser.Stderr = &output
 	err := parser.Run()
+	if parent.Err() != nil {
+		return fail("PREFLIGHT_CANCELLED", parent.Err().Error())
+	}
 	if ctx.Err() != nil {
-		return fail("PREFLIGHT_TIMEOUT", ctx.Err().Error())
+		report["coverage"].(map[string]interface{})["syntax"] = "not_checked"
+		return fail("PREFLIGHT_TIMEOUT", "syntax checker timed out after "+timeout.String())
 	}
 	var items []interface{}
 	if ps {

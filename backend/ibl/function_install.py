@@ -14,7 +14,7 @@ def installed_descriptions(definitions, root=None):
     descriptions = {}
     for path in sorted(root.glob('*_seeds.json')):
         try:
-            rows = json.loads(path.read_text())
+            rows = json.loads(path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             continue
         if not isinstance(rows, list):
@@ -30,7 +30,7 @@ def installed_descriptions(definitions, root=None):
             if source.parent != root or source.is_symlink() or source.suffix != '.ibl':
                 continue
             try:
-                if source.read_text().strip() != definitions[name].strip():
+                if source.read_text(encoding='utf-8').strip() != definitions[name].strip():
                     continue
             except (OSError, UnicodeError):
                 continue
@@ -45,17 +45,17 @@ def installed_sources(base):
     manifest = root / 'installed.json'
     if not manifest.is_file():
         return []
-    mapping = json.loads(manifest.read_text())
+    mapping = json.loads(manifest.read_text(encoding='utf-8'))
     result = []
     for name, filename in mapping.items():
         path = root / filename
         if path.parent != root or path.suffix not in ('.ibl', '.yaml') or path.is_symlink():
             raise ValueError('배포 정의 경로가 잘못되었습니다.')
-        data = yaml.safe_load(path.read_text()) if path.suffix == '.yaml' else None
+        data = yaml.safe_load(path.read_text(encoding='utf-8')) if path.suffix == '.yaml' else None
         if path.suffix == '.yaml' and not isinstance(data, dict):
             raise ValueError('배포 관용구는 정의 객체여야 합니다.')
         edition = data.get('edition') if data is not None else 2
-        source = (data.get('code', '').strip() if data is not None else path.read_text().strip())
+        source = (data.get('code', '').strip() if data is not None else path.read_text(encoding='utf-8').strip())
         from ibl_edition import require_current
         require_current(source, edition)
         from ibl_v2_store import definition_name
@@ -79,6 +79,13 @@ def install(base):
     entries = installed_sources(base)
     if not entries:
         return {'updated': [], 'conflicts': []}
+    # An editor may publish while the background installer is starting.
+    # Take the generation and check personal revisions under the same writer lock.
+    with store.transaction(root):
+        return _install_locked(entries, root)
+
+
+def _install_locked(entries, root):
     prepared = prepare(entries, root=root)
     view = store.snapshot(root)
     changes, conflicts = [], []

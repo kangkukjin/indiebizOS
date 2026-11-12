@@ -17,15 +17,26 @@ def using_script_registry(path, registry):
     """Compile a candidate registration without writing the executable namespace."""
     token = _script_views.set({str(Path(path).resolve()): registry})
     try:
-        with compilation_dependencies():
+        # A candidate registry is a different namespace: never share snapshots
+        # with an enclosing check that observed the committed registry.
+        with compilation_dependencies(fresh=True):
             yield
     finally:
         _script_views.reset(token)
 
 
 @contextmanager
-def compilation_dependencies():
-    """One check observes one metadata snapshot; execution never inherits it."""
+def compilation_dependencies(*, fresh=False):
+    """One check observes one metadata snapshot; execution never inherits it.
+
+    Nested compiles inside one enclosing check (catalog publication compiles
+    every caller and stored consumer, ~900 programs) share the enclosing
+    observation. Re-observing the Python environment per compile cost one
+    changed idiom 275 environment scans locally and 738 s on a slow PC.
+    """
+    if not fresh and _check_metadata.get() is not None:
+        yield
+        return
     token = _check_metadata.set({})
     try:
         yield

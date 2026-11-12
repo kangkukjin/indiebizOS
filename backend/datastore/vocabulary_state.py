@@ -22,20 +22,27 @@ _inventory_cache = {}
 #: 한 도구 호출 안에서 재고 검증(보유 폴더 전체 stat)을 묶는 창 — inventory_scope 참조.
 _SCOPE_WINDOW_S = 1.0
 _scope = ContextVar("vocabulary_inventory_scope", default=None)
+#: 고정 범위 표식 — 창 없이 범위 전체가 처음 검증한 재고 하나를 본다.
+_PINNED = object()
 
 
 @contextmanager
-def inventory_scope():
+def inventory_scope(*, pinned=False):
     """한 도구 호출 동안 같은 재고를 다시 검증하지 않는다(긴문장 18회차 후속).
 
     inventory() 는 부를 때마다 보유 묶음의 정의 파일을 전부 stat 해 캐시를 검증한다. 도구 호출 한 번이
     인자 검사·도구 찾기·활성 판정으로 이 함수를 열두 번쯤 부르므로, 표 변환 69번에 stat 이 49만 번이었다.
     호출 하나 안에서는 처음 검증한 결과를 _SCOPE_WINDOW_S 동안 쓴다. 창을 두는 까닭은 오래 도는 호출
-    (위임·반복) 안에서도 밖의 설치·삭제가 곧 보이게 하려는 것이다. 범위 밖의 조회는 종전대로 매번 검증한다."""
-    if _scope.get() is not None:
+    (위임·반복) 안에서도 밖의 설치·삭제가 곧 보이게 하려는 것이다. 범위 밖의 조회는 종전대로 매번 검증한다.
+
+    pinned=True 는 실행 없는 검사 하나(관용구 원장 공개 검사 — 호출자·저장 소비자 수백 개 컴파일)가
+    재고 한 판을 끝까지 본다. 창을 두면 느린 PC 에서 검사 내내 창이 만료되어 컴파일마다 전체 stat 을
+    되풀이했다(tv1 738초). 검사는 실행하지 않으므로 검사 도중의 설치는 다음 검사가 본다."""
+    current = _scope.get()
+    if current is not None and (current.get(_PINNED) or not pinned):
         yield
         return
-    token = _scope.set({})
+    token = _scope.set({_PINNED: True} if pinned else {})
     try:
         yield
     finally:
@@ -64,7 +71,7 @@ def inventory(root: Path = None) -> dict:
     held = _scope.get()
     if held is not None:
         seen = held.get(str(root))
-        if seen and time.monotonic() - seen[0] < _SCOPE_WINDOW_S:
+        if seen and (held.get(_PINNED) or time.monotonic() - seen[0] < _SCOPE_WINDOW_S):
             return seen[1]
     with LOCK:
         paths = []

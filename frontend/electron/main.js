@@ -751,6 +751,7 @@ app.whenReady().then(async () => {
   setupIPC();
 
   // Python 백엔드 시작
+  let backendStartError = null;
   try {
     console.log('[Electron] Python 백엔드 시작 시도...');
     await startPythonBackend();
@@ -758,14 +759,20 @@ app.whenReady().then(async () => {
     ensureKeeper();  // 앱이 떠 있는 동안 백엔드 크래시 자동 소생 (종료 시 함께 정리)
   } catch (err) {
     console.error('[Electron] Python 백엔드 시작 실패:', err);
-    dialog.showErrorBox(
-      '백엔드 시작 오류',
-      `Python 백엔드를 시작하는 중 오류가 발생했습니다.\n\n${err.message}`
-    );
+    backendStartError = err;
   }
 
-  // 윈도우 생성
+  // 윈도우 생성 — 시작 오류가 있어도 창을 먼저 띄운다. 동기 오류창(showErrorBox)은 닫힐 때까지
+  // 메인 창 생성을 막아, 느린 PC(tv1)에서 백엔드가 대기 한도 뒤에 떠도 창이 없었다(2026-11-12).
   createWindow();
+  if (backendStartError) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: '백엔드 시작 오류',
+      message: 'Python 백엔드를 시작하는 중 오류가 발생했습니다.',
+      detail: String(backendStartError.message || backendStartError),
+    }).catch(() => {});
+  }
   mainWindow.webContents.once('did-finish-load', () => updateControl?.ready());
 
   // Launcher WS 브릿지: 백엔드 → Electron 메인 프로세스 직접 연결

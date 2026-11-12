@@ -17,7 +17,36 @@
 """
 
 
-def wire_local_subsystems(profile: str = None) -> dict:
+def _start_function_install(tag, *, defer_updates):
+    """First boot needs the catalog. During updates readers can use its last published revision."""
+    import threading
+    import time
+    from function_install import install
+    from function_store import catalog
+    from runtime_utils import get_base_path
+
+    base = get_base_path()
+
+    def apply():
+        started = time.monotonic()
+        try:
+            result = install(base)
+            print(f"{tag} 관용구 원장 설치: 갱신 {len(result['updated'])}건 · "
+                  f"충돌 {len(result['conflicts'])}건 ({time.monotonic() - started:.1f}s)", flush=True)
+            return result
+        except Exception as exc:
+            print(f"{tag} 관용구 원장 설치 실패: {exc}", flush=True)
+            return False
+
+    if not defer_updates or not catalog(base / 'data/workflows')['functions']:
+        return apply()
+    from runtime_work import bind_boot
+    threading.Thread(target=bind_boot(apply, label="function-catalog-install"),
+                     name="function-catalog-install", daemon=True).start()
+    return "background"
+
+
+def wire_local_subsystems(profile: str = None, *, defer_catalog_updates=False) -> dict:
     """몸 독립 부팅 서브시스템을 켠다.
 
     각 단계는 독립 try 로 감싼다 — 하나가 실패해도 나머지와 부팅은 계속된다
@@ -47,9 +76,7 @@ def wire_local_subsystems(profile: str = None) -> dict:
         results["function_catalog"] = "skipped"
     else:
         try:
-            from function_install import install
-            from runtime_utils import get_base_path
-            results["function_catalog"] = install(get_base_path())
+            results["function_catalog"] = _start_function_install(tag, defer_updates=defer_catalog_updates)
         except Exception as exc:
             results["function_catalog"] = False
             print(f"{tag} 관용구 원장 설치 실패: {exc}")

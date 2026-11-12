@@ -198,7 +198,7 @@ async def lifespan(app: FastAPI):
     # 몸 종속만 각 진입점이 profile 게이트로 명시 분기). 폰은 phone_api.serve() 가 같이 호출.
     try:
         from boot_common import wire_local_subsystems
-        wire_local_subsystems(profile="mac")  # eventloop-ok: 부팅 1회(서비스 시작 전), 요청 경로 아님
+        wire_local_subsystems(profile="mac", defer_catalog_updates=True)  # eventloop-ok: 부팅 1회(서비스 시작 전), 요청 경로 아님
         boot_status.record("boot", True)
     except Exception as e:
         print(f"[boot] 부팅 배선 실패 (무시): {e}")

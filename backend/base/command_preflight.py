@@ -125,7 +125,7 @@ def check(argv, *, cwd=None, env=None, runner=None, cancelled=None):
                  if k not in {'BASH_ENV', 'ENV', 'ZDOTDIR', 'SHELLOPTS', 'BASHOPTS'}}
         if dialect in ('powershell', 'pwsh'):
             parser = [resolved, '-NoProfile', '-NonInteractive', '-Command', PS_PARSE]
-            timeout = 5
+            timeout = 30
         else:
             # Preserve -e/pipefail/POSIX options, suppress optional interactive rc files.
             parser = [resolved, *argv[1:index], *(['-f'] if dialect == 'zsh' else []), '-n', '-c', source]
@@ -147,7 +147,12 @@ def check(argv, *, cwd=None, env=None, runner=None, cancelled=None):
                                 'location': {'line': int(location[1]), 'column': None} if location else None}]
         report['status'] = 'invalid' if report['items'] else 'valid'
         report['coverage']['syntax'] = 'checked'
-    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+    except subprocess.TimeoutExpired as exc:
+        report.update(status='failed', items=[{'code': 'PREFLIGHT_TIMEOUT', 'severity': 'error',
+                                               'message': f'Syntax checker timed out after {exc.timeout}s',
+                                               'location': None}])
+        report['coverage']['syntax'] = 'not_checked'
+    except (OSError, ValueError) as exc:
         report.update(status='failed', items=[{'code': 'PREFLIGHT_UNAVAILABLE', 'severity': 'error',
                                               'message': str(exc)[:1000], 'location': None}])
         report['coverage']['syntax'] = 'unavailable'

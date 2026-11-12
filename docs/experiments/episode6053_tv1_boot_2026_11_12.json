@@ -1,0 +1,76 @@
+{
+  "device": "TV1 (Windows)",
+  "date": "2026-11-12",
+  "scope": "Isolated backend boots on TV1 with its existing Python environment. No production checkout, live catalog or Electron update.",
+  "source_baseline": "eeed6dc3",
+  "method": "Copy the TV1 workflow catalog (21 functions) and immutable revisions. Select the previous shipped revision of 주소마다읽기 in the isolated index. Start the normal controller and worker on a separate loopback port. Read authenticated runtime state, /health, catalog generation and published source. The injected delay sleeps inside validation and then runs the original validator.",
+  "previous_episode": {
+    "episode": 6047,
+    "catalog_install_s": 738.0,
+    "updated_count": 1
+  },
+  "cases": {
+    "replay": {
+      "job_id": "4c61325fa68f470d800765dc61c3099e",
+      "job_state": "succeeded",
+      "boot_status": "succeeded",
+      "boot_seconds": 263.98,
+      "boot_deadline_s": 300,
+      "phase": "ACTIVE",
+      "health": "healthy",
+      "readiness": "ready",
+      "before_generation": 2,
+      "after_generation": 3,
+      "before_revision": "0effeec1bffd994bba5868764b9d401f3ca3fcbbef6a8f1d140b95785d5e7a9d",
+      "after_revision": "724a854c21f1c67b62cdb5ca1311032d46566442f89797ace73ac60768437e87",
+      "expected_code_sha256": "d279aafc6bafd4db5828f93fa0781efeb2736de90fed593bc83b47bfbed34195",
+      "published": true,
+      "observed_publication_s": 413.55,
+      "catalog_install_s": 301.9,
+      "conflicts": 0
+    },
+    "overlapping_cold_start": {
+      "job_id": "6f2c31406a2749f09a1d50990fd4fe2d",
+      "job_state": "failed",
+      "boot_status": "timeout",
+      "boot_seconds": 302.19,
+      "boot_deadline_s": 300,
+      "observation": "Timed out from process launch while STARTING. The isolated worker had entered the delay. Its own controller deadline had not elapsed. This run did not verify readiness or publication."
+    },
+    "final_with_310s_delay": {
+      "job_id": "44c2c770f7ed4ecf8b3f2b1c54b9fc60",
+      "job_state": "succeeded",
+      "boot_status": "succeeded",
+      "boot_seconds": 209.09,
+      "boot_deadline_s": 300,
+      "phase": "ACTIVE",
+      "health": "healthy",
+      "readiness": "ready",
+      "before_generation": 2,
+      "after_generation": 3,
+      "before_revision": "0effeec1bffd994bba5868764b9d401f3ca3fcbbef6a8f1d140b95785d5e7a9d",
+      "after_revision": "66544b3477c77052a72d84cb61515d4ce70d997e805493df0d34f9bc5d1c53dd",
+      "expected_code_sha256": "5be2d788fd5473de69a82caa582d525a1bf2c32c5defcec9ea05e49c79614a39",
+      "published": true,
+      "observed_publication_s": 604.91,
+      "injected_pause_s": 310.04,
+      "healthy_while_check_pending": true,
+      "injected_into": "isolated function_library.validate_changes before the original check",
+      "runtime_observation": {
+        "job_id": "cff26c89e02848f8a2fc178163f5de91",
+        "seconds_after_validation_entered": 331.4,
+        "phase": "ACTIVE",
+        "accepting": true,
+        "work_label": "function-catalog-install",
+        "kind": "finalizer"
+      }
+    }
+  },
+  "validation": "Fresh install, personal revision conflicts, candidate registry isolation, update visibility and parser timeout are covered by backend tests. Windows helper test job 5c81c221293b4fb3a035d5d81d22a4f9 ran TestPowerShellPreflightOnActualRuntime and TestWindowsCommandContract.",
+  "checks": {
+    "backend_full_passed": 13077,
+    "backend_full_skipped": 24,
+    "windows_preflight_test_s": 11.47,
+    "windows_command_contract_test_s": 25.33
+  }
+}

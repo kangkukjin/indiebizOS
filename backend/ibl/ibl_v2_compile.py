@@ -11,7 +11,7 @@ from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record
 from ibl_v2_parser import parse
 from ibl_v2_narrow import known_condition
 from ibl_v2_expr import BUILTINS
-from ibl_dependencies import compilation_dependencies
+from ibl_dependencies import compilation_dependencies, _check_value
 import re
 # f-문자열의 글자 부분에 남은 `$이름` — `$(`·`$5` 같은 다른 쓰임은 잡지 않는다.
 _BARE_DOLLAR_NAME = re.compile(r"\$[A-Za-z_\uac00-\ud7a3][\w\uac00-\ud7a3]*")
@@ -898,6 +898,21 @@ class Compiler(CallAnalysis):
         target.update(merged)
 
 
+def _code_identity():
+    """Digest of the compiler/value-semantics sources that define a plan.
+
+    One check observes it once (shared check scope): reading ~40 source files
+    per compile was repeated for every caller in a catalog publication check.
+    """
+    return {"edition": digest((Path(__file__).parents[1] / "base/ibl_edition.py").read_text()),
+                    "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
+                    "expressions": digest({p.name: digest(p.read_text()) for p in sorted(set((Path(__file__).parents[1] / "common").glob("expression_*.py")) | {Path(__file__).parents[1] / "common/foreign_ref.py"})}),
+                    "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
+                              {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_file_script.py", "ibl_document_value.py", "ibl_member_library.py",
+                                                                        "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")} |
+                              {Path(__file__).parents[1] / 'base' / name for name in ('file_script.py', 'script_process.py', 'script_workspace.py')})})}
+
+
 @compilation_dependencies()
 def compile_program(source, registry=None, inputs=None, definitions=None, *, declared_inputs=None, input_types=None, value_protocols=None):
     """declared_inputs: 표면이 템플릿에서 참조하는 입력 이름 전부. inputs 에 없는 이름은 '미지정'으로 컴파일된다.
@@ -938,13 +953,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None, *, dec
                     "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
                     "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(compiler.used_actions)}),
-                    "edition": digest((Path(__file__).parents[1] / "base/ibl_edition.py").read_text()),
-                    "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
-                    "expressions": digest({p.name: digest(p.read_text()) for p in sorted(set((Path(__file__).parents[1] / "common").glob("expression_*.py")) | {Path(__file__).parents[1] / "common/foreign_ref.py"})}),
-                    "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
-                              {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_file_script.py", "ibl_document_value.py", "ibl_member_library.py",
-                                                                        "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")} |
-                              {Path(__file__).parents[1] / 'base' / name for name in ('file_script.py', 'script_process.py', 'script_workspace.py')})})}
+                    **_check_value(("compiler-code", __file__), _code_identity)}
     refs = [getattr(compiler.definitions, 'references', {}).get(name) for name in sorted(compiler.external)]
     refs += [ref for key in sorted(compiler.used_actions)
              for ref in registry[key].contract.get('function_refs', [])]

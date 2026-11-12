@@ -449,3 +449,11 @@ stdin에만 싣는다. 진행 표시의 CLIXML이 결과에 섞이지 않도록 
 운영 ACTIVE/healthy, 변경한 운영 Python9개 파일의 활성 세대 바이트 일치,
 Windows helper 판본 일치를 확인했다. Windows 시험용 임시 실행 파일 삭제도 확인했다.
 PowerShell 7 실기와 Codex 네이티브 셸 전수 사전 차단은 이 검증에 포함하지 않는다.
+
+
+### TV1의 느린 PowerShell 기동 (2026-11-12)
+
+#6047에서 PowerShell 파서 기동이 기존 5초를 세 번 넘겼다. 로컬과 상주 헬퍼 모두
+PowerShell 구문 검사에 최대 30초를 허용한다. 시간 초과는 `PREFLIGHT_TIMEOUT`과
+`syntax: not_checked`로 반환하고 해당 후보의 실행을 보류한다. 상주 헬퍼는 소유 작업의
+취소를 별도로 보고한다. 명령의 실행 제한과 POSIX 파서의 제한은 각 실행 경로가 관리한다.

@@ -26,7 +26,15 @@ def definitions(view=None):
 
 
 def validate_changes(before, after, changed):
-    with store.using(after):
+    """One publication check = one observation of the environment and inventory.
+
+    The check compiles every changed definition, caller and stored consumer
+    without executing any of them, so all compiles share one metadata snapshot
+    instead of re-scanning Python distributions and tool packages per program.
+    """
+    from ibl_dependencies import compilation_dependencies
+    from vocabulary_state import inventory_scope
+    with store.using(after), compilation_dependencies(fresh=True), inventory_scope(pinned=True):
         return _validate_changes(before, after, changed)
 
 

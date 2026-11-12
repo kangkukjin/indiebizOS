@@ -79,8 +79,12 @@ def test_unsupported_never_executes_and_failures_are_not_zero_errors(tmp_path):
 
 def test_timeout_and_cancel(tmp_path):
     def expired(*args, **kwargs):
-        raise subprocess.TimeoutExpired(args[0], 2)
-    assert check(['/bin/sh', '-c', 'echo hi'], runner=expired)['status'] == 'failed'
+        assert kwargs['timeout'] == 30
+        raise subprocess.TimeoutExpired(args[0], kwargs['timeout'])
+    report = check(['powershell', '-Command', 'echo hi'], runner=expired)
+    assert blocked(report)
+    assert report['coverage']['syntax'] == 'not_checked'
+    assert report['items'][0]['code'] == 'PREFLIGHT_TIMEOUT'
     assert check(['/bin/sh', '-c', 'echo hi'], cancelled=lambda: True)['status'] == 'failed'
 
 

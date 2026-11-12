@@ -359,8 +359,44 @@ def _guide_map(req: RecallRequest, recall: Recall) -> Optional[Block]:
     return _step("guide_map", run)
 
 
+def _ibl_body(registration) -> str:
+    """등록 기기에 IBL 문장을 받아 실행할 IndieBiz OS 가 있으면 그 몸을 한 마디로 소개한다(없으면 "").
+
+    2026-11-12 사용자 결정 — 등록 기기에 IndieBiz OS 가 있으면 그 몸에 요청하는 것이 기본 통로다. 소개 행이
+    위치·용도만 말하던 때 중앙은 IndieBiz OS 가 도는 PC 의 재생기·브라우저를 직접 다루다 207초를 썼고(에피소드 6039),
+    같은 일을 그 몸에 문장으로 보내면 2초였다. 판정 근거는 기기의 신고(limb_keys.has_ibl_body)다."""
+    import limb_keys
+    if not limb_keys.has_ibl_body(registration):
+        return ""
+    caps = (registration or {}).get("capabilities") or {}
+    count = (caps.get("card") or {}).get("action_count") if isinstance(caps.get("card"), dict) else None
+    return f"IndieBiz OS(자체 어휘 {count}개)" if count else "IndieBiz OS"
+
+
+def _own_abilities(caps) -> str:
+    """기기가 신고한 능력 가운데 헬퍼로 직접 다룰 수 있는 실행 수단만 짧게 옮긴다. 신고에 없는 것은 적지 않는다."""
+    if not isinstance(caps, dict):
+        return ""
+    found = []
+    if caps.get("shell"):
+        found.append("셸")
+    if caps.get("python"):
+        found.append("Python")
+    player = caps.get("media_player")
+    if isinstance(player, str) and player:
+        found.append("재생기 " + re.sub(r"\.exe$", "", re.split(r"[\\/]", player)[-1], flags=re.I))
+    elif caps.get("media") or "media" in (caps.get("ops") or []):
+        found.append("재생기")
+    session = caps.get("media_session") if isinstance(caps.get("media_session"), dict) else {}
+    if caps.get("interactive") or session.get("display") or isinstance(caps.get("screen"), dict):
+        found.append("화면")
+    found.extend(label for key, label in (("camera", "카메라"), ("microphone", "마이크"), ("speaker", "스피커"))
+                 if session.get(key))
+    return ", ".join(found)
+
+
 def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
-    """등록 대상의 식별·환경·배치/용도·드라이버 참조. 상태와 계약은 필요할 때 조회한다."""
+    """등록 대상의 식별·환경·자체 능력·배치/용도·드라이버 참조. 상태와 계약은 필요할 때 조회한다."""
     def run():
         allowed = _allowed_set(req.runner)
         if allowed is not None and "limbs" not in allowed:
@@ -385,13 +421,14 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                           and (r.get("registration") or {}).get("adapter") != "network-api")
         rows, names, references = [], [], {}
 
-        def introduce(name, device_id, kind, platform, adapter, context="", scope="unknown", channel_scopes=()):
+        def introduce(name, device_id, kind, platform, adapter, context="", scope="unknown", channel_scopes=(),
+                      own="", body=""):
             # 손발은 하드웨어 단위다 — 같은 PC 에 딸린 통로(관리 서비스)의 드라이버도 이 한 행에 싣는다.
             drivers = [d for d in catalog["drivers"] if any(driver_matches(
                 d, platform=str(platform), adapter=adapter, service_scope=s) for s in (scope, *channel_scopes))]
             references.update((d["id"], d) for d in drivers)
             attrs = {"name": name, "device_id": device_id, "kind": kind, "os": platform,
-                     "adapter": adapter, "drivers": ",".join(d["id"] for d in drivers),
+                     "adapter": adapter, "body": body, "own": own, "drivers": ",".join(d["id"] for d in drivers),
                      "elevate": "unattended" if "machine" in channel_scopes else ""}
             attr_text = " ".join(f"{k}={quoteattr(str(v))}" for k, v in attrs.items() if v)
             rows.append(f"  <limb {attr_text}>{escape(context)}</limb>")
@@ -415,12 +452,17 @@ def _connected_limbs(req: RecallRequest, recall: Recall) -> Optional[Block]:
                         for r in records.values() if (r.get("registration") or {}).get("attached_to") == device_id]
             introduce(e.get("alias") or device_id, device_id, reg.get("kind"), platform,
                       reg.get("adapter") or ("resident-v1" if reg else "portable"),
-                      reg.get("context") or "", caps.get("service_scope", "unknown"), tuple(attached))
+                      reg.get("context") or "", caps.get("service_scope", "unknown"), tuple(attached),
+                      own=_own_abilities(caps), body=_ibl_body(reg))
         for identifier, driver in references.items():
             attrs = {"id": identifier, "guide": driver["file"],
                      "surfaces": ",".join(driver.get("surfaces", []))}
             rows.append("  <driver " + " ".join(f"{k}={quoteattr(v)}" for k, v in attrs.items() if v) + " />")
         note = ("등록 대상 소개이며 실시간 접속·실행 가능을 보증하지 않는다. 본문은 사용자의 배치·용도 설명이다. "
+                "body 가 있는 기기는 같은 IBL 을 쓰는 IndieBiz OS 몸이다 — 그 기기에서 할 일은 "
+                "[limbs:guestpc]{op:\"ibl\",limb,code} 로 문장을 보내면 그 몸이 자기 어휘로 실행한다. "
+                "own·drivers 는 헬퍼로 직접 조작하는 수단이다 — body 가 없는 기기의 길이고, body 가 있는 기기에서는 "
+                "그 몸이 못 하는 일(중앙과의 파일 전송, 그 몸의 설치·기동)에 쓴다. "
                 "드라이버 자료는 read_guide(query=guide), 등록 대상 상세는 [self:limb]{op:list,limb:이름/ID}, "
                 "관측은 [self:limb]{op:list,target:device_id}로 조회한다.")
         return Block("connected_limbs", "connected_limbs",

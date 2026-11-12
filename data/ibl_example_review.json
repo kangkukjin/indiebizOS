@@ -341,20 +341,20 @@
   },
   "limbs:guestpc": {
    "fields": {
-    "description": "116c68669e9e",
+    "description": "d290637dcdb6",
     "target_description": "23e72f9390ac",
     "implementation": "11bd2c55aa6e",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
     "params": "8edfb51d35d5",
     "aliases": "7dc78b669fdf",
-    "ops": "bca9f4879ed7",
+    "ops": "594b5151a2e8",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "9c98c80a5fd1"
    },
-   "reviewed": "2026-11-11",
-   "examples": 61
+   "reviewed": "2026-11-12",
+   "examples": 62
   },
   "limbs:launch": {
    "fields": {

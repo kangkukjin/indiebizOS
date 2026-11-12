@@ -34,6 +34,17 @@ GUEST_PC_CLASS = "guest-pc-class"
 MEMBER_PC_CLASS = "member-pc-class"
 
 
+
+def has_ibl_body(registration) -> bool:
+    """등록 기기에 IBL 문장을 받아 자기 사전으로 실행할 IndieBiz OS 가 있는가 — 기기의 신고가 근거다.
+
+    폰은 설치본 자체가 손발(adapter indiebiz-v1)이고, PC 는 헬퍼가 그 PC 의 로컬 IndieBiz OS 응답을
+    `ibl: true` 로 신고한다. 이것이 있으면 그 기기에 시킬 일의 기본 통로는 그 몸이고, 헬퍼 조작은
+    몸이 없거나 응답하지 않을 때의 아래층이다(2026-11-12 사용자 결정)."""
+    reg = registration or {}
+    return reg.get("adapter") == "indiebiz-v1" or (reg.get("capabilities") or {}).get("ibl") is True
+
+
 def is_member(rec: Dict) -> bool:
     """회원 PC 등록과 구형 이웃 결합 자격을 일반 손발과 구분한다."""
     return bool(rec.get("member_id")) or rec.get("neighbor_id") not in (None, "")

@@ -73,6 +73,11 @@ func (r *residentRuntime) capabilities() map[string]interface{} {
 	_, afplay := exec.LookPath("afplay")
 	caps := map[string]interface{}{"os": runtime.GOOS, "hostname": hostname, "arch": runtime.GOARCH, "kind": "pc", "adapter": "resident-v1", "shell": true, "transfer": true, "wake_relay": true, "media": mpv != "" || afplay == nil, "media_player": mpv, "interactive": true, "max_parallel": 2, "observation_parallel": 1, "screen_observation": true, "screen_cancel": true, "media_volume": true, "observation_shell_timeout": 10, "cpu_hard_limit": false, "memory_hard_limit": false, "service_scope": "user_login", "generation": r.cfg.Generation}
 	caps["desktop_stream"] = 1
+	// 이 PC 에 IndieBiz OS 가 응답하면 IBL 문장을 받아 그 몸에 건넨다(op:"ibl"). 명함은 그 몸의 어휘 요약이다.
+	caps["ibl"] = false
+	if card := localBodyCard(); card != nil && !residentMachineActive(r.cfg) {
+		caps["ibl"], caps["card"] = true, card
+	}
 	caps["preflight_contract"] = 1
 	caps["shell_contract"] = 2
 	caps["default_shell"], _ = shellFor("", "")

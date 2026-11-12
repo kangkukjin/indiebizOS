@@ -1,0 +1,16 @@
+#!ibl edition=2
+[def:외부PC에부탁]($PC,$부탁,$요청ID,$대기=3) {
+  [if:len($부탁)==0 or len($요청ID)==0 or $대기<0 or $대기>240] { return {ok:false,status:"invalid_input"} }
+  $준비 = [fn:외부PC준비]{PC:$PC,환경조회:false}
+  [if:$준비.ok==false] { return $준비 }
+  [if:$준비.helper_mode!="resident" or $준비.registration.adapter!="resident-v1"] { return {ok:false,status:"resident_pc_required"} }
+  $전송 = "curl -fsS --noproxy '*' --connect-timeout 3 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:8765/system-ai/chat"
+  $옵션 = {}
+  [if:get($준비.registration.capabilities,"os","")=="windows"] {
+    $전송 = "curl.exe -fsS --noproxy * --connect-timeout 3 -H \"Content-Type: application/json\" --data-binary @- http://127.0.0.1:8765/system-ai/chat"
+    $옵션 = {shell:"cmd"}
+  }
+  $본문 = json({message:"이 요청의 실행 대상은 지금 요청을 받은 이 PC입니다. 이곳의 도구로 수행하고 실제 결과를 알려주세요. 사용자 요청: "+$부탁})
+  $작업 = [limbs:guestpc]{op:"shell",limb:$준비.limb,cmd:$전송,stdin:$본문,background:true,timeout:1800,request_id:$요청ID,**$옵션}
+  return [fn:외부PC작업확인]{작업:$작업,대기:$대기}
+}

@@ -2,10 +2,11 @@
 
 ## 빠른 호출
 
-장치 소개의 이름·OS·접속 관측으로 대상을 고르고 device_id를 유지한다. `registration`이 있으면 상주형, 없으면 휴대형이다. 오프라인·마지막 권한 관측은 현재 실행 가능의 증거가 아니다. `[self:limb]{op:"list"}`에서 설치 세대·부품·관측 판본·업데이트 상태와 관측 기록을 확인한다.
+장치 소개의 이름·OS·접속 관측으로 대상을 고르고 device_id를 유지한다. 소개에 `body`가 있는 기기는 IndieBiz OS가 응답하는 몸이고, 아래 표의 헬퍼 조작은 `body`가 없는 기기의 길이자 그 몸이 못 하는 일(중앙과의 파일 전송, 그 몸의 설치·기동)의 길이다. `registration`이 있으면 상주형, 없으면 휴대형이다. 오프라인·마지막 권한 관측은 현재 실행 가능의 증거가 아니다. `[self:limb]{op:"list"}`에서 설치 세대·부품·관측 판본·업데이트 상태와 관측 기록을 확인한다.
 
 | 작업 | 소유 가이드와 조회할 절 |
 | --- | --- |
+| IndieBiz OS가 있는 등록 기기(소개의 `body`)에서 할 일 | `[limbs:guestpc]{op:"ibl",limb,code}`로 문장을 보내면 그 몸이 자기 어휘로 실행한다. 그 자리의 판단이 필요한 일은 `remote_pc_execution.md` 빠른 호출의 `fn:외부PC에부탁` |
 | PC 음량·앱·전원·화면·재생 | `pc_control.md`의 빠른 호출과 해당 조작면 |
 | Android 제어 | `android_control.md`의 빠른 호출; 실행·파일은 `remote_phone.md` |
 | TV | `tv_control.md`의 빠른 호출. network-api는 허브 실행이며 guestpc 대상이 아님 |

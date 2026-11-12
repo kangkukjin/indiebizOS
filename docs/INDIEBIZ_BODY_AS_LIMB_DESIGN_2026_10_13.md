@@ -177,3 +177,22 @@ adb run-as 로 폰 `files/secrets/limb_client.json` → 앱 재시작. 초대는
 | E2E 등록·명령 | J7 을 `삼성1` 로 등록(USB `adb reverse tcp:8766 tcp:8765`, 허브=http://127.0.0.1:8766) | ✅ 허브 `[self:limb]{op:list}` 에 adapter indiebiz-v1·live. `op:ibl` 진동 **왕복 0.69초**, `op:info` 명함, `background:true` 5초 녹음 → `[self:task]{op:wait}` succeeded(파일 경로), `op:shell` → `unsupported_on_this_body`, `[limbs:radio]{op:status}` ok, `op:play` → Wi-Fi 없어 "인터넷 연결 실패" 정직 실패. `/ibl/translate "삼성1에게 라디오 틀라고 해"` → 심은 용례 #5037 회상 |
 
 후속: ① J7 Wi-Fi 연결 뒤 `--replace --hub https://finder.kukjinkang.uk`(또는 LAN http://192.168.0.32:8765) 로 재등록 → 라디오 실소리·화면 끈 채 하룻밤 ② 녹음·사진 파일 회수(transfer collect 의 폰 구현) ③ 릴리스 빌드(run-as 차단) ④ API 29+ 무가드 2곳 ⑤ 높은 레벨 이웃의 ask 범위에 limbs:guestpc 가 드는지 확인(손발 명령=허브 주인 전용 권고) ⑥ communication.md·remote_access.md 요지 이전.
+
+## 9. 헬퍼가 설치된 PC 의 IndieBiz OS (2026-11-12)
+
+사용자 결정(2026-11-12): **등록 기기에 IndieBiz OS 가 있으면 그 몸에 요청하는 것이 기본 통로다.** 등록된 기기는 중앙이
+전권을 가지므로 승인이 필요 없다. 요청의 형태는 IBL 문장이다. IndieBiz OS 가 없는 기기는 헬퍼로 조작한다. 등록되지 않은
+두 IndieBiz OS 사이의 요청(승인 필요)은 별개 문제다.
+
+계기 = 에피소드 6036·6038·6039. 맥26(헬퍼 등록 + IndieBiz OS 실행 중)에 "아이유 노래 틀어줘"를 중앙이 헬퍼 수준에서
+대신하다 175~207초를 썼다. 같은 PC 의 IndieBiz OS 에 `[limbs:youtube]{op:"stop"}` 한 문장을 건네면 2.2초, 시스템 AI 에
+자연어로 부탁하면 약 17초였다(셸+curl 로 실측).
+
+§1 보안 개정과의 관계: IndieBiz OS 설치본이 손발 클라이언트를 돌리지 않는다는 결정은 그대로다. PC 의 통로는 **등록된
+헬퍼**다. 헬퍼가 그 PC 의 로컬 백엔드(`127.0.0.1:8765`) 응답을 `ibl:true`·`card` 로 신고하고, 받은 `op:"ibl"` 봉투를
+로컬 `/ibl/execute`(시스템 프로젝트 `앱모드`)에 건넨다. 헬퍼는 이미 그 PC 의 셸 권한을 갖고 있으므로 중앙의 권한은
+늘지 않으며, 헬퍼 등록을 해제하면 통로도 닫힌다(설치 ≠ 종속 유지).
+
+구현: `helper/local_body.go`(신고·전달), `resident_pcs.submit`(신고가 있는 PC 에만 `ibl` 허용, 없으면
+`no_indiebiz_body` — 셸로 바꿔 실행하지 않음), `limb_keys.has_ibl_body`(판정 단일 구현), `guest-helper` `_op_ibl`,
+`associative_recall._connected_limbs`(소개 행의 `body`). 폰(§4)과 봉투·어휘·접수증이 같다.

@@ -81,3 +81,20 @@ func TestFindMediaPlayerWingetInstallerLocation(t *testing.T) {
 		t.Fatalf("got %q want %q (searched %v)", got, want, searched)
 	}
 }
+
+func TestMediaPlayerEnvPutsThePlayersFolderFirstOnPath(t *testing.T) {
+	player := filepath.Join(string(filepath.Separator)+"opt", "pkg", "bin", "mpv")
+	dir := filepath.Dir(player)
+	sep := string(os.PathListSeparator)
+	got := mediaPlayerEnv(player, []string{"HOME=/h", "PATH=/usr/bin"})
+	if got[0] != "HOME=/h" || got[1] != "PATH="+dir+sep+"/usr/bin" || len(got) != 2 {
+		t.Fatalf("env=%v", got)
+	}
+	if got := mediaPlayerEnv(player, []string{"HOME=/h"}); got[len(got)-1] != "PATH="+dir {
+		t.Fatalf("missing PATH was not added: %v", got)
+	}
+	// A bare name gives no folder to add; the environment is passed through unchanged.
+	if got := mediaPlayerEnv("mpv", []string{"PATH=/usr/bin"}); len(got) != 1 || got[0] != "PATH=/usr/bin" {
+		t.Fatalf("env=%v", got)
+	}
+}

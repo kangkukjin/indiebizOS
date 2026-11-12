@@ -321,7 +321,7 @@ def test_guide_and_all_seed_examples_compile(pc):
     seeds = json.loads((ROOT / 'data/idioms/guestpc_seeds.json').read_text())
     guide = (ROOT / 'data/guides/remote_pc_execution.md').read_text()
     examples = re.findall(r'<!-- example:guestpc_\w+ -->\s*```ibl\n(.*?)\n```', guide, re.S)
-    assert len(examples) == len(sources) == 9
+    assert len(examples) == len(sources) == 10
     adapters = load_registry(str(pc.path))
     inputs = {'작업': {'limb': 'fixture', 'task_ref': {'kind': 'guestpc', 'task_id': 'fixture'}}}
     for source in examples + [r['ibl_code'] for r in seeds]:

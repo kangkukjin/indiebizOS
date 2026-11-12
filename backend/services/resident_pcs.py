@@ -309,6 +309,14 @@ def attribution():
     return out
 
 
+def _require_ibl_code(command):
+    code = command.get("ibl")
+    if not isinstance(code, str) or not code.strip():
+        raise ValueError("ibl_code_required")
+    if len(code.encode("utf-8")) > 64 * 1024:
+        raise ValueError("ibl_code_too_large")
+
+
 def submit(target, command, request_id=None, *, allow_update=False, allow_terminal=False, allow_desktop=False,
            allow_media=False, allow_phone_update=False, update_expected=None):
     hardware = resolve(target)
@@ -363,11 +371,13 @@ def submit(target, command, request_id=None, *, allow_update=False, allow_termin
                 raise ValueError('control_request_id_mismatch')
             request_id = inner_id
         if op == "ibl":
-            code = command.get("ibl")
-            if not isinstance(code, str) or not code.strip():
-                raise ValueError("ibl_code_required")
-            if len(code.encode("utf-8")) > 64 * 1024:
-                raise ValueError("ibl_code_too_large")
+            _require_ibl_code(command)
+    elif op == "ibl":
+        # 헬퍼가 설치된 PC 에 IndieBiz OS 가 응답하면(헬퍼의 신고) 문장을 그 몸에 건넨다. 신고가 없으면
+        # 그 PC 에는 문장을 받을 몸이 없다 — 셸로 바꿔 실행하지 않고 명시 거절한다.
+        if not limb_keys.has_ibl_body(rec["registration"]):
+            raise ValueError("no_indiebiz_body")
+        _require_ibl_code(command)
     elif op not in allowed:
         raise ValueError("unsupported_resident_operation")
     if op in {"screen", "click", "move", "type", "key", "scroll", "drag"} and command.get("mode") != "interactive":

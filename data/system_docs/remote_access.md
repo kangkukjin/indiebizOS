@@ -94,8 +94,9 @@ Android UI는 `ui_contract:1` APK·접근성 권한·전면 동작의 화면 문
 
 AI의 원격 실행은 대상 device_id·workspace·작업 접수증을 보존한다. 시간 초과는 실행 실패와 다르므로 같은 접수증으로 회수한다. Windows 출력은 새 헬퍼에서 UTF-8 경로를 사용하고, 셸 인용·종료 코드·부팅 확인은 [원격 PC 설정 검증](../../docs/REMOTE_PC_SETUP_VERIFICATION.md)을 따른다. 폰에는 `op:ibl` 또는 info에서 계약1을 확인한 뒤 `op:shell/python`을 보낸다. 폰은 별도 프로세스의 앱 UID로 실행하며 원격 참조를 중앙 참조처럼 읽지 않는다. [원격폰 기능 범위](../guides/remote_phone.md).
 
-중앙 AI의 `connected_limbs`는 장치 이름·ID·OS·종류·어댑터, 사용자가 알려준 배치·용도와
-공유 드라이버 참조를 소개한다. 사용자 설명은 등록 원장의 `registration.context`에 보관하며,
+중앙 AI의 `connected_limbs`는 장치 이름·ID·OS·종류·어댑터, 기기가 능력 보고로 신고한 몸(`body` — 응답하는 IndieBiz OS)과
+헬퍼 수준 실행 수단(`own`), 사용자가 알려준 배치·용도와 공유 드라이버 참조를 소개한다. `body`가 있는 기기에는 IBL 문장을
+보내 그 몸이 실행하게 하는 것이 기본 통로다. 사용자 설명은 등록 원장의 `registration.context`에 보관하며,
 소유자 API `PUT /remote-pcs/context`의 `{target, context}`로 수정한다(1000자 이내).
 장치의 주기적인 능력 보고와 별도이므로 재접속해도 설명이 유지된다. 설명이 있는 장치는 미접속·
 중지 상태여도 목록에 남고, 폐기·제거·만료·초대·회원 장치는 기존 기준대로 제외한다.

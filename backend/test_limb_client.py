@@ -83,8 +83,19 @@ def test_phone_body_refuses_shell_and_helper_refuses_ibl(hub, phone_env):
         pcs.submit(phone['device_id'], {'op': 'ibl', 'ibl': '  '}, 'req-e')
     inv = limb_keys.resident_invite('desk', 0)
     pc = limb_keys.resident_enroll(inv['key'], 'd' * 32)
-    with pytest.raises(ValueError, match='unsupported_resident_operation'):
+    with pytest.raises(ValueError, match='no_indiebiz_body'):
         pcs.submit(pc['device_id'], {'op': 'ibl', 'ibl': '[self:read]{}'}, 'req-p')
+    # 그 PC 의 헬퍼가 로컬 IndieBiz OS 응답을 신고하면 같은 봉투가 접수된다 — 등록 기기에 IndieBiz OS 가
+    # 있으면 그 몸에 문장을 보내는 것이 기본 통로다(2026-11-12 사용자 결정).
+    caps = {'os': 'linux', 'adapter': 'resident-v1', 'shell': True}
+    limb_keys.resident_update(pc['device_id'], capabilities={**caps, 'ibl': True})
+    with pytest.raises(ValueError, match='ibl_code_required'):
+        pcs.submit(pc['device_id'], {'op': 'ibl', 'ibl': ' '}, 'req-q')
+    assert pcs.submit(pc['device_id'], {'op': 'ibl', 'ibl': '[self:time]{}', 'timeout': 30}, 'req-r')['state'] == 'queued'
+    # 신고가 사라지면(그 PC 의 IndieBiz OS 가 내려감) 다시 거절한다. 셸로 바꿔 실행하지 않는다.
+    limb_keys.resident_update(pc['device_id'], capabilities={**caps, 'ibl': False})
+    with pytest.raises(ValueError, match='no_indiebiz_body'):
+        pcs.submit(pc['device_id'], {'op': 'ibl', 'ibl': '[self:time]{}'}, 'req-t')
     # 손발 쪽도 모르는 봉투는 정직하게 거절(허브 관문을 우회해 큐에 들어와도)
     c = _client(hub, phone, lambda *a: {'success': True})
     out = c._dispatch({'id': 'x', 'code': json.dumps({'op': 'shell', 'cmd': 'rm -rf /'})})

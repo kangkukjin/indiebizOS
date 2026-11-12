@@ -80,6 +80,7 @@ func startMediaPlayback(ctx context.Context, r *residentRuntime, jid, dir, sourc
 		}
 		args = append(args, "--", source)
 		cmd = exec.CommandContext(ctx, mpv, args...)
+		cmd.Env = mediaPlayerEnv(mpv, os.Environ())
 	} else {
 		vol := p.volume
 		cmd = exec.CommandContext(ctx, "/usr/bin/afplay", residentAfplayArgs(source, &vol)...)

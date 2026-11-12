@@ -66,7 +66,9 @@ def test_device_context_keeps_offline_description_and_escapes_markup(monkeypatch
     assert rows[1].text == '스피커 <연결> & 사용자 설명'
     assert rows[2].attrib["os"] == "windows"
     assert "pc_control" in rows[2].attrib["drivers"].split(",")
-    assert all(set(row.attrib) <= {"name", "device_id", "kind", "os", "adapter", "drivers"} for row in rows)
+    # 행의 속성은 식별·환경과 기기가 신고한 몸(body)·헬퍼 수단(own)까지다. 접속·설치 같은 상태는 싣지 않는다.
+    assert all(set(row.attrib) <= {"name", "device_id", "kind", "os", "adapter", "body", "own", "drivers"}
+               for row in rows)
     assert "def run" not in block.text
     assert rows[2].text == "작은방 프린터"
 
@@ -145,6 +147,35 @@ def test_device_context_with_no_known_devices_still_introduces_local_body(monkey
         assert "pc_control" in local["drivers"].split(",")
     assert "__local__" in block.text
     assert "limb:이름/ID" in block.text and "target:device_id" in block.text
+
+
+def test_device_rows_introduce_the_indiebiz_body_and_the_helper_level_means(monkeypatch):
+    """2026-11-12 사용자 결정 — 등록 기기에 IndieBiz OS 가 있으면 그 몸에 IBL 문장을 보내는 것이 기본 통로다.
+    소개 행이 위치·용도만 말하던 때 중앙은 IndieBiz OS 가 도는 PC 의 재생기·브라우저를 직접 다뤘다(에피소드 6036·6038·6039).
+    행은 기기의 신고대로 몸(body)과 헬퍼 수준 수단(own)을 나눠 싣고, 신고에 없는 것은 싣지 않는다."""
+    def record(device_id, kind, capabilities, adapter="resident-v1"):
+        return {"device_id": device_id, "alias": device_id, "registration": {
+            "state": "active", "kind": kind, "adapter": adapter, "capabilities": capabilities, "context": "서재"}}
+    records = [
+        record("helper-only", "pc", {"os": "windows", "shell": True, "media_player": "C:\\tools\\mpv.exe",
+                                     "interactive": True, "ibl": False,
+                                     "media_session": {"speaker": True, "camera": False}}),
+        record("pc-with-body", "pc", {"os": "linux", "shell": True, "ibl": True, "card": {"action_count": 58}}),
+        record("phone", "phone", {"os": "android", "ibl": True, "python": "3.11", "ops": ["ibl", "media"],
+                                  "card": {"action_count": 48}}, adapter="indiebiz-v1"),
+        record("silent", "pc", {"os": "linux"}),
+    ]
+    monkeypatch.setattr(limb_keys, "list_keys", lambda **kw: records)
+    monkeypatch.setattr(device_registry, "live_with_capability", lambda _: [])
+    block = recall._connected_limbs(recall.RecallRequest(None, "상태", []), None)
+    rows = {r.attrib["device_id"]: r.attrib for r in ET.fromstring(block.text).findall("limb")}
+    assert rows["helper-only"]["own"] == "셸, 재생기 mpv, 화면, 스피커" and "body" not in rows["helper-only"]
+    assert rows["pc-with-body"]["body"] == "IndieBiz OS(자체 어휘 58개)" and rows["pc-with-body"]["own"] == "셸"
+    assert rows["phone"]["body"] == "IndieBiz OS(자체 어휘 48개)" and rows["phone"]["own"] == "Python, 재생기"
+    assert not {"own", "body"} & set(rows["silent"]) and not {"own", "body"} & set(rows["__local__"])
+    # 통로의 구조를 한 번 설명한다 — 몸에는 문장, 헬퍼 수단은 그 아래층.
+    note = ET.fromstring(block.text).attrib["note"]
+    assert '[limbs:guestpc]{op:"ibl",limb,code}' in note and "body 가 없는 기기의 길" in note
 
 
 def test_device_rows_do_not_read_or_expose_observations(monkeypatch):

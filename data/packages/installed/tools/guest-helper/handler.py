@@ -526,9 +526,10 @@ def _op_control(tool_input: dict) -> dict:
 
 
 def _op_ibl(tool_input: dict) -> dict:
-    """op=ibl — IndieBiz OS 손발(폰 등)에 IBL 을 하달해 **그 몸의 사전**으로 돌린다 (2026-10-13).
+    """op=ibl — IndieBiz OS 가 있는 등록 기기에 IBL 을 하달해 **그 몸의 사전**으로 돌린다 (2026-10-13).
 
-    헬퍼(Go) 손발은 IBL 엔진이 없으므로 adapter=indiebiz-v1 등록에만 허용한다(허브 submit 도 같은
+    폰은 설치본 자체가 손발이고, PC 는 헬퍼가 그 PC 의 로컬 IndieBiz OS 에 문장을 건넨다(2026-11-12).
+    IndieBiz OS 가 응답하지 않는 PC(헬퍼만 있음)에는 문장을 받을 몸이 없어 거절한다(허브 submit 도 같은
     관문). 결과는 IBL 통화 그대로 result 에 — 실패 봉투(success:false)는 실패로 투영한다.
     설계: docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md"""
     device_id, alias, err = _guestpc_begin(tool_input)
@@ -539,9 +540,18 @@ def _op_ibl(tool_input: dict) -> dict:
         return {"success": False, "error": "ibl 엔 code(그 몸에서 실행할 IBL)가 필요합니다."}
     import limb_keys
     reg = (limb_keys.get_by_device(device_id) or {}).get("registration") or {}
+    if not limb_keys.has_ibl_body(reg):
+        return {"success": False, "error_type": "capability",
+                "error": f"'{alias}' 은(는) 응답하는 IndieBiz OS 를 신고하지 않았습니다(IndieBiz OS 가 없거나 꺼져 있음, "
+                         "또는 그 PC 의 헬퍼가 이 신고를 하기 전 판). 지금은 헬퍼 조작(shell 등)만 받습니다."}
+    # PC 의 IndieBiz OS 는 판본 표식이 있는 문장만 받는다(EDITION_REQUIRED). 하달 문장은 중앙이 지금 판본으로 쓴
+    # 것이므로 전송 경계에서 판본을 명시한다. 폰 설치본은 머리 없는 문장을 그대로 받으므로 건드리지 않는다.
     if reg.get("adapter") != "indiebiz-v1":
-        return {"success": False,
-                "error": f"'{alias}' 은(는) IndieBiz OS 손발이 아닙니다(헬퍼 PC) — IBL 대신 shell 을 쓰세요."}
+        import ibl_edition
+        try:
+            code = ibl_edition.pin_source(code)
+        except ValueError as exc:
+            return {"success": False, "error": str(exc)}
     to = tool_input.get("timeout")
     try:
         to = int(to) if to else 300
@@ -1053,7 +1063,7 @@ _OP_DISPATCHERS = {
         "shell": _op_shell,
         "python": _op_python,
         "control": _op_control,
-        "ibl": _op_ibl,      # IndieBiz OS 손발(adapter=indiebiz-v1)에 IBL 하달 — 2026-10-13
+        "ibl": _op_ibl,      # IndieBiz OS 가 있는 등록 기기(폰·IndieBiz OS 가 응답하는 PC)에 IBL 하달
         "read": _op_read,
         "write": _op_write,
         "list": _op_list,

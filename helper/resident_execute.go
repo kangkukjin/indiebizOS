@@ -149,6 +149,7 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		TransferID string            `json:"transfer_id"`
 		SHA256     string            `json:"sha256"`
 		MAC        string            `json:"mac"`
+		IBL        string            `json:"ibl"`
 		Broadcast  string            `json:"broadcast"`
 	}
 	if json.Unmarshal([]byte(j.Code), &extra) != nil {
@@ -200,6 +201,8 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 		c.Path = filepath.Join(dir, c.Path)
 	}
 	switch c.Op {
+	case "ibl":
+		return localIBL(ctx, extra.IBL)
 	case "desktop":
 		return r.desktop(ctx, j)
 	case "terminal":
@@ -308,6 +311,7 @@ func (r *residentRuntime) execute(parent context.Context, j Job) map[string]inte
 			}
 			args = append(args, "--", source)
 			cmd = exec.CommandContext(ctx, mpv, args...)
+			cmd.Env = mediaPlayerEnv(mpv, os.Environ())
 		} else {
 			cmd = exec.CommandContext(ctx, "/usr/bin/afplay", residentAfplayArgs(source, c.Volume)...)
 		}

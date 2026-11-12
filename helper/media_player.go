@@ -105,3 +105,29 @@ func residentSelectMediaPlayer(source, mode, goos, dataDir, pathEnv string, cand
 	res["searched"] = searched
 	return "", res
 }
+
+// mediaPlayerEnv 는 재생기와 같은 폴더를 PATH 앞에 둔 환경을 돌려준다. 상주 헬퍼는 로그인 셸 PATH 를 받지 않아,
+// 재생기가 페이지 주소 해소에 부르는 보조 도구(yt-dlp)를 같은 설치 위치에 두고도 찾지 못했다(2026-11-12 실측).
+func mediaPlayerEnv(player string, env []string) []string {
+	dir := filepath.Dir(player)
+	if !filepath.IsAbs(player) || dir == "" {
+		return env
+	}
+	out := make([]string, 0, len(env)+1)
+	found := false
+	for _, kv := range env {
+		if name, value, ok := strings.Cut(kv, "="); ok && strings.EqualFold(name, "PATH") && !found {
+			found = true
+			if value == "" {
+				kv = name + "=" + dir
+			} else {
+				kv = name + "=" + dir + string(os.PathListSeparator) + value
+			}
+		}
+		out = append(out, kv)
+	}
+	if !found {
+		out = append(out, "PATH="+dir)
+	}
+	return out
+}

@@ -117,6 +117,10 @@ nc = run("names", [PY, "scripts/name_candidates.py"], timeout=300, ok_codes=ANY)
 try: rec["name_candidates"] = json.loads(nc.stdout.strip().splitlines()[-1]).get("new_houses", 0); rec["names_file"] = json.loads(nc.stdout.strip().splitlines()[-1]).get("file")
 except Exception: rec["name_candidates"] = None
 
+at = run("atlas", [PY, "scripts/export_atlas.py", "--photos"], timeout=300, ok_codes=ANY)   # 글의 지도(2026-11-14): 새 여행 글을 지도에 세우고 첫 사진을 줄여 둔다 — 실패해도 이전 지도 그대로 배포한다
+try: rec["atlas"] = json.loads(at.stdout.strip().splitlines()[-1])
+except Exception: rec["atlas"] = None
+
 run("font", [PY, "scripts/make_font.py"], timeout=300)
 run("build", ["npm", "run", "build"], timeout=900)          # NODE_ENV=production 고정(README) — npx astro build 는 셸 NODE_ENV 를 따른다
 mp = run("map", [PY, "scripts/bake_map.py"], timeout=400)
@@ -164,7 +168,7 @@ rec["ok"] = True
 
 # 3d-blog 전용 로컬 저장소에 이번 갱신이 바꾼 데이터 파일만 커밋한다(소스 코드·다른 미커밋 변경은 건드리지 않는다).
 # 커밋 실패는 배포 성공을 뒤집지 않고 기록·알림 대상으로만 남긴다(배포는 이미 끝났으므로).
-DATA_PATHS = ["layout.lock.json", "video.lock.json", "src/data", "public/d", "public/fonts", "public/map", "public/hall.json"]
+DATA_PATHS = ["layout.lock.json", "video.lock.json", "src/data", "public/d", "public/fonts", "public/map", "public/hall.json", "public/atlas-photos"]
 def git(*a): return subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True, timeout=60)
 try:
     paths = [x for x in DATA_PATHS if (ROOT / x).exists()]

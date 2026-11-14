@@ -27,7 +27,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # data.go.kr 서비스 경로의 모양: 기관코드(7자리 숫자 또는 B+6자리) + 서비스명.
 _ENDPOINT_RE = re.compile(r"/((?:B\d{6}|\d{7})/[A-Za-z0-9_]+)")
 
-SCAN_ROOTS = ("backend", "data/packages/installed", "scripts")
+# data/scripts = 등록 스크립트. 2026-11-13 까지 빠져 있어 일감공고수집(나라장터)이 링크 없이 들어왔다.
+SCAN_ROOTS = ("backend", "data/packages/installed", "data/scripts", "scripts")
 SKIP_DIRS = {"__pycache__", "node_modules", ".git", "_backups"}
 
 # 정본(카탈로그)과 이 가드 자신은 제외 — 전자는 등록부 그 자체이고, 후자의 엔드포인트

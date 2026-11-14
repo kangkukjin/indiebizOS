@@ -56,6 +56,10 @@ DATASETS: List[Dict[str, str]] = [
      "label": "한국문화정보원_문화정보 서비스", "id": "15138937"},
     {"path": "/B551011/KorService2", "env_var": "DATA_GO_KR_API_KEY",
      "label": "한국관광공사_국문 관광정보 서비스_GW", "id": "15101578"},
+    # 조달청은 /1230000/<두 글자 묶음>/<서비스명> 꼴이라 서비스명까지 적어야 데이터셋이 특정된다.
+    # 이름이 비슷한 '조달청_나라장터공지사항'(api.odcloud.kr 파일 데이터)은 입찰공고가 아니다.
+    {"path": "/1230000/ad/BidPublicInfoService02", "env_var": "DATA_GO_KR_API_KEY",
+     "label": "조달청_나라장터 입찰공고정보서비스", "id": "15129394"},
     {"path": "/1421000/mssBizService_v2", "env_var": "DATA_GO_KR_API_KEY",
      "label": "중소벤처기업부_사업공고", "id": "15113297",
      "note": "코드가 부르는 mssBizService_v2 는 폐기 추정 — 이 데이터셋이 후속(엔드포인트 갱신 필요)."},

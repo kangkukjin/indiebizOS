@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
 import boot_paths  # noqa: E402,F401
 from common.auth_manager import get_auth_query_params  # noqa: E402
+from common.datagokr_catalog import permission_error  # noqa: E402
 from file_script import atomic_json  # noqa: E402
 
 WISHKET = "https://www.wishket.com/project/"
@@ -27,6 +28,10 @@ WISHKET_FILTERS = (
 NIA = "https://www.nia.or.kr/site/nia_kor/ex/bbs/"
 BIDS = "https://apis.data.go.kr/1230000/ad/BidPublicInfoService02/getBidPblancListInfoServc02"
 KST = ZoneInfo("Asia/Seoul")
+# 한 쪽 최대 행 수. 2026-11-14 실측: 평일 직전 24시간은 670~1,000건이고 999행 한 쪽에 896건이 온다.
+# 100행만 읽던 때는 전날 오전 세 시간치(약 11%)만 표본에 들어왔다.
+BIDS_PAGE_ROWS = 999
+BIDS_MAX_PAGES = 6
 
 
 def page(url, params=None):
@@ -99,49 +104,98 @@ def nia_notices():
         if deadline and datetime.strptime(deadline, "%Y/%m/%d %H:%M").replace(tzinfo=KST) <= datetime.now(KST):
             continue
         price = match(r"사업금액\s*[:：]?\s*([\d,]+\s*원(?:\s*\([^)]{1,30}\))?)", text)
+        digits = re.sub(r"\D", "", match(r"([\d,]+)\s*원", price))
+        # 전국 표본과 같은 칸을 둔다 — 정렬·거르기 문장이 대체 표본에서도 그대로 돈다.
         rows.append({"title": title, "url": url, "agency": "한국지능정보사회진흥원",
-                     "bid_no": bid, "deadline": deadline, "price_text": price,
+                     "kind": "입찰공고", "category": "", "category_detail": "",
+                     "bid_no": bid, "deadline": deadline,
+                     "price": int(digits) if digits else None, "price_text": price,
                      "posted": match(r"(\d{4}\.\d\d\.\d\d)", field(link, ".src"))})
     return rows, warnings
 
 
-def national_bids(now):
-    auth = get_auth_query_params("data_go_kr")
-    if not auth:
-        raise ValueError("공공데이터포털 키 미설정")
+def bid_page(auth, now, page_no):
+    """24시간 구간의 한 쪽. (전체 건수, 그 쪽의 원 행)을 돌려준다."""
     response = requests.get(BIDS, params={
         **auth, "inqryDiv": 1, "inqryBgnDt": (now - timedelta(hours=24)).strftime("%Y%m%d%H%M"),
-        "inqryEndDt": now.strftime("%Y%m%d%H%M"), "type": "json", "numOfRows": 100, "pageNo": 1,
-    }, timeout=15)
+        "inqryEndDt": now.strftime("%Y%m%d%H%M"), "type": "json",
+        "numOfRows": BIDS_PAGE_ROWS, "pageNo": page_no,
+    }, timeout=30)
     # 인증 파라미터가 든 요청 URL을 오류·보고서에 출력하지 않는다.
+    if response.status_code in (401, 403):
+        # 키는 맞고 이 데이터셋의 활용신청만 빠진 경우 — 신청할 곳까지 알려 준다.
+        raise ValueError(permission_error(BIDS, response.status_code))
     if response.status_code != 200:
         raise ValueError(f"나라장터 API HTTP {response.status_code}")
     envelope = response.json().get("response", {})
     if str(envelope.get("header", {}).get("resultCode")) not in {"00", "0"}:
         raise ValueError("나라장터 API 서비스 오류")
     body = envelope["body"]
-    total = int(body["totalCount"])
     items = body["items"] or []
     if isinstance(items, dict):
         items = items.get("item", [])
-    if total and not items:
-        raise ValueError("나라장터 API 목록 구조 확인 필요")
+    return int(body["totalCount"]), items
+
+
+def open_notices(raw, now):
+    """원 행 → 지금 유효한 공고. 같은 공고번호는 마지막 차수가 현재 상태다.
+
+    등록(000) 뒤의 변경·취소는 차수를 올린 새 행으로 온다. 차수마다 따로 세면 변경공고가
+    두 번 실리고, 취소된 공고의 앞 차수가 열린 공고처럼 남는다.
+    """
+    latest = {}
+    for bid in raw:
+        number = bid["bidNtceNo"]
+        if number not in latest or str(bid["bidNtceOrd"]) > str(latest[number]["bidNtceOrd"]):
+            latest[number] = bid
     rows = []
-    for bid in items:
-        if "취소" in str(bid.get("ntceKindNm", "")) or "취소공고" in str(bid["bidNtceNm"]):
+    for bid in latest.values():
+        kind = str(bid.get("ntceKindNm") or "")
+        if "취소" in kind or "취소공고" in str(bid["bidNtceNm"]):
             continue
         deadline = bid.get("bidClseDt") or ""
         if deadline and deadline <= now.strftime("%Y-%m-%d %H:%M:%S"):
             continue
-        amount = bid.get("presmptPrce")
+        try:
+            price = int(float(bid.get("presmptPrce") or ""))
+        except ValueError:
+            price = None
         rows.append({"title": bid["bidNtceNm"], "bid_no": f"{bid['bidNtceNo']}-{bid['bidNtceOrd']}",
                      "agency": bid.get("dminsttNm") or bid.get("ntceInsttNm"),
+                     "kind": kind, "category": str(bid.get("pubPrcrmntLrgClsfcNm") or "").strip(),
+                     "category_detail": str(bid.get("pubPrcrmntClsfcNm") or "").strip(),
                      "posted": bid.get("bidNtceDt"), "deadline": deadline,
                      "url": bid.get("bidNtceDtlUrl") or bid.get("bidNtceUrl"),
-                     "price_text": f"추정가격 {amount}원" if amount else ""})
-    return {"source": "나라장터", "series": "g2b", "complete_sample": True,
-            "scope": f"최근 24시간 용역 공고 {total}건 중 첫 100건 이내, 취소·마감 제외",
-            "warnings": [], "items": rows}
+                     "price": price, "price_text": f"추정가격 {price:,}원" if price else ""})
+    return rows
+
+
+def national_bids(now):
+    auth = get_auth_query_params("data_go_kr")
+    if not auth:
+        raise ValueError("공공데이터포털 키 미설정")
+    total, raw = bid_page(auth, now, 1)
+    if total and not raw:
+        raise ValueError("나라장터 API 목록 구조 확인 필요")
+    warnings = []
+    for page_no in range(2, BIDS_MAX_PAGES + 1):
+        if len(raw) >= total:
+            break
+        try:
+            _, more = bid_page(auth, now, page_no)
+        except (requests.RequestException, ValueError, KeyError) as exc:
+            warnings.append(f"나라장터 {page_no}쪽 조회 실패 ({type(exc).__name__})")
+            break
+        if not more:
+            break
+        raw.extend(more)
+    if len(raw) < total and not warnings:
+        warnings.append(f"나라장터 {total}건 중 {len(raw)}건만 읽음")
+    rows = open_notices(raw, now)
+    read = "전체" if not warnings else f"중 {len(raw)}건"
+    return {"source": "나라장터", "series": "g2b", "complete_sample": not warnings,
+            "scope": f"최근 24시간 전국 용역 공고 {total}건 {read}에서 취소·마감·앞 차수를 뺀 {len(rows)}건",
+            "warnings": warnings, "items": rows}
 
 
 def procurement():
@@ -155,16 +209,20 @@ def procurement():
             "warnings": [reason, *warnings], "items": rows}
 
 
+def sample_key(row):
+    """표본 비교의 단위는 공고다. 차수만 오른 변경공고는 새 공고가 아니다."""
+    return re.sub(r"-\d+$", "", row.get("bid_no") or "") or row.get("url")
+
+
 def compare_sample(scan, folder, today):
     """같은 출처의 직전 날짜와만 비교한다. 같은 날 재실행은 기준선을 바꾸지 않는다."""
     folder.mkdir(parents=True, exist_ok=True)
     target = folder / f"{today}.json"
     previous = max((p for p in folder.glob("????-??-??.json") if p.name < target.name), default=None)
     prior = json.loads(previous.read_text(encoding="utf-8")) if previous else []
-    seen = {r.get("bid_no") or r.get("url") for r in prior}
+    seen = {sample_key(r) for r in prior}
     for row in scan["items"]:
-        row["new_to_sample"] = ((row.get("bid_no") or row.get("url")) not in seen
-                                if previous else None)
+        row["new_to_sample"] = sample_key(row) not in seen if previous else None
     atomic_json(target, scan["items"])
     scan["previous_date"] = previous.stem if previous else None
 

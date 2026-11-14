@@ -919,11 +919,18 @@ class CodexProvider(CliSubprocessProvider):
                 else:
                     self._started_items.discard(iid)
                 result_text, is_error = self._tool_result(item)
+                # MCP가 덧붙인 실행 상황은 결과가 아니다 — 여기서 갈라 결과만 흘린다(2026-11-14, claude_code 와 같은 계약).
+                delivery = None
+                if itype == "mcp_tool_call":
+                    from situation_delivery import split_result
+                    result_text, delivery = split_result(result_text)
                 self._log_tool_result(result_text, is_error)
                 out.append((
                     {"type": "tool_result", "id": iid, "name": name,
                      "result": result_text, "is_error": is_error,
-                     "transport_error": itype == "mcp_tool_call" and bool(item.get("error"))},
+                     "transport_error": itype == "mcp_tool_call" and bool(item.get("error")),
+                     **({"situation_delivery_id": delivery["delivery_id"]}
+                        if delivery and delivery.get("delivery_id") else {})},
                     None,
                 ))
 

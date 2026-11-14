@@ -47,6 +47,17 @@ def provider_tool_result(raw: str, per_action: int = PER_ACTION_CHARS) -> str:
     return fit_tool_result(raw, budget)
 
 
+def with_model_result(event: dict, model_result: str) -> dict:
+    """도구 결과 이벤트에 모델이 받은 결과를 함께 싣는다 — 화면용 result 와 다를 때만.
+
+    API 공급자의 result 는 화면 미리보기(3000자 절단·details)라 JSON 이 닫히지 않을 수 있다.
+    기록층(agent_pipeline._collect)이 그 미리보기를 적으면 결과를 읽는 소비자(경험 증류·절단 증거)가
+    조용히 놓친다(2026-11-14 실측: deepseek 실행 결과 44건 중 33건). 기록층이 이 키를 떼어 쓴다."""
+    if event.get("result") != model_result:
+        event["model_result"] = model_result
+    return event
+
+
 def _condense_items(obj, cap):
     if isinstance(obj, str):
         parsed = _parse(obj) if obj.lstrip().startswith(("{", "[")) else None

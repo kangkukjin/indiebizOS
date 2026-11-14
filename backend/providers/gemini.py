@@ -457,11 +457,11 @@ class GeminiProvider(BaseProvider):
                 }
                 if tool_images:
                     event["images"] = tool_images
-                yield event
-
                 # 도구 응답 추가 (AI에게는 content만)
-                from ibl_result_transport import provider_tool_result
+                from ibl_result_transport import provider_tool_result, with_model_result
                 truncated_output = provider_tool_result(tool_output)
+                yield with_model_result(event, truncated_output)
+
                 function_response_parts.append(self._function_response_part(fc, truncated_output))
 
                 # [images] 이미지가 있으면 inline_data Part로 추가 (AI가 볼 수 있도록)

@@ -10,6 +10,33 @@ def render(delivery):
     return PREFIX + json.dumps(compact_delivery(delivery), ensure_ascii=False, separators=(',', ':'))
 
 
+def split_result(text):
+    """Separate a delivery that the MCP boundary appended after a tool result.
+
+    CLI clients hand the result and the delivery over as text blocks joined by a space or a
+    newline. Only a trailing PREFIX + JSON object is a delivery; PREFIX quoted inside the
+    result stays in the result. Returns (result text, delivery dict or None).
+    """
+    if not isinstance(text, str):
+        return text, None
+    at = text.rfind(PREFIX)
+    if at < 0 or (at and not text[at - 1].isspace()):
+        return text, None
+    head = text[:at].rstrip()
+    try:
+        delivery = json.loads(text[at + len(PREFIX):])
+    except ValueError:
+        delivery = None
+    if isinstance(delivery, dict) and 'mode' in delivery:
+        return head, delivery
+    # A cut delivery still is not result data when the result before it is one whole JSON value.
+    try:
+        json.loads(head)
+    except ValueError:
+        return text, None
+    return head, {}
+
+
 def compact_delivery(delivery):
     """Share repeated observation metadata inside one message, never across deliveries."""
     import copy

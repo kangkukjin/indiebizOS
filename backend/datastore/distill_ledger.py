@@ -14,6 +14,8 @@ def _conn():
                  "job_key TEXT PRIMARY KEY, payload TEXT NOT NULL, prepared TEXT, decision TEXT, "
                  "status TEXT NOT NULL, receipts TEXT NOT NULL DEFAULT '{}', "
                  "attempts INTEGER NOT NULL DEFAULT 0, error TEXT, updated_at TEXT NOT NULL)")
+    # 최근 행만 읽는 조회(직전 턴 찾기·주간 감사)가 큰 payload 를 전부 훑지 않게 한다(2026-11-14).
+    conn.execute("CREATE INDEX IF NOT EXISTS distill_jobs_updated_at ON distill_jobs(updated_at)")
     conn.commit()
     return conn
 
@@ -141,3 +143,38 @@ def compact_finished(comparison_selector):
         return stats
     finally:
         conn.close()
+
+
+def previous_turn(job, minutes=60):
+    """같은 대화(에이전트·대화 열쇠·프로젝트)의 직전 턴 봉투. 없거나 오래됐으면 None.
+
+    대화가 이어지는지는 여기서 판단하지 않는다 — 시간 창 안의 직전 턴을 사실로 건넬 뿐이다."""
+    from datetime import timedelta
+    try:
+        now = datetime.fromisoformat(str(job.get('recorded_at')))
+    except (TypeError, ValueError):
+        return None
+    if now.tzinfo is None:
+        return None
+    since = (now.astimezone(timezone.utc) - timedelta(minutes=minutes + 30)).isoformat()
+    keys = ('agent_id', 'registry_key', 'project_id', 'principal')
+    conn = _conn()
+    try:
+        rows = conn.execute("SELECT payload FROM distill_jobs WHERE updated_at >= ? "
+                            "ORDER BY updated_at DESC LIMIT 60", (since,)).fetchall()
+    finally:
+        conn.close()
+    best = None
+    for (raw,) in rows:
+        try:
+            other = json.loads(raw)
+            then = datetime.fromisoformat(str(other.get('recorded_at')))
+        except (TypeError, ValueError):
+            continue
+        if (other.get('job_key') == job.get('job_key') or then.tzinfo is None
+                or any(other.get(k) != job.get(k) for k in keys)):
+            continue
+        gap = (now - then).total_seconds()
+        if 0 < gap <= minutes * 60 and (best is None or then > best[0]):
+            best = (then, other)
+    return best[1] if best else None

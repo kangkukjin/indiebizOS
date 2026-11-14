@@ -324,7 +324,9 @@ class IBLUsageRAG:
                     "avg_ms는 성공 IBL 도구 지연 합의 평균(ms; 추론·셸·감독 시간 제외), "
                     "avg_tokens는 그 턴 전체의 평균 모델 "
                     "토큰 소요 — 같은 목표를 같은 품질로 이룬다면 빠르고 싼 패턴이 좋다"
-                    "(품질을 깎아 아끼는 것은 금물).")
+                    "(품질을 깎아 아끼는 것은 금물). "
+                    "learned는 실제 실행에서 배운 날, confirmed는 마지막으로 쓰여 성공한 날이다(없으면 그런 기록이 없다). "
+                    "route는 그 용례에 이르던 날 참고한 것과 안 된 길(원인)이다 — 그날의 사실이지 금지가 아니다.")
         if phrases:
             note += (" kind=\"phrase\" 는 이미 이름이 붙은 프로그램이다. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄 — 정의 없이 이름만으로 돈다. "
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
@@ -341,7 +343,10 @@ class IBLUsageRAG:
             condition = applicability_note(getattr(ex, 'provenance', '{}'))
             if condition:
                 attrs += f' applicability="{_xml_attr(condition)}"'
-            from corpus_policy import exclusion_reason
+            from corpus_policy import exclusion_reason, route_note
+            route = route_note(getattr(ex, 'provenance', '{}'))
+            if route:
+                attrs += f' route="{_xml_attr(route)}"'
             reason = exclusion_reason(ex)
             attrs += ' edition="2"'
             if getattr(ex, 'source', '') == 'distilled_component':
@@ -355,6 +360,11 @@ class IBLUsageRAG:
                 attrs += f' avg_ms="{int(ex.avg_ms)}"'
             if getattr(ex, "avg_tokens", -1.0) >= 0:
                 attrs += f' avg_tokens="{int(ex.avg_tokens)}"'
+            # 배운 날·마지막으로 쓰여 성공한 날(2026-11-14) — 순위·삭제에 쓰지 않고 표시만. 낡았는지는 AI 가 판단한다.
+            if getattr(ex, "learned_at", ""):
+                attrs += f' learned="{ex.learned_at}"'
+            if getattr(ex, "confirmed_at", ""):
+                attrs += f' confirmed="{ex.confirmed_at}"'
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             from hippo_tree import reference_needs_expansion
@@ -767,11 +777,6 @@ def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
         return (0.0, "")
 
 
-# 피드백 귀속 임계값: 고점수 top-1 example에 실제 사용이 관측될 때 실행 결과 귀속.
-# 라우팅과 독립이다. 참고로 주입된 회상 액션이 실행 궤적에 등장했는지 아래 관문이 확인한다.
-RECALL_RECORD_THRESHOLD = 0.85
-
-
 def _ibl_elapsed_ms(tool_calls: list) -> Optional[int]:
     """성공한 execute_ibl 호출들의 소요시간 합(ms). 측정된 호출이 없으면 None.
 
@@ -793,8 +798,12 @@ def _ibl_elapsed_ms(tool_calls: list) -> Optional[int]:
 
 
 def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
-                          turn_tokens: int = None) -> bool:
-    """실제 사용한 연상 top-1 example의 실행 성공/실패(+소요시간·토큰)를 해마에 피드백한다.
+                          turn_tokens: int = None, presented: list = None) -> bool:
+    """이 턴에 실제로 쓰인 연상 example 의 실행 성공/실패(+소요시간·토큰)를 해마에 피드백한다.
+
+    귀속 기준은 점수가 아니라 쓰임이다(2026-11-14). 옛 문턱(최고점 0.85 이상의 top-1 하나)은 10-15 이후
+    1,131턴 중 3턴만 넘었고, 성패가 적힌 행은 3,907개 중 58개였다 — 강화·감쇠가 사실상 서 있었다.
+    presented(이 턴에 제시된 회상 목록)를 주면 제시된 해마 항목 모두를 쓰임으로 가르고, 없으면 top_code 만 본다.
 
     이것이 해마의 강화-감쇠 루프다. 기록된 성공/실패는 success_rate로 환산되어
     이후 연상 시 참조 XML에 표시되고(검증된 사례 부상), 정리 패스의 가지치기
@@ -811,9 +820,8 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     Returns:
         기록 여부 (귀속 불가/저점수 시 False)
     """
-    # execute_ibl 호출들의 성공 여부 집계 (하나라도 실패하면 실패로 귀속)
-    ibl_success = None
-    ibl_codes = []
+    ibl_success = None      # 턴 전체(하나라도 실패하면 실패) — 여러 호출에 걸쳐 쓰인 항목의 폴백 판정
+    calls = []              # (판본 원문, 성공, 소요 ms)
     for tc in (tool_calls or []):
         if not isinstance(tc, dict):
             continue
@@ -825,56 +833,81 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
         if code:
             from ibl_edition import explicit_source
             try:
-                ibl_codes.append(explicit_source(code, (tc.get('input') or {}).get('edition')))
+                calls.append((explicit_source(code, (tc.get('input') or {}).get('edition')), s, tc.get("elapsed_ms")))
             except ValueError:
                 continue  # Invalid source is not execution evidence.
+    ibl_codes = [c for c, _, _ in calls]
 
     # 관용구 실적은 실행 자리의 ID·revision·call_id에만 귀속된다.
     from thread_context import clear_phrase_recall
     clear_phrase_recall()
 
-    if not top_code or top_score < RECALL_RECORD_THRESHOLD:
-        return False
     if ibl_success is None:
         return False  # IBL 실행이 없었으면 귀속 불가
 
-    # ★귀속 관문(2026-09-02): 회상 top-1 의 액션이 실행에 실제로 등장했을 때만 귀속.
-    #   증류 쪽(distill_experience)은 이미 이 관문을 썼는데 귀속 쪽만 없어서, 표면 어휘만
-    #   닮은 고점수 회상이 전혀 안 쓰인 턴의 성공/실패까지 흡수했다 — 잘못된 강화·감쇠.
-    _alias = _alias_of_code(top_code)
+    # 귀속 후보 = 제시된 해마 항목 전부(제시 기록이 없으면 top-1 하나). 이름·함수 참조가 있는 항목은
+    # 호출 자리에서 그 몸의 결과로 이미 기록된다 — 턴 단위로 다시 세면 성공을 두 번 센다(ep3219).
+    candidates = []         # (example id 또는 None, 코드)
+    for block in presented or []:
+        if isinstance(block, dict) and block.get("source") == "hippocampus":
+            for it in (block.get("join") or {}).get("items") or []:
+                if isinstance(it, dict) and it.get("code") and not it.get("alias") and not it.get("function_ref"):
+                    candidates.append((it.get("id"), it["code"]))
+    if not candidates and top_code:
+        candidates.append((None, top_code))
+
     _pointed = _pointed_count(tool_calls)     # 가리킴(턴 변수 주입) — 베끼지 않고 앞 결과를 가리킨 횟수(2026-09-06 §3)
-    if _alias:
-        # 호출 자리에서 그 몸의 결과로 이미 기록했다. 턴 전체의 오류를 다시 덮어쓰면
-        # 성공한 fn이 무관한 후속 문장의 실패까지 흡수하고, 성공도 두 번 센다(ep3219).
-        print(f"[해마피드백] 함수 호출 [fn:{_alias}] — 실행 자리 귀속 사용(턴 중복 기록 없음, 가리킴 {_pointed})")
+    credited, named = [], False
+    for ident, code in candidates:
+        _alias = _alias_of_code(code)
+        if _alias:
+            print(f"[해마피드백] 함수 호출 [fn:{_alias}] — 실행 자리 귀속 사용(턴 중복 기록 없음, 가리킴 {_pointed})")
+            named = True
+            continue
+        # ★귀속 관문(2026-09-02): 회상 액션이 실행에 실제로 등장했을 때만. _recall_was_used 는 이 턴의 모든
+        #   execute_ibl 코드를 본다 — 앞 호출이 회상 액션을 실행하고 뒤 호출이 `$이름` 으로 가리키기만 해도 산다.
+        if not _recall_was_used(code, ibl_codes):
+            continue
+        # 성패는 그 항목이 쓰인 호출의 것이다. 무관한 호출의 실패가 쓰인 기억을 깎지 않는다 — IBL 을 쓴 턴의
+        # 37%가 실패 뒤 성공이라, 턴 전체 판정은 문법 실수 한 번으로 쓰인 기억을 벌줬다.
+        using = [(s, ms) for c, s, ms in calls if _recall_was_used(code, [c])]
+        outcome = any(s for s, _ in using) if using else ibl_success
+        if not outcome:
+            elapsed = None
+        elif using:
+            elapsed = sum(int(ms) for s, ms in using if s and isinstance(ms, (int, float)) and ms > 0) or None
+        else:
+            elapsed = _ibl_elapsed_ms(tool_calls)
+        credited.append((ident, code, outcome, elapsed))
+    if named:
         IBLUsageRAG().clear_cache()
+    if not credited:
+        if candidates and not named:
+            print(f"[해마피드백] 회상 미사용 — 귀속 스킵 (score={top_score or 0:.2f}, 가리킴 {_pointed})")
         return False
-    elif not _recall_was_used(top_code, ibl_codes):
-        # ★_recall_was_used 는 이 턴의 *모든* execute_ibl 코드를 본다 — 앞 호출이 회상 액션을 실행하고 뒤 호출이
-        #   `$이름` 으로 가리키기만 해도 귀속은 산다(가리키면 귀속이 끊기는 역보상 없음). 여기 오면 회상 액션이
-        #   턴 어디에도 없었던 것.
-        print(f"[해마피드백] 회상 미사용 — 귀속 스킵 (score={top_score:.2f}, 가리킴 {_pointed}): {top_code[:50]}")
-        return False
+    # 턴 토큰은 그 턴에 쓰인 표현이 하나일 때만 그 표현의 비용이다.
+    tokens = turn_tokens if (len(credited) == 1 and credited[0][2] and turn_tokens and turn_tokens > 0) else None
 
-    elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
-    tokens = turn_tokens if (ibl_success and turn_tokens and turn_tokens > 0) else None
-
+    recorded = False
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        ok = db.update_success_by_code(top_code, ibl_success,
-                                       elapsed_ms=elapsed_ms, tokens=tokens)
-        if ok:
-            _t = (f", {elapsed_ms}ms" if elapsed_ms else "") + \
-                 (f", {tokens}tok" if tokens else "")
-            print(f"[해마피드백] top-1 {'성공' if ibl_success else '실패'} 기록 "
-                  f"(score={top_score:.2f}{_t}): {top_code[:50]}")
-            # 성공률이 바뀌었으니 연상 캐시 무효화
-            IBLUsageRAG().clear_cache()
-        return ok
+        for ident, code, outcome, elapsed in credited:
+            if ident is not None and str(ident).isdigit():
+                db.update_success(int(ident), outcome, elapsed_ms=elapsed, tokens=tokens)
+                ok = True
+            else:
+                ok = db.update_success_by_code(code, outcome, elapsed_ms=elapsed, tokens=tokens)
+            if ok:
+                recorded = True
+                print(f"[해마피드백] 쓰인 회상 {'성공' if outcome else '실패'} 기록"
+                      f"{f', {elapsed}ms' if elapsed else ''}{f', {tokens}tok' if tokens else ''}: {code[:50]}")
+        if recorded:
+            IBLUsageRAG().clear_cache()   # 성공률이 바뀌었으니 연상 캐시 무효화
+        return recorded
     except Exception as e:
         print(f"[해마피드백] 실패 (무시): {e}")
-        return False
+        return recorded
 
 
 _FN_CALL_RE = re.compile(r'\[fn:\s*([^\]\s]+)\s*\]')
@@ -1014,7 +1047,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
 
 
 def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_tokens=None, turn_cost=None,
-                       *, unified=False):
+                       *, unified=False, previous=None):
     """기존 실행·중복 관문과 원문 선택 자료. 모델·저장 호출 없음."""
     if not _principal_allows_recall():
         return False   # 주체 관문 — 주인 해마에 남의 경험을 쓰지 않는다(쓰기 격리, 2026-09-14)
@@ -1032,6 +1065,7 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
     accepted_calls = []
     retry_notes = []
     evidence_notes = []
+    unreadable = 0
     import json
     from ibl_honesty import truncation_evidence, completion_evidence
     from checked_program_sources import checked_program_sources
@@ -1055,8 +1089,16 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
                 continue
             tc = {**tc, "input": {**inputs, "code": original}}
         from ibl_v2_experience import closed_call
+        _raw = tc.get("result")
         tc = closed_call(tc, turn_cost=turn_cost)
         if tc is None:
+            # 못 읽은 결과와 관문이 거른 결과를 가른다(2026-11-14). 못 읽은 것은 '배울 것 없음'이 아니라 고장이다 —
+            # 10-31~11-14 두 주 동안 결과 뒤에 붙은 블록 때문에 전부 못 읽고도 '근거 없음'으로 조용히 지나갔다.
+            if isinstance(_raw, str):
+                try:
+                    json.loads(_raw)
+                except ValueError:
+                    unreadable += 1
             continue
         inputs = tc.get("input") or {}
         code = inputs.get("code", "")
@@ -1081,6 +1123,8 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
                 fb = tc.get("quality_feedback")
                 retry_notes.append(f"  - {code[:200]}" + (f" — 첫 미달 사유: {fb}" if fb else ""))
 
+    if unified and unreadable and not ibl_calls:
+        return {"eligible": False, "reason": "unreadable_evidence", "unreadable_results": unreadable}
     from ibl_distill_gates import memory_only_program
     if not ibl_calls or (_ge is None and all(memory_only_program(code)
                                            for code, (_, tc) in zip(ibl_calls, accepted_calls))):
@@ -1106,8 +1150,14 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
         known = value.known_examples(db)
         rows = value.source_rows(accepted_calls)
         source_calls = [row['code'] for row in rows]
+        # 턴의 길(2026-11-14): 통한 원문 앞의 실패·조회를 근거로 건넨다. 원문이 이미 아는 절차여도
+        # 헤맨 길은 새로울 수 있으므로, 길 근거가 있으면 호출 전 생략을 하지 않고 판단에 넘긴다.
+        from distill_route import turn_path
+        # previous = 같은 대화의 직전 턴 요약(R6). 있으면 길을 항상 만든다 — 사용자가 바로잡은 길을 원문에 묶을 번호가 필요하다.
+        path = turn_path(tool_calls, {row['tool_call_index']: row['id'] for row in rows},
+                         always=bool(previous)) if unified else None
         why = value.redundant_reason(source_calls, known)
-        if why:
+        if why and not path:
             print(f"[경험증류] 호출 전 생략: {why}")
             return False
         tool_log = json.dumps(rows, ensure_ascii=False)
@@ -1145,7 +1195,9 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
                 "topic_map": _topic_map, "retry_notes": retry_block,
                 "outcome": json.loads(value.outcome_evidence(accepted_calls, _ge)),
                 "ibl_calls": ibl_calls, "evaluation": _ge, "tool_calls": tool_calls,
-                "turn_cost": turn_cost, "turn_tokens": turn_tokens, "top_score": top_score}
+                "turn_cost": turn_cost, "turn_tokens": turn_tokens, "top_score": top_score,
+                **({"path": path} if path else {}), **({"known_procedure": why} if why else {}),
+                **({"previous_turn": previous} if previous and path else {})}
 
 
 def apply_experience(prepared, distilled, *, candidate_key=None):
@@ -1174,7 +1226,16 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     print(f"[경험증류] 원문 선택: {selection_note}")
     if not intent or not code:
         return False
+    route = None
+    if prepared.get("path") and not prepared.get("partial_selection") and not committed:
+        from distill_route import build_route, attach_route
+        route = build_route(prepared["path"], distilled.get("route"), distilled["source_ids"],
+                            (prepared.get("origin") or {}).get("recorded_at"), prepared.get("previous_turn"))
     if not committed and value.redundant_reason([code], known):
+        if route and attach_route(db, code, route):
+            print("[경험증류] 같은 원문의 기존 용례에 길을 덧붙임 — 새 행 없음")
+            IBLUsageRAG().clear_cache()
+            return True
         print("[경험증류] 선택 결과가 기존 용례와 중복 — 저장 생략")
         return False
     _topic = str(distilled.get("topic", "") or "").strip()
@@ -1213,6 +1274,8 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     if candidate_key:
         evidence.update(prepared.get("origin", {}))
         evidence["candidate_key"] = candidate_key
+    if route:
+        evidence["routes"] = [route]
     _birth_ms = _ibl_elapsed_ms(tool_calls)
     # 입력 함수는 검증된 AST 포장만 허용한다. 신규 입력의 성공 실적은 추가하지 않는다.
     example_id = db.add_example(

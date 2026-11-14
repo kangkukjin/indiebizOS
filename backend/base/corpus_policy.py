@@ -18,6 +18,30 @@ def applicability_note(raw):
     return ''
 
 
+def route_note(raw):
+    """가장 최근의 길 한 건을 회상용 한 줄로 — 참고한 것과 안 된 길(원인), 그리고 날짜.
+
+    금지문이 아니라 그날의 사실이다. 날짜를 함께 보여 낡았는지는 읽는 쪽이 판단한다."""
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else raw
+        if data.get('evidence_stale'):
+            return ''
+        route = (data.get('routes') or [])[-1]
+        parts = []
+        seen = [r.get('guide') or '·'.join(r.get('actions') or []) for r in route.get('consulted') or []]
+        if any(seen):
+            parts.append('참고: ' + ', '.join(s for s in seen if s))
+        for row in route.get('failed') or []:
+            label = '사용자가 바로잡음: ' if row.get('by') == 'user' else '안 된 길: '
+            parts.append(label + '·'.join(row.get('actions') or []) + ' — ' + str(row.get('cause') or ''))
+        if parts:
+            text = ' / '.join(parts)
+            return f"{route.get('at', '')} " + text[:260] + ('…' if len(text) > 260 else '')
+    except (ValueError, TypeError, AttributeError, IndexError):
+        pass
+    return ''
+
+
 def function_reference(raw):
     """Identity from the owner's projection, not a name or a second definition."""
     try:

@@ -7,6 +7,8 @@ AUDITS = [
     ("doc_drift", "doc_drift", "run_doc_drift_check"),
     ("store_waste", "store_waste_audit", "run_store_waste_check"),
     ("vocab_overlap", "vocab_overlap_audit", "run_vocab_overlap_check"),
+    ("distill_health", "distill_health_audit", "run_distill_health_check"),
+    ("recurring_failure", "recurring_failure_audit", "run_recurring_failure_check"),
 ]
 CADENCE_HOURS = 168
 MAX_CADENCE_HOURS = 672

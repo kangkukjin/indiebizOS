@@ -45,6 +45,14 @@ partial_selection=true는 일부 원문만 검토했으므로 scope=component로
 첨부파일·외부 변수·일회성 생성 본문에 의존하면 제외한다. 재시도는 최종 성공 원문만 선택한다.
 criteria를 바꾸거나 탐색 중간 결과/쓰기 영수증만으로 전체 성공을 주장하지 마라.
 원시 호출의 검색어·주소만 바뀐 것과 탐색 일지는 새 절차가 아니다. 기존 topic을 우선한다.
+실행 구획의 path는 통한 원문에 이르기 전의 호출 순서다(실패한 실행의 오류 머리와 조회 단계 포함).
+같은 처지에서 같은 헛걸음이 되풀이될 만할 때만, 통한 원문을 고른 후보에 route를 붙인다. route는 선택이고 없는 것이 정상이다.
+route.failed에는 근거에서 원인을 댈 수 있는 헛걸음만 적는다. 금지문이 아니라 무엇이 왜 안 됐는지의 사실로 쓴다.
+route.consulted_steps에는 통한 길을 실제로 바꾼 조회 단계만 고른다. 일시 장애와 이번 대상에만 해당하는 실패는 route가 아니다.
+known_procedure가 있으면 원문은 이미 아는 절차다. 이때는 route가 있을 때만 keep하며, 길은 기존 용례에 덧붙는다.
+실행 구획의 previous_turn은 같은 대화의 직전 턴이다(그때의 사용자 말과 호출 순서). 이번 사용자 말이 그 방법을 바로잡았고
+이번에 고른 원문이 고친 길일 때만 route.corrected를 붙인다. cause에는 사용자가 무엇을 바로잡았는지를 원문에 있는 만큼만 적는다.
+결과에 대한 추가 요청, 이어지는 다음 단계, 새 과제는 교정이 아니다. 교정이 아니면 previous_turn은 무시한다.
 공간 claim은 관측한 주소의 지속적으로 재사용할 의미·사용 조건·관습이다. 자기 인지 서술,
 파일 미발견/검색 실패를 공간 부재로 확정하지 마라. body/locus는 제공된 주소에서 고른다.
 파일 한 개의 행 의미·단위·결합 키·기간 제한도 prior_class:semantic으로 남길 수 있다.
@@ -57,7 +65,9 @@ SAME은 새 관측이 있을 때만 제출한다. 충돌은 UPDATE/surface로 �
 최대 execution 2, deep 3, forage 3건. 각 문자열 필드 최대 400자, 사유는 짧게 쓴다.
 공통 후보: future_use(구체적 향후 쓰임), novelty(기존 대비 차이), durable:true.
 execution: decision:"keep", source_ids:[정수], intent, topic, scope:"task|component",
- benefit(재사용 이익), applicability(적용 조건).
+ benefit(재사용 이익), applicability(적용 조건),
+ route(선택):{consulted_steps:[path의 step 정수], failed:[{steps:[path의 step 정수], cause:"원인 한 줄"}],
+  corrected:{previous_steps:[previous_turn의 step 정수], cause:"사용자가 바로잡은 것 한 줄"}}.
 deep: user_source_ids:[정수], retention:"user_fact|user_preference|user_decision",
  node, keywords, category:"사용자선호|사용자정보|의사결정|중요날짜",
  relation:"NEW|SAME|UPDATE|REPLACE", existing_id:null|정수, existing_version:null|문자열.
@@ -103,6 +113,16 @@ def snapshot(runner, payload, ident, descriptor=None, episode=None):
     return json.loads(json.dumps(job, ensure_ascii=False, default=str))
 
 
+def _previous(job):
+    """같은 대화의 직전 턴 요약(R6). 찾지 못하거나 조회가 실패해도 이번 증류는 그대로 간다."""
+    try:
+        import distill_ledger as ledger
+        from distill_route import previous_summary
+        return previous_summary(ledger.previous_turn(job), job.get('recorded_at'))
+    except Exception:
+        return None
+
+
 def prepare(job):
     from distill_memory_adapters import prepare_deep, prepare_forage
     from ibl_usage_rag import prepare_experience
@@ -113,7 +133,8 @@ def prepare(job):
     makers = {
         'execution': lambda: prepare_experience(job['user_message'], [{**tc, 'success': False} if isinstance(tc, dict)
             and (tc.get('result') is None or '_t0' in tc) else tc for tc in job.get('tool_calls') or []],
-            job.get('hippo_score'), job.get('top_code'), job.get('turn_tokens'), job.get('turn_cost'), unified=True),
+            job.get('hippo_score'), job.get('top_code'), job.get('turn_tokens'), job.get('turn_cost'), unified=True,
+            previous=_previous(job)),
         'deep': lambda: prepare_deep(job), 'forage': lambda: prepare_forage(job),
     }
     gates = {'execution': job.get('write_experience', True) and job.get('tool_calls')
@@ -158,6 +179,13 @@ def model_input(prepared):
                              'omitted_source_ids': section.get('omitted_source_ids', []),
                              'outcome': section.get('outcome'), 'topic_map': section.get('topic_map', ''),
                              'retry_notes': section.get('retry_notes', '')}
+            # 턴의 길은 원문 번호가 그대로일 때만 싣는다(예산 때문에 일부만 고른 구획은 번호가 다시 매겨진다).
+            if section.get('path') and not section.get('partial_selection'):
+                visible[kind]['path'] = section['path']
+                if section.get('known_procedure'):
+                    visible[kind]['known_procedure'] = section['known_procedure']
+                if section.get('previous_turn'):
+                    visible[kind]['previous_turn'] = section['previous_turn']
 
         elif kind == 'deep':
             visible[kind] = {**section, 'units': [u for u in section['units'] if u['id'] in section['allowed_ids']]}
@@ -293,7 +321,9 @@ def run(job):
         prepared = fit_input(prepare(job))
         ledger.update(key, prepared=prepared)
     if not prepared['sections']:
-        failed = any(v.startswith('preparation_failed') for v in prepared['skip_reasons'].values())
+        # 못 읽은 근거는 '배울 것 없음(skipped)'이 아니다 — 준비 실패와 같이 집계해 죽은 고리가 드러나게 한다.
+        failed = any(v.startswith('preparation_failed') or v == 'unreadable_evidence'
+                     for v in prepared['skip_reasons'].values())
         ledger.update(key, status='completed_with_rejections' if failed else 'skipped')
         return ledger.read(key)
     decision = state['decision']

@@ -88,12 +88,18 @@ def apply_deep(job, prepared, candidate, key):
             return {'status': 'rejected', 'reason': 'unknown_relation_target'}
     elif relation != 'NEW' or candidate.get('existing_id') is not None:
         return {'status': 'rejected', 'reason': 'invalid_relation'}
+    project, agent = job['project_path'], job['agent_id']
+    # 다시 만난 사실은 '마지막으로 확인된 때'를 올린다(2026-11-14). 통합 증류로 옮긴 뒤 이 갱신이 빠져
+    # used_at 이 09-14 에 멈췄고, 가지치기(LRU)와 '최근참조' 표시가 낡은 시각을 보고 있었다.
     if relation == 'SAME':
+        db.read(project, agent, target['id'], touch=True)
         return {'status': 'same', 'id': target['id']}
     # 같은 배치/다른 턴과의 의미 중복은 모델 판단. 명백한 원문 중복은 코드가 차단.
-    if relation == 'NEW' and any(fact['content'] == r['content'] for r in prepared['known']):
-        return {'status': 'same', 'reason': 'identical_existing_fact'}
-    project, agent = job['project_path'], job['agent_id']
+    if relation == 'NEW':
+        twin = next((r for r in prepared['known'] if fact['content'] == r['content']), None)
+        if twin:
+            db.read(project, agent, twin['id'], touch=True)
+            return {'status': 'same', 'reason': 'identical_existing_fact'}
     kwargs = dict(content=fact['content'], keywords=candidate.get('keywords', ''),
                   category=candidate.get('category', ''), node=node,
                   source_ref=fact['source_ref'], candidate_key=key)

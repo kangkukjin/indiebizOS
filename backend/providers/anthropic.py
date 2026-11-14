@@ -601,6 +601,8 @@ class AnthropicProvider(BaseProvider):
                 "result": ui_result_preview,
                 "is_error": is_error
             }
+            from ibl_result_transport import with_model_result
+            with_model_result(tool_result_event, truncated_output)
             if tool_images:
                 tool_result_event["images"] = tool_images
             yield tool_result_event

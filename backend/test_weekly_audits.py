@@ -11,7 +11,8 @@ import pytest
 
 def test_감사_넷이_전부_배선돼_있다():
     keys = [k for k, _, _ in WA.AUDITS]
-    assert keys == ["data_ownership", "doc_drift", "store_waste", "vocab_overlap"], keys
+    assert keys == ["data_ownership", "doc_drift", "store_waste", "vocab_overlap", "distill_health",
+                    "recurring_failure"], keys
     for _, module, func in WA.AUDITS:
         mod = __import__(module, fromlist=[func])
         assert callable(getattr(mod, func)), f"{module}.{func} 없음"

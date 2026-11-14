@@ -695,9 +695,12 @@ class CognitivePipelineMixin:
                                         "result": "", "is_error": False, "_result_received": False})
             elif et == "tool_result":
                 _rt = ev.get("result", "")
+                # 증류용 기록은 모델이 받은 결과를 적는다(2026-11-14). API 공급자의 result 는 화면 미리보기라
+                # JSON 이 닫히지 않을 수 있어, 다를 때만 model_result 가 함께 온다 — 여기서 떼어 화면으로는 안 흘린다.
+                _rec = ev.pop("model_result", _rt)
                 # 되받아쓰기·가리킴 수치 메타 — 결과 원문은 싣지 않고 수치만(2026-09-06 [출력해부])
                 try:
-                    _rs = _rt if isinstance(_rt, str) else json.dumps(_rt, ensure_ascii=False)
+                    _rs = _rec if isinstance(_rec, str) else json.dumps(_rec, ensure_ascii=False)
                     if tool_calls_log and ('"retyped"' in _rs or '"turn_vars"' in _rs):
                         _ro = json.loads(_rs)
                         tool_calls_log[-1]["retyped_chars"] = int(((_ro.get("retyped") or {}).get("verbatim_chars")) or 0)
@@ -736,13 +739,16 @@ class CognitivePipelineMixin:
                         if not _is_err:
                             try:
                                 from workflow_verdict import is_error_result
-                                _is_err = is_error_result(_rt)
+                                _is_err = is_error_result(_rec)
                             except Exception:
                                 pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
                         tool_calls_log[_idx]["success"] = not _is_err
-                        tool_calls_log[_idx]["result"] = _rt
+                        tool_calls_log[_idx]["result"] = _rec
+                        # 결과와 함께 온 실행 상황은 사본이 아니라 가리킴만 남긴다(본문은 situation 원장에 있다).
+                        if ev.get("situation_delivery_id"):
+                            tool_calls_log[_idx]["situation_delivery_id"] = ev["situation_delivery_id"]
                         from ibl_honesty import truncation_evidence
-                        _evidence = truncation_evidence(_rt)
+                        _evidence = truncation_evidence(_rec)
                         if _evidence:
                             tool_calls_log[_idx]["evidence"] = _evidence
                         _t0 = tool_calls_log[_idx].pop("_t0", None)
@@ -753,7 +759,7 @@ class CognitivePipelineMixin:
                         # 미달(fail)은 봉투 success:false → 위 판정이 이미 거른다. 재시도
                         # 통과는 success 지만 첫 지시가 약했다는 사실 — 증류가 이걸 모르면
                         # 약한 지시가 그대로 코퍼스에 들어간다(복리 출혈의 품질판).
-                        _q, _fb = _quality_of_result(_rt)
+                        _q, _fb = _quality_of_result(_rec)
                         if _q:
                             tool_calls_log[_idx]["quality"] = _q
                             if _fb:

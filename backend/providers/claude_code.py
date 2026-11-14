@@ -741,6 +741,10 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                 else:
                     result_text = str(result_content)
                 is_error = bool(block.get("is_error"))
+                # MCP가 덧붙인 실행 상황은 결과가 아니다 — 여기서 갈라 결과만 흘린다(2026-11-14).
+                # 안 가르면 결과를 JSON으로 읽는 소비자(경험 증류·지도 봉투)가 조용히 전부 놓친다.
+                from situation_delivery import split_result
+                result_text, delivery = split_result(result_text)
                 self._log_tool_result(result_text, is_error)
                 out.append((
                     {
@@ -749,6 +753,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                         "name": "",  # stream-json의 tool_result에는 name 없음
                         "result": result_text,
                         "is_error": is_error,
+                        **({"situation_delivery_id": delivery["delivery_id"]}
+                           if delivery and delivery.get("delivery_id") else {}),
                     },
                     None,
                 ))

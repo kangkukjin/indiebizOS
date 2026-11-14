@@ -512,7 +512,7 @@ JSON 배열로만 응답.
                 if tool_calls:
                     from ibl_usage_rag import record_recall_outcome
                     ledger.once(key, "recall_outcome", lambda: record_recall_outcome(
-                        top_code, hippo_score, tool_calls, turn_tokens=turn_tokens))
+                        top_code, hippo_score, tool_calls, turn_tokens=turn_tokens, presented=presented))
         from thread_context import get_goal_eval_outcome
         evaluation = get_goal_eval_outcome()  # 경험 증류가 소비하기 전에 기억용 상태를 보존한다.
         # 제시→사용 결합(2026-09-18): 심층기억은 증류가 SAME/UPDATE 로 다시 만난 항목만 used_at 을 올린다 —
@@ -528,7 +528,7 @@ JSON 배열로만 응답.
                 distill_experience(user_message, tool_calls, hippo_score, top_code=top_code,
                                    turn_tokens=turn_tokens, turn_cost=turn_cost)
                 record_recall_outcome(top_code, hippo_score, tool_calls,
-                                      turn_tokens=turn_tokens)
+                                      turn_tokens=turn_tokens, presented=presented)
             except Exception as e:
                 log(f"[경험증류] 오류 (무시): {e}")
         # 2) 심층/의미 메모리 증류.

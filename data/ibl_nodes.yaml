@@ -3457,6 +3457,9 @@ nodes:
           generation: string
           limit_bytes: integer
           wait_ms: integer
+        aliases:
+          ref:
+          - task_ref
         callable_contract:
           version: 1
           params:

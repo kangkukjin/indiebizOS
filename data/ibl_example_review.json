@@ -1550,12 +1550,13 @@
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
     "params": "8c921742829e",
+    "aliases": "f2bd545674a1",
     "ops": "c020347d87ac",
     "side_effect": "b5bea41b6c62",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-11-06",
-   "examples": 15
+   "reviewed": "2026-11-14",
+   "examples": 16
   },
   "self:time": {
    "fields": {

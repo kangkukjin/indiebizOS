@@ -128,8 +128,8 @@ def _preview_with_signals(flat: str, cap: int) -> str:
     숨김량 그대로이고 표식은 문자열 끝에 남는다 — truncate_for_log 의 읽는 쪽 계약
     (TRUNC_MARK_RE 가 끝에 걸림 = 절단분)이 깨지지 않는다.
     MCP가 덧붙인 실행 상황은 과거 관측이므로 현재 결과의 미리보기·신호에서 제외한다."""
-    from situation_delivery import PREFIX
-    flat = flat.partition("\n" + PREFIX)[0].replace("\n", " ")
+    from situation_delivery import split_result
+    flat = split_result(flat)[0].replace("\n", " ")
     digest = _failure_digest(flat) if len(flat) > cap else ""
     return truncate_for_log(flat[:cap] + digest + flat[cap:], cap + len(digest))
 

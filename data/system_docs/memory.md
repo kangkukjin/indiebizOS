@@ -8,8 +8,9 @@ owner_code: >
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   forage_doc.py, forage_evidence_doc.py, forage_evidence.py, source_observation.py,
   final_evaluator.py, distill_queue.py, execution_identity.py, pursuit_history.py, execution_trace.py,
-  tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-11-04
+  tree_recall.py, associative_recall.py, cognitive_recall.py,
+  unified_distill.py, distill_route.py, distill_health_audit.py, recurring_failure_audit.py
+last_updated: 2026-11-14
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -95,6 +96,21 @@ see_also: [architecture.md, ibl.md]
 최신 코퍼스를 다시 조회한다. 종결 원장의 불필요한 코퍼스 사본은 일일 정리에서 지문으로
 바꾼다. 수리 커밋 증류는 최신 우선·미처리 backlog 보존 방식이다. 측정과 한계는 위 통합 증류
 설계의 「낭비 관문 보강」을 따른다.
+
+**턴의 길과 사용자 교정(2026-11-14).** 실행 구획에는 통한 원문에 이르기 전의 호출 순서(`path`: 실패한 실행의
+오류 머리, 가이드 읽기·기억 조회)와 같은 대화의 직전 턴 요약(`previous_turn`: 60분 안의 가장 가까운 앞 턴)을
+근거로 함께 건넨다. 프로그램은 사실만 모은다. 그 턴이 배울 만한지, 무엇이 원인인지, 이번 사용자 말이 직전의
+방법을 바로잡은 것인지는 판단 모델이 정한다. 판단이 붙인 `route`(참고한 조회, 원인을 댈 수 있는 헛걸음,
+사용자 교정)는 근거 안의 단계를 가리킬 때만 용례의 출처 기록 `provenance.routes`에 날짜와 함께 남는다(최근 3건).
+원문이 이미 아는 절차면 새 행을 만들지 않고 같은 원문의 기존 용례에 덧붙인다. 곧장 성공했고 직전 턴 근거도
+없는 턴의 판단 입력은 그대로다. 조회만 한 실행을 배우지 않는 관문은 그대로이므로, IBL 실행 없이 풀린 턴은
+여전히 실행기억에 남지 않는다. 구현은 `backend/cognition/distill_route.py`다.
+
+**읽지 못한 근거는 '배울 것 없음'이 아니다(2026-11-14).** 도구 결과 기록은 결과만 담는다. CLI 공급자의 결과에
+덧붙던 실행 상황 블록은 기록할 때 가르고 가리킴(`situation_delivery_id`)만 남기며, API 공급자는 화면
+미리보기 대신 모델이 받은 결과를 기록한다. 성공한 실행이 있는데 결과를 하나도 읽지 못하면 사유가
+`unreadable_evidence`가 되고 준비 실패와 같이 집계된다. 2026-10-31~11-14에 실행기억 증류가 조용히 0건이던
+원인과 단계별 수리 기록은 [기억 시스템 수리계획](../../docs/MEMORY_REPAIR_PLAN_2026_11_14.md)에 있다.
 
 ## 1. 의미 기억 — 시스템 문서 / 메모 (정적 지식)
 
@@ -222,6 +238,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 - **증류**: 기존 성공·중복 관문 → 통합 판단이 재사용 가치 있는 실제 실행 원문만 선택 → 독립 검증 → DB·`ibl_distilled.json` 반영. 성공했다는 이유만으로 저장하지 않으며 자동 관용구/작명은 중단 상태다.
 - **첫 등록의 닭과 달걀**: 새 액션/op는 아직 성공 실행이 없어 자동 증류가 시작될 재료도 없다. `description`/`ops.values`는 존재를 알리지만 자연어→op 선택과 인자 모양을 대신하지 않는다. 그래서 첫 등록은 manual seed를 넣고 실제 연상 프로브를 통과시켜야 한다. 코퍼스·실행에서 관측된 키는 `ibl_param_sweep.py`가 카탈로그의 `⟨인자: …⟩`로 올린다.
 - 임계값: 표시 MIN_SCORE 0.65 / 증류 DISTILL_THRESHOLD 0.7 — 단 점수 ≥ 0.7이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면(가짜 유사도) 새 패턴으로 보고 증류 진행(`_recall_was_used`, 2026-08-07 ep949 학습 유실 수리. top_code 없는 조종실 경로는 점수 게이트 그대로)
+- **쓰임에 따른 되먹임과 날짜(2026-11-14)**: 성공·실패는 점수가 아니라 쓰임으로 귀속한다. 이 턴에 제시된 해마 항목 가운데 실행 코드에 실제로 등장한 항목마다, 그 항목이 쓰인 호출의 성패를 적는다(무관한 호출의 실패는 깎지 않는다). 성공하면 `confirmed_at`(마지막으로 쓰여 성공한 때)이 오른다. 회상 줄에는 `learned`(실제 실행에서 배운 날, 경험에서 온 행만)·`confirmed`·`route`(그날 참고한 것과 안 된 길, 사용자가 바로잡은 것)가 실린다. 날짜와 길은 순위·삭제에 쓰지 않고 보여 주기만 한다 — 낡았는지는 읽는 AI 가 판단한다.
 - **증류 게이트 셋째 신호 — 품질**(2026-08-27): 구조 실패·목표 미달성에 이어 **AI step 품질 미달**이 학습 회로에 붙었다. ①미달(`error_type:"quality"`) 봉투는 `success:false` → 이미 있던 증류 성공 필터가 거른다(새 코드 0줄, 사슬 핵심 고리를 회귀로 고정) ②재시도로 통과한 건은 `pass_after_retry`+`criteria_feedback` 을 봉투에서 캐 반성 프롬프트에 병기 — "첫 미달 사유가 재발하지 않게 instruction 을 다듬어라(criteria 보존)"로 먹여, 약한 지시 대신 **개선된 지시**가 증류된다. ★게이트 규칙(미달 용례를 학습하지 마라)은 판정 데이터가 쌓인 뒤에 정당화되는 것이 아니라 지금 참이다 — 미루면 그 사이 오염 용례가 코퍼스에 들어가 재학습 때 해마에 구워진다. 정본 = `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
 - **증류의 관문 한 벌**(`backend/cognition/ibl_distill_gates.py`): 실행한 현행 원문을 기반으로 머리 접지·합성 접지·구문을 검사한다. 빈 조회만 수행한 실행은 해결 절차의 성공 증거로 배우지 않는다. 입력값은 본문에 치환하지 않고 명시 inputs로 전달하며, 후보는 현행 컴파일러로 검사한다. 회귀는 `backend/test_ibl_distill_gates.py`와 `backend/test_ibl_check_client.py`를 따른다.
 - **구문 실패의 원문 복구**(2026-09-09, ep3219·3223·3224): 반성기가 액션 뒤에 `.phrases`를 붙이거나, 변수 생산 호출을 빼거나, `each.do`의 중첩 따옴표를 깨뜨렸다. 할당 앞점 복원으로 해결되지 않는 구문 실패에는 경량 모델에 **성공한 호출 번호만 한 번** 다시 고르게 한다. 코드는 번호가 가리키는 원문 전체를 실행 순서대로 연결하므로 새 인자·파이프·따옴표를 만들지 않는다. 같은 의도를 독립적으로 충족하는 원문이 없으면 빈 선택으로 끝낸다. 복구본은 구문·자유 변수·첨부파일 의존을 검사한 뒤 기존 머리 접지·합성 접지·어휘·인자 관문을 모두 지난다. 정상 증류에는 추가 모델 호출이 없고, `check:true`는 실행이 아니므로 증류 입력·접지 근거·주행 본문에서 제외한다. 주행 기록과 대표 용례 적재는 별도이며 자동 함수 작명은 계속 중단이다. 회귀 `backend/test_distill_source_recovery_2026_09_09.py`.
@@ -413,6 +430,7 @@ metadata가 같아도 내용·목록의 동일성은 unknown이다. content의 u
 ### ② 일화 기억 → 개별 반성 루프 닫기
 - **현재**: episode_summary는 집계 추이로만 소비.
 - **이상**: 해마처럼 **유사 과거 에피소드를 회상**해 "지난번 이 작업은 NOT_ACHIEVED, 교훈 X"를 의식 에이전트에 주입. 해마=성공 코드 회상, 일화=실패 경험·교훈 회상의 짝.
+- **2026-11-14 부분 해소**: 실패의 교훈을 에피소드 평가가 아니라 턴의 길과 사용자 교정에서 얻어 실행기억 용례에 붙인다(위 「통합 증류」의 턴의 길). 유사 에피소드를 회상하는 루프 자체는 여전히 없다. 10-15 이후 에피소드의 71%가 평가 없이 끝나, 평가 결과를 재료로 삼기 어렵다.
 
 ### ③ 작업 기억의 의미 보존 압축 — ✅ 해소(2026-08-14, `history_checkpoint.py`)
 - 밀려난 턴을 경량 AI 재귀 요약 체크포인트로 보존해 히스토리 머리에 주입(위 §2). 남은 것: 요약 품질·갱신 실패의 가시화(`last_error` 칸만 있음).
@@ -458,6 +476,8 @@ metadata가 같아도 내용·목록의 동일성은 unknown이다. content의 u
 
 심층메모리(#5) 2026-05-31 진단분 ①~⑦은 해소됐다. **남은 부채(2026-09-02 감사)**: 저장소 간(의미기억·포식기억) 교차 충돌 판정 없음 · 보호 카테고리에 검증일/만료 없음 · `retrieved/used/verified` 의 완전 분리는 used_at 비갱신까지만(verified 축 미구현).
 
+> **확인 시각 복구(2026-11-14)**: 통합 증류로 옮긴 뒤 같은 사실을 다시 만났을 때(SAME) `used_at`을 올리는 갱신이 빠져, 시각이 2026-09-14에 멈춰 있었다. `apply_deep`의 SAME과 원문이 같은 NEW에서 다시 올린다. `used_at`은 가지치기와 "최근참조" 표시가 읽는다.
+
 ---
 
 ## 실행기억(#4 해마) 정밀 진단 & 피드백 루프 (2026-05-31)
@@ -495,6 +515,8 @@ metadata가 같아도 내용·목록의 동일성은 unknown이다. content의 u
 > 실행기억(#4) 2026-05-31 진단분 ①~⑤ 해소. 심층메모리 정리 패스와 **대칭 완성** — 두 자기학습 기억(해마/심층메모리)이 모두 증류(입력) + 정리(위생) 양쪽을 갖췄다.
 >
 > **귀속 관문(2026-09-02)**: `record_recall_outcome` 은 회상 top-1 의 액션이 실행 궤적에 실제 등장했을 때만(`_recall_was_used`) 성공/실패를 귀속한다. 증류 쪽은 2026-08 부터 이 관문을 썼으나 귀속 쪽이 빠져, 표면 어휘만 닮은 고점수 회상이 안 쓰인 턴의 결과까지 흡수하고 있었다(잘못된 강화·감쇠). 남은 부채: `run_command` 등 비-IBL 도구 실행은 해마에 증류·귀속되지 않는다(설계상 — 승격은 `[self:script]` 로).
+>
+> **귀속 기준 개정(2026-11-14)**: 최고점 0.85 문턱을 없앴다. 10-15 이후 그 문턱을 넘은 턴이 1,131개 중 3개였고 성패가 적힌 행이 3,907개 중 58개라, 강화·감쇠가 사실상 서 있었다. 이제 제시된 항목 전부를 쓰임으로 가르고, 성패는 그 항목이 쓰인 호출의 것으로 적는다. 이름·함수 참조가 있는 항목은 전과 같이 실행 자리에서 귀속한다.
 
 **관용구 호출의 귀속(2026-10-24 통합)**: 저장 관용구의 실제 호출은 `function_id/revision/run_id/call_id`에 귀속한다. 재수집은 같은 호출을 중복 기록하지 않는다. 반환 성공·자료 완전성·업무 검증은 구분하며, 옛 기억의 본문·이름 일치로 새 판본의 실적을 만들지 않는다. 턴 종료의 관용구 본문 대조·점수 재귀속 경로는 제거했다. 이름 없는 용례의 회상 피드백은 별도로 유지한다.
 
@@ -527,6 +549,8 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 **조언성 감사의 완료 계약(2026-09-11)**: `audit_lifecycle`이 주간 감사 등록·카덴스·결과 분류를 소유한다. `weekly_audits`는 깨끗한 성공(clean), 발견(findings), 생략(skipped), 실패(failed), 관측 부족(insufficient)을 구별하며, 개별 예외도 실패 결과로 남기고 다음 감사를 계속한다. 일부 문서·DB를 읽지 못한 결과는 성공이 아니다. 결과 파일 저장 후에만 완료 시각을 기록하며 저장 실패도 보고한다. 감사별 파일은 독립 복구 경계로 유지한다.
 
 비용이 큰 어휘 임베딩 중복 검사만 입력·검사 코드의 지문과 전체 임베딩 관측을 확인해 주기를 늘린다. 같은 입력의 완전한 clean 3회마다 1주→2주→최대 4주로 늘고, 입력 변경은 대기를 무시하며 실패·발견·관측 부족은 원래 주기로 돌아간다. 빈 코퍼스는 검사 생략이며 clean 횟수에 넣지 않는다. 값싼 감사·빌드 정합성·부작용 관문에는 이 감쇠를 적용하지 않는다.
+
+주간 감사에 기억 고리의 두 항목이 더해졌다(2026-11-14). `distill_health`(`backend/cognition/distill_health_audit.py`)는 지난 7일의 성공한 실행 결과 가운데 읽지 못한 비율과 실행 후보가 만들어진 턴이 있는지를 본다 — 저장 건수가 아니라 고리의 생사를 본다. `recurring_failure`(`backend/cognition/recurring_failure_audit.py`)는 지난 14일의 실행 실패를 꼴로 묶어 3일 이상 되풀이된 것을 `data/recurring_failure_flags.json`에 적는다. 둘 다 신고만 하고 고치지 않는다.
 
 ---
 
@@ -711,6 +735,8 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 ```
 
 각 태그가 self-describing이라 별도 외부 래퍼는 불필요.
+
+`<ref>`에는 기록이 있을 때만 `success_rate`·`avg_ms`·`avg_tokens`·`applicability`·`learned`·`confirmed`·`route`가 붙는다. 기록이 없으면 속성도 없다(2026-11-14에 뒤의 셋 추가).
 
 ---
 
@@ -1023,6 +1049,9 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 |------|------|
 | `backend/cognition/ibl_usage_rag.py` | `build_execution_memory()` — (xml, top_score, top_code) 반환, `distill_experience()` |
 | `backend/datastore/ibl_usage_db.py` | 해마 검색 엔진 (시맨틱 + FTS5 폴백, 점수 0~1 정규화) |
+| `backend/cognition/unified_distill.py` | 통합 증류 — 준비(`prepare`)·판단 입력(`model_input`)·판단 프롬프트·적용 |
+| `backend/cognition/distill_route.py` | 턴의 길 — `turn_path()`·`previous_summary()`·`build_route()`·`attach_route()` |
+| `backend/cognition/distill_health_audit.py` · `recurring_failure_audit.py` | 주간 감사 — 증류 고리의 생사, 되풀이되는 실행 실패 |
 | `backend/ibl_embedding_trainer.py` | 해마 학습 스크립트 (베이스 모델에서 fine-tuning) |
 | `backend/cognition/associative_recall.py` | 연상 공통 흐름 — `begin()`(1상)·`route()`(2상)·`text()`·`presented()`, 정책 표 `SOURCES`/`CHANNELS`, 공급원 함수(해마·심층 지도/선택·가이드·손발·수리·판정) |
 | `backend/cognition/cognitive_recall.py` | 러너 쪽 입구 `_associate()`(위임만) + 포식 의도 단서 `_FORAGE_CUES` |

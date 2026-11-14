@@ -148,8 +148,10 @@
     "cognition/delegation_tasks",
     "cognition/derived_freshness",
     "cognition/dialogue_continuation",
+    "cognition/distill_health_audit",
     "cognition/distill_memory_adapters",
     "cognition/distill_queue",
+    "cognition/distill_route",
     "cognition/doc_drift",
     "cognition/evaluation_evidence",
     "cognition/evaluation_input",
@@ -183,6 +185,7 @@
     "cognition/prompt_builder",
     "cognition/prompt_composition",
     "cognition/recovery_observation",
+    "cognition/recurring_failure_audit",
     "cognition/reframe",
     "cognition/repair_check_runner",
     "cognition/repair_policy",
@@ -656,8 +659,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 645,
-    "engine": 613,
+    "total": 648,
+    "engine": 616,
     "blocklist": 32
   }
 }

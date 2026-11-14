@@ -98,6 +98,8 @@ class UsageExample:
     returns: str = ""         # 반환 모양(2026-09-05)
     returns_observed: str = ""  # 실행이 실제로 돌려준 최상위 필드 JSON(2026-09-26) — returns_display 가 `⟨관측: …⟩` 로 붙인다
     provenance: str = "{}"   # 로컬 출처·적용 조건. 회상에는 조건만 발췌한다.
+    learned_at: str = ""      # 실제 경험에서 배운 날(YYYY-MM-DD). 씨앗·합성 행은 빈 값
+    confirmed_at: str = ""    # 마지막으로 쓰여 성공한 날. 빈 값=확인된 적 없음
 
 
 # =============================================================================
@@ -259,6 +261,10 @@ class IBLUsageDB:
             # {kind, keys, more, runs, observed, source}. 선언(returns)이 아니라 흔적. 회상 줄의 `→ Record⟨관측: …⟩` 재료 —
             # 4018 실측: 회상 줄이 `→ Record` 만 말해 모델이 describe 를 한 번 더 불렀다.
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN returns_observed TEXT DEFAULT ''")
+        if "confirmed_at" not in cols:
+            # 마지막으로 쓰여 성공한 때(2026-11-14). updated_at 은 편집·실패에도 올라 '확인됨'을 못 가른다 —
+            # 8월에 배워 어제도 통한 기억과 어제 문장만 다듬은 기억이 같은 날짜가 된다.
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN confirmed_at TEXT DEFAULT NULL")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
@@ -657,8 +663,9 @@ class IBLUsageDB:
         찍히는 자리)는 성공 실행에서만 반영한다 — 실패의 비용은 '그 표현의 값'이 아니라
         실패 양상의 비용이라 섞으면 오염된다. -1(미측정)에서 첫 관측은 그대로 채택."""
         field = "success_count" if success else "fail_count"
-        cost_sql = ""
-        args: list = [datetime.now().isoformat()]
+        now = datetime.now().isoformat()
+        cost_sql = ", confirmed_at = ?" if success else ""
+        args: list = [now, now] if success else [now]
         _a = self.AVG_MS_ALPHA
         for col, val in (("avg_ms", elapsed_ms), ("avg_tokens", tokens)):
             if success and val is not None and val > 0:
@@ -1307,7 +1314,8 @@ class IBLUsageDB:
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
                            source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias,
-                           signature, COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, provenance
+                           signature, COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, provenance,
+                           created_at, confirmed_at
                     FROM ibl_current_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1362,7 +1370,10 @@ class IBLUsageDB:
                 signature=meta.get('signature'),
                 returns=meta.get('returns') or '',
                 returns_observed=meta.get('returns_observed') or '',
-                provenance=meta.get('provenance') or '{}'
+                provenance=meta.get('provenance') or '{}',
+                learned_at=(str(meta.get('created_at') or '')[:10]
+                            if str(meta['source'] or '').startswith('distilled') else ''),
+                confirmed_at=str(meta.get('confirmed_at') or '')[:10],
             ))
 
             if len(results) >= top_k:

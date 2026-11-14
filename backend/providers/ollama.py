@@ -636,13 +636,14 @@ class OllamaProvider(BaseProvider):
 
             # 클라이언트에 도구 결과 전달 — UI에는 details가 있으면 details 사용
             ui_result = ui_details if ui_details is not None else truncated_output
-            yield {
+            from ibl_result_transport import with_model_result
+            yield with_model_result({
                 "type": "tool_result",
                 "name": tool_name,
                 "input": tool_input,
                 "result": ui_result[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result,
                 "is_error": is_error
-            }
+            }, truncated_output)
 
             # 3. role="tool" 메시지 추가 (AI에게는 content만)
             messages.append({

@@ -18,7 +18,7 @@ import { iblSurface } from '../../lib/remote-session';
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import {
   jget, applyFilter, tplWith, templateNames, requestCode, approvalChallenge, viewList,
-  appRequest, actionRequest, requiredInputMessage,
+  appRequest, actionRequest, executionRequest, requiredInputMessage,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
@@ -175,9 +175,9 @@ export function suggestionText(d: unknown): string {
   return typeof v === 'string' && v ? v : v != null && typeof v !== 'object' ? String(v) : '(빈 응답)';
 }
 
-/** 실행 — 문자열(구형 치환 결과) 또는 판본 2 봉투(actionRequest). 봉투는 code·edition·inputs·declared_inputs 를 그대로 싣는다. */
+/** 실행 — 화면의 단일 액션 문자열 또는 판본 2 봉투(actionRequest). 입력·참조를 보존해 전송한다. */
 export async function runIBL(req: ActionReq): Promise<Json> {
-  const body = typeof req === 'string' ? { code: req } : { ...req };
+  const body = executionRequest(req);
   const post = async (extra: Record<string, unknown>) => {
     const res = await fetch(IBL_ENDPOINT, {
       method: 'POST',

@@ -45,8 +45,8 @@ async function ibl(code){
   /* 포털(회원 원격 계기): 범용 /ibl/execute 대신 회원 실행 게이트로 보낸다 — 렌더러 포크 금지·매개변수화 */
   /* surface:'web' = 보고 있는 곳이 브라우저라는 표식 — 소리·저장이 맥이 아니라 여기서 나게 한다
      (포털은 게이트가 서버측에서 같은 표식을 붙인다). */
-  /* code 는 문자열(구형 치환 결과) 또는 판본 2 봉투 {code,edition,inputs,declared_inputs}(공용 코어 appRequest). */
-  const body=(code&&typeof code==='object')?Object.assign({},code):{code:code};
+  /* 단일 액션 문자열과 앱 요청 봉투 모두 공용 코어에서 판본을 보존해 전송한다. */
+  const body=executionRequest(code);
   const send=async(extra)=> window.__PORTAL
     ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify(Object.assign({},body,extra||{}))})
     : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify(Object.assign({},body,extra||{},{project_id:'앱모드',project_path:'.',surface:'web'}))});

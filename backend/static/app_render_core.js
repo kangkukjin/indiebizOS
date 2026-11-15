@@ -125,6 +125,12 @@ function approvalChallenge(d) {
 /** 실행 요청(문자열 또는 봉투)의 코드 원문 — 로그·정규식 판정용 */
 function requestCode(req) { return req && typeof req === 'object' ? String(req.code || '') : String(req == null ? '' : req); }
 
+/** 화면이 작성한 단일 액션도 현재 판본을 명시한다. 기존 요청의 입력·참조·판본은 보존한다.
+ * @param {string|AppRequest} req @returns {AppRequest|{code: string, edition: 2}} */
+function executionRequest(req) {
+  return typeof req === 'string' ? {code: req, edition: /** @type {2} */ (2)} : Object.assign({}, req);
+}
+
 /** view 통화 슬라이스 — from:'.' 은 응답 자체를 1행으로 */
 function viewList(data, from) {
   if (from === '.') return [data];
@@ -507,7 +513,7 @@ function dateInputType(t) { return t === 'datetime' ? 'datetime-local' : t; }
 
 /* --- ESM export (데스크탑 Vite 전용 — 원격 인라인 시 이 블록만 제거된다. 파일의 마지막) --- */
 export {
-  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requiredInputMessage, requestCode, approvalChallenge, viewList,
+  jget, applyFilter, tplWith, templateNames, appRequest, actionRequest, requiredInputMessage, requestCode, executionRequest, approvalChallenge, viewList,
   emptyText, trendUp, statusGlyph, unwrapFinalResult, completionStatus, iblOutcomeError,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,

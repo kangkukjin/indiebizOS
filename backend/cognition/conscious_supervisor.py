@@ -610,7 +610,7 @@ class Supervisor:
                                "마치고 실행 구간을 닫으세요. 적용·활성·완료는 인계 원장이 재기동 뒤 이어서 확인합니다."},
                               ensure_ascii=False)
         from deep_execution import hold as deep_hold
-        deep_hold(self)  # 심층실행의 되돌아보기가 진행 중이면 끝날 때까지 잠깐 기다린다(기본 꺼짐)
+        deep_hold(self, name)  # 심층실행: 하네스가 대신 되돌아보는 동안만 잠깐 기다린다
         notice = self.boundary()
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.
@@ -800,7 +800,7 @@ class Supervisor:
             return
         if not self.enabled or self.finalizing or self.phase in {"plan", "reframe", "plan_completion"} or self.cancelled():
             return
-        from deep_execution import tick as deep_tick  # 심층실행(기본 꺼짐): 되돌아볼 지점이면 이번 주기는 그것만 한다
+        from deep_execution import tick as deep_tick  # 심층실행: 대신 되돌아봤으면 이번 주기는 그것만 한다
         if deep_tick(self):
             return
         with self.lock:

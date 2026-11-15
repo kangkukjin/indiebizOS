@@ -7,8 +7,10 @@
 - 실행자는 첫 걸음을 마치면 알게 된 것을 적어 돌아온다(reframe 도구, kind=checkpoint). 의식은
   그것만 보고 길을 다시 꼽은 뒤 실행자가 한 일·하려는 일과 대조해 판정하고, 다음에 돌아올
   지점을 정한다. 답이 올 때까지 실행자는 기다린다.
-- 실행자가 돌아오지 않고 오래 가면 하네스가 실행 기록을 읽혀 '알게 된 것'을 대신 적고
-  되돌아본다. 호출 수 상한은 이 경우에만 쓰인다.
+- 실행자가 돌아오지 않고 오래 가면 하네스가 먼저 돌아오라고 청한다. 그래도 오지 않을 때만
+  실행 기록을 읽혀 '알게 된 것'을 대신 적고 되돌아본다. 호출 수 상한은 이 경우에만 쓰인다.
+  (2026-11-16: 상한이 실행자의 첫 걸음 길이와 같아, 실행자가 스스로 돌아오기 몇 초 전에 하네스가
+  대신 되돌아보고 한 번뿐인 횟수를 써 버린 일이 있었다 — 에피소드 6110.)
 - 갈래를 그만두라는 지시는 하지 않는다(시험 T1에서 그 지시는 16건 중 9건이 틀렸다). 값이
   의심되는 일은 질문으로 전한다.
 - 착수 메모와 되돌아보기는 작업 메모 하나에 쌓인다. 다음 되돌아보기와 끝내기 전 확인이 읽는다.
@@ -27,7 +29,8 @@ DEFAULTS = {
     "enabled": True,          # THINK 로 간 일은 말이 없어도 1단계다
     "default_depth": 1,
     "max_depth": 5,
-    "ceilings": [8, 16, 32],  # 실행자가 돌아오지 않을 때: 지난 되돌아보기 뒤 이만큼 호출이 지나면 하네스가 대신 본다
+    "ceilings": [16, 24, 32],  # 지난 되돌아보기 뒤 이만큼 호출이 지나도 돌아오지 않으면 돌아오라고 청한다
+    "grace": 8,                # 청한 뒤에도 이만큼 더 지나면 하네스가 실행 기록으로 대신 되돌아본다
     "final_check": True,
     "hold_s": 150,            # 하네스가 대신 되돌아보는 동안 실행자의 다음 도구 호출을 붙잡는 상한
     "result_chars": 2500,     # 하네스가 '알게 된 것'을 적을 때 호출 결과마다 보는 앞부분
@@ -92,7 +95,7 @@ def execution_block(framing):
         "답이 올 때까지 다음 작업을 시작하지 않는다. 답에는 방향에 대한 판단과 다음에 돌아올 지점이 들어 있다. "
         "남은 횟수만큼 그 지점에서 같은 방법으로 돌아간다.",
         "판단은 지금 상태에 비춰 확인한다. 따르지 않으면 최종 보고에 이유를 적는다. "
-        "돌아가지 않고 오래 가면 하네스가 실행 기록으로 대신 되돌아본다.",
+        "돌아가지 않고 오래 가면 돌아오라는 청을 받는다. 그래도 가지 않으면 하네스가 실행 기록으로 대신 되돌아본다.",
     ]
     return "\n".join(lines)
 
@@ -179,6 +182,7 @@ def _state(controller):
                     and getattr(controller, "request_intent", "task") == "task")
         state = controller._deep = {"cfg": cfg, "depth": depth_of(controller.framing, cfg) if eligible else 0,
                                     "done": 0, "last_calls": 0, "next": "", "memo": [],
+                                    "nudged_at": None,
                                     "final_done": False, "busy": threading.Event()}
         if state["depth"]:
             controller.log("deep.started", role="harness", depth=state["depth"], ceilings=cfg["ceilings"])
@@ -306,6 +310,7 @@ def _round(controller, state, *, note, by, stated=""):
            "verdict": verdict, "reason": reason, "judgment": body, "next": parse_next(judgment)}
     state["memo"].append(row)
     state["next"] = row["next"]
+    state["nudged_at"] = None
     _save_memo(controller, state)
     controller.log("deep.reflection", role="consciousness", round=row["round"], depth=state["depth"], calls=k,
                    by=by, verdict=verdict, reason=reason, next=row["next"],
@@ -346,13 +351,19 @@ def checkpoint(controller, payload):
     stated = str((payload or {}).get("progress") or "").strip()
     if state["depth"] <= 0:
         return reply(checkpoint=False, directive="이 턴에는 되돌아보기가 없다. 그대로 진행한다.")
-    if state["done"] >= state["depth"]:
-        return reply(checkpoint=False, directive="되돌아보기를 모두 마쳤다. 끝까지 진행하고, 끝내기 전에 한 번 확인받는다.")
     if not learned:
         return reply(checkpoint=False, reason="evidence 에 지금까지 알게 된 것을 적어야 한다")
-    with controller.review_lock:  # 하네스의 대신 되돌아보기·중간검토와 겹치지 않는다
+    with controller.review_lock:  # 하네스의 대신 되돌아보기·중간검토가 끝나기를 기다린다
+        _drop_own_notice(controller)  # 스스로 돌아왔다. 청도, 전달을 기다리던 판단도 여기서 직접 답한다
+        substitute = _unanswered(state)
+        if substitute is not None:
+            # 하네스가 방금 대신 되돌아봤다. 그 판단을 이 요청의 답으로 준다(같은 판단을 두 번 전하지 않는다).
+            substitute["answered"] = True
+            return reply(checkpoint=True, round=f"{substitute['round']}/{state['depth']}",
+                         verdict=substitute["verdict"], content=_guidance(substitute, state))
         if state["done"] >= state["depth"]:
-            return reply(checkpoint=False, directive="되돌아보기를 모두 마쳤다. 끝까지 진행한다.")
+            return reply(checkpoint=False,
+                         directive="되돌아보기를 모두 마쳤다. 끝까지 진행하고, 끝내기 전에 한 번 확인받는다.")
         if controller.cancelled() or controller.finalizing:
             return reply(checkpoint=False, directive="실행이 끝나는 중이다. 새 작업을 시작하지 않는다.")
         state["busy"].set()
@@ -385,7 +396,13 @@ def tick(controller):
         state = _state(controller)
         if state["depth"] <= 0 or state["done"] >= state["depth"]:
             return False
-        if controller.store.cost["execution_calls"] - state["last_calls"] < _ceiling(state["cfg"], state["done"]):
+        calls = controller.store.cost["execution_calls"]
+        if calls - state["last_calls"] < _ceiling(state["cfg"], state["done"]):
+            return False
+        if state["nudged_at"] is None:
+            nudge(controller, state, calls)   # 모델을 부르지 않는다. 실행자가 직접 적어 오게 한다
+            return False
+        if calls - state["nudged_at"] < int(state["cfg"]["grace"]):
             return False
         return reflect(controller, state)
     except Exception as exc:
@@ -396,33 +413,73 @@ def tick(controller):
         return False
 
 
-def reflect(controller, state):
-    """실행자가 돌아오지 않았을 때 하네스가 대신 되돌아본다. 판단은 다음 도구 경계에서 전달된다."""
+def _notice(controller, state, *, finding_id, reason, instruction, review):
     from supervision_store import digest
+    goal = digest(json.dumps(controller.framing or {}, sort_keys=True, ensure_ascii=False))
+    return {"id": uuid.uuid4().hex, "reason": reason, "source": "deep_execution",
+            "target": {"agent": controller.owner, "task": controller.task},
+            "sequence": controller.store.sequence, "expires_at": None, "review": review,
+            "revision": controller.exec_revision,
+            "conditions": {"trigger": "deep_reflection", "call_signature": "", "goal": goal,
+                           "issues": {}, "incidents": {}, "active": [], "jobs": {}},
+            "findings": [{"id": finding_id, "scope": "goal", "reason": reason, "instruction": instruction,
+                          "resolved_when": "", "evidence_ids": [], "needs_recheck": False}]}
+
+
+def _own_pending(controller):
+    """대기 중인 알림이 심층실행의 것이면 그 종류('nudge'=돌아오라는 청, 'reflection'=대신 되돌아본 판단)."""
+    with controller.lock:
+        notice = controller.pending
+        if not isinstance(notice, dict) or notice.get("source") != "deep_execution":
+            return None
+        first = (notice.get("findings") or [{}])[0].get("id", "")
+        return "nudge" if str(first).startswith("deep-nudge") else "reflection"
+
+
+def _drop_own_notice(controller):
+    with controller.lock:
+        if isinstance(controller.pending, dict) and controller.pending.get("source") == "deep_execution":
+            controller.pending = None
+
+
+def _unanswered(state):
+    """하네스가 대신 되돌아본 판단 가운데 실행자가 아직 답으로 받지 못한 마지막 것."""
+    row = state["memo"][-1] if state["memo"] else None
+    return row if row and row["by"] == "harness" and not row.get("answered") else None
+
+
+def nudge(controller, state, calls):
+    """정해진 지점을 지났는데 돌아오지 않았다. 대신 적지 않고, 돌아와 직접 적으라고 청한다."""
+    state["nudged_at"] = calls
+    with controller.lock:
+        if controller.pending is None:
+            controller.pending = _notice(
+                controller, state, finding_id=f"deep-nudge-{state['done'] + 1}", review=state["done"] + 1,
+                reason=f"심층실행 되돌아보기 {state['done'] + 1}/{state['depth']} — 돌아올 지점을 지났다",
+                instruction=("지금 reframe 도구를 kind=\"checkpoint\" 로 불러, evidence 에 지금까지 알게 된 것"
+                             "(확인된 사실·수치·상태와 막힌 것)을, progress 에 다음에 하려는 것을 적어 돌아온다. "
+                             "돌아오지 않으면 하네스가 실행 기록으로 대신 되돌아본다."))
+    controller.log("deep.nudged", role="harness", round=state["done"] + 1, depth=state["depth"], calls=calls)
+
+
+def reflect(controller, state):
+    """청한 뒤에도 실행자가 돌아오지 않았을 때 하네스가 대신 되돌아본다. 판단은 다음 도구 경계에서 전달된다."""
     if not controller.review_lock.acquire(blocking=False):
         return False
     state["busy"].set()  # run_tool 이 이 동안 실행자의 다음 도구 호출을 붙잡는다
     try:
         if controller.finalizing or controller.cancelled() or state["done"] >= state["depth"]:
             return False
-        revision = controller.exec_revision
-        goal = digest(json.dumps(controller.framing or {}, sort_keys=True, ensure_ascii=False))
+        _drop_own_notice(controller)  # 청해 둔 것은 걷는다. 이제 대신 되돌아본다
         row = _round(controller, state, note=None, by="harness")
         if controller.cancelled() or controller.finalizing:
             return True
         if row["verdict"] == "KEEP" and state["done"] >= state["depth"]:
-            return True  # 바꿀 것도, 다시 돌아올 지점도 없다
-        notice = {"id": uuid.uuid4().hex, "reason": row["reason"] or row["verdict"], "source": "deep_execution",
-                  "target": {"agent": controller.owner, "task": controller.task},
-                  "sequence": controller.store.sequence, "expires_at": None, "review": row["round"],
-                  "revision": revision,
-                  "conditions": {"trigger": "deep_reflection", "call_signature": "", "goal": goal,
-                                 "issues": {}, "incidents": {}, "active": [], "jobs": {}},
-                  "findings": [{"id": f"deep-{row['round']}", "scope": "goal",
-                                "reason": f"심층실행 되돌아보기 {row['round']}/{state['depth']} — "
-                                          "정해진 지점에서 돌아오지 않아 실행 기록으로 대신 되돌아봤다",
-                                "instruction": _guidance(row, state), "resolved_when": "", "evidence_ids": [],
-                                "needs_recheck": False}]}
+            return True  # 바꿀 것도, 다시 돌아올 지점도 없다. 실행자가 뒤늦게 돌아오면 그때 이 판단을 답으로 준다
+        notice = _notice(controller, state, finding_id=f"deep-{row['round']}", review=row["round"],
+                         reason=(f"심층실행 되돌아보기 {row['round']}/{state['depth']} — "
+                                 "돌아오지 않아 실행 기록으로 대신 되돌아봤다"),
+                         instruction=_guidance(row, state))
         with controller.lock:
             controller.pending = notice
             controller.log("instruction.queued", role="harness", instruction=notice)
@@ -437,15 +494,27 @@ def reflect(controller, state):
         controller.review_lock.release()
 
 
-def hold(controller):
-    """하네스가 대신 되돌아보는 동안 실행자의 다음 도구 호출을 잠깐 붙잡는다. 잠금은 쥐지 않는다."""
+def hold(controller, name=""):
+    """하네스가 대신 되돌아보는 동안 실행자의 다음 도구 호출을 잠깐 붙잡는다. 잠금은 쥐지 않는다.
+
+    실행자가 스스로 돌아오는 호출(reframe)은 붙잡지 않는다. 그 호출이 '돌아오라'는 청에 막히지도 않게
+    청을 걷는다. 기다림과 답은 checkpoint 가 맡는다.
+    """
     state = getattr(controller, "_deep", None)
-    if not state or not state["busy"].is_set():
+    if not state:
         return
     try:
-        deadline = time.monotonic() + float(state["cfg"]["hold_s"])
-        while state["busy"].is_set() and time.monotonic() < deadline and not controller.cancelled():
-            time.sleep(0.25)
+        if name == "reframe":
+            if _own_pending(controller) == "nudge":
+                _drop_own_notice(controller)
+        elif state["busy"].is_set():
+            deadline = time.monotonic() + float(state["cfg"]["hold_s"])
+            while state["busy"].is_set() and time.monotonic() < deadline and not controller.cancelled():
+                time.sleep(0.25)
+        if _own_pending(controller) == "reflection":
+            row = _unanswered(state)
+            if row is not None:
+                row["answered"] = True  # 이 호출 바로 앞에서 그 판단이 전달된다
     except Exception:
         return
 

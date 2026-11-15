@@ -12,7 +12,7 @@ import thread_context as tc
 from conscious_supervisor import Supervisor
 from supervision_bus import wrap
 
-FAST = {"ceilings": [2, 2, 2], "hold_s": 2}
+FAST = {"ceilings": [2, 2, 2], "grace": 2, "hold_s": 2}
 SWITCH = ("1. 합성음을 다듬는 길이다\n2. 음원 후보 조사: 얻는 것 실제 음악 / 드는 것 호출 5회 / 뒤집을 관측 접근 제한\n"
           "3. 없음\nNEXT: 후보 두 개의 이용 조건을 확인하면 돌아온다\nVERDICT: SWITCH — 음원부터 찾아본다")
 KEEP = "1. 같은 길이다\n2. 없음\n3. 없음\nNEXT: 초안이 나오면 돌아온다\nVERDICT: KEEP — 그대로 간다"
@@ -156,36 +156,68 @@ def test_three_rounds_accumulate_one_memo_and_set_the_next_point(tmp_path, monke
     assert len(seen) == 6 and len(controller._deep["memo"]) == 3
 
 
-def test_harness_steps_in_only_when_executor_does_not_come_back(tmp_path, monkeypatch, scope):
+def test_harness_first_asks_then_steps_in_only_if_executor_still_does_not_come_back(tmp_path, monkeypatch, scope):
     runner, controller = make(tmp_path, monkeypatch, scope, framing={"task_framing": "문제", "deep_execution": 2})
     seen = script(monkeypatch, {"reflect": ["- 확인된 것: 음원 파일이 없다", "길", SWITCH]})
     work(controller, 1, 1)
     controller.tick()
-    assert seen == []                                                 # 상한(2회) 전에는 끼어들지 않는다
+    assert seen == [] and controller.pending is None                  # 상한(2회) 전에는 아무 일도 없다
     work(controller, 2, 1)
     controller.tick()
-    assert [phase for phase, _ in seen] == ["reflect"] * 3            # 알게 된 것을 하네스가 대신 적었다
-    assert "돌아오지 않았다" in seen[0][1] and "- 확인된 것: 음원 파일이 없다" in seen[1][1]
-    blocked = json.loads(wrap(controller._execute)("inspect", {"n": 3}))
-    assert blocked["not_executed"] is True
-    instruction = blocked["supervisor_instruction"]["instruction"]
-    assert "돌아오지 않아" in instruction and "음원 후보 조사" in instruction
-    assert 'kind="checkpoint"' in instruction and "남은 되돌아보기 1번" in instruction
-    assert len(controller.calls) == 2                                 # 지시를 받은 호출은 실행되지 않았다
-    assert "하네스가 적음" in (controller.store.directory / "deep_memo.md").read_text(encoding="utf-8")
+    assert seen == []                                                 # 상한에 닿으면 먼저 청한다. 모델은 부르지 않는다
+    asked = json.loads(wrap(controller._execute)("inspect", {"n": 3}))
+    assert asked["not_executed"] is True
+    assert "돌아올 지점을 지났다" in asked["supervisor_instruction"]["instruction"]
+    assert 'kind="checkpoint"' in asked["supervisor_instruction"]["instruction"]
     work(controller, 4, 1)
     controller.tick()
-    assert len(seen) == 3                                             # 상한은 지난 되돌아보기 뒤부터 다시 센다
+    assert seen == []                                                 # 청한 뒤 기다리는 폭(2회) 안
+    work(controller, 5, 1)
+    controller.tick()
+    assert [phase for phase, _ in seen] == ["reflect"] * 3            # 그래도 오지 않아 하네스가 대신 적고 되돌아봤다
+    assert "돌아오지 않았다" in seen[0][1] and "- 확인된 것: 음원 파일이 없다" in seen[1][1]
+    blocked = json.loads(wrap(controller._execute)("inspect", {"n": 6}))
+    instruction = blocked["supervisor_instruction"]["instruction"]
+    assert blocked["not_executed"] is True and "돌아오지 않아" in instruction and "음원 후보 조사" in instruction
+    assert "남은 되돌아보기 1번" in instruction
+    assert "하네스가 적음" in (controller.store.directory / "deep_memo.md").read_text(encoding="utf-8")
+    assert len(controller.calls) == 4                                 # 청과 판단을 받은 두 호출은 실행되지 않았다
 
+
+def test_executor_returning_after_being_asked_uses_its_own_note(tmp_path, monkeypatch, scope):
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    seen = script(monkeypatch, {"reflect": ["길", KEEP]})
+    work(controller, 1, 2)
+    controller.tick()
+    assert de._own_pending(controller) == "nudge"
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "공식 안내와 포스터를 확인했다"}))
+    assert told["checkpoint"] is True and told["round"] == "1/1"
+    assert [phase for phase, _ in seen] == ["reflect", "reflect"]     # 실행자가 적었으므로 대신 적는 호출이 없다
+    assert "공식 안내와 포스터를 확인했다" in seen[0][1]
+    assert controller.pending is None                                 # 청은 걷혔다
+    assert work(controller, 3, 1)[0]["success"] is True               # 다음 호출은 막히지 않는다
+
+
+def test_executor_arriving_after_harness_substitute_gets_that_judgment(tmp_path, monkeypatch, scope):
+    """에피소드 6110: 하네스가 먼저 대신 되돌아본 뒤 실행자가 스스로 돌아왔다. 거절하지 않고 그 판단을 답으로 준다."""
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    seen = script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP]})
+    work(controller, 1, 2)
+    assert de.reflect(controller, de._state(controller)) is True      # 한 번뿐인 되돌아보기를 하네스가 썼다
+    assert controller.pending is None                                 # 마지막 차례의 '계속'은 따로 전달하지 않는다
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "공식 안내와 포스터를 확인했다"}))
+    assert told["checkpoint"] is True and told["round"] == "1/1" and told["verdict"] == "KEEP"
+    assert "지금 길로 계속한다" in told["content"] and len(seen) == 3  # 모델을 다시 부르지 않는다
+    again = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "더 알게 된 것"}))
+    assert again["checkpoint"] is False and "모두 마쳤다" in again["directive"]
 
 def test_keep_at_the_last_round_stays_silent(tmp_path, monkeypatch, scope):
     runner, controller = make(tmp_path, monkeypatch, scope)
     seen = script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP]})
     work(controller, 1, 2)
-    controller.tick()
+    assert de.reflect(controller, de._state(controller)) is True
     assert len(seen) == 3 and controller.pending is None
     assert work(controller, 3, 1)[0]["success"] is True
-
 
 def test_no_stop_directive_exists():
     assert de.parse_verdict("VERDICT: CUT — 이 갈래를 그만둔다") == ("KEEP", "")
@@ -202,13 +234,13 @@ def test_failed_reflection_never_stops_the_turn(tmp_path, monkeypatch, scope):
         raise RuntimeError("모델 장애")
     monkeypatch.setattr("supervisor_runtime.invoke", broken)
     work(controller, 1, 2)
-    controller.tick()                                                 # 예외가 밖으로 나오지 않는다
+    assert de.reflect(controller, de._state(controller)) is True      # 예외가 밖으로 나오지 않는다
     assert controller.pending is None and controller.phase == "execute"
     told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "알게 된 것"}))
     assert told["checkpoint"] is False and "하던 방향으로 진행" in told["directive"]
     assert controller.executor_paused is False and not controller._deep["busy"].is_set()
     assert work(controller, 3, 1)[0]["success"] is True
-
+    controller.tick()                                                 # 감시 주기도 그대로 돈다
 
 def test_checkpoint_needs_what_was_learned_and_reframe_still_needs_its_premise(tmp_path, monkeypatch, scope):
     from reframe import TOOL_SCHEMA, execute_reframe

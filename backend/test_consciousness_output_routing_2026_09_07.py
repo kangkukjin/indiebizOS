@@ -23,7 +23,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 PROMPT = ROOT / "data" / "common_prompts" / "consciousness_prompt.md"
-CONTROL_KEYS = {"deep_research", "independent_review", "revise_research_plan"}
+CONTROL_KEYS = {"deep_research", "independent_review", "revise_research_plan", "deep_execution"}
 
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT / "backend" / "cognition"))
@@ -123,6 +123,12 @@ def _assembled_text(co: dict) -> str:
         ensure_ascii=False))
     # clarification — needs_clarification=true 일 때의 질문 경로
     parts.append(str(holder._consciousness_clarification(co)))
+    # 심층실행 — 되묻기·심층연구가 아닌 턴에서 첫 걸음이 실행자 지침에 실리는 경로
+    import deep_execution
+    from unittest.mock import patch
+    plain = {k: v for k, v in co.items() if k not in ("needs_clarification", "deep_research", "deep_execution")}
+    with patch.object(deep_execution, "_file_settings", lambda: {}):
+        parts.append(compile_user_command("표식 요청", plain))
     return "\n".join(p for p in parts if p)
 
 
@@ -146,6 +152,9 @@ def _bool_probes():
             enabled=True, framing={'independent_review': v, 'achievement_criteria': '요청 결과'},
             message='요청', completion_review_required=False)),
         "deep_research": lambda v: requested({"deep_research": v}),
+        # 숫자 키 — 사용자가 시킨 단계가 있고 없음에 따라 되돌아보는 횟수가 달라진다
+        "deep_execution": lambda v: __import__("deep_execution").depth_of(
+            {"task_framing": "문제", "deep_execution": 3 if v else 0}, dict(__import__("deep_execution").DEFAULTS)),
         "needs_clarification": lambda v: holder._consciousness_clarification(
             {"needs_clarification": v, "clarification_question": "질문"}),
         "needs_repair": lambda v: holder._consciousness_needs_repair({"needs_repair": v}),

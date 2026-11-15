@@ -229,6 +229,15 @@ def isolated_spill_root(tmp_path, monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def deep_execution_off_unless_tested(monkeypatch):
+    """심층실행은 운영 기본이 켜짐이다. 다른 기능의 검사가 그 때문에 실제 의식 모델을 부르거나
+    호출 순서가 달라지지 않도록 여기서는 끈다. 심층실행의 검사는 자기 파일에서 다시 켠다
+    (test_deep_execution.py 의 no_live_config). 운영 설정 파일의 값도 검사에 새지 않는다."""
+    import deep_execution
+    monkeypatch.setattr(deep_execution, "_file_settings", lambda: {"enabled": False})
+
+
 @pytest.fixture
 def isolated_distill_training(tmp_path, monkeypatch):
     """증류의 임시 파일→replace 저장도 운영 학습 자료 밖에서 검증한다."""

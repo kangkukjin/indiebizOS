@@ -488,7 +488,7 @@ async def todo_write(todos: List[dict], ctx: Context = None):
 
 
 @mcp.tool()
-async def reframe(broken_assumption: str, evidence: str, progress: str = "",
+async def reframe(evidence: str, broken_assumption: str = "", progress: str = "",
                   kind: str = "other", ctx: Context = None) -> str:
     """규정(현재 태스크·이 계획의 전제)이 실행 중 사실이 아니게 됐을 때 의식에게 재규정을 요청합니다.
 
@@ -497,11 +497,17 @@ async def reframe(broken_assumption: str, evidence: str, progress: str = "",
     돌아오고 작업은 그 자리에서 이어집니다(처음부터 다시 시작하지 않습니다). 사소한 오류·재시도로
     풀리는 실패에는 쓰지 않습니다. 한 턴에 최대 2회.
 
+    심층실행의 되돌아보기도 이 도구로 합니다. 정해진 지점에서 kind="checkpoint" 로 부르고 evidence 에
+    지금까지 알게 된 것, progress 에 다음에 하려는 것을 적으면, 방향에 대한 판단과 다음에 돌아올 지점이
+    돌아옵니다(재규정 횟수에 세지 않습니다. broken_assumption 은 비웁니다).
+
     Args:
-        broken_assumption: 깨진 전제 또는 틀린 규정 한 문장('이 계획의 전제' 줄을 그대로 인용하면 좋다).
-        evidence: 그것이 깨졌음을 보여주는 근거 — 실제 도구 결과·오류·수치를 3줄 안팎으로.
-        progress: 지금까지 확보한 사실·산출물 요약(새 규정이 제약으로 흡수).
-        kind: impossible(이 틀 안에서 불가) · dangerous(그대로 하면 위해) · wrong_problem(문제가 다른 것) · other.
+        evidence: 재규정이면 전제가 깨졌음을 보여주는 근거(실제 도구 결과·오류·수치를 3줄 안팎으로).
+            되돌아보기면 지금까지 알게 된 것(확인된 사실·수치·상태와 막힌 것).
+        broken_assumption: 깨진 전제 또는 틀린 규정 한 문장('이 계획의 전제' 줄을 그대로 인용하면 좋다). 재규정에는 꼭 적는다.
+        progress: 재규정이면 지금까지 확보한 사실·산출물 요약. 되돌아보기면 다음에 하려는 것.
+        kind: impossible(이 틀 안에서 불가) · dangerous(그대로 하면 위해) · wrong_problem(문제가 다른 것) · other
+            · checkpoint(심층실행의 되돌아보기).
 
     ※ in-process 프로바이더는 같은 도구를 자기 프로세스에서 직접 갖는다(system_tools 'reframe').
       이 MCP 노출은 아웃오브프로세스인 Claude Code 가 같은 능력을 갖게 하는 통로다(read_guide 와 동형).

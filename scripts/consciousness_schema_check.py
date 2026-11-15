@@ -47,6 +47,7 @@ CONSUMER_FILES = [
     ROOT / "backend" / "cognition" / "reframe.py",
     ROOT / "backend" / "cognition" / "supervisor_runtime.py",
     ROOT / "backend" / "cognition" / "member_runner.py",
+    ROOT / "backend" / "cognition" / "deep_execution.py",   # 2026-11-15 심층실행: first_step·deep_execution
 ]
 
 # capability_focus 하위 dict를 바인딩하는 .get 키(별칭 포함). 새 별칭은 여기 추가.

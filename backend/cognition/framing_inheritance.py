@@ -42,6 +42,7 @@ PATCHABLE_BOOL = ("needs_clarification", "deep_research", "independent_review", 
 PATCHABLE = set(PATCHABLE_TEXT) | set(PATCHABLE_LIST) | set(PATCHABLE_DICT) | set(PATCHABLE_BOOL)
 # 저장본에서 벗기는 키 — 권한·턴 전용 표식
 STRIP_ALWAYS = ("needs_repair", "_repair_policy", "_framing_source", "_inherited_from",
+                "deep_execution", "first_step",  # 심층실행의 주문 단계와 첫 걸음은 그 턴의 것이다
                 "scope", "pursuit_id", "title", "goal_criteria", "pursuit_reason", "detach_pursuit")
 
 _RELATION_PROMPT = "framing_relation_prompt.md"

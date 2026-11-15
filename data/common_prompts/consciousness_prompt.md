@@ -78,6 +78,11 @@ JSON 객체로 답한다. task_framing 외에는 필요한 필드만 반환한�
   사용자가 그 오류를 스스로 알아채기 어려울 때만 true. 사용자가 이번 판단의 근거로 삼을, 여러 출처·수치를
   종합한 최종 결과물이 그런 경우다. 조회·대화·초안·중간 산출물·정기 반복 보고·쉽게 되돌릴 변경에는
   켜지 않는다. 작업 종류의 이름·분량·도구 실패만으로 선택하지 않는다.
+- first_step: 도구로 실행하는 요청이면 항상 적는다. 실행자가 가장 먼저 해 볼 한 걸음과 그것으로 알아 올 것이다.
+  전체 계획이 아니라 방향을 확인하는 첫 확인이다. 실행자는 이 걸음을 마치면 알게 된 것을 적어 돌아오고,
+  그때 방향을 다시 본다. 도구 없이 답하는 대화에만 생략한다.
+- deep_execution: 사용자가 "3단계 심층실행"처럼 단계를 주문했을 때만 그 숫자를 적는다. 주문이 없으면
+  적지 않는다(그때는 1단계로 진행된다). 스스로 정하거나 올리지 않는다.
 - needs_clarification: 기본 false. 도구·기억으로 확인할 수 없는 필수 정보가 없어 중대한
   오실행 가능성이 높을 때 true. clarification_question에 필요한 질문을 쓴다.
 - needs_repair: 기본 false. 아래 변경 대상 계약을 따른다.
@@ -101,6 +106,8 @@ JSON 객체로 답한다. task_framing 외에는 필요한 필드만 반환한�
   "deep_research": false,
   "revise_research_plan": false,
   "independent_review": false,
+  "first_step": "",
+  "deep_execution": null,
   "needs_clarification": false,
   "clarification_question": "",
   "needs_repair": false

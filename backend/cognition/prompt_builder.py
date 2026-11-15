@@ -749,6 +749,12 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if research:
         aug.append(research)
 
+    # 심층실행(기본 꺼짐): 단계가 있으면 첫 걸음과 되돌아보기를 실행자에게 알린다.
+    from deep_execution import execution_block as deep_execution_block
+    deep = deep_execution_block(co)
+    if deep:
+        aug.append(deep)
+
     user_cmd = (user_message or "").strip()
     if not aug:
         return f"사용자 명령: {user_cmd}"

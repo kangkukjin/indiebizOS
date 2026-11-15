@@ -117,7 +117,7 @@ class GuideRequest(BaseModel):
 
 class ReframeRequest(BaseModel):
     """턴 안 재규정 — claude_code(아웃오브프로세스 MCP) 브리지. GuideRequest 와 같은 이유·같은 모양."""
-    broken_assumption: str
+    broken_assumption: str = ""   # 심층실행의 되돌아보기(kind=checkpoint)에는 없다
     evidence: str
     progress: str = ""
     kind: str = "other"

@@ -24,7 +24,10 @@ TOOL_SCHEMA = {
         "전제·범위·질문이 부정확하거나 이 틀로 사용자 목적을 이룰 수 없을 때 근거를 보낸다. "
         "깨진 계획 위에 계속 짓거나 혼자 목표를 바꾸지 말 것 — 이 도구가 새 규정(문제·접근·전제·달성 기준)을 "
         "돌려주고 작업은 그 자리에서 이어진다(처음부터 다시 시작하지 않는다). "
-        "사소한 오류·재시도로 풀리는 실패에는 쓰지 않는다. 한 턴에 최대 2회."
+        "사소한 오류·재시도로 풀리는 실패에는 쓰지 않는다. 한 턴에 최대 2회. "
+        "심층실행의 되돌아보기도 이 도구로 한다: 정해진 지점에서 kind=\"checkpoint\" 로 부르고 evidence 에 "
+        "지금까지 알게 된 것, progress 에 다음에 하려는 것을 적으면 방향에 대한 판단과 다음에 돌아올 지점을 "
+        "돌려준다(재규정 횟수에 세지 않는다)."
     ),
     "input_schema": {
         "type": "object",
@@ -43,11 +46,13 @@ TOOL_SCHEMA = {
             },
             "kind": {
                 "type": "string",
-                "enum": ["impossible", "dangerous", "wrong_problem", "other"],
-                "description": "impossible=이 틀 안에서 풀 수 없음 · dangerous=그대로 하면 위해 · wrong_problem=문제가 다른 것이었음"
+                "enum": ["impossible", "dangerous", "wrong_problem", "other", "checkpoint"],
+                "description": "impossible=이 틀 안에서 풀 수 없음 · dangerous=그대로 하면 위해 · wrong_problem=문제가 다른 것이었음 "
+                               "· checkpoint=심층실행의 되돌아보기(broken_assumption 은 비운다)"
             },
         },
-        "required": ["broken_assumption", "evidence"],
+        # broken_assumption 은 재규정 요청에서 여전히 필요하다(실행부가 검사한다). 되돌아보기에는 없다.
+        "required": ["evidence"],
     },
 }
 
@@ -314,6 +319,9 @@ def execute_reframe(tool_input: dict, agent_id: str, task_id: str = None) -> str
     supervisor = supervisor_current(agent_id, task_id)
     if supervisor:
         return supervisor.reframe(tool_input)
+    if tool_input.get("kind") == "checkpoint":  # 감독이 없는 턴에는 되돌아보기도 없다
+        return json.dumps({"checkpoint": False, "directive": "이 턴에는 되돌아보기가 없다. 그대로 진행한다."},
+                          ensure_ascii=False, indent=2)
     ch = current(agent_id or "", task_id)
     if ch is None:
         return json.dumps({"revised": False,

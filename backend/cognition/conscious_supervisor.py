@@ -379,6 +379,9 @@ class Supervisor:
 
     def reframe(self, payload):
         from reframe import _revise, render_for_executor
+        if (payload or {}).get("kind") == "checkpoint":
+            from deep_execution import checkpoint  # 심층실행: 실행자가 알게 된 것을 적어 돌아왔다
+            return checkpoint(self, payload)
         try:
             if not payload.get("broken_assumption") or not payload.get("evidence"):
                 raise ValueError("broken_assumption과 evidence가 필요합니다")
@@ -606,6 +609,8 @@ class Supervisor:
                                "supervisor_instruction": "적용이 예약됐습니다. 이 턴에서는 더 실행하지 않습니다 — 지금 응답을 "
                                "마치고 실행 구간을 닫으세요. 적용·활성·완료는 인계 원장이 재기동 뒤 이어서 확인합니다."},
                               ensure_ascii=False)
+        from deep_execution import hold as deep_hold
+        deep_hold(self)  # 심층실행의 되돌아보기가 진행 중이면 끝날 때까지 잠깐 기다린다(기본 꺼짐)
         notice = self.boundary()
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.
@@ -794,6 +799,9 @@ class Supervisor:
                          elapsed_s=round(elapsed), waiting_for="local_preparation", model_started=False)
             return
         if not self.enabled or self.finalizing or self.phase in {"plan", "reframe", "plan_completion"} or self.cancelled():
+            return
+        from deep_execution import tick as deep_tick  # 심층실행(기본 꺼짐): 되돌아볼 지점이면 이번 주기는 그것만 한다
+        if deep_tick(self):
             return
         with self.lock:
             for job in self.jobs.values():

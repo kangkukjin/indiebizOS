@@ -145,6 +145,7 @@
     "cognition/conscious_supervisor",
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
+    "cognition/deep_execution",
     "cognition/delegation_tasks",
     "cognition/derived_freshness",
     "cognition/dialogue_continuation",
@@ -659,8 +660,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 648,
-    "engine": 616,
+    "total": 649,
+    "engine": 617,
     "blocklist": 32
   }
 }

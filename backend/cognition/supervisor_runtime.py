@@ -205,8 +205,8 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         restore(controller.context)
         set_current_agent_id(controller.supervisor_id)
         set_step_role("consciousness")
-        completion = phase == "plan_completion"
-        if phase not in {"receipt", "plan_completion"}:
+        completion = phase in {"plan_completion", "reflect"}  # reflect = 심층실행의 도구 없는 되돌아보기
+        if phase not in {"receipt", "plan_completion", "reflect"}:
             prompt += "\ntool_context=" + json.dumps(
                 tool_context(controller, include_idioms=phase in {"plan", "reframe"}), ensure_ascii=False)
         # 별도 프로바이더 객체/세션: 실행자의 resume 기록과 singleton provider를 건드리지 않는다.
@@ -216,7 +216,7 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
                         agent_name="의식 감독", agent_id=controller.supervisor_id,
                         project_path=controller.project_path, tools=[] if completion else [TOOL_SCHEMA],
                         execute_tool_func=lambda name, payload, **kw: controller.tool(payload),
-                        role="oneshot:plan_completion" if completion else "consciousness")
+                        role=f"oneshot:{phase}" if completion else "consciousness")
         agent._provider.disable_session_persistence = True
         if completion:
             agent._provider.no_tools = True

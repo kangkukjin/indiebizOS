@@ -381,6 +381,23 @@ def _search_meta(raw_str: str) -> dict:
     return {}
 
 
+def _source_failure(raw):
+    """HTTP 클라이언트의 실패 원인·재시도 정보를 파싱 오류로 덮지 않는다."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            return None
+    if not isinstance(raw, dict) or not raw.get("error"):
+        return None
+    failure = {"success": False, "error_code": "SOURCE_ERROR",
+               "error": _redact(str(raw["error"]))[:200]}
+    for key in ("error_type", "retry_after"):
+        if key in raw:
+            failure[key] = raw[key]
+    return failure
+
+
 def _search(api_key: str, target: str, query: str, *, page=1, limit=20, search_scope="auto") -> dict:
     """One explicitly bounded page; fallback failure is never proof of absence."""
     if type(page) is not int or page < 1 or type(limit) is not int or not 1 <= limit <= 100:
@@ -399,16 +416,23 @@ def _search(api_key: str, target: str, query: str, *, page=1, limit=20, search_s
             params["page"] = page
         if limit != 20:
             params["display"] = limit
+        failure = None
         try:
             raw = api_call("law", "/lawSearch.do", params=params, raw_response=True)
+            failure = _source_failure(raw)
+            if failure:
+                raise ValueError(failure["error"])
             raw_str = raw if isinstance(raw, str) else str(raw)
             records = _build_records(raw_str, target)
             if records is None:
                 raise ValueError("읽을 수 없는 원천 응답")
         except Exception as exc:
             error = {"scope": scope, "page": page, "message": _redact(str(exc))[:200]}
+            if failure:
+                error.update({k: failure[k] for k in ("error_type", "retry_after") if k in failure})
             if out is None:
                 return {"success": False, "error_code": "SOURCE_ERROR", "error": error["message"],
+                        **(failure or {}),
                         "source_complete": False, "items": [], "errors": [error]}
             return {**out, "source_complete": False, "errors": [error], "checked_scopes": checked,
                     "note": "이름 검색은 0건이나 본문 검색은 실패했습니다. 전체 부재를 확인하지 못했습니다."}
@@ -550,6 +574,9 @@ def _detail(api_key: str, target: str, item_id) -> dict:
         raw = api_call("law", "/lawService.do",
                        params={"OC": api_key, "target": api_target, "type": "JSON", param: item_id},
                        raw_response=True)
+        failure = _source_failure(raw)
+        if failure:
+            return {**failure, "source_complete": False, "items": []}
         raw_str = _redact(raw if isinstance(raw, str) else str(raw))
         tried.append(param)
         try:

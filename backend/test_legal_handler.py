@@ -148,6 +148,52 @@ def test_explicit_page_preserves_scope_and_pagination(legal, monkeypatch):
     assert len(calls) == 1
 
 
+@pytest.mark.parametrize("detail", [False, True])
+@pytest.mark.parametrize("encoded", [False, True])
+@pytest.mark.parametrize("message", [
+    "API 요청 시간 초과 (law) (10초)",
+    "서버 오류 (HTTP 503)",
+    "접근 거부 (HTTP 403)",
+    "네트워크 연결 실패. 인터넷 연결을 확인하세요.",
+])
+def test_source_failure_preserves_cause(legal, monkeypatch, detail, encoded, message):
+    source = {"error": message}
+    monkeypatch.setattr(legal, "api_call", lambda *a, **k: json.dumps(source) if encoded else source)
+    args = {"id": "001248"} if detail else {"query": "도로교통법"}
+    out = legal.execute(args, SimpleNamespace(tool_name="legal_lookup"))
+    assert out["success"] is False
+    assert out["error"] == message
+    assert out["source_complete"] is False and out["items"] == []
+
+
+@pytest.mark.parametrize("detail", [False, True])
+def test_rate_limit_crosses_legal_adapter(legal, monkeypatch, detail):
+    from ibl_v2_adapters import decode_envelope
+    from ibl_v2_ir import Fault
+
+    source = {"success": False, "error": "law 요청 한도 초과(HTTP 429)",
+              "error_type": "rate_limited", "retry_after": 30}
+    monkeypatch.setattr(legal, "api_call", lambda *a, **k: source)
+    args = {"id": "001248"} if detail else {"query": "도로교통법"}
+    out = legal.execute(args, SimpleNamespace(tool_name="legal_lookup"))
+    assert out["retry_after"] == 30
+    with pytest.raises(Fault) as failure:
+        decode_envelope(out, {"protocol": "legacy-envelope", "value_path": ""}, {})
+    assert failure.value.code == "RATE_LIMITED"
+
+
+def test_fallback_http_failure_retains_cause_and_partial_scope(legal, monkeypatch):
+    responses = iter([json.dumps({"LawSearch": {"totalCnt": "0"}}),
+                      {"error": "서버 오류 (HTTP 503) OC=fixture-private-oc&target=law"}])
+    monkeypatch.setattr(legal, "api_call", lambda *a, **k: next(responses))
+    out = legal._search("fixture-private-oc", "law", "missing")
+    assert out["source_complete"] is False
+    assert out["checked_scopes"] == ["name"]
+    assert out["errors"][0]["scope"] == "body"
+    assert "HTTP 503" in out["errors"][0]["message"]
+    assert "fixture-private-oc" not in json.dumps(out)
+
+
 if __name__ == "__main__":
     import sys
 

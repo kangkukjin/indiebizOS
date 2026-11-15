@@ -810,8 +810,8 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     <div className="project-manager h-full flex flex-col bg-[#F5F1EB]">
       {/* 헤더 */}
       <div className="project-header h-12 flex items-center justify-between px-4 bg-[#EAE4DA] border-b border-[#E5DFD5] drag">
-        <div className="flex items-center gap-2 no-drag">
-          <span className="font-semibold text-[#4A4035]">{currentProject.name}</span>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="truncate font-semibold text-[#4A4035]">{currentProject.name}</span>
         </div>
 
         {IS_WEB_SURFACE && <button className="remote-mobile-only px-3 rounded-lg border border-stone-300" onClick={() => setMobileActionsOpen(v => !v)} aria-expanded={mobileActionsOpen} aria-controls="project-actions">프로젝트 관리</button>}

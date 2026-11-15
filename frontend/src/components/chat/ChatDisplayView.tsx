@@ -3,7 +3,7 @@ import type { ChatDisplayBindings } from './ChatView';
 
 /** Only presentation: the persistent ChatPane owns state, streams and callbacks. */
 export function renderChatDisplay(bindings: ChatDisplayBindings) {
-  const { ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant } = bindings;
+  const { ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, scrollTopRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant } = bindings;
   // ── 렌더링: 다이얼로그 모드 가시성 체크 ──
 
   if (isDialog && !show) return null;
@@ -98,7 +98,15 @@ export function renderChatDisplay(bindings: ChatDisplayBindings) {
       <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
 
       {/* 메시지 영역 */}
-      <div ref={messagesScrollRef} onScroll={e => { const el = e.currentTarget; followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; }} className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
+      <div ref={messagesScrollRef}
+        onWheel={e => { if (e.deltaY < 0) followRef.current = false; }}
+        onScroll={e => {
+          const el = e.currentTarget;
+          // 초기 배치/새 내용으로 바닥이 멀어진 것과 사용자가 위로 읽는 동작을 구분한다.
+          if (el.scrollHeight - el.scrollTop - el.clientHeight <= 2) followRef.current = true;
+          else if (el.scrollTop < scrollTopRef.current) followRef.current = false;
+          scrollTopRef.current = el.scrollTop;
+        }} className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
 
         {messages.length === 0 && !isLoading ? (
           <div className={`h-full flex items-center justify-center ${isDialog ? 'text-gray-400' : 'text-[#A09080]'}`}>

@@ -702,8 +702,15 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
   }, [show]);
 
   const followRef = useRef(true);
+  const scrollTopRef = useRef(0);
   useEffect(() => {
-    if (active && followRef.current) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // 메시지 영역만 움직인다. smooth/scrollIntoView는 폴링과 사용자 스크롤에
+    // 뒤늦게 개입하거나 부모 창까지 움직여 제목줄을 밀어낼 수 있다.
+    const el = messagesScrollRef.current;
+    if (active && followRef.current && el) {
+      el.scrollTop = el.scrollHeight;
+      scrollTopRef.current = el.scrollTop;
+    }
   }, [messages, streamingContent, active]);
 
   // 다이얼로그 크기 저장
@@ -994,7 +1001,7 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
     fileAttachments.clearAttachments();
   };
 
-  return { __uiTools, React, ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant };
+  return { __uiTools, React, ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, scrollTopRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant };
 }
 
 export type ChatDisplayBindings = ReturnType<typeof useChatHost>;

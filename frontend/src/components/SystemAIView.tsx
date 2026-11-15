@@ -83,10 +83,13 @@ export function SystemAIView() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
+      {/* 세션 유무·음성대화·메뉴 폭과 무관하게 맨 위에 창 이동 영역을 확보한다. */}
+      <div className="system-ai-titlebar h-10 shrink-0 flex items-center pl-20 pr-3 drag select-none text-sm text-[#6B5B4F]">
+        시스템 AI
+      </div>
       <ChatView
         chatTarget={{ type: 'system_ai' }}
         layout="fullpage"
-        titleBarInset
         initialMessage={initialMessage}
         initialMessageLabel={initialLabel}
       />

@@ -23,7 +23,10 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCOPES = ("backend/ibl", "backend/cognition/system_tools_ibl.py", "data/packages/installed/tools")
+# 연구 자료 보존은 IBL 호출의 인자·결과에 든 경로를 그대로 받는다(2026-11-16, 에피소드 6119:
+# `~workspace/…`를 직접 펴다 난 예외가 그 연구의 조회를 전부 막았다).
+SCOPES = ("backend/ibl", "backend/cognition/system_tools_ibl.py", "data/packages/installed/tools",
+          "backend/services/research_capture.py", "backend/services/research_threads.py")
 _MARK = re.compile(r"#\s*path-ok:\s*\S")
 
 

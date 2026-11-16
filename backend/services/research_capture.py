@@ -11,6 +11,9 @@ from research_context import install_capture, install_review, call_started
 
 _locks = {}
 _guard = threading.Lock()
+# 호출이 가리킨 파일의 사본 상한. 첨부 한도(research_threads.prepare_attachments)와 같은 크기다.
+# 보존은 파일을 통째로 읽으므로, 조회 대상인 큰 DB를 호출마다 사본으로 뜨지 않게 한다.
+SNAPSHOT_MAX_BYTES = 25 * 1024 * 1024
 
 
 def library(context):
@@ -92,14 +95,22 @@ def capture(context, config, params, result, call):
     # 호출자가 명시한 읽기 파일 또는 프로젝트 안의 실제 다운로드 파일만 스냅샷한다.
     paths = []
     fetched = set()
+    # 경로 값은 단일 해소점으로 편다. `~workspace/…`를 사람의 홈으로 풀려다 난 예외가 보존 실패로
+    # 기록되어 그 연구의 이후 조회를 전부 막았다(2026-11-16, 에피소드 6119).
+    from runtime_utils import expand_body_path
+    # 액션이 `research_snapshot: false`를 선언하면 호출이 가리킨 파일은 보존할 문서가 아니라 조회 대상이다
+    # (DB 조회 등). 그 파일의 사본은 뜨지 않고 호출 결과만 보존한다.
+    target = None
     if url and not url.startswith(('http://', 'https://')):
-        p = Path(url).expanduser()
-        paths.append(p if p.is_absolute() else lib.store.path / p)
+        p = Path(expand_body_path(url))
+        target = p if p.is_absolute() else lib.store.path / p
+        if config.get('research_snapshot') is not False:
+            paths.append(target)
     def artifacts(value):
         if isinstance(value, dict):
             for key, item in value.items():
                 if key in {'path', 'file_path', 'download_path', 'saved_path'} and isinstance(item, str):
-                    p = Path(item).expanduser()
+                    p = Path(expand_body_path(item))
                     if p.is_absolute() and p.resolve().is_relative_to(lib.store.path):
                         paths.append(p)
                         if key in {'download_path', 'saved_path'}:
@@ -124,8 +135,19 @@ def capture(context, config, params, result, call):
     # 수집을 선언한 액션이 남긴 파일은 확보한 사본이다. 그 밖의 호출이 실행 중에 써낸 파일은
     # 실행자의 산출물이다. 전부터 있던 파일(읽기만 한 문서)은 확보한 자료로 남는다.
     authoring = declared in {'unknown', 'produced'} and started is not None
+    if config.get('research_snapshot') is False and target is not None:
+        # 결과가 같은 파일을 되적어도(path 필드) 조회 대상의 사본은 뜨지 않는다.
+        queried = target.resolve()
+        paths = [p for p in paths if p.resolve() != queried]
     for index, path in enumerate(dict.fromkeys(paths)):
         if path.is_file() and not path.resolve().is_relative_to(lib.store.root):
+            size = path.stat().st_size
+            if size > SNAPSHOT_MAX_BYTES:
+                # 조회 대상인 큰 파일(DB 등)은 통째로 사본을 뜨지 않는다. 호출 결과는 위에서 이미 보존했다.
+                with lib.store.connect(True) as db:
+                    lib.store.event(db, 'capture.skipped', {'path': str(path), 'bytes': size, 'reason': 'too_large'},
+                                    context['thread_id'], context['run_id'])
+                continue
             if path in copies:
                 extra = {'coverage': 'snippet'} if declared == 'snippet' else {}
             elif authoring and path not in fetched and path.stat().st_mtime >= int(started):

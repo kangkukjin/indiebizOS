@@ -2529,6 +2529,7 @@ nodes:
         returns: items
         columns_from: data
         side_effect: false
+        research_snapshot: false
         runs_on: anywhere
         fixture: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
         description: SQLite 파일 읽기 전용 조회 (op 분기) — query(SELECT → 행 items)·tables(표 목록·행 수)·schema(열 목록). 몸의 원장(.db)을 셸 sqlite3 대신 문장으로 본다. 쓰기는 거절.

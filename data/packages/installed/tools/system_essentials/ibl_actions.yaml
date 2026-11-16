@@ -1107,6 +1107,7 @@ nodes:
         returns: items
         columns_from: data   # 반환 열은 질의·표가 정한다 — 정적 검사기는 fixture 열을 이 낱말의 열로 쓰지 않는다
         side_effect: false    # 읽기 전용 — mode=ro 연결 + 문장 머리 관문(SELECT/WITH/PRAGMA/EXPLAIN 만)
+        research_snapshot: false   # path 는 조회 대상이지 보존할 문서가 아니다 — 연구 자료실은 조회 결과만 보존한다
         runs_on: anywhere
         fixture: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
         description: SQLite 파일 읽기 전용 조회 (op 분기) — query(SELECT → 행 items)·tables(표 목록·행 수)·schema(열 목록). 몸의 원장(.db)을 셸 sqlite3 대신 문장으로 본다. 쓰기는 거절.

@@ -7,6 +7,9 @@
 - 실행자는 첫 걸음을 마치면 알게 된 것을 적어 돌아온다(reframe 도구, kind=checkpoint). 의식은
   그것만 보고 길을 다시 꼽은 뒤 실행자가 한 일·하려는 일과 대조해 판정하고, 다음에 돌아올
   지점을 정한다. 답이 올 때까지 실행자는 기다린다.
+  첫 걸음의 끝은 준비를 마친 때가 아니라 본 문제에 대한 첫 결과를 얻은 때다. (2026-11-16: 의식이
+  첫 걸음을 날짜 확인·직전 자료 읽기 같은 준비로 적어, 실행자가 호출 1~5회 만에 돌아오고 의식은
+  규정을 쓸 때와 같은 것만 알아 '그대로'밖에 답하지 못했다 — 에피소드 6115·6117·6119.)
 - 실행자가 돌아오지 않고 오래 가면 하네스가 먼저 돌아오라고 청한다. 그래도 오지 않을 때만
   실행 기록을 읽혀 '알게 된 것'을 대신 적고 되돌아본다. 호출 수 상한은 이 경우에만 쓰인다.
   (2026-11-16: 상한이 실행자의 첫 걸음 길이와 같아, 실행자가 스스로 돌아오기 몇 초 전에 하네스가
@@ -15,6 +18,8 @@
   의심되는 일은 질문으로 전한다.
 - 착수 메모와 되돌아보기는 작업 메모 하나에 쌓인다. 다음 되돌아보기와 끝내기 전 확인이 읽는다.
 - 끝내기 직전에 현행 감독 지문으로 한 번 확인하고, 교정이 있으면 실행자를 한 번 잇는다.
+  독립 검토(평가)가 선택된 턴에서는 건너뛴다. 끝 확인은 방향만 묻고 평가는 결과가 목표에 맞는지를
+  묻는데, 둘이 연달아 돌면 끝 확인이 겹친다(2026-11-16, 에피소드 6119: 끝 확인 17초 뒤 평가 14초).
 
 끄려면 world_pulse_config.json 의 conscious_supervisor.deep_execution.enabled 를 false 로 둔다.
 """
@@ -89,7 +94,10 @@ def execution_block(framing):
         lines.append("첫 걸음(내부 제안): " + json.dumps({"source": "consciousness", "field": "first_step",
                                                          "text": first}, ensure_ascii=False))
     lines += [
-        "먼저 첫 걸음만 한다. 첫 걸음에서 요청이 다 끝나는 가벼운 일이면 돌아가지 않고 마친다.",
+        "먼저 첫 걸음만 한다. 방향 담당자는 돌아와 적은 것만 보고 방향을 다시 잡으므로, 본 문제에 대해 새로 "
+        "알게 된 것이 있어야 돌아갈 값이 있다. 날짜·기준선 확인이나 자료 읽기 같은 준비만 마친 때는 아직 돌아갈 "
+        "때가 아니다. 본 문제에 대한 첫 결과(첫 표본·첫 후보·첫 시도가 돌려준 것)를 얻은 때가 첫 걸음의 끝이다. "
+        "첫 걸음에서 요청이 다 끝나는 가벼운 일이면 돌아가지 않고 마친다.",
         "첫 걸음을 마치면 reframe 도구를 kind=\"checkpoint\" 로 부른다. evidence 에 지금까지 알게 된 것"
         "(확인된 사실·수치·상태와 막힌 것), progress 에 다음에 하려는 것을 적는다. broken_assumption 은 비워 둔다.",
         "답이 올 때까지 다음 작업을 시작하지 않는다. 답에는 방향에 대한 판단과 다음에 돌아올 지점이 들어 있다. "
@@ -220,6 +228,10 @@ def memo_text(state, framing):
     if hint:
         lines.append("접근: " + hint)
     for row in state["memo"]:
+        if row.get("failed"):
+            lines += ["", f"## 되돌아보기 {row['round']}/{state['depth']} (도구 호출 {row['calls']}회 뒤) — 이루어지지 않음",
+                      "사유: " + row["failed"]]
+            continue
         writer = "실행자가 적음" if row["by"] == "executor" else "실행자가 돌아오지 않아 하네스가 적음"
         lines += ["", f"## 되돌아보기 {row['round']}/{state['depth']} (도구 호출 {row['calls']}회 뒤, {writer})",
                   "알게 된 것:", row["learned"], "", "다시 생각한 것:", row["rethink"], "",
@@ -266,8 +278,17 @@ def trace_of(controller, cfg, *, per_result=None):
 
 
 def _ask(controller, prompt):
+    """의식에게 묻는다. 빈 답은 판정이 아니다 — '계속'으로 읽지 않고 실패로 올린다.
+
+    (2026-11-16, 에피소드 6119: 예산 심사에서 불리지 않은 되돌아보기가 빈 답을 냈고, 그것이 KEEP 으로
+    읽혀 실행자에게 "지금 길로 계속한다"로 전달됐다. 최종 보고에도 점검을 마쳤다고 적혔다.)
+    """
     from supervisor_runtime import invoke
-    return invoke(controller, prompt, planning_prompt=SYSTEM, phase="reflect") or ""
+    text = invoke(controller, prompt, planning_prompt=SYSTEM, phase="reflect") or ""
+    if not text.strip():
+        why = (getattr(controller, "call_stop", None) or {}).get("reason") or "빈 응답"
+        raise RuntimeError("의식이 답하지 못했다 — " + str(why))
+    return text
 
 
 def parse_verdict(text):
@@ -294,16 +315,20 @@ def _round(controller, state, *, note, by, stated=""):
     task = str(framing.get("task_framing") or "")
     k, errors, trace, actions = trace_of(controller, cfg, per_result=None if note is None else 0)
     state["last_calls"] = k
-    if note is None:
-        note = _ask(controller, NOTE.format(message=controller.message, framing=task, k=k, trace=trace))
-        if not note.strip():
-            raise RuntimeError("알게 된 것을 적는 호출이 빈 응답을 냈다")
-    rethink = _ask(controller, R1.format(message=controller.message, framing=task, criteria=_criteria_text(framing),
-                                         memo=memo_text(state, framing), note=note,
-                                         by="실행자가 적음" if by == "executor" else "하네스가 실행 기록에서 적음"))
-    judgment = _ask(controller, R2.format(message=controller.message, r1=rethink, k=k, errors=errors,
-                                          actions=actions or "(아직 없음)", stated=stated or "(적지 않음)",
-                                          round=state["done"], depth=state["depth"]))
+    try:
+        if note is None:
+            note = _ask(controller, NOTE.format(message=controller.message, framing=task, k=k, trace=trace))
+        rethink = _ask(controller, R1.format(message=controller.message, framing=task, criteria=_criteria_text(framing),
+                                             memo=memo_text(state, framing), note=note,
+                                             by="실행자가 적음" if by == "executor" else "하네스가 실행 기록에서 적음"))
+        judgment = _ask(controller, R2.format(message=controller.message, r1=rethink, k=k, errors=errors,
+                                              actions=actions or "(아직 없음)", stated=stated or "(적지 않음)",
+                                              round=state["done"], depth=state["depth"]))
+    except Exception as exc:
+        # 이루어지지 않은 차례를 메모에 남긴다. 다음 되돌아보기와 끝내기 전 확인이 이 사실을 읽는다.
+        state["memo"].append({"round": state["done"], "by": by, "calls": k, "failed": str(exc)})
+        _save_memo(controller, state)
+        raise
     verdict, reason = parse_verdict(judgment)
     body = re.sub(r"\n?\s*\**(NEXT|VERDICT)\**:.*$", "", judgment.strip(), flags=re.S).strip()
     row = {"round": state["done"], "by": by, "calls": k, "learned": note.strip(), "rethink": rethink.strip(),
@@ -377,7 +402,8 @@ def checkpoint(controller, payload):
                 except Exception as exc:  # 되돌아보기가 실패해도 실행은 그대로 간다
                     controller.log("deep.error", role="consciousness", stage="checkpoint", error=str(exc))
                     return reply(checkpoint=False, reason="되돌아보기를 하지 못했다: " + str(exc),
-                                 directive="하던 방향으로 진행한다.")
+                                 directive="방향에 대한 판단을 받지 못했다. 하던 방향으로 진행하고, 최종 보고에는 "
+                                           "이 차례의 되돌아보기가 이루어지지 않았다고 적는다.")
         finally:
             with controller.lock:
                 controller.executor_paused = paused
@@ -445,7 +471,7 @@ def _drop_own_notice(controller):
 def _unanswered(state):
     """하네스가 대신 되돌아본 판단 가운데 실행자가 아직 답으로 받지 못한 마지막 것."""
     row = state["memo"][-1] if state["memo"] else None
-    return row if row and row["by"] == "harness" and not row.get("answered") else None
+    return row if row and row["by"] == "harness" and not row.get("answered") and not row.get("failed") else None
 
 
 def nudge(controller, state, calls):
@@ -539,6 +565,11 @@ def final_check(runner, controller, message, response, history, *, collect, imag
         state = _state(controller)
         if (state["depth"] <= 0 or not state["cfg"]["final_check"] or state["final_done"]
                 or controller.store.cost["execution_calls"] < 1 or controller.cancelled()):
+            return response
+        if getattr(controller, "evaluation_enabled", False):
+            # 독립 검토가 곧바로 이어진다. 방향이 틀렸다면 결과가 목표에 맞지 않아 평가가 잡는다.
+            state["final_done"] = True
+            controller.log("deep.final_skipped", role="harness", reason="독립 검토가 이어진다")
             return response
         state["final_done"] = True
         from supervisor_interventions import review_findings

@@ -196,6 +196,49 @@ def test_supported_workspace_capture_read_question_submit_review_roundtrip(works
     assert current() is None
 
 
+def test_database_query_word_declares_its_path_is_not_a_document():
+    """DB 조회 낱말의 path 는 조회 대상이다. 그 선언이 사전에서 빠지면 조회마다 DB 사본을 뜨게 된다."""
+    from ibl_access import load_nodes_raw
+    assert load_nodes_raw()['nodes']['sense']['actions']['sqlite'].get('research_snapshot') is False
+
+
+def test_workspace_token_path_and_large_file_do_not_break_preservation(workspace, monkeypatch):
+    """에피소드 6119: `~workspace/…` 경로를 사람의 홈으로 풀려다 난 예외가 그 연구의 조회를 전부 막았다.
+
+    경로 값은 단일 해소점으로 펴고, 조회 대상인 큰 파일은 통째로 사본을 뜨지 않는다.
+    """
+    import research_capture
+    from research_context import observe
+    runner, path = workspace
+    monkeypatch.setattr(research_capture, 'schedule_index', lambda path: None)
+    body = path / 'body'
+    (body / 'data').mkdir(parents=True)
+    monkeypatch.setenv('INDIEBIZ_BASE_PATH', str(body))
+    small, big = body / 'data' / 'small.db', body / 'data' / 'big.db'
+    small.write_bytes(b'x' * 10)
+    big.write_bytes(b'y' * 200)
+    monkeypatch.setattr(research_capture, 'SNAPSHOT_MAX_BYTES', 100)
+    config = {'tool': 'sqlite_op', 'router': 'handler'}
+    with TurnResearch() as turn:
+        turn.activate(runner, {'_research_plan': {'path': 'plan.md'}}, '연구')
+        ctx = current()
+        kept = observe(config, {'op': 'tables', 'path': '~workspace/data/small.db'}, {'tables': ['a']})
+        assert not ctx.get('capture_failed')
+        assert len(kept['research_materials']) == 2                       # 호출 결과 + 가리킨 파일의 사본
+        skipped = observe(config, {'op': 'tables', 'path': '~workspace/data/big.db'}, {'tables': ['b']})
+        assert not ctx.get('capture_failed')
+        assert len(skipped['research_materials']) == 1                    # 결과만 보존하고 큰 파일은 뜨지 않는다
+        before(config, {'op': 'tables', 'path': str(big)})                # 이후 조회가 막히지 않는다
+        # 조회 대상이라고 선언한 액션은 작은 파일도 사본을 뜨지 않는다. 결과가 경로를 되적어도 같다.
+        queried = observe({**config, 'research_snapshot': False},
+                          {'op': 'tables', 'path': '~workspace/data/small.db'}, {'tables': ['c'], 'path': str(small)})
+        assert not ctx.get('capture_failed') and len(queried['research_materials']) == 1
+        with ResearchStore(path).connect() as db:
+            rows = [r[0] for r in db.execute("SELECT payload FROM research_events WHERE kind='capture.skipped'")]
+        assert len(rows) == 1 and 'too_large' in rows[0] and 'big.db' in rows[0]
+        list(turn.events(iter([{'type': 'final', 'content': '완료'}])))
+
+
 if __name__ == '__main__':
     import pytest
     raise SystemExit(pytest.main([__file__]))

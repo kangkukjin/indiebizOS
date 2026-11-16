@@ -113,6 +113,8 @@ def test_executor_is_told_the_first_step_and_how_to_come_back():
     block = de.execution_block({"task_framing": "x", "deep_execution": 2, "first_step": "현황부터 본다"})
     assert "심층실행 2단계" in block and "현황부터 본다" in block
     assert 'kind="checkpoint"' in block and "evidence" in block and "progress" in block
+    # 준비만 마치고 돌아오면 의식이 다시 볼 것이 없다(에피소드 6115·6117·6119). 첫 걸음의 끝은 첫 결과다.
+    assert "준비만 마친 때는 아직 돌아갈 때가 아니다" in block and "첫 결과" in block
     assert de.execution_block({"task_framing": "x", "deep_research": True}) == ""
     assert de.execution_block({}) == ""
 
@@ -314,6 +316,50 @@ def test_final_check_without_findings_or_without_work_passes_through(tmp_path, m
     with pytest.raises(StopIteration) as done:
         next(checked)
     assert done.value.value == "초안" and [phase for phase, _ in seen] == ["review"]
+
+
+def test_reflection_that_did_not_happen_is_not_reported_as_keep(tmp_path, monkeypatch, scope):
+    """에피소드 6119: 예산 심사에서 불리지 않은 되돌아보기가 빈 답을 냈고 그것이 KEEP 으로 전달됐다."""
+    runner, controller = make(tmp_path, monkeypatch, scope,
+                              framing={"task_framing": "문제", "first_step": "먼저 현황을 본다", "deep_execution": 2})
+    script(monkeypatch, {})                                            # 의식이 아무 답도 내지 못한다
+    controller.call_stop = {"kind": "budget", "reason": "의식 호출 토큰 예산을 소진했습니다"}
+    work(controller, 1, 3)
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "알게 된 것", "progress": "다음에 할 것"}))
+    assert told["checkpoint"] is False and "verdict" not in told
+    assert "토큰 예산" in told["reason"] and "이루어지지 않았다고 적는다" in told["directive"]
+    logged = [json.loads(line) for path in (tmp_path / "store").rglob("events.jsonl")
+              for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    kinds = [row["kind"] for row in logged]
+    assert "deep.error" in kinds and "deep.reflection" not in kinds
+    memo = de.memo_text(controller._deep, controller.framing)
+    assert "되돌아보기 1/2" in memo and "이루어지지 않음" in memo          # 끝내기 전 확인이 이 사실을 읽는다
+
+
+def test_ordered_reflections_are_not_starved_by_the_planning_share(tmp_path, monkeypatch, scope):
+    """재규정이 계획 몫을 다 써도 사람이 주문한 되돌아보기는 불린다(6119: 재규정 두 번이 16만 8천 토큰)."""
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    controller.phase_usage["plan"] = {"input": 10 ** 9, "output": 10 ** 9}
+    assert controller.model_admitted("reflect") is True
+    assert controller.model_admitted("plan") is False and controller.model_admitted("reframe") is False
+
+
+def test_final_check_steps_aside_when_independent_review_follows(tmp_path, monkeypatch, scope):
+    """평가가 곧바로 이어지는 턴에서는 끝 확인을 부르지 않는다(에피소드 6119 에서 둘이 연달아 돌았다)."""
+    runner, controller = make(tmp_path, monkeypatch, scope,
+                              framing={"task_framing": "문제", "first_step": "먼저 현황을 본다",
+                                       "independent_review": True})
+    seen = script(monkeypatch, {"review": [json.dumps({"status": "REWORK", "reason": "x", "findings": [
+        {"reason": "r", "instruction": "i", "scope": "goal"}]})]})
+    work(controller, 1, 2)
+    assert controller.evaluation_enabled is True
+    steps = de.final_check(runner, controller, "목표 원문", "초안", [], collect=lambda e: None)
+    with pytest.raises(StopIteration) as done:
+        next(steps)
+    assert done.value.value == "초안" and seen == []                  # 의식 모델을 부르지 않았다
+    logged = [json.loads(line)["kind"] for path in (tmp_path / "store").rglob("events.jsonl")
+              for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert "deep.final_skipped" in logged and "deep.final_check" not in logged
 
 
 def test_order_and_first_step_belong_to_their_turn():

@@ -317,7 +317,8 @@ def notebook_operation(params):
             if str(path).startswith(('http://', 'https://')):
                 result = lib.add_url(path)
             else:
-                path = Path(path).expanduser()
+                from runtime_utils import expand_body_path
+                path = Path(expand_body_path(path))
                 result = lib.add_file(path if path.is_absolute() else store.path / path)
         elif params.get('text'):
             result = lib.capture(params['text'], title=params.get('title') or '사용자 자료', kind='user')
@@ -337,7 +338,8 @@ def prepare_attachments(store, tid, attachments, request):
     for i, item in enumerate(attachments):
         if not isinstance(item, dict) or not item.get('path'):
             raise ValueError('첨부파일 경로가 필요합니다')
-        path = Path(item['path']).expanduser().resolve(strict=True)
+        from runtime_utils import expand_body_path
+        path = Path(expand_body_path(item['path'])).resolve(strict=True)
         if path.stat().st_size > 25 * 1024 * 1024:
             raise ValueError('첨부파일은 25MB 이하로 보내세요')
         receipt = lib.add_file(path, title=str(item.get('name') or path.name), run='attachment:' + tid + ':' + request, call=str(i))

@@ -234,9 +234,12 @@ class Supervisor:
         """입장 심사와 진행 중 취소를 분리한다. 기본 배분은 소프트 한도다."""
         if self.config["budget_mode"] == "hard":
             return self.model_budget_available()
-        if phase in {"final", "receipt", "plan_completion"}:
+        if phase in {"final", "receipt", "plan_completion", "reflect"}:
             # 필수 종결 호출은 탐색의 soft 배분으로 막지 않는다. 최종 검수는
             # 결함 보완은 max_repairs, 근거 회수는 새 구간·작업 예산으로 제한한다.
+            # 심층실행의 되돌아보기(reflect)는 사람이 주문한 횟수이고 그 횟수가 곧 상한이다. 재규정이
+            # 계획 몫을 다 썼다고 건너뛰지 않는다(2026-11-16, 에피소드 6119: 재규정 두 번이 16만 8천
+            # 토큰을 써서 둘째 되돌아보기가 불리지 않았다).
             return True
         bucket = "review" if phase == "review" else "plan"
         spent = self.phase_usage.get(bucket, {})

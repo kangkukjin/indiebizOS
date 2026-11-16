@@ -38,15 +38,37 @@ incident_assessments(incident_ref, incident_revision, disposition, basis_refs, r
 """
 
 
+DECISION_STATUSES = {"APPROVED", "REWORK", "UNKNOWN", "CONTINUE"}
+
+
+def _json_objects(text):
+    """글 안에 놓인 JSON 객체를 앞에서부터 읽는다(안쪽 객체는 바깥 객체에 딸려 읽힌다)."""
+    decoder, found, at = json.JSONDecoder(), [], text.find("{")
+    while at != -1:
+        try:
+            value, end = decoder.raw_decode(text, at)
+        except ValueError:
+            at = text.find("{", at + 1)
+            continue
+        if isinstance(value, dict):
+            found.append(value)
+        at = text.find("{", end)
+    return found
+
+
 def parse_decision(raw):
-    text = (raw or "").strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    try:
-        value = json.loads(text)
-    except (ValueError, TypeError):
+    """의식의 답에서 판정을 읽는다. 판정 앞뒤에 설명 문단이나 코드 울타리가 붙어도 판정은 읽는다.
+
+    2026-11-16, 에피소드 6133: 의식이 설명 네 문단을 먼저 쓰고 판정(REWORK, 지적 3건)을 울타리 안에
+    붙였다. 답이 울타리로 시작할 때만 벗기던 해석이 실패해 지적이 버려지고 초안이 그대로 전달됐다.
+    (그 호출은 심층실행의 끝내기 전 확인이었고 같은 날 없앴다. 실행 중 감독 검토가 같은 해석을 쓴다.)
+    판정이 여럿이면 마지막 것을 따른다(앞의 것은 예시·인용일 수 있다).
+    """
+    found = _json_objects((raw or "").strip())
+    if not found:
         return {"status": "UNKNOWN", "reason": "의식 판정 JSON을 해석할 수 없습니다"}
-    if not isinstance(value, dict) or value.get("status") not in {"APPROVED", "REWORK", "UNKNOWN", "CONTINUE"}:
+    value = next((v for v in reversed(found) if v.get("status") in DECISION_STATUSES), None)
+    if value is None:
         return {"status": "UNKNOWN", "reason": "의식 판정이 없거나 유효하지 않습니다"}
     if not isinstance(value.get("reason"), str) or not value["reason"].strip():
         return {"status": "UNKNOWN", "reason": "의식 판정에 근거가 없습니다"}

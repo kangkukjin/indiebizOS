@@ -45,3 +45,8 @@ posts·search·latest·stats는 로컬 사본을 읽는다. `as_of`는 마지막
 `latest`는 파일을 만들지 않는다. vault 파일이 없으면 오류를 반환하고 `op:"vault",mode:"export"`를 안내한다.
 목록과 검색의 category는 없는 폴더가 하나라도 있으면 오류다. 정상 폴더의 검색 결과 0건과 구별한다.
 stats는 수집 글·요약 건수이며 방문자 수나 조회수를 측정하지 않는다.
+
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-11-16 실측: '3D 블로그 소원마당'은 [self:blog] 글 데이터에 없다. 별도 웹앱(data/outputs/3d-blog, Astro+three.js, Cloudflare Worker 배포)이라 blog 검색·폴더 경로로는 찾을 수 없다.

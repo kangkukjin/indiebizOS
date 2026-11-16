@@ -1171,6 +1171,56 @@ python_libraries:
   registered_at: '2026-09-05T13:46:00'
   registration_updated_at: '2026-11-03T08:38:41.533445+00:00'
   timeout: 900
+소원마당glTF:
+  callable_contract:
+    adapter:
+      protocol: registered-json/1
+    effects:
+    - unknown
+    params:
+      apply: Bool
+      architect: Text
+      base: Text
+      build: Bool
+      collection: Text
+      fence: Text
+      glb: Text
+      ground: Text
+      input: Text
+      license: Text
+      maker: Text
+      name: Text
+      names: List<Text>
+      note: Text
+      op: Text
+      out: Text
+      plot: Number
+      remove: Bool
+      rot: Number
+      script: Text
+      source: Text
+      tag: Text
+      title: Text
+      tool: Text
+      url: Text
+      yard: List<Text>
+    required:
+    - op
+    result:
+      ok: Bool
+      op: Text
+    version: 1
+  created_at: '2026-11-16T04:36:37.715050+00:00'
+  description: 소원마당(3D 블로그) 집 작업 묶음. op build/pack/register/verify=glTF 건물 만들기·압축·게시판
+    등록·검증 / snapshot·checks=기준 사본과 check_wish_*.mjs 전부 / lines·lines_live=선 부재·다층
+    화면 검사 / make{script}=레시피 모음 만들기(scripts/make_*.mjs) / architecture{collection?,apply?,base?}=모음(design/*.json)
+    게시판 등록(재사용·재조회 대조·터 불변, 기본 dry-run) / board_check{names,plot?,base?}=게시판 항목 운영
+    표시 확인(plot 주면 지어 보고 원래 집으로 되돌림). 결과 JSON 에 operation_outcome.
+  file: blog3d_gltf.py
+  interpreter: python
+  registered_at: '2026-11-16T04:36:37.715043+00:00'
+  registration_updated_at: '2026-11-16T06:02:45.263419+00:00'
+  timeout: 1200
 수리적용상태:
   callable_contract:
     adapter:

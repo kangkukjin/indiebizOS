@@ -831,11 +831,6 @@ class CognitivePipelineMixin:
                     _capability_guard, self, message, final_content, eval_tool_calls, history,
                     collect=_collect, images=images, supervisor=_supervisor,
                     allowed_set=allowed_set, cancel_check=cancel_check)
-                # 심층실행(기본 꺼짐): 끝내기 직전 한 번 확인하고, 교정이 있으면 실행자를 한 번 잇는다.
-                from deep_execution import final_check as _deep_final_check
-                final_content = yield from _deep_final_check(
-                    self, _supervisor, message, final_content, history,
-                    collect=_collect, images=images, cancel_check=cancel_check)
 
             if notice := pending_response():
                 yield {'type': 'final', 'content': notice}

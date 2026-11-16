@@ -1,4 +1,4 @@
-"""심층실행 — 단계의 출처, 실행자가 돌아오는 되돌아보기, 작업 메모, 돌아오지 않을 때의 상한, 끝내기 전 확인."""
+"""심층실행 — 단계의 출처, 실행자가 돌아오는 되돌아보기, 작업 메모, 돌아오지 않을 때의 상한, 끝에서는 의식을 부르지 않는 것."""
 import json
 import threading
 import time
@@ -103,10 +103,6 @@ def test_switched_off_leaves_the_turn_as_before(tmp_path, monkeypatch, scope):
     assert seen == [] and controller.pending is None
     told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "알게 된 것"}))
     assert told["checkpoint"] is False and seen == []
-    steps = de.final_check(runner, controller, "목표 원문", "초안", [], collect=lambda e: None)
-    with pytest.raises(StopIteration) as done:
-        next(steps)
-    assert done.value.value == "초안" and seen == []
 
 
 def test_executor_is_told_the_first_step_and_how_to_come_back():
@@ -271,53 +267,6 @@ def test_hold_waits_only_while_reflecting(tmp_path, monkeypatch, scope):
     assert 0.3 <= time.monotonic() - started < 1.9                    # 끝나면 풀리고, 상한(2초) 전에 돌아온다
 
 
-def test_final_check_resumes_executor_once_and_takes_rewritten_response(tmp_path, monkeypatch, scope):
-    resumed = []
-
-    def stream(**kw):
-        resumed.append(kw["message_content"])
-        yield {"type": "tool_start", "id": "t1", "name": "Bash", "input": {"command": "true"}}
-        yield {"type": "tool_result", "id": "t1", "result": "ok"}
-        yield {"type": "final", "content": "고친 응답"}
-    runner, controller = make(tmp_path, monkeypatch, scope, stream=stream)
-    seen = script(monkeypatch, {"reflect": ["길", KEEP], "review": [json.dumps({
-        "status": "REWORK", "reason": "찾아보지 않고 없다고 했다",
-        "findings": [{"reason": "음원 조사가 없다", "instruction": "후보를 확인하라", "scope": "goal"}]})]})
-    work(controller, 1, 1)
-    controller.reframe({"kind": "checkpoint", "evidence": "알게 된 것"})
-    collected, events = [], []
-    steps = de.final_check(runner, controller, "목표 원문", "초안", [], collect=collected.append)
-    with pytest.raises(StopIteration) as done:
-        while True:
-            events.append(next(steps))
-    assert done.value.value == "고친 응답"
-    review = [prompt for phase, prompt in seen if phase == "review"]
-    assert len(review) == 1 and "response_draft" in review[0] and "초안" in review[0]
-    assert "작업 메모" in review[0]                                   # 끝내기 전 확인이 메모를 읽는다
-    assert len(resumed) == 1 and "후보를 확인하라" in resumed[0] and "끝내기 전 확인" in resumed[0]
-    assert [e["type"] for e in events] == ["tool_start", "tool_result"]  # 초안 글은 흘리지 않는다
-    assert any(e.get("type") == "final" for e in collected)
-    again = de.final_check(runner, controller, "목표 원문", "고친 응답", [], collect=collected.append)
-    with pytest.raises(StopIteration) as second:
-        next(again)
-    assert second.value.value == "고친 응답" and len(resumed) == 1    # 다시 검토하지 않는다
-
-
-def test_final_check_without_findings_or_without_work_passes_through(tmp_path, monkeypatch, scope):
-    runner, controller = make(tmp_path, monkeypatch, scope)
-    seen = script(monkeypatch, {"review": [json.dumps({"status": "CONTINUE", "reason": "요청과 맞는다"})]})
-    quiet = de.final_check(runner, controller, "목표 원문", "초안", [], collect=lambda e: None)
-    with pytest.raises(StopIteration) as done:
-        next(quiet)
-    assert done.value.value == "초안" and seen == []                  # 도구를 한 번도 안 쓴 답에는 확인이 없다
-    work(controller, 1, 1)
-    controller._deep["final_done"] = False
-    checked = de.final_check(runner, controller, "목표 원문", "초안", [], collect=lambda e: None)
-    with pytest.raises(StopIteration) as done:
-        next(checked)
-    assert done.value.value == "초안" and [phase for phase, _ in seen] == ["review"]
-
-
 def test_reflection_that_did_not_happen_is_not_reported_as_keep(tmp_path, monkeypatch, scope):
     """에피소드 6119: 예산 심사에서 불리지 않은 되돌아보기가 빈 답을 냈고 그것이 KEEP 으로 전달됐다."""
     runner, controller = make(tmp_path, monkeypatch, scope,
@@ -333,7 +282,7 @@ def test_reflection_that_did_not_happen_is_not_reported_as_keep(tmp_path, monkey
     kinds = [row["kind"] for row in logged]
     assert "deep.error" in kinds and "deep.reflection" not in kinds
     memo = de.memo_text(controller._deep, controller.framing)
-    assert "되돌아보기 1/2" in memo and "이루어지지 않음" in memo          # 끝내기 전 확인이 이 사실을 읽는다
+    assert "되돌아보기 1/2" in memo and "이루어지지 않음" in memo          # 다음 되돌아보기가 이 사실을 읽는다
 
 
 def test_ordered_reflections_are_not_starved_by_the_planning_share(tmp_path, monkeypatch, scope):
@@ -344,22 +293,36 @@ def test_ordered_reflections_are_not_starved_by_the_planning_share(tmp_path, mon
     assert controller.model_admitted("plan") is False and controller.model_admitted("reframe") is False
 
 
-def test_final_check_steps_aside_when_independent_review_follows(tmp_path, monkeypatch, scope):
-    """평가가 곧바로 이어지는 턴에서는 끝 확인을 부르지 않는다(에피소드 6119 에서 둘이 연달아 돌았다)."""
-    runner, controller = make(tmp_path, monkeypatch, scope,
-                              framing={"task_framing": "문제", "first_step": "먼저 현황을 본다",
-                                       "independent_review": True})
-    seen = script(monkeypatch, {"review": [json.dumps({"status": "REWORK", "reason": "x", "findings": [
-        {"reason": "r", "instruction": "i", "scope": "goal"}]})]})
-    work(controller, 1, 2)
-    assert controller.evaluation_enabled is True
-    steps = de.final_check(runner, controller, "목표 원문", "초안", [], collect=lambda e: None)
-    with pytest.raises(StopIteration) as done:
-        next(steps)
-    assert done.value.value == "초안" and seen == []                  # 의식 모델을 부르지 않았다
-    logged = [json.loads(line)["kind"] for path in (tmp_path / "store").rglob("events.jsonl")
-              for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    assert "deep.final_skipped" in logged and "deep.final_check" not in logged
+PROSE_FIRST = """I'm asking for rework on the report. The work itself is done, but the draft contradicts itself.
+
+The draft has two problems to fix:
+1. **Placeholder sentences contradict the code.** `src/wish/plan.js:10` sets `COLS=20, ROWS=24`.
+2. Call it as [self:script]{id:"소원마당glTF", args:{op:"board_check"}} once.
+
+```json
+{"status":"REWORK","reason":"보고 초안이 스스로 어긋난다","findings":[{"reason":"측정값과 표의 숫자가 다르다","instruction":"숫자를 다시 재서 표에 넣어라","scope":"goal"}]}
+```
+"""
+
+
+def test_decision_is_read_from_the_shapes_the_model_actually_writes():
+    from supervisor_runtime import parse_decision
+    plain = json.dumps({"status": "CONTINUE", "reason": "요청과 맞는다"})
+    assert parse_decision(plain)["status"] == "CONTINUE"
+    assert parse_decision("```json\n" + plain + "\n```")["status"] == "CONTINUE"
+    assert parse_decision("```json\n" + plain + "\n```\n덧붙임: 방향은 그대로다.")["status"] == "CONTINUE"
+    assert parse_decision("방향은 맞다. " + plain + " 이상이다.")["reason"] == "요청과 맞는다"
+    rework = parse_decision(PROSE_FIRST)
+    assert rework["status"] == "REWORK" and rework["findings"][0]["scope"] == "goal"
+    # 판정이 여럿이면 마지막 것 — 앞의 것은 예시나 인용일 수 있다
+    later = json.dumps({"status": "REWORK", "reason": "숫자가 다르다", "instruction": "다시 재라"})
+    assert parse_decision("형식은 " + plain + " 와 같다.\n\n" + later)["status"] == "REWORK"
+    # 판정이 아닌 것은 전과 같이 UNKNOWN 이고, 사유가 갈린다
+    assert parse_decision("")["reason"] == "의식 판정 JSON을 해석할 수 없습니다"
+    assert parse_decision("방향은 맞다고 본다.")["reason"] == "의식 판정 JSON을 해석할 수 없습니다"
+    assert parse_decision('{"verdict": "ok"}')["reason"] == "의식 판정이 없거나 유효하지 않습니다"
+    assert parse_decision('{"status": "MAYBE", "reason": "x"}')["reason"] == "의식 판정이 없거나 유효하지 않습니다"
+    assert parse_decision('{"status": "REWORK"}')["reason"] == "의식 판정에 근거가 없습니다"
 
 
 def test_order_and_first_step_belong_to_their_turn():
@@ -367,8 +330,10 @@ def test_order_and_first_step_belong_to_their_turn():
     assert "deep_execution" in STRIP_ALWAYS and "first_step" in STRIP_ALWAYS
 
 
-def test_real_pipeline_checks_before_finishing_and_delivers_one_rewritten_final(tmp_path, monkeypatch, scope):
-    """운영 기본(켜짐)에서 실제 파이프라인 본문이 끝내기 전 확인을 거쳐 최종 응답을 한 번만 낸다."""
+def test_real_pipeline_ends_without_calling_consciousness_again(tmp_path, monkeypatch, scope):
+    """운영 기본(켜짐)에서 실제 파이프라인 본문은 실행자의 최종 응답을 그대로 한 번 낸다. 끝에서 의식을
+    따로 부르지 않는다(2026-11-16 사용자 결정: 끝내기 전 확인을 없앴다 — 실행 기록 전체를 읽는 호출이
+    14번에 입력 211만 토큰을 쓰고 보완 요구는 1번이었으며, 결과를 보는 일은 선택된 독립 검토가 맡는다)."""
     import associative_recall
     from agent_pipeline import CognitivePipelineMixin
     _, controller = make(tmp_path, monkeypatch, scope)
@@ -389,22 +354,19 @@ def test_real_pipeline_checks_before_finishing_and_delivers_one_rewritten_final(
 
     def execute(**kwargs):
         requests.append(str(kwargs["message_content"]))
-        resumed = "끝내기 전 확인" in requests[-1]
         yield {"type": "tool_start", "id": f"t{len(requests)}", "name": "Bash", "input": {"command": "true"}}
         yield {"type": "tool_result", "id": f"t{len(requests)}", "name": "Bash", "result": "ok"}
-        yield {"type": "final", "content": "고친 응답" if resumed else "초안"}
+        yield {"type": "final", "content": "초안"}
 
     runner = Runner()
     runner.ai = SimpleNamespace(_provider=None, process_message_stream=execute)
     controller.runner = runner
     monkeypatch.setattr("supervision_bus.current", lambda: controller)
     monkeypatch.setattr("reframe.open_turn", lambda *a, **kw: None)
-    seen = script(monkeypatch, {"review": [json.dumps({
-        "status": "REWORK", "reason": "확인 없이 끝냈다",
-        "findings": [{"reason": "결과를 다시 읽지 않았다", "instruction": "결과를 확인하라", "scope": "goal"}]})]})
+    seen = script(monkeypatch, {})
     events = list(runner._cognitive_stream_body("요청", []))
     assert not [e for e in events if e["type"] == "error"], events
     finals = [e["content"] for e in events if e["type"] == "final"]
-    assert finals == ["고친 응답"] and saved == finals            # 초안은 나가지 않고 고친 응답이 한 번 나간다
-    assert len(requests) == 2 and "결과를 확인하라" in requests[1]  # 실행자를 한 번만 이었다
-    assert [phase for phase, _ in seen] == ["review"]
+    assert finals == ["초안"] and saved == finals                  # 실행자의 응답이 그대로 한 번 나간다
+    assert len(requests) == 1 and seen == []                       # 실행자를 다시 잇지 않고 의식도 부르지 않는다
+    assert not hasattr(de, "final_check") and "final_check" not in de.DEFAULTS

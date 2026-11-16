@@ -16,10 +16,11 @@
   대신 되돌아보고 한 번뿐인 횟수를 써 버린 일이 있었다 — 에피소드 6110.)
 - 갈래를 그만두라는 지시는 하지 않는다(시험 T1에서 그 지시는 16건 중 9건이 틀렸다). 값이
   의심되는 일은 질문으로 전한다.
-- 착수 메모와 되돌아보기는 작업 메모 하나에 쌓인다. 다음 되돌아보기와 끝내기 전 확인이 읽는다.
-- 끝내기 직전에 현행 감독 지문으로 한 번 확인하고, 교정이 있으면 실행자를 한 번 잇는다.
-  독립 검토(평가)가 선택된 턴에서는 건너뛴다. 끝 확인은 방향만 묻고 평가는 결과가 목표에 맞는지를
-  묻는데, 둘이 연달아 돌면 끝 확인이 겹친다(2026-11-16, 에피소드 6119: 끝 확인 17초 뒤 평가 14초).
+- 착수 메모와 되돌아보기는 작업 메모 하나에 쌓인다. 다음 되돌아보기가 읽는다.
+- 끝에서는 의식을 따로 부르지 않는다. 결과를 볼 필요가 있으면 의식이 규정 때 고른 독립 검토(평가)가
+  본다. (2026-11-16 사용자 결정: 처음에는 끝내기 직전에 실행 기록 전체를 의식에게 주고 한 번
+  확인했다. 14번 불려 입력 211만 토큰을 쓰고 보완 요구는 1번이었으며, 하는 일은 평가와 겹쳤다.
+  평가는 목표와 최종 결과만 받는다.)
 
 끄려면 world_pulse_config.json 의 conscious_supervisor.deep_execution.enabled 를 false 로 둔다.
 """
@@ -36,7 +37,6 @@ DEFAULTS = {
     "max_depth": 5,
     "ceilings": [16, 24, 32],  # 지난 되돌아보기 뒤 이만큼 호출이 지나도 돌아오지 않으면 돌아오라고 청한다
     "grace": 8,                # 청한 뒤에도 이만큼 더 지나면 하네스가 실행 기록으로 대신 되돌아본다
-    "final_check": True,
     "hold_s": 150,            # 하네스가 대신 되돌아보는 동안 실행자의 다음 도구 호출을 붙잡는 상한
     "result_chars": 2500,     # 하네스가 '알게 된 것'을 적을 때 호출 결과마다 보는 앞부분
     "trace_chars": 90000,
@@ -190,8 +190,7 @@ def _state(controller):
                     and getattr(controller, "request_intent", "task") == "task")
         state = controller._deep = {"cfg": cfg, "depth": depth_of(controller.framing, cfg) if eligible else 0,
                                     "done": 0, "last_calls": 0, "next": "", "memo": [],
-                                    "nudged_at": None,
-                                    "final_done": False, "busy": threading.Event()}
+                                    "nudged_at": None, "busy": threading.Event()}
         if state["depth"]:
             controller.log("deep.started", role="harness", depth=state["depth"], ceilings=cfg["ceilings"])
     return state
@@ -219,7 +218,7 @@ def _ceiling(cfg, index):
 
 
 def memo_text(state, framing):
-    """착수와 지난 되돌아보기를 한 문서로. 다음 되돌아보기와 끝내기 전 확인이 읽는다."""
+    """착수와 지난 되돌아보기를 한 문서로. 다음 되돌아보기가 읽는다."""
     framing = framing or {}
     lines = [f"# 작업 메모 (심층실행 {state['depth']}단계)", "", "## 착수"]
     first = str(framing.get("first_step") or "").strip()
@@ -325,7 +324,7 @@ def _round(controller, state, *, note, by, stated=""):
                                               actions=actions or "(아직 없음)", stated=stated or "(적지 않음)",
                                               round=state["done"], depth=state["depth"]))
     except Exception as exc:
-        # 이루어지지 않은 차례를 메모에 남긴다. 다음 되돌아보기와 끝내기 전 확인이 이 사실을 읽는다.
+        # 이루어지지 않은 차례를 메모에 남긴다. 다음 되돌아보기가 이 사실을 읽는다.
         state["memo"].append({"round": state["done"], "by": by, "calls": k, "failed": str(exc)})
         _save_memo(controller, state)
         raise
@@ -543,80 +542,3 @@ def hold(controller, name=""):
                 row["answered"] = True  # 이 호출 바로 앞에서 그 판단이 전달된다
     except Exception:
         return
-
-
-# ── 끝내기 직전 ────────────────────────────────────────────────────────────────
-
-RESUME = """[심층실행 — 끝내기 전 확인]
-방향 담당자가 지금까지의 작업과 응답 초안을 사용자 요청과 대조했다. 아래 지적을 현재 상태에 비춰 확인한다.
-맞는 것은 고치거나 마저 한다. 고치지 않는 것은 이유와 남은 한계를 밝힌다. 이미 끝낸 부작용은 반복하지 않는다.
-새 조사를 크게 열지 말고 지적에 필요한 일만 한다. 끝나면 사용자에게 전할 최종 응답 전체를 다시 쓴다.
-
-"""
-
-
-def final_check(runner, controller, message, response, history, *, collect, images=None, cancel_check=None):
-    """끝내기 직전 한 번. 교정이 있으면 실행자를 한 번 잇는다. 해당 없으면 응답을 그대로 돌려준다."""
-    if False:
-        yield  # 제너레이터로 만든다
-    try:
-        if controller is None or not getattr(controller, "enabled", False) or not (response or "").strip():
-            return response
-        state = _state(controller)
-        if (state["depth"] <= 0 or not state["cfg"]["final_check"] or state["final_done"]
-                or controller.store.cost["execution_calls"] < 1 or controller.cancelled()):
-            return response
-        if getattr(controller, "evaluation_enabled", False):
-            # 독립 검토가 곧바로 이어진다. 방향이 틀렸다면 결과가 목표에 맞지 않아 평가가 잡는다.
-            state["final_done"] = True
-            controller.log("deep.final_skipped", role="harness", reason="독립 검토가 이어진다")
-            return response
-        state["final_done"] = True
-        from supervisor_interventions import review_findings
-        from supervisor_runtime import invoke, parse_decision
-        with controller.review_lock:
-            controller.executor_paused = True  # 실행자가 멈춘 때다. 필요한 원문을 읽을 수 있게 한다
-            try:
-                k, errors, digest_text, _ = trace_of(controller, state["cfg"], per_result=300)
-                packet = {"trigger": "completion", **controller.state(),
-                          "tool_calls": k, "tool_failures": errors,
-                          "events_digest": digest_text[:state["cfg"]["trace_chars"]],
-                          "deep_memo": memo_text(state, controller.framing) if state["memo"] else "",
-                          "response_draft": response[:20000]}
-                decision = parse_decision(invoke(controller, json.dumps(packet, ensure_ascii=False, default=str),
-                                                 phase="review"))
-            finally:
-                controller.phase = "execute"
-                controller.executor_paused = False
-        rows = [r for r in review_findings(decision) if r["instruction"].strip()] if decision["status"] == "REWORK" else []
-        controller.log("deep.final_check", role="consciousness", status=decision["status"], findings=len(rows),
-                       reason=decision.get("reason", ""))
-        if not rows or controller.cancelled():
-            return response
-        from task_continuation import execution_available
-        if not execution_available(controller):
-            return response
-        instruction = RESUME + "\n".join(f"- {r['reason']}\n  → {r['instruction']}" for r in rows)
-        from repair_readiness import execution_stream
-        stream = execution_stream(runner.ai.process_message_stream(
-            message_content=instruction, history=history, images=images, cancel_check=cancel_check))
-    except Exception as exc:  # 확인이 실패해도 실행자의 응답은 그대로 전달한다
-        try:
-            controller.log("deep.error", role="consciousness", stage="final", error=str(exc))
-        except Exception:
-            pass
-        return response
-    candidate = ""
-    try:
-        for event in stream:
-            collect(event)
-            controller.observe_native(event)
-            if event.get("type") == "final":
-                if (event.get("content") or "").strip():
-                    candidate = event["content"]
-            elif event.get("type") != "text":
-                yield event
-    finally:
-        stream.close()
-    controller.log("deep.final_resumed", role="harness", rewritten=bool(candidate))
-    return candidate or response

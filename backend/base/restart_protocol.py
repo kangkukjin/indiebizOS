@@ -17,6 +17,11 @@ def control_dir(base):
     return Path(base) / "data" / "restart_control"
 
 
+def pycache_dir(base):
+    """세대별 바이트코드 캐시 뿌리. 하위 폴더 이름 = 세대 code_digest(=generations/ 하위 이름)."""
+    return control_dir(base) / "pycache"
+
+
 def atomic_json(path, value):
     """동일 디렉토리 rename + 파일/디렉토리 fsync. 비밀을 담는 파일은 0600."""
     path = Path(path)

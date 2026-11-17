@@ -10,7 +10,7 @@ import urllib.request
 from pathlib import Path
 
 import psutil
-from restart_protocol import atomic_json, control_dir, read_json
+from restart_protocol import atomic_json, control_dir, pycache_dir, read_json
 
 IS_WINDOWS = os.name == "nt"
 
@@ -129,7 +129,7 @@ class ProcessAdapter:
             import generation_store
             root = Path(gen_dir)
             python = generation_store.python_executable(root)
-            cache = self.home / "pycache" / str(state.get("code_digest") or "unknown")
+            cache = pycache_dir(self.base) / str(state.get("code_digest") or "unknown")
             env.update(INDIEBIZ_CODE_ROOT=str(root), INDIEBIZ_SOURCE_ROOT=str(self.code_root),
                        PYTHONPYCACHEPREFIX=str(cache))
             env.pop("PYTHONDONTWRITEBYTECODE", None)

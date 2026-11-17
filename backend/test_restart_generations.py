@@ -364,6 +364,22 @@ def test_generation_prune_keeps_active_previous_and_pending(setup):
     assert len(existing) <= 4
 
 
+def test_generation_prune_removes_orphan_pycache(setup):
+    """세대를 지우면 그 세대의 바이트코드 캐시(pycache/<code_digest>)도 거둔다 — 재기동마다 쌓이지 않는다."""
+    from restart_protocol import pycache_dir
+    ctl, adapter, clock = setup
+    for n in range(2, 7):
+        (ctl.base / "backend/app.py").write_text(f"value = {n}\n")
+        settle(ctl, clock); ticks(ctl, 12)
+        assert ctl.state["phase"] == "ACTIVE"
+        (pycache_dir(ctl.base) / ctl.state["code_digest"]).mkdir(parents=True, exist_ok=True)
+    (pycache_dir(ctl.base) / "unknown").mkdir(parents=True, exist_ok=True)
+    restart_candidates.prune(ctl.base, ctl.code_root, {ctl.state["generation_dir"]})
+    store = {p.name for p in restart_candidates.store_dir(ctl.base).iterdir() if p.is_dir()}
+    caches = {p.name for p in pycache_dir(ctl.base).iterdir() if p.is_dir()}
+    assert ctl.state["code_digest"] in caches
+    assert caches <= store and len(caches) <= 4
+
 def test_control_base_snapshot_verify_and_select(tmp_path):
     """G6: 정본의 제어 파일을 기반으로 봉인·검증하고, 실패한 기반은 이전 승인 기반으로 대신한다."""
     import control_base

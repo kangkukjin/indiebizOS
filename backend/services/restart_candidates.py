@@ -7,11 +7,12 @@
   - 복사 중 변경(CandidateChanged): 후보를 게시하지 않고 다음 tick 에 다시 회수한다.
   - 사전검사 실패: 그 원천 지문을 failed_sources 에 적고 현역을 유지한다. 같은 입력은 다시 시도하지 않는다.
 """
+import shutil
 import time
 from pathlib import Path
 
 import generation_store as gens
-from restart_protocol import control_dir
+from restart_protocol import control_dir, pycache_dir
 
 QUIET_S = 2.0            # 마지막 변경 관측 뒤 이만큼 조용해야 스냅샷한다(편집기의 다중 파일 저장 창)
 WATCH_INTERVAL_S = 2.0   # 정본 재고 주기
@@ -126,4 +127,34 @@ class Watcher:
 
 
 def prune(base, source_root, keep, log=lambda m: None):
-    return gens.prune(store_dir(base), keep, source_root=source_root, log=log)
+    removed = gens.prune(store_dir(base), keep, source_root=source_root, log=log)
+    prune_pycache(base, log=log)
+    return removed
+
+
+def prune_pycache(base, log=lambda m: None):
+    """남은 세대가 없는 바이트코드 캐시(pycache/<code_digest>)를 지운다.
+
+    워커는 세대마다 PYTHONPYCACHEPREFIX=pycache/<code_digest> 로 뜨므로(restart_process.spawn),
+    세대를 지울 때 캐시를 함께 거두지 않으면 재기동마다 한 벌(~120MB)씩 끝없이 쌓인다.
+    보존 기준은 세대 저장소에 남은 이름 — 현역·직전·후보·참조 중 세대는 gens.prune 이 이미 남긴다.
+    """
+    root = pycache_dir(base)
+    store = store_dir(base)
+    if not root.is_dir() or not store.is_dir():
+        return []
+    alive = {p.name for p in store.iterdir() if p.is_dir() and not p.name.startswith(".building-")}
+    removed, failed = [], []
+    for entry in root.iterdir():
+        if not entry.is_dir() or entry.name in alive:
+            continue
+        try:
+            shutil.rmtree(entry)
+            removed.append(entry.name)
+        except OSError as exc:
+            failed.append(f"{entry.name} ({type(exc).__name__}: {exc})")
+    if removed:
+        log(f"바이트코드 캐시 정리: {len(removed)}개")
+    if failed:
+        log(f"바이트코드 캐시 정리 실패: {failed}")
+    return removed

@@ -94,12 +94,43 @@ class Worker:
         except (ProcessLookupError, OSError):
             return
 
+    def leftovers(self):
+        """명령은 끝났는데 그 프로세스 무리에 아직 살아 있는 것들의 이름 — 명령이 백그라운드로 띄워 둔 하위 프로세스다.
+
+        곧이어 terminate가 이 무리를 끝낸다. 무엇을 끝냈는지 남기지 않으면 명령을 낸 쪽은 그 일이 계속 도는 줄
+        안다(2026-11-17, 에피소드 6192: `( 평가 & ); 다른 명령`으로 띄운 평가가 함께 끝났는데 결과에 그 말이
+        없어 실행자가 280초를 기다렸다). 무리가 비어 있으면 프로세스 표를 훑지 않는다. 프로세스 무리를 물을 수
+        없는 몸에서는 아무것도 주장하지 않는다.
+        """
+        killpg, getpgid = getattr(os, 'killpg', None), getattr(os, 'getpgid', None)
+        if killpg is None or getpgid is None or self.cancelled:
+            return []
+        try:
+            killpg(self.proc.pid, 0)   # 신호 없이 무리에 누가 남았는지만 묻는다
+        except OSError:
+            return []
+        names = []
+        try:
+            import psutil
+            for member in psutil.process_iter(['pid', 'name', 'status']):
+                try:
+                    if member.info['status'] != psutil.STATUS_ZOMBIE and getpgid(member.info['pid']) == self.proc.pid:
+                        names.append(member.info['name'] or '?')
+                except OSError:
+                    continue
+        except Exception:
+            return []
+        return names
+
     def launch(self):
         command = self.meta['argv']
         if self.meta.get('environment') == 'inherit':
-            env = dict(os.environ)
-            if self.meta.get('path'):
-                env['PATH'] = self.meta['path']
+            # 덮을 변수(사용자 셸의 환경)는 기록이 아니라 이 프로세스의 환경으로 건네받는다.
+            env = {k: v for k, v in os.environ.items() if k != 'INDIEBIZ_CHILD_ENV'}
+            try:
+                env.update(json.loads(os.environ.get('INDIEBIZ_CHILD_ENV') or '{}'))
+            except ValueError:
+                pass
         else:
             env = {k: v for k, v in os.environ.items()
                    if not any(s in k.upper() for s in ('TOKEN', 'API_KEY', 'SECRET', 'PASSWORD'))
@@ -164,12 +195,15 @@ class Worker:
         self.save()
         def reap():
             code = self.proc.wait()
+            left = self.leftovers()
             # Close escaped/background descendants before releasing ownership.
             self.terminate()
             for thread in threads: thread.join(timeout=2)
             if self.execution_stack is not None:
                 self.execution_stack.close()
             with self.condition:
+                if left:
+                    self.meta['left_behind'] = left_behind(left)
                 self.meta.update(state='cancelled' if self.cancelled else 'succeeded' if code == 0 else 'failed',
                                  exit_code=code, ended_at=time.time())
                 self.save(); self.condition.notify_all()
@@ -348,6 +382,15 @@ class Worker:
         if self.master is not None: os.close(self.master)
 
 
+def left_behind(names):
+    """명령과 함께 끝낸 하위 프로세스의 기록 — 수, 이름(여덟까지), 그리고 결과에 그대로 붙일 한 문단."""
+    shown = ', '.join(names[:8]) + (f' 외 {len(names) - 8}개' if len(names) > 8 else '')
+    return {'count': len(names), 'processes': names[:8],
+            'note': ('몸은 명령이 끝나면 그 명령이 띄워 둔 하위 프로세스도 함께 끝냅니다. '
+                     f'이번에는 {len(names)}개({shown})가 살아 있었고 함께 끝났습니다. '
+                     '그 자체를 명령으로 실행한 일은 제한 시간이 지나도 끝내지 않고 접수증으로 돌려줍니다.')}
+
+
 def snapshot(meta, events, end, cursor=0, limit=65536):
     start = events[0]['start'] if events else end
     position = max(cursor, start)
@@ -366,7 +409,7 @@ def snapshot(meta, events, end, cursor=0, limit=65536):
             'gap': {'from': cursor, 'to': start} if cursor < start else None,
             'exit_code': meta.get('exit_code'), 'accepted_at': meta['created_at'],
             'ended_at': meta.get('ended_at'), 'capabilities': meta['capabilities'],
-            **({k: meta[k] for k in ('cleanup', 'execution', 'error', 'runtime_retained') if k in meta})}
+            **({k: meta[k] for k in ('cleanup', 'execution', 'error', 'runtime_retained', 'left_behind') if k in meta})}
 
 
 def main(directory):

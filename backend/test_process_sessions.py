@@ -1,5 +1,6 @@
 """Detached real processes: streaming, stdin dedup, EOF and restart reconnect."""
 import json
+import os
 import time
 import sys
 import shlex
@@ -254,14 +255,107 @@ def test_held_command_starts_with_input_closed(tmp_path):
         _cancel(live['task_ref']['task_id'], db)
 
 
-def test_hold_uses_the_users_shell_path_when_asked(tmp_path, monkeypatch):
+def test_hold_runs_in_the_users_shell_environment_when_asked(tmp_path, monkeypatch):
+    """CLI 실행자의 문: 사용자의 셸이 갖는 PATH와 변수로 돈다. PATH만 옮겼을 때는 `JAVA_HOME` 같은 변수가 비어
+    보였다(에피소드 6187). 값은 세션 기록에 남기지 않는다(사용자가 셸 설정에 적어 둔 비밀일 수 있다)."""
     import process_sessions
     db = CodingStore(tmp_path / 'store')
-    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', '/indiebiz-user-bin:/usr/bin:/bin')})
-    asked = process_sessions.hold('echo "$PATH"', tmp_path, db=db, timeout=10, user=True)
-    plain = process_sessions.hold('echo "$PATH"', tmp_path, db=db, timeout=10, shell='sh')
-    assert asked['stdout'].startswith('/indiebiz-user-bin:')
-    assert '/indiebiz-user-bin' not in plain['stdout']
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', {
+        'PATH': '/indiebiz-user-bin:/usr/bin:/bin', 'INDIEBIZ_TEST_HOME_VAR': 'kept-out-of-the-record'})})
+    asked = process_sessions.hold('echo "$PATH|$INDIEBIZ_TEST_HOME_VAR"', tmp_path, db=db, timeout=10, user=True)
+    plain = process_sessions.hold('echo "$PATH|$INDIEBIZ_TEST_HOME_VAR"', tmp_path, db=db, timeout=10, shell='sh')
+    assert asked['stdout'] == '/indiebiz-user-bin:/usr/bin:/bin|kept-out-of-the-record\n'
+    assert '/indiebiz-user-bin' not in plain['stdout'] and plain['stdout'].endswith('|\n')
+    # 손잡이를 넘긴 세션의 기록에도 값이 없다
+    left = process_sessions.hold(f'{shlex.quote(sys.executable)} -c "import time; time.sleep(60)"',
+                                 tmp_path, db=db, timeout=1, user=True)
+    tid = left['task_ref']['task_id']
+    try:
+        folder = db.root / 'processes' / tid
+        recorded = ''.join(path.read_text(errors='replace') for path in folder.iterdir() if path.is_file())
+        assert 'kept-out-of-the-record' not in recorded
+        assert 'kept-out-of-the-record' not in json.dumps(db.list('process_session'))
+    finally:
+        _cancel(tid, db)
+
+
+def test_failure_diagnostic_keeps_the_error_text_whatever_the_callers_cursor(tmp_path):
+    """실패한 명령의 진단은 명령이 낸 오류 글을 싣는다 — 묻는 쪽이 그 출력을 이미 읽고 지나갔어도.
+    `hold`는 출력을 먼저 받고 종료를 나중에 볼 수 있는데, 그때 진단이 "exit 7: "로 비어 나갔다."""
+    import process_sessions
+    db = CodingStore(tmp_path / 'store')
+    value = process_sessions.start('echo useful-error >&2; exit 7', tmp_path, db=db, sandbox=False, shell='sh',
+                                   stdin='closed', environment='inherit', yield_ms=0)
+    tid = value['task_ref']['task_id']
+    deadline = time.time() + 10
+    while value['state'] in ('queued', 'running') and time.time() < deadline:
+        value = query(tid, db=db, wait_ms=500)
+    assert value['state'] == 'failed' and value['exit_code'] == 7
+    read_all = query(tid, db=db)['cursor']
+    late = query(tid, db=db, cursor=read_all)      # 출력을 다 읽은 뒤의 물음
+    assert late['output'] == []
+    assert 'useful-error' in late['diagnostics']['items'][0]['message']
+
+
+def test_command_end_reports_children_it_took_down(tmp_path):
+    """명령이 끝나면 몸은 그 명령이 백그라운드로 띄워 둔 하위 프로세스도 끝낸다. 그 사실을 결과에 남긴다 —
+    남기지 않으면 낸 쪽은 그 일이 계속 도는 줄 안다(에피소드 6192: 함께 끝난 평가를 280초 기다렸다)."""
+    psutil = pytest.importorskip('psutil')
+    import process_sessions
+    if not hasattr(os, 'killpg'):
+        pytest.skip('프로세스 무리를 물을 수 없는 몸')
+    db = CodingStore(tmp_path / 'store')
+    marker = tmp_path / 'child.pid'
+    child = f'{shlex.quote(sys.executable)} -c "import os,time; open({str(marker)!r},\'w\').write(str(os.getpid())); time.sleep(60)"'
+    done = process_sessions.hold(f'( {child} & ) ; while [ ! -s {shlex.quote(str(marker))} ]; do sleep 0.05; done; echo done',
+                                 tmp_path, db=db, timeout=20, shell='sh')
+    assert done['state'] == 'succeeded' and done['stdout'] == 'done\n'
+    left = done['left_behind']
+    assert left['count'] == 1 and len(left['processes']) == 1 and '1개' in left['note']
+    pid = int(marker.read_text())
+    deadline = time.time() + 5
+    while psutil.pid_exists(pid) and psutil.Process(pid).status() != psutil.STATUS_ZOMBIE and time.time() < deadline:
+        time.sleep(.05)
+    assert not psutil.pid_exists(pid) or psutil.Process(pid).status() == psutil.STATUS_ZOMBIE   # 실제로 끝났다
+    # 남긴 것이 없는 명령에는 그 칸이 없다
+    assert 'left_behind' not in process_sessions.hold('echo plain', tmp_path, db=db, timeout=10, shell='sh')
+
+
+def test_held_command_is_not_handed_model_provider_keys(tmp_path, monkeypatch):
+    """모델 공급자의 과금 키는 몸이 쓰는 것이다. 명령에는 건네지 않는다 — 백엔드의 환경에 있든 사용자의 셸
+    설정에 있든(에피소드 6192: 실행자가 환경에서 키를 찾아 모델을 164회 직접 불렀다). 다른 변수는 그대로다."""
+    import process_sessions
+    db = CodingStore(tmp_path / 'store')
+    from model_resolver import provider_env_vars
+    names = sorted(provider_env_vars())
+    assert {'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY'} <= set(names)   # 공급자 카탈로그에서 온다
+    for name in names:
+        monkeypatch.setenv(name, 'from-backend')
+    monkeypatch.setenv('INDIEBIZ_TEST_DEPLOY_TOKEN', 'kept')
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', {
+        'PATH': os.environ['PATH'], 'ANTHROPIC_API_KEY': 'from-user-shell', 'INDIEBIZ_TEST_HOME_VAR': 'kept-too'})})
+    show = 'echo "' + '|'.join('${%s:-none}' % name for name in names) + '|$INDIEBIZ_TEST_DEPLOY_TOKEN|$INDIEBIZ_TEST_HOME_VAR"'
+    asked = process_sessions.hold(show, tmp_path, db=db, timeout=10, user=True)
+    plain = process_sessions.hold(show, tmp_path, db=db, timeout=10, shell='sh')
+    assert asked['stdout'] == '|'.join(['none'] * len(names)) + '|kept|kept-too\n'
+    assert plain['stdout'] == '|'.join(['none'] * len(names)) + '|kept|\n'
+
+
+def test_user_shell_reads_the_login_shells_exports(tmp_path, monkeypatch):
+    """사용자의 셸 설정이 내보내는 변수를 표식 사이에서 읽는다. 설정이 화면에 쓰는 글과 섞이지 않는다."""
+    pwd = pytest.importorskip('pwd')   # 사용자 계정의 셸을 아는 몸에서만 잰다
+    import process_sessions
+    home = tmp_path / 'home'
+    home.mkdir()
+    (home / '.profile').write_text('echo "greeting from profile"\nexport INDIEBIZ_FROM_PROFILE="one two"\nexport PATH="/from-profile:$PATH"\n')
+    from types import SimpleNamespace
+    monkeypatch.setattr(pwd, 'getpwuid', lambda uid: SimpleNamespace(pw_shell='/bin/sh'))
+    monkeypatch.setenv('HOME', str(home))
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {})
+    name, env = process_sessions.user_shell()
+    assert name == 'sh' and env['INDIEBIZ_FROM_PROFILE'] == 'one two'
+    assert env['PATH'].startswith('/from-profile:')
+    assert not {'PWD', 'SHLVL', '_', 'TERM'} & set(env)
 
 
 def test_held_commands_do_not_pile_up_records(tmp_path, monkeypatch):

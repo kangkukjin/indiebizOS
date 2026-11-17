@@ -307,6 +307,51 @@ def test_cli_providers_use_model_capacity_not_early_compaction(monkeypatch):
     assert "CLAUDE_CODE_AUTO_COMPACT_WINDOW" not in inst._build_env()
 
 
+def test_cli_launch_environment_carries_no_model_provider_keys(monkeypatch):
+    """CLI 의 자기 셸은 기동 환경을 그대로 받는다. `.env` 의 모델 공급자 키가 거기 있으면 실행자가 그것으로
+    모델을 직접 부를 수 있다(사용자 판정 2026-11-17: 유료 호출을 임의로 하지 않는다, 에피소드 6192).
+    주인이 그 CLI 에 과금 키를 명시로 준 경우에는 그 키 하나만 들어간다."""
+    from model_resolver import provider_env_vars
+    from providers.claude_code import ClaudeCodeProvider
+    from providers.codex import CodexProvider
+
+    names = provider_env_vars()
+    assert {"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "DEEPSEEK_API_KEY"} <= names
+    for name in names:
+        monkeypatch.setenv(name, "from-dotenv")
+    monkeypatch.setenv("INDIEBIZ_TEST_DEPLOY_TOKEN", "kept")
+
+    codex = object.__new__(CodexProvider)
+    monkeypatch.setattr(codex, "_identity_env", lambda: {})
+    codex._effective_key = None
+    env = codex._build_env()
+    assert not names & set(env) and env["INDIEBIZ_TEST_DEPLOY_TOKEN"] == "kept"
+    codex._effective_key = "sk-explicit"
+    env = codex._build_env()
+    assert names & set(env) == {"OPENAI_API_KEY"} and env["OPENAI_API_KEY"] == "sk-explicit"
+
+    # Codex 의 자기 셸은 사용자 셸의 스냅숏으로 변수를 다시 얻는다 — 그 셸의 환경 정책으로도 뺀다(평소 턴과
+    # 코딩 프로필 두 명령 모두).
+    import json as _json
+    from providers import get_provider
+    from providers.coding_profile import codex_command
+    p = get_provider("codex", api_key="", model="gpt-5.6-sol", system_prompt="")
+    p._binary_path = "/fake/codex"
+    for command in (p._build_command(stream=True, tools_mode=None), codex_command(p)):
+        policy = [command[i + 1] for i in range(len(command) - 1)
+                  if command[i] == "-c" and command[i + 1].startswith("shell_environment_policy.exclude=")]
+        assert len(policy) == 1 and set(_json.loads(policy[0].split("=", 1)[1])) == names
+
+    claude = object.__new__(ClaudeCodeProvider)
+    monkeypatch.setattr(claude, "_identity_env", lambda: {})
+    claude._effective_token = "sk-ant-oat-subscription"
+    env = claude._build_env()
+    assert not names & set(env) and env["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-ant-oat-subscription"
+    claude._effective_token = "sk-ant-api-explicit"
+    env = claude._build_env()
+    assert names & set(env) == {"ANTHROPIC_API_KEY"} and env["ANTHROPIC_API_KEY"] == "sk-ant-api-explicit"
+
+
 def test_cli_compaction_events_are_counted(monkeypatch):
     """압축이 실제로 도는지는 사건으로 센다 — codex item.type=context_compaction, claude system/compact_boundary."""
     import time

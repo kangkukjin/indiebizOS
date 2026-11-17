@@ -6,8 +6,7 @@ from cognitive_consciousness import CognitiveConsciousnessMixin
 
 
 @pytest.fixture
-def run(monkeypatch):
-    monkeypatch.setattr("framing_inheritance.inherit", lambda *a: None)
+def run():
     def check(repair_framing, fresh_repair=False):
         class Runner(CognitiveConsciousnessMixin):
             calls = 0

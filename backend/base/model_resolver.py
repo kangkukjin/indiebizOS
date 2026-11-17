@@ -136,6 +136,25 @@ def _provider_env_map() -> dict:
     return _PROVIDER_ENV_FALLBACK
 
 
+def provider_env_vars() -> set:
+    """모델 공급자 키가 사는 `.env` 변수 이름 전부. 카탈로그가 정본이라 새 공급자가 생기면 따라 늘어난다."""
+    return {name for name in _provider_env_map().values() if name}
+
+
+def without_provider_keys(env) -> dict:
+    """env 의 사본에서 모델 공급자의 과금 키를 뺀 것 — 실행자가 띄우는 명령에 건네는 환경에 쓴다.
+
+    그 키는 몸이 모델을 부를 때 쓰는 것이다. 실행자의 명령이 그것으로 모델을 직접 부르면 주인 계정에 따로
+    과금된다(에피소드 6192: 환경에서 키를 찾아 164회). 모델이 할 일은 몸의 통로(원샷 질문·다른 에이전트
+    위임)로 간다 — 사용자 판정 2026-11-17, data/decisions.yaml `model-work-through-body`.
+    쓰는 곳은 둘이고 같은 이름 목록을 쓴다: 몸의 셸(process_sessions.start)과 CLI 실행자의 기동 환경
+    (cli_provider._build_env — 그 CLI 의 자기 셸이 받는 환경). 주인이 CLI 에 과금 키를 명시로 준 경우는
+    그 공급자가 제 키 하나를 다시 넣는다. 나머지 변수는 걸러 내지 않는다.
+    """
+    names = provider_env_vars()
+    return {k: v for k, v in env.items() if k not in names}
+
+
 def env_var_for_provider(provider: str) -> str:
     """프로바이더 → `.env` 변수 이름. 키가 필요 없는 프로바이더는 빈 문자열."""
     p = (provider or "").strip().lower()

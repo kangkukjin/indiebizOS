@@ -6,6 +6,7 @@
 import boot_paths  # noqa: F401
 import importlib.util
 import json
+import os
 import shlex
 import sys
 import time
@@ -96,11 +97,12 @@ def test_syntax_error_and_dangerous_command_never_start_a_process(shell):
     assert shell.db.list('process_session') == []
 
 
-def test_cli_door_runs_with_the_users_shell_path(shell, monkeypatch):
+def test_cli_door_runs_in_the_users_shell_environment(shell, monkeypatch):
     import process_sessions
-    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', '/indiebiz-user-bin:/usr/bin:/bin')})
-    assert json.loads(shell('echo "$PATH"', _door='cli'))['output'].startswith('/indiebiz-user-bin:')
-    assert '/indiebiz-user-bin' not in shell('echo "$PATH"')
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', {
+        'PATH': '/indiebiz-user-bin:/usr/bin:/bin', 'JAVA_HOME': '/users/own/jdk'})})
+    assert json.loads(shell('echo "$PATH|$JAVA_HOME"', _door='cli'))['output'] == '/indiebiz-user-bin:/usr/bin:/bin|/users/own/jdk'
+    assert '/indiebiz-user-bin' not in shell('echo "$PATH"')      # API 실행자의 문은 그대로다
 
 
 def test_member_cannot_reach_the_owner_shell(shell):
@@ -134,6 +136,24 @@ def test_cli_door_gets_an_envelope_and_the_bridge_unfolds_it_into_shell_text(she
     assert mcp_server._command_text('plain text') is None
 
 
+def test_both_doors_say_which_children_ended_with_the_command(shell):
+    """명령이 백그라운드로 띄워 둔 하위 프로세스는 명령과 함께 끝난다. 두 문 모두 결과에 그 사실을 적는다
+    (에피소드 6192: `( 평가 & ); 다른 명령` 뒤 결과가 평범한 성공이라 실행자가 죽은 평가를 280초 기다렸다)."""
+    import mcp_server
+    if not hasattr(os, 'killpg'):
+        pytest.skip('프로세스 무리를 물을 수 없는 몸')
+    sleeper = f'( {shlex.quote(sys.executable)} -c "import time; time.sleep(60)" & ) ; sleep 0.5; echo started'
+    plain = shell(sleeper)
+    assert plain.startswith('started\n[몸은 명령이 끝나면') and '1개(' in plain and '함께 끝났습니다' in plain
+    envelope = shell(sleeper, _door='cli')
+    value = json.loads(envelope)
+    assert value['success'] is True and value['output'] == 'started' and value['left_behind']['count'] == 1
+    text, failed = mcp_server._command_text(envelope)
+    assert failed is False and text == 'started\n[' + value['left_behind']['note'] + ']'
+    # 남긴 것이 없으면 지금까지의 글자 그대로다
+    assert shell('echo alone') == 'alone' and 'left_behind' not in json.loads(shell('echo alone', _door='cli'))
+
+
 from test_conscious_supervisor import supervisor  # noqa: E402,F401
 
 
@@ -144,7 +164,7 @@ def test_ordinary_executor_reaches_a_real_process_through_the_workbench(supervis
     from providers.claude_code import ClaudeCodeProvider
     db = CodingStore(tmp_path / 'held-store')
     monkeypatch.setattr(process_sessions, 'store', lambda: db)
-    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', '/usr/bin:/bin')})
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', {'PATH': '/usr/bin:/bin'})})
     monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: 'body'))
     monkeypatch.setattr('repair_context.active', lambda: False)
     monkeypatch.setattr('research_context.library_only', lambda: False)
@@ -167,7 +187,7 @@ def test_command_left_running_ends_with_its_turn(supervisor, tmp_path, monkeypat
     from providers.claude_code import ClaudeCodeProvider
     db = CodingStore(tmp_path / 'held-store')
     monkeypatch.setattr(process_sessions, 'store', lambda: db)
-    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', '/usr/bin:/bin')})
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', {'PATH': '/usr/bin:/bin'})})
     monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: 'body'))
     monkeypatch.setattr('repair_context.active', lambda: False)
     monkeypatch.setattr('research_context.library_only', lambda: False)

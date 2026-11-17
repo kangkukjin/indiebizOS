@@ -1,6 +1,5 @@
-"""L81: intervening user corrections reach framing inheritance and final judgment."""
+"""L81: intervening user corrections reach the relation judge and final judgment."""
 import json
-from types import SimpleNamespace
 
 import boot_paths  # noqa: F401
 import pytest
@@ -14,21 +13,13 @@ HISTORY = [{'role': 'user', 'content': '타이머가 있는 쿠커를 찾는다.
            {'role': 'assistant', 'content': 'A는 냄비 고정이고 B는 분리된다.'}]
 
 
-def test_intervening_execute_correction_reaches_both_inheritance_calls(monkeypatch):
-    previous = {'message': HISTORY[0]['content'], 'framing': {
-        'task_framing': '내장 타이머 추천', 'criteria': [{'text': '내장 타이머 후보'}]}}
+def test_intervening_correction_reaches_the_relation_judge(monkeypatch):
+    """관계 판정(수리 재개가 쓴다)은 직전 기록의 요청만이 아니라 그 사이 사용자 정정까지 본다."""
+    previous = {'message': HISTORY[0]['content'], 'framing': {'task_framing': '내장 타이머 추천'}}
     seen = []
-    def answer(body, prompt, role):
-        seen.append(json.loads(body))
-        return 'CONTINUE' if role == 'classify' else json.dumps({
-            'achievement_criteria': '분리 세척 후보', 'criteria': [{'text': '분리 세척 후보'}]})
-    monkeypatch.setattr(fi, '_candidate', lambda *a: ('followup', previous))
-    monkeypatch.setattr(fi, '_oneshot', answer)
-    result = fi._inherit(SimpleNamespace(), '다른 것을 더 찾아봐.', HISTORY, lambda *a: None)
-    assert result['_framing_source'] == 'inherited_followup'
-    assert len(seen) == 2
-    assert all(CORRECTION in json.dumps(body, ensure_ascii=False) for body in seen)
-    assert 'history_summary' not in result  # executor still receives original history
+    monkeypatch.setattr(fi, '_oneshot', lambda body, prompt, role: seen.append(json.loads(body)) or 'CONTINUE')
+    assert fi._judge_relation(previous, '다른 것을 더 찾아봐.', history=HISTORY) == 'CONTINUE'
+    assert len(seen) == 1 and CORRECTION in json.dumps(seen[0], ensure_ascii=False)
 
 
 def test_final_evaluation_gets_raw_conversation_even_with_stale_summary(supervisor, monkeypatch):
@@ -72,13 +63,6 @@ def test_history_excerpt_empty_and_many_messages_are_explicitly_bounded():
     assert '요청 0' in text and '요청 999' in text and '메시지 생략' in text
     with pytest.raises(ValueError):
         conversation_excerpt(history, 127)
-
-
-def test_repeat_patch_does_not_import_unrelated_dialogue(monkeypatch):
-    seen = []
-    monkeypatch.setattr(fi, '_oneshot', lambda body, *a: seen.append(json.loads(body)) or '{}')
-    assert fi._patch({'framing': {}}, '정기 보고', 'repeat', history=HISTORY) == {}
-    assert CORRECTION not in json.dumps(seen, ensure_ascii=False)
 
 
 if __name__ == '__main__':

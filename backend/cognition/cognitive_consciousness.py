@@ -55,21 +55,20 @@ class CognitiveConsciousnessMixin:
         from repair_continuation import inherited_framing
         inherited = inherited_framing(user_message) if repair else None
         if inherited:
-            return project_framing(inherited)
+            # 사용자의 말로 이은 수리는 의식이 지금 상태에서 남은 일을 새로 규정한다(완료 기준은 그대로).
+            # 하네스가 자동으로 잇는 턴은 보존된 규정 그대로다 — repair_resume.rethink.
+            from repair_resume import rethink
+            return project_framing(rethink(self, user_message, history, execution_memory, inherited))
         # 명시적인 수리는 실행자가 직접 조사·검사한다. #think는 기존 의식을 유지한다.
         from thread_context import get_task_origin
         if (repair and get_task_origin() == "user" and re.search(r"(?i)#repair\b", user_message)
                 and not re.search(r"(?i)#think\b", user_message)):
             from repair_policy import direct_framing
             return project_framing(direct_framing(user_message))
-        # 규정 계승(2026-10-07): 같은 문장의 정기 실행(직전 ACHIEVED) 또는 같은 과제의 후속 턴은
-        # 직전 규정을 경량 패치로 잇는다 — 의식 각성(≈1분·10만 토큰)을 건너뛴다. 수리 턴은 제외
-        # (수리는 repair_continuation 이 따로 계승한다). 포기하면 아래에서 전과 같이 깨운다.
-        if not repair:
-            from framing_inheritance import inherit
-            inherited_turn = inherit(self, user_message, history)
-            if inherited_turn:
-                return project_framing(inherited_turn)
+        # THINK 판정이면 의식이 새로 규정한다. 직전 규정을 물려받아 경량 모델이 고쳐 쓰던 '규정 계승'
+        # (후속 턴·같은 문장의 정기 실행, 2026-10-07)은 2026-11-17 사용자 판정으로 없앴다 — 되살리지 말 것
+        # (data/decisions.yaml `think-always-fresh-framing`, 사정은 framing_inheritance.py 머리말).
+        # 수리 재개는 repair_continuation 이 따로 잇는다(위).
         result = project_framing(self._run_consciousness(user_message, history, execution_memory, repair=repair))
         if result:
             result["_framing_source"] = "fresh_consciousness"
@@ -79,7 +78,7 @@ class CognitiveConsciousnessMixin:
 
     def _run_consciousness(self, user_message: str, history: list,
                            execution_memory: str = "", repair: bool = False,
-                           revision: dict = None) -> dict:
+                           revision: dict = None, resume: dict = None) -> dict:
         """의식 에이전트 실행 — 메타 판단
 
         사용자 메시지와 히스토리를 분석하여 프롬프트 최적화 지침을 반환합니다.
@@ -147,6 +146,7 @@ class CognitiveConsciousnessMixin:
                 available_tools=available_tools,
                 repair=repair,
                 revision=revision,
+                **({"resume": resume} if resume else {}),
                 project_path=getattr(self, "project_path", None) or getattr(getattr(self, "ai", None), "project_path", None),
                 previous_research_plan=previous_plan,
                 **({'research_topic': research_topic} if research_topic is not None else {}),

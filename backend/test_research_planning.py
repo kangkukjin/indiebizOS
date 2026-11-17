@@ -260,22 +260,6 @@ def test_existing_general_plan_is_seen_by_initial_consciousness_and_reused(works
     assert '수집된 근거 C' in out['_research_plan']['body']
 
 
-@pytest.mark.parametrize('existing,revise,expected', [(False, False, False),
-                                                   (True, False, True), (True, True, False)])
-def test_inheritance_reuses_plan_or_returns_to_consciousness(workspace, monkeypatch, existing, revise, expected):
-    import framing_inheritance as fi
-    framing = draft()
-    if existing:
-        framing = rp.prepare(planner(), framing, '', project_path=workspace)
-    previous = {'message': '같은 연구', 'framing': framing}
-    monkeypatch.setattr(fi, '_candidate', lambda *args: ('repeat', previous))
-    monkeypatch.setattr(fi, '_patch', lambda *args, **kw: {'revise_research_plan': revise})
-    result = fi.inherit(SimpleNamespace(project_path=workspace), '같은 연구', [])
-    assert bool(result) is expected
-    if expected:
-        assert result['_research_plan']['path'] == framing['_research_plan']['path']
-
-
 @pytest.mark.parametrize('error', [RuntimeError('project changed'), OSError('save failed'),
                                   ConsciousnessCallSkipped('budget', 'budget exhausted')])
 def test_process_does_not_fall_back_to_execution_on_plan_handoff_failure(workspace, monkeypatch, error):

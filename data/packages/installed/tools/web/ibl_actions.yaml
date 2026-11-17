@@ -87,7 +87,7 @@ nodes:
             - - query
               - queries
         lands_on: hub
-        path_audited: {at: "2026-10-31", impl: "96991ae5c47d05b9"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-11-17", impl: "586b08719009bd92"}  # 구글 뉴스 주소 풀기에서 두 칸짜리 글자를 합침(tool_webcrawl._unescape_u, 2026-11-17) — 응답 글자 해독뿐이고 목적지 검사·권한은 바뀌지 않음. 이전: 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -173,7 +173,7 @@ nodes:
               url: Text
               items: List<Record>
         lands_on: hub
-        path_audited: {at: "2026-10-31", impl: "96991ae5c47d05b9"}  # 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
+        path_audited: {at: "2026-11-17", impl: "586b08719009bd92"}  # 구글 뉴스 주소 풀기에서 두 칸짜리 글자를 합침(tool_webcrawl._unescape_u, 2026-11-17) — 응답 글자 해독뿐이고 목적지 검사·권한은 바뀌지 않음. 이전: 재감사: 부품 수리는 활성 owner 업무만 허용. 후보는 순수 제한 자식으로 실행, 등록/검사 계약은 지문에 포함. 회원 선행 분기·파일 전송 경계 유지.
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'

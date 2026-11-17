@@ -1,12 +1,14 @@
-"""규정 계승(framing_inheritance, 2026-10-07) — 회귀 고정물. 외부 호출 없음.
+"""규정 계승을 없앤 뒤의 고정물(2026-11-17, 사용자 판정) — 외부 호출 없음.
 
-1) 정기: 같은 문장 + 직전 ACHIEVED → 의식을 깨우지 않고 경량 패치로 계승(inherited_repeat).
-2) 정기: 직전이 ACHIEVED 가 아니면 계승하지 않는다.
-3) 후속: 관계 판정 NEW → 의식 각성 / CONTINUE → 계승(inherited_followup), 초안·히스토리 요약은 안 잇는다.
-4) 후속: 24시간 지난 직전 규정·히스토리 없는 턴은 판정 호출조차 없이 각성.
-5) 권한은 계승되지 않는다(needs_repair·_repair_policy 벗김). 과제 연결은 행 id 로 정규화.
-6) 패치가 허용 밖 필드·깨진 JSON 이면 계승 포기 → 각성.
-7) `[task:…] 완료.` 는 CONTEXT_UPDATE 결정론 단서. "[task:…] 주간 재조사" 는 아니다.
+있던 것: 같은 문장의 정기 실행이나 '같은 과제의 후속'이면 의식을 깨우지 않고 경량 모델이 직전 규정을
+고쳐 썼다(2026-10-07). 에피소드 6192 에서 시제품 제작 요청이 후속으로 판정돼 경량 모델이 92분짜리 과제의
+규정을 새로 썼고, 사용자가 주문한 심층실행 단계가 빠졌다.
+
+1) THINK 는 어떤 경우에도 의식이 새로 규정한다 — 같은 문장을 되풀이해도, 직전 과제에 이어지는 말이어도.
+   경량 모델은 한 번도 불리지 않는다.
+2) 계승 함수는 모듈에 없다(되살아나면 이 검사가 잡는다).
+3) 직전 규정의 기록은 남는다 — 권한·과제 연결은 벗기고, 문장별 기록 수는 묶인다.
+4) `[task:…] 완료.` 는 CONTEXT_UPDATE 결정론 단서. "[task:…] 주간 재조사" 는 아니다.
 """
 import json
 from datetime import datetime, timedelta
@@ -69,82 +71,30 @@ def _remember(runner, message, achieved=True, at=None):
     return rec
 
 
-def test_repeat_inherits_without_waking_consciousness(monkeypatch):
+@pytest.mark.parametrize("message,history,achieved", [
+    ("AI 동향 보고서 써줘", [], True),                                              # 같은 문장의 정기 실행
+    ("AI 동향 보고서 써줘.", [], False),
+    ("찾을 수 있는 소스를 다 찾은 건가?", [{"role": "user", "content": "x"}], True),      # 직전 결과에 대한 되물음
+    ("그것도 해줘", [{"role": "user", "content": "x"}], True),                        # 이어 하기
+    ("서울시의회 AI 의정비서 시제품을 만들어 봐. 10단계 심층실행을 해.", [{"role": "user", "content": "x"}], True),
+])
+def test_think_always_wakes_consciousness(monkeypatch, message, history, achieved):
     r = Runner()
-    _remember(r, "AI 동향 보고서 써줘.")
+    _remember(r, "AI 동향 보고서 써줘.", achieved=achieved)
     seen = _calls(monkeypatch)
     with actor_context(agent_id="agent_t", task_id="t1"):
-        out = r._run_consciousness_or_reuse("AI 동향 보고서 써줘", [], "")
-    assert r.calls == 0 and seen == ["background"]          # 관계 판정 없이 패치만
-    assert out["_framing_source"] == "inherited_repeat"
-    assert out["task_framing"].startswith("문제: 2026-10-07")
-    assert out["criteria"][0]["text"] == "NEW 5건" and "imagined_ibl" not in out
-    assert "history_summary" not in out
-    assert "needs_repair" not in out and "_repair_policy" not in out       # 권한 미계승
-    assert not {"scope", "pursuit_id", "title"} & out.keys()
+        out = r._run_consciousness_or_reuse(message, history, "")
+    assert r.calls == 1 and seen == []                    # 의식이 불리고, 경량 모델은 불리지 않는다
+    assert out["task_framing"] == "새 규정" and out["_framing_source"] == "fresh_consciousness"
+    assert "_inherited_from" not in out
 
 
-def test_repeat_requires_previous_achieved(monkeypatch):
-    r = Runner()
-    _remember(r, "AI 동향 보고서 써줘.", achieved=False)
-    seen = _calls(monkeypatch)
-    with actor_context(agent_id="agent_t", task_id="t1"):
-        out = r._run_consciousness_or_reuse("AI 동향 보고서 써줘.", [], "")
-    assert r.calls == 1 and seen == [] and out["task_framing"] == "새 규정"
-
-
-def test_followup_new_wakes_and_continue_inherits(monkeypatch):
-    r = Runner()
-    _remember(r, "오송 전세 매물 찾아줘")
-    seen = _calls(monkeypatch, relation="NEW")
-    with actor_context(agent_id="agent_t", task_id="t1"):
-        out = r._run_consciousness_or_reuse("프랑스 국채 위기 원인이 뭐야?", [{"role": "user", "content": "x"}], "")
-    assert r.calls == 1 and seen == ["classify"] and out["task_framing"] == "새 규정"
-
-    r2 = Runner()
-    seen2 = _calls(monkeypatch, relation="CONTINUE",
-                   patch='{"patch": {"task_framing": "문제: 직전 결과의 빈틈 확인", "assumptions": [], "achievement_criteria": "빈틈 확인", "criteria": [{"text": "빈틈 확인"}]}}')
-    with actor_context(agent_id="agent_t", task_id="t2"):
-        out2 = r2._run_consciousness_or_reuse("찾을 수 있는 소스를 다 찾은 건가?", [{"role": "user", "content": "x"}], "")
-    assert r2.calls == 0 and seen2 == ["classify", "background"]
-    assert out2["_framing_source"] == "inherited_followup" and out2["assumptions"] == []
-    assert "imagined_ibl" not in out2 and "history_summary" not in out2
-    assert out2["_inherited_from"]["task_id"] == "t0"
-
-
-def test_followup_needs_history_and_freshness(monkeypatch):
-    r = Runner()
-    _remember(r, "오송 전세 매물 찾아줘")
-    seen = _calls(monkeypatch)
-    with actor_context(agent_id="agent_t", task_id="t1"):
-        assert r._run_consciousness_or_reuse("그것도 해줘", [], "")["task_framing"] == "새 규정"
-    assert seen == [] and r.calls == 1
-    stale = (datetime.now() - timedelta(hours=25)).isoformat(timespec="seconds")
-    _remember(r, "오송 전세 매물 찾아줘", at=stale)
-    with actor_context(agent_id="agent_t", task_id="t2"):
-        r._run_consciousness_or_reuse("그것도 해줘", [{"role": "user", "content": "x"}], "")
-    assert seen == [] and r.calls == 2
-
-
-def test_patch_keeps_hint_without_recommending_actions(monkeypatch):
-    r = Runner()
-    _remember(r, "AI 동향 보고서 써줘.")
-    _calls(monkeypatch, patch='{"capability_focus": {"hint": "원장부터", "highlight_actions": '
-                              '["sense:search", "해당 섹션 재작성", "fn:주소마다읽기", " self:read "]}}')
-    with actor_context(agent_id="agent_t", task_id="t1"):
-        out = r._run_consciousness_or_reuse("AI 동향 보고서 써줘.", [], "")
-    assert r.calls == 0
-    assert out["capability_focus"] == {"hint": "원장부터"}
-
-
-@pytest.mark.parametrize("patch", ['{"needs_repair": true}', '{"scope": "pursuit", "title": "x"}', 'not json', '[]'])
-def test_bad_patch_declines_inheritance(monkeypatch, patch):
-    r = Runner()
-    _remember(r, "AI 동향 보고서 써줘.")
-    _calls(monkeypatch, patch=patch)
-    with actor_context(agent_id="agent_t", task_id="t1"):
-        out = r._run_consciousness_or_reuse("AI 동향 보고서 써줘.", [], "")
-    assert r.calls == 1 and out["task_framing"] == "새 규정"
+def test_inheritance_is_gone_from_the_module():
+    for name in ("inherit", "_inherit", "_candidate", "_patch", "_parse_patch", "PATCHABLE"):
+        assert not hasattr(fi, name), name
+    from pathlib import Path
+    prompts = Path(fi.__file__).resolve().parents[2] / "data" / "common_prompts"
+    assert not (prompts / "framing_patch_prompt.md").exists()
 
 
 def test_remember_keeps_only_framing_and_is_bounded(monkeypatch):

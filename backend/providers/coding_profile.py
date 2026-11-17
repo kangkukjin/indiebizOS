@@ -47,6 +47,7 @@ def codex_command(provider, resume_session_id=None):
                "-c", "notify=[]", "-c", 'web_search="disabled"',
                "-c", "sandbox_workspace_write.exclude_tmpdir_env_var=true",
                "-c", "sandbox_workspace_write.exclude_slash_tmp=true"]
+    command += provider._shell_policy_args()   # 모델 공급자의 과금 키는 Codex 자기 셸에 건네지 않는다
     # Native tools are read-only. All writes use the same OS-confined run_command as API workers.
     bridge = getattr(provider, 'coding_bridge_command', None)
     if bridge:

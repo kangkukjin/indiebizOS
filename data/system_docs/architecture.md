@@ -290,7 +290,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
     의식 미실행·누락·잘못된 타입은 빈 결정과 구분한다. 계약: `docs/HISTORY_RELEVANCE_REPAIR_2026_09_14.md`.
   - 베이스 프롬프트(`base_prompt_v7.md`)와 함께 내부 계획·실제 관측을 구분하고, 계획의 전제가 깨지면 접근을 수정한다.
 - **현재 문제 규정과 실행 신원** — 일반 과제 원장 제거(2026-10-29)
-  - THINK/REPAIR의 현재 문제·기준과 규정 계승은 기존 의식 경로가 맡는다.
+  - THINK/REPAIR의 현재 문제·기준은 기존 의식 경로가 맡는다(THINK 는 매번 의식이 새로 규정한다).
   - `execution_turn`은 현재 task의 MCP 재진입 문맥을 유지하고 종료 때 폐기한다.
   - `execution_identity`는 주행기록 소유자·task·episode의 명시 연결만 저장한다. 과거 과제 원문은 `pursuit_history`로 읽는다.
   - 대화 이력·할일·연구 계획·자기수리 인계는 유지한다. [제거 기록](../../docs/PURSUIT_REMOVAL_PLAN_2026_10_29.md).
@@ -339,7 +339,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **턴 안 재규정 (`cognition/reframe.py`, 감독 통합 2026-09-10)**: 실행자가 `reframe`으로 실제 반증을 제시하면 해당 agent+task의 감독이 같은 의식 역할·중간 검토 예산으로 규정을 바꾼다. 새 규정은 도구 결과로 실행자에게 돌아오며 이미 만든 산출물을 유지한다. 권한은 재규정으로 늘어나지 않는다. 감독 없는 실행도 `open_turn`의 명시 재규정을 사용한다. 검수 실패 횟수·심각도로 기준을 자동 교체하던 경로는 제거했다. 보완 검수는 원래 전체 기준을 유지한다. IBL 어휘를 추가하지 않고 인지 역할 사이의 내부 도구로 연결한다. 양쪽의 실제 행동·근거·판정·인계·응답 버전은 `supervision.*`, 검수 결과는 `validation.completed` 사건과 작업대 `events.jsonl`에 남는다.
 
-**규정 계승 (`cognition/framing_inheritance.py`, 2026-10-07)**: 의식을 다시 깨우지 않아도 되는 두 자리. ① 정기 — 같은 문장(정규화)의 직전 실행이 **목표 달성**(`goal_status` ACHIEVED)이면 그 규정을 잇는다(30일 창). 검수 승인만 남은 옛 기록은 목표 미확정이라 계승하지 않고 재규정한다(2026-10-26). ② 후속 — 같은 자아의 직전 규정(24시간 창, 히스토리 있는 턴)에 대해 경량 분류(출력 한 단어 CONTINUE/NEW)로 "같은 과제의 후속인가"를 묻고, CONTINUE 면 잇는다(애매하면 NEW=각성). 계승은 베끼기가 아니라 경량 패치다: 직전 규정+새 메시지+오늘 날짜를 경량 모델에 주고 바뀌는 필드만 받는다(정기=시간 의존 표현만, 후속=바뀐 조건·범위·요구만; `data/common_prompts/framing_relation_prompt.md`·`framing_patch_prompt.md`). 권한(needs_repair)·히스토리 요약은 잇지 않고, 과제 연결은 직전 턴의 행 id 로 정규화해 같은 행에 잇는다. 패치 형식·과제 계약 검증에 실패하면 포기하고 각성한다. 저장소 `data/system_ai_state/framing_inherit/<자아>.json`(턴 종료에 유효 규정 기록), 사건 `framing.inherited`/`framing.inherit_declined`, `_framing_source=inherited_repeat|inherited_followup`. 위임 완료 통지(`[task:…] 완료.`)는 분류기 앞 결정론 단서로 CONTEXT_UPDATE(사실 통보 범위). 근거: 10월 실측 — 의식 호출 평균 72초·입력 중앙 11만 토큰, 같은 문장의 세 날 규정이 사실상 동일(ep4297·4330·4357), 후속 턴 각성(ep4352·4359·4364·4388·4390). 수리 턴은 `repair_continuation` 의 계승 경로 그대로.
+**THINK 는 의식이 새로 규정한다 — 규정 계승은 없앴다 (2026-11-17, 사용자 판정)**: 2026-10-07부터 같은 문장의 정기 실행(직전 목표 달성)이나 "같은 과제의 후속"으로 판정된 THINK 턴은 의식을 깨우지 않고, 직전 규정을 경량 모델이 고쳐 써서 실행자에게 넘겼다(의식 호출을 아끼려는 것). 에피소드 6192 에서 시제품 제작 요청이 직전 조사의 후속으로 판정돼 92분짜리 과제의 규정을 경량 모델이 새로 썼고, 사용자가 주문한 심층실행 10단계는 옮겨 적을 칸이 없어 1단계로 돌았다. 그래서 후속·정기 계승을 둘 다 걷어냈다 — 판정 `data/decisions.yaml` `think-always-fresh-framing`. 남은 것(`cognition/framing_inheritance.py`): ① 직전 규정의 기록 `data/system_ai_state/framing_inherit/<자아>.json`(턴 종료에 유효 규정을 적음 — 의식의 계획 작성이 같은 대화의 최근 연구계획을 후보로 읽고, 수리 재개가 미완료 작업을 찾는 데 읽는다. 권한·심층실행 단계·첫 걸음은 적지 않는다) ② 관계 판정(한 단어 CONTINUE/NEW, `data/common_prompts/repair_resume_relation_prompt.md`) — 수리 재개(`repair_resume.user_resume`)만 쓰고 규정을 고치지 않는다. 의식 축의 모델이 답한다(같은 날 사용자 판정 — CONTINUE 한 단어가 옛 완료 기준과 수리 권한을 되살리는데 그때까지는 분류 축의 경량 모델이 답했다) ③ 위임 완료 통지(`[task:…] 완료.`)를 분류기 앞 결정론 단서로 CONTEXT_UPDATE 로 보내는 판별. 계승을 알리던 사건 두 가지와 규정 출처의 계승 표식은 더 생기지 않는다(옛 운영 기록에는 남아 있다). 수리 턴은 `repair_continuation` 의 계승 경로 그대로.
 
 **에피소딕 메모리**: 에피소드(사용자 명령→최종 응답)별 실행 로그 기록
 - `episode_log` 테이블: 전체 로그 (최근 100개 보존)

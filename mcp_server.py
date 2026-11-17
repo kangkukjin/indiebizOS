@@ -424,7 +424,8 @@ async def run_command(command: str, timeout: Annotated[int, Field(ge=1, le=300)]
     timeout(초, 최대 300) 안에 끝나면 출력이 그대로 옵니다. 끝나지 않으면 명령을 죽이지 않고 계속 돌린 채
     task_ref와 그때까지의 출력, signs(시작 뒤 초·마지막 출력 뒤 초·쓴 CPU 초·살아 있는 프로세스·입력 통로
     상태)가 돌아옵니다. 그 뒤는 execute_ibl의 [self:task]{op:"wait"|"status"|"cancel", ref:task_ref}로
-    기다리거나 봅니다. 명령의 입력 통로는 닫혀 있습니다. 입력을 주고받을 프로세스는 mode="session"
+    기다리거나 봅니다. 명령이 끝나면 그 명령이 백그라운드(&)로 띄워 둔 하위 프로세스도 함께 끝납니다(끝낸 것이
+    있으면 결과에 적습니다). 명령의 입력 통로는 닫혀 있습니다. 입력을 주고받을 프로세스는 mode="session"
     (또는 io="pty")으로 시작하고 [self:task]{op:"control"}로 다룹니다.
     cwd는 위치이며 권한을 넓히지 않습니다. 호출 사이에 셸 상태(cd·변수)는 이어지지 않습니다.
     승인된 수리에서는 사용자 파일은 정본 프로젝트, 몸의 구현은 사본에서 실행하며 lifetime=task입니다.
@@ -464,7 +465,9 @@ def _command_text(raw):
     if value.get("state") in ("succeeded", "failed"):
         code = value.get("exit_code")
         text = output + (f"\n[exit code: {code}]" if code else "")
-        return text or "(명령어가 출력 없이 완료됨)", not value.get("success")
+        note = (value.get("left_behind") or {}).get("note")   # 명령과 함께 끝낸 하위 프로세스가 있었다
+        text = (text or "(명령어가 출력 없이 완료됨)") + (f"\n[{note}]" if note else "")
+        return text, not value.get("success")
     return json.dumps({k: v for k, v in value.items() if k != "shape"}, ensure_ascii=False), True
 
 

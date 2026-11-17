@@ -25,10 +25,11 @@ def directory(task_id, db=None):
 
 
 def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='task', db=None, sandbox=True, shell=None,
-          stdin='open', environment=None, path=None):
+          stdin='open', environment=None, child_env=None):
     """stdin='closed'는 입력 통로를 닫고 시작한다(pipe 전용). environment='inherit'는 이 프로세스의 환경을
-    걸러 내지 않고 물려준다. path는 그 환경의 PATH를 바꾼다. 셋 다 몸의 셸 문(`hold`)이 쓰는 값이고,
-    기본값은 지금까지의 세션과 같다."""
+    물려준다 — 모델 공급자의 과금 키만 빼고 걸러 내지 않는다. child_env는 그 위에 덮을 변수다(기록에 남기지
+    않고 워커의 환경으로만 건넨다. 같은 키는 여기서도 빠진다).
+    셋 다 몸의 셸 문(`hold`)이 쓰는 값이고, 기본값은 지금까지의 세션과 같다."""
     from runtime_utils import expand_body_path
     cwd = str(Path(expand_body_path(cwd)).resolve(strict=True))
     check(cwd, write=True)
@@ -86,8 +87,6 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
         if environment:
             row['environment'] = environment
             row['held'] = True     # hold가 시작한 세션 — 끝나면 기록을 거둔다(_forget·_sweep)
-            if path:
-                row['path'] = str(path)
         if execution:
             row['execution'] = execution
         write_json(folder / 'session.json', row)
@@ -95,10 +94,18 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
         backend = Path(__file__).resolve().parents[1]
         code = 'import sys; sys.path.insert(0, sys.argv[1]); import boot_paths; from process_session_worker import main; main(sys.argv[2])'
         from runtime_work import service_scope
+        spawn_env = None
+        if environment:
+            # 물려주는 환경에서 모델 공급자의 과금 키만은 뺀다(이유는 model_resolver.without_provider_keys).
+            # CLI 실행자의 기동 환경도 같은 함수로 같은 키를 뺀다. 나머지 변수는 걸러 내지 않는다.
+            from model_resolver import without_provider_keys
+            spawn_env = without_provider_keys(os.environ)
+            if child_env:
+                spawn_env['INDIEBIZ_CHILD_ENV'] = json.dumps(without_provider_keys(child_env), ensure_ascii=False)
         with service_scope(), open(folder / 'worker.log', 'ab') as log:
             subprocess.Popen([sys.executable, '-c', code, str(backend), str(folder), '--indiebiz-owned-session'],
                              stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
-                             close_fds=True)
+                             close_fds=True, env=spawn_env)
     return receipt(row, db, yield_ms)
 
 
@@ -118,31 +125,43 @@ HOLD_OUTPUT_BYTES = 1048576   # 세션이 보존하는 출력과 같은 크기
 
 
 _USER_SHELL = {}
+_USER_ENV_SKIP = {'PWD', 'OLDPWD', 'SHLVL', '_', 'TERM'}
 
 
 def user_shell():
-    """(셸 이름, PATH) — 사용자가 터미널에서 쓰는 셸과 그 셸이 평소 갖는 PATH. POSIX 전용, 없으면 (None, None).
+    """(셸 이름, 환경) — 사용자가 터미널에서 쓰는 셸과 그 셸이 평소 갖는 환경 변수. POSIX 전용, 없으면 (None, {}).
 
-    CLI 실행자의 자기 셸은 사용자의 셸 환경에서 돌았다(Claude Code는 대화형 셸의 스냅숏, Codex는 로그인 셸).
-    백엔드는 앱이 준 좁은 PATH로 뜨므로, 같은 명령이 몸의 셸에서도 같은 도구를 찾게 PATH만 가져온다.
-    값은 비밀이 아니라 세션 기록에 남겨도 된다. 프로세스당 한 번 잰다.
+    백엔드는 앱이 준 좁은 환경으로 뜨므로, 사용자가 터미널에서 쓰는 도구와 변수를 명령이 보게 사용자 셸의
+    환경을 가져온다. PATH만 가져왔을 때는 `JAVA_HOME`·`ANDROID_HOME` 같은 변수가 비어 보였다(에피소드 6187).
+    Claude Code의 자기 셸이 갖던 것보다 넓다 — 그 셸의 스냅숏에는 PATH만 있고 다른 변수는 없다(2026-11-17
+    확인). 그래서 셸 설정에 적힌 모델 공급자 키가 이 길로 실행자 명령에 처음 보이게 됐고(에피소드 6192),
+    그 키는 `start`가 건네기 전에 뺀다. 값에는 그 밖의 비밀이 있을 수 있어 세션 기록에 남기지 않는다 —
+    워커 프로세스의 환경으로만 건넨다. 프로세스당 한 번 잰다.
     """
     if os.name == 'nt':
-        return None, None
+        return None, {}
     if 'value' not in _USER_SHELL:
-        name, found = None, None
+        name, found = None, {}
         try:
             import pwd
-            import re
             executable = pwd.getpwuid(os.getuid()).pw_shell
             if Path(executable).name in ('sh', 'bash', 'zsh'):
                 name = Path(executable).name
-                # 프로필이 화면에 쓰는 글과 섞이지 않게 표식 사이의 값만 읽는다.
-                done = subprocess.run([executable, '-l', '-i', '-c', 'printf "\\n__INDIEBIZ_PATH__%s__END__\\n" "$PATH"'],
+                # 백엔드의 환경이 섞이지 않게 좁은 바탕에서 띄운다. 프로필이 화면에 쓰는 글과 섞이지 않게
+                # 표식 사이의 값만 읽는다.
+                base = {k: os.environ[k] for k in ('HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG') if k in os.environ}
+                base.update(PATH='/usr/bin:/bin:/usr/sbin:/sbin', SHELL=executable)
+                done = subprocess.run([executable, '-l', '-i', '-c',
+                                       'printf "\\n__INDIEBIZ_ENV_BEGIN__\\n"; /usr/bin/env -0; printf "\\n__INDIEBIZ_ENV_END__\\n"'],
                                       stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                      timeout=20, text=True, start_new_session=True)
-                match = re.search(r'__INDIEBIZ_PATH__(.*?)__END__', done.stdout, re.S)
-                found = match.group(1).strip() if match and match.group(1).strip() else None
+                                      timeout=20, env=base, start_new_session=True)
+                text = done.stdout.decode('utf-8', errors='replace')
+                begin, end = text.rfind('__INDIEBIZ_ENV_BEGIN__\n'), text.rfind('\n__INDIEBIZ_ENV_END__')
+                if 0 <= begin < end:
+                    for item in text[begin + len('__INDIEBIZ_ENV_BEGIN__\n'):end].split('\0'):
+                        key, sep, value = item.partition('=')
+                        if sep and key and key not in _USER_ENV_SKIP:
+                            found[key] = value
         except Exception:
             pass
         _USER_SHELL['value'] = (name, found)
@@ -154,19 +173,20 @@ def hold(command, cwd, *, timeout=60, shell=None, lifetime='task', request_id=No
 
     길지 짧을지를 미리 고르지 않게 하는 문이다(docs/BODY_HELD_COMMANDS_DESIGN_2026_11_17.md 4.2).
     돌려주는 것: state, exit_code(끝났으면), stdout·stderr(처음부터 지금까지), task_ref·generation·cursor
-    (이어서 `[self:task]`로 볼 손잡이), signs(아직 돌고 있으면 살아 있다는 신호), preflight·diagnostics.
+    (이어서 `[self:task]`로 볼 손잡이), signs(아직 돌고 있으면 살아 있다는 신호), preflight·diagnostics,
+    left_behind(명령이 끝날 때 살아 있어 함께 끝낸 하위 프로세스가 있었으면 그 수·이름·알리는 글).
     구문 검사에서 막힌 명령은 start의 거절 봉투를 그대로 돌려준다(accepted 없음).
-    입력 통로는 닫고 시작하고, 환경은 걸러 내지 않으며, 샌드박스를 씌우지 않는다 — 지금까지의 동기 실행과
-    같은 범위다. 입력을 주고받을 세션은 start를 쓴다. user=True면 셸을 지정하지 않았을 때 사용자의 셸과
-    그 PATH로 돈다(CLI 실행자의 자기 셸이 돌던 조건).
+    입력 통로는 닫고 시작하고, 환경은 모델 공급자의 과금 키만 빼고 걸러 내지 않으며, 샌드박스를 씌우지
+    않는다 — 그 키 말고는 지금까지의 동기 실행과 같은 범위다. 입력을 주고받을 세션은 start를 쓴다. user=True면 사용자의 셸 환경에서 돌고, 셸을 지정하지
+    않았으면 사용자의 셸로 돈다(CLI 실행자의 자기 셸이 돌던 조건).
     """
     db = db or store()
-    path = None
+    child_env = None
     if user:
-        name, path = user_shell()
+        name, child_env = user_shell()
         shell = shell or name
     value = start(command, cwd, io='pipe', request_id=request_id, yield_ms=0, lifetime=lifetime, db=db,
-                  sandbox=False, shell=shell, stdin='closed', environment='inherit', path=path)
+                  sandbox=False, shell=shell, stdin='closed', environment='inherit', child_env=child_env)
     if not value.get('accepted'):
         return value
     task_id, receipt_fields = value['task_ref']['task_id'], {k: value[k] for k in ('task_ref', 'preflight') if k in value}
@@ -193,7 +213,7 @@ def hold(command, cwd, *, timeout=60, shell=None, lifetime='task', request_id=No
             'generation': value.get('generation'), 'cursor': cursor, 'gap': value.get('gap'),
             'stdout': ''.join(streams['stdout'] + streams['combined']), 'stderr': ''.join(streams['stderr']),
             'truncated': size >= HOLD_OUTPUT_BYTES,
-            **({k: value[k] for k in ('signs', 'diagnostics', 'cleanup', 'error') if k in value}),
+            **({k: value[k] for k in ('signs', 'diagnostics', 'cleanup', 'error', 'left_behind') if k in value}),
             'accepted': True}
 
 
@@ -270,7 +290,7 @@ def query(task_id, *, db=None, op='status', **params):
             conn.sendall(json.dumps({**params, 'op': op, 'generation': generation, 'token': meta['token']}).encode() + b'\n')
             result = json.loads(conn.makefile('rb').readline(2 * 1024 * 1024))
             if not result.get('success'): raise ValueError(result.get('error'))
-            return _execution_feedback(meta, result)
+            return _execution_feedback(meta, result, folder)
     except (OSError, KeyError):
         if op != 'status':
             raise RuntimeError('delivery_unknown: 실행 소유자 연결 실패. 입력을 새 request_id로 자동 재전송하지 마세요')
@@ -279,14 +299,32 @@ def query(task_id, *, db=None, op='status', **params):
         path = folder / 'output.json'
         output = json.loads(path.read_text()) if path.exists() else {'events': [], 'end': 0}
         return _execution_feedback(meta, snapshot(meta, output['events'], output['end'], int(params.get('cursor') or 0),
-                        min(int(params.get('limit_bytes') or 65536), 262144)))
+                        min(int(params.get('limit_bytes') or 65536), 262144)), folder)
 
 
-def _execution_feedback(meta, result):
+def _output_tail(meta, folder, size=8192):
+    """세션이 지금까지 낸 출력의 끝. 묻는 쪽이 어디까지 읽었는지(cursor)와 무관하다. 못 읽으면 None."""
+    try:
+        saved = json.loads((folder / 'output.json').read_text())
+        tail = snapshot(meta, saved['events'], saved['end'], max(0, saved['end'] - size), size)
+    except (OSError, ValueError, KeyError):
+        return None
+    return ''.join(row.get('text', '') for row in tail['output'])
+
+
+def _execution_feedback(meta, result, folder=None):
+    """끝난 명령의 진단을 낸다. 실패 진단에 싣는 글은 이 물음이 받은 조각이 아니라 명령 출력 전체의 끝이다.
+
+    이 물음이 받은 조각만 쓰면, 출력을 먼저 읽고 종료를 나중에 본 쪽의 진단은 빈 글이 된다(`hold`가 그렇게
+    묻는다 — 출력이 나온 뒤 종료가 기록되기까지 사이에 첫 물음이 끼면 "exit 7: "만 남았다. 부하가 걸린 전수
+    검사에서만 드러났다, 2026-11-17).
+    """
     if meta.get('preflight') and result.get('exit_code') is not None:
         from preflight_feedback import execution_result
-        result['diagnostics'] = execution_result(meta['preflight'], result['exit_code'],
-            ''.join(row.get('text', '') for row in result.get('output', [])))
+        text = _output_tail(meta, folder) if folder is not None else None
+        if text is None:
+            text = ''.join(row.get('text', '') for row in result.get('output', []))
+        result['diagnostics'] = execution_result(meta['preflight'], result['exit_code'], text)
     return result
 
 

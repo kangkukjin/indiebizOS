@@ -378,7 +378,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     NATIVE_SHELL_TOOLS = ("Bash", "BashOutput", "KillShell")
     BODY_SHELL_POLICY = (
         "\n셸 명령 도구의 정확한 이름은 `mcp__indiebizos__run_command` 다(Bash 도구는 없다). "
-        "명령은 사용자의 셸과 그 PATH로 돌고, cwd로 위치를 정한다(호출 사이에 cd·변수는 이어지지 않는다). "
+        "명령은 사용자의 셸 환경(그 셸의 PATH와 내보낸 변수)에서 돌고, cwd로 위치를 정한다(호출 사이에 cd·변수는 이어지지 않는다). "
         "timeout(초, 기본 60·최대 300) 안에 끝나면 출력이 그대로 오고, 끝나지 않으면 명령을 계속 돌린 채 "
         "task_ref와 그때까지의 출력, signs(시작 뒤 초·마지막 출력 뒤 초·쓴 CPU 초·살아 있는 프로세스·입력 통로 "
         "상태)가 온다. 그 뒤는 `[self:task]{op:\"wait\"|\"status\"|\"cancel\", ref:task_ref}`로 기다리거나 본다. "

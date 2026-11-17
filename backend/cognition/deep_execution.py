@@ -385,22 +385,40 @@ def _round(controller, state, *, note, by, stated=""):
     return row
 
 
+def _has_points(judgment):
+    """판단 본문에 실행자에게 전할 갈래나 질문이 있는가. 둘 다 '없음'이라고 읽힐 때만 없다고 본다.
+
+    읽지 못하면 있다고 본다 — 전할 것을 버리는 쪽보다 한 번 더 전하는 쪽이 싸다.
+    """
+    found = dict(re.findall(r"^\s*\**\s*([23])\s*[.)]\s*\**\s*(.*)$", judgment or "", flags=re.M))
+    if set(found) != {"2", "3"}:
+        return bool((judgment or "").strip())
+    empty = lambda text: re.sub(r"[\s*.:·\-—'\"]", "", text.split(":", 1)[-1]) in ("", "없음", "없다")
+    return not (empty(found["2"]) and empty(found["3"]))
+
+
 def _guidance(row, state):
-    """실행자가 읽을 본문 — 판단, 다음 지점, 남은 횟수."""
+    """실행자가 읽을 본문 — 판단, 의식이 적은 갈래와 질문, 다음 지점, 남은 횟수.
+
+    판단 본문(가고 있는 길·옮기거나 새로 열 갈래·실행자에게 물을 것)은 판정이 무엇이든 붙인다. 처음에는
+    '계속'이면 사유 한 줄만 보냈다 — 에피소드 6192 에서 의식이 새 갈래 둘과 질문 둘을 적고 "그것은 지금 길
+    위에서 조정하면 된다"며 '계속'으로 판정했는데, 실행자는 그 둘이 무엇인지 받지 못했다. 값이 의심되는 일은
+    질문으로 전한다는 설계(4.5)와도 어긋났다.
+    """
     left = state["depth"] - row["round"]
     head = {"KEEP": "지금 길로 계속한다.",
             "SWITCH": "방향을 옮기거나 새 갈래를 연다.",
             "WRAP": "더 해도 이득이 작다. 한계를 밝히고 마무리한다."}[row["verdict"]]
     lines = [f"[심층실행 되돌아보기 {row['round']}/{state['depth']}] {head}"
              + (f" 이유: {row['reason']}" if row["reason"] else "")]
-    if row["verdict"] != "KEEP" and row["judgment"]:
+    if row["judgment"] and (row["verdict"] != "KEEP" or _has_points(row["judgment"])):
         lines.append(row["judgment"])
     if row["verdict"] != "WRAP":
         if left > 0:
             lines.append("다음 지점: " + (row["next"] or "다음 구간에서 새로 알게 된 것이 생겼을 때")
                          + f" — 거기에 닿으면 reframe 도구를 kind=\"checkpoint\" 로 다시 부른다(남은 되돌아보기 {left}번).")
         else:
-            lines.append("되돌아보기를 모두 마쳤다. 끝까지 진행하고, 끝내기 전에 한 번 확인받는다.")
+            lines.append("되돌아보기를 모두 마쳤다. 끝까지 진행한다.")
     lines.append("이 판단은 지금 상태에 비춰 확인한다. 따르지 않으면 최종 보고에 이유를 적는다.")
     return "\n".join(lines)
 
@@ -429,7 +447,7 @@ def checkpoint(controller, payload):
                          verdict=substitute["verdict"], content=_guidance(substitute, state))
         if state["done"] >= state["depth"]:
             return reply(checkpoint=False,
-                         directive="되돌아보기를 모두 마쳤다. 끝까지 진행하고, 끝내기 전에 한 번 확인받는다.")
+                         directive="되돌아보기를 모두 마쳤다. 끝까지 진행한다.")
         if controller.cancelled() or controller.finalizing:
             return reply(checkpoint=False, directive="실행이 끝나는 중이다. 새 작업을 시작하지 않는다.")
         state["busy"].set()
@@ -541,8 +559,8 @@ def reflect(controller, state):
         row = _round(controller, state, note=None, by="harness")
         if controller.cancelled() or controller.finalizing:
             return True
-        if row["verdict"] == "KEEP" and state["done"] >= state["depth"]:
-            return True  # 바꿀 것도, 다시 돌아올 지점도 없다. 실행자가 뒤늦게 돌아오면 그때 이 판단을 답으로 준다
+        if row["verdict"] == "KEEP" and state["done"] >= state["depth"] and not _has_points(row["judgment"]):
+            return True  # 바꿀 것도, 전할 갈래·질문도, 다시 돌아올 지점도 없다. 실행자가 뒤늦게 돌아오면 그때 이 판단을 답으로 준다
         notice = _notice(controller, state, finding_id=f"deep-{row['round']}", review=row["round"],
                          reason=(f"심층실행 되돌아보기 {row['round']}/{state['depth']} — "
                                  "돌아오지 않아 실행 기록으로 대신 되돌아봤다"),

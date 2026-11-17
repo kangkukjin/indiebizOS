@@ -46,6 +46,104 @@ def test_user_followup_keeps_all_criteria_and_reuses_same_workspace(unfinished, 
     assert journal.current() is None
 
 
+class _Runner:
+    """의식 호출만 가짜인 실행 주체. 나머지(_run_consciousness_or_reuse·rethink·인계 원장)는 실제 경로다."""
+    def __init__(self, config, answer):
+        from cognitive_consciousness import CognitiveConsciousnessMixin
+        self.config, self.answer, self.calls = config, answer, []
+        self.reuse = CognitiveConsciousnessMixin._run_consciousness_or_reuse.__get__(self)
+
+    def _run_consciousness(self, message, history, memory="", repair=False, revision=None, resume=None):
+        self.calls.append({"message": message, "repair": repair, "resume": resume})
+        if isinstance(self.answer, Exception):
+            raise self.answer
+        return self.answer
+
+
+def test_user_resumed_repair_is_reframed_from_its_present_state_with_criteria_fixed(unfinished, monkeypatch):
+    """사용자의 말로 이은 수리는 의식이 지금 상태에서 남은 일을 새로 규정한다. 완료 기준과 권한은 못 바꾼다.
+    (그 전에는 수리를 시작하기 전에 쓴 규정을 다시 틀었다 — 11-03: 같은 수리에 "완료해줘" 15번.)"""
+    root, wt, st, sess, controller = unfinished
+    events = []
+    monkeypatch.setattr('episode_logger.record_trajectory_event', lambda kind, data=None: events.append((kind, data)))
+    runner = _Runner(controller.runner.config, {
+        'task_framing': '남은 것은 전달이다. 사본의 a.txt 를 확인하고 전달 단계만 마친다.',
+        'criteria': [{'text': '기준을 느슨하게 바꿔 본다'}], 'needs_repair': False, '_repair_policy': 99,
+        'independent_review': False, 'deep_execution': 3, 'first_step': '처음부터 다시 조사',
+        'assumptions': ['사본이 그대로 있다']})
+    message = '수리를 완료해줘'
+    with resume.user_resume(runner, message, [{'role': 'user', 'content': controller.message}]):
+        assert resume.user_resumed()
+        out = runner.reuse(message, [], '', repair=True)
+    call = runner.calls[0]
+    assert call['repair'] is True
+    facts = call['resume']
+    assert facts['stopped_because'] == 'C2 unmet' and facts['last_report'] == 'not delivered'
+    assert facts['applied_to_canonical'] is False and facts['copy']['path'] == sess['worktree']
+    assert [c['text'] for c in facts['criteria']] == ['build', 'deliver without changing key']
+    # 남은 일의 규정은 의식의 것, 완료 기준·권한·검토 여부는 보존된 것
+    assert out['task_framing'].startswith('남은 것은 전달이다')
+    assert [c['text'] for c in out['criteria']] == ['build', 'deliver without changing key']
+    assert out['_repair_policy'] == 2 and out['_framing_source'] == 'repair_continuation'
+    assert out['independent_review'] is True and 'needs_repair' not in out
+    assert 'deep_execution' not in out and 'first_step' not in out
+    assert out['assumptions'] == ['사본이 그대로 있다']
+    assert ('repair.resume_rethink', {'used': True, 'needs_clarification': False,
+                                      'task_framing_chars': len(out['task_framing'])}) in events
+    assert not resume.user_resumed()            # 표식은 그 턴 밖으로 나가지 않는다
+
+
+@pytest.mark.parametrize('answer', [None, {'task_framing': '  '}, RuntimeError('의식 모델 오프라인')])
+def test_resume_falls_back_to_the_preserved_framing_when_consciousness_cannot_answer(unfinished, monkeypatch, answer):
+    root, wt, st, sess, controller = unfinished
+    events = []
+    monkeypatch.setattr('episode_logger.record_trajectory_event', lambda kind, data=None: events.append((kind, data)))
+    runner = _Runner(controller.runner.config, answer)
+    message = '수리를 완료해줘'
+    with resume.user_resume(runner, message, [{'role': 'user', 'content': controller.message}]):
+        out = runner.reuse(message, [], '', repair=True)
+    assert out['task_framing'].startswith('build and deliver') and '사용자 후속 요청: ' + message in out['task_framing']
+    assert len(out['criteria']) == 2
+    assert [data['used'] for kind, data in events if kind == 'repair.resume_rethink'] == [False]
+
+
+def test_automatic_continuation_keeps_the_preserved_framing_without_waking_consciousness(unfinished):
+    """하네스가 자동으로 잇는 턴(재기동 뒤·검수 지점 복원)은 같은 턴이 이어지는 것이다 — 의식을 부르지 않는다."""
+    root, wt, st, sess, controller = unfinished
+    runner = _Runner(controller.runner.config, {'task_framing': '불리면 안 된다'})
+    row = {**journal.read(controller.task), 'resume_task_id': 'next', 'resume_message': 'build and deliver'}
+    with journal.resuming(row):
+        assert not resume.user_resumed()
+        out = runner.reuse('build and deliver', [], '', repair=True)
+    assert runner.calls == [] and out['task_framing'] == 'build and deliver'
+
+
+def test_state_facts_carry_why_it_stopped_and_every_earlier_stop(unfinished):
+    root, wt, st, sess, controller = unfinished
+    first = journal.read(controller.task)
+    journal.save({**first, 'status': 'continued', 'child_task_id': 'second'})
+    second = journal.save({**first, 'task_id': 'second', 'parent_task_id': first['task_id'], 'status': 'blocked',
+                           'reason': '적용할 수리 델타가 없습니다', 'response': '두 번째 보고', 'execution_round': 2,
+                           'criteria_state': [{'id': 'C1', 'text': 'build', 'status': 'met'},
+                                              {'id': 'C2', 'text': 'deliver without changing key', 'status': 'unmet'}]})
+    facts = journal.state_facts(second)
+    assert facts['stopped_because'] == '적용할 수리 델타가 없습니다' and facts['rounds_so_far'] == 2
+    assert facts['earlier_stops'] == [{'task': first['task_id'], 'phase': first['phase'], 'reason': 'C2 unmet'}]
+    assert [(c['id'], c['status']) for c in facts['criteria']] == [('C1', 'met'), ('C2', 'unmet')]
+    assert facts['applied_to_canonical'] is False and '반영되기 전' in facts['tool_facts'][0]
+    assert '반영된 뒤' in journal.state_facts({**second, 'applied': True, 'staging_task_id': 'none'})['tool_facts'][0]
+    text = journal.state_text(second)
+    assert '적용할 수리 델타가 없습니다' in text and '지시가 아니다' in text
+
+
+def test_consciousness_input_carries_the_resume_state():
+    from consciousness_agent import ConsciousnessAgent
+    agent = ConsciousnessAgent.__new__(ConsciousnessAgent)
+    text = agent._build_input('수리를 완료해줘', [], '', '', '', '', resume={'stopped_because': '커밋 관문 거부', 'phase': 'verify_remaining'})
+    assert '<repair_resume' in text and '커밋 관문 거부' in text and '원래 기준이 쓰인다' in text
+    assert '<repair_resume' not in agent._build_input('수리를 완료해줘', [], '', '', '', '')
+
+
 @pytest.mark.parametrize('applied', [False, True, None])
 def test_rejected_apply_reuses_workspace_only_with_confirmed_no_write(unfinished, applied):
     root, wt, st, sess, controller = unfinished
@@ -140,16 +238,19 @@ def test_user_review_resume_authenticates_followup_but_preserves_original_goal(u
 
 
 def test_resume_relation_requires_execution_intent_and_keeps_history(monkeypatch):
+    """수리 재개 판정은 의식 축의 모델이 답한다 — CONTINUE 한 단어가 옛 기준과 수리 권한을 되살리기 때문이다
+    (2026-11-17 사용자 판정. 그 전에는 분류 축의 경량 모델이 답했다)."""
     seen = []
-    monkeypatch.setattr(framing, '_prompt', lambda name: 'relation')
     def model(body, prompt, role):
-        seen.append((body, prompt))
+        seen.append((body, prompt, role))
         return 'NEW'
     monkeypatch.setattr(framing, '_oneshot', model)
     assert framing._judge_relation({'message': 'repair'}, '지금 상태는?', strict=True,
-        history=[{'role': 'user', 'content': 'original work'}], execution_only=True) == 'NEW'
-    assert '상태 조회' in seen[0][1]
-    assert 'original work' in seen[0][0]
+        history=[{'role': 'user', 'content': 'original work'}]) == 'NEW'
+    body, prompt, role = seen[0]
+    assert role == 'consciousness'
+    assert '상태 조회' in prompt and '애매하면 NEW' in prompt      # 수리 재개만을 위한 지문
+    assert 'original work' in body
 
 
 def test_applied_backend_can_resume_commit_without_reapplying(setup, monkeypatch):

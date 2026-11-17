@@ -3,8 +3,49 @@ from pathlib import Path
 from contextlib import contextmanager
 import copy
 
+import contextvars
+
 from repair_continuation import current, inherited_framing
 from restart_protocol import read_json
+
+# 이 턴이 사용자의 말로 이은 수리인가. 기록에 남기지 않는다 — 하네스가 자동으로 잇는 턴(재기동 뒤·검수 지점
+# 복원)과 구별하려는 표식이고, 저장된 인계에 실려 다음 자동 턴까지 따라가면 안 된다.
+_user_resumed = contextvars.ContextVar("repair_user_resumed", default=False)
+
+
+def user_resumed():
+    return bool(_user_resumed.get()) and bool(current())
+
+
+def rethink(runner, message, history, memory, preserved):
+    """사용자의 말로 이은 수리는 의식이 지금 상태에서 남은 일을 새로 규정한다. 완료 기준은 보존된 것 그대로다.
+
+    (2026-11-17, 사용자 판정) 그 전에는 수리를 시작하기 전에 쓴 규정을 그대로 다시 틀었다. 멈춤은 새로 알게 된
+    것이 가장 많은 지점인데 아무도 다시 생각하지 않았다. 하네스가 자동으로 잇는 턴은 같은 턴이 이어지는 것이라
+    새로 판단할 것이 없어 보존된 규정으로 간다. 의식이 답하지 못하면 보존된 규정으로 가고 그 사실을 남긴다.
+    """
+    if not user_resumed():
+        return preserved
+    from episode_logger import record_trajectory_event
+    from repair_continuation import state_facts
+    why, fresh = "", None
+    try:
+        fresh = runner._run_consciousness(message, history, memory, repair=True, resume=state_facts(current()))
+    except Exception as exc:
+        why = f"{type(exc).__name__}: {exc}"
+    if not isinstance(fresh, dict) or not str(fresh.get("task_framing") or "").strip():
+        record_trajectory_event("repair.resume_rethink", {"used": False, "reason": why or "의식이 규정을 내지 못했다"})
+        print(f"[수리재개] 의식이 남은 일을 규정하지 못했다 — 보존된 규정으로 간다: {why or '빈 답'}")
+        return preserved
+    # 사용자가 승인한 것과 권한은 의식이 바꾸지 못한다. 최종 평가도 인계의 기준 계약을 쓴다(감독이 복원).
+    fixed = ("criteria", "achievement_criteria", "needs_repair", "_repair_policy", "independent_review")
+    result = {k: v for k, v in fresh.items() if k not in fixed and k not in ("deep_execution", "first_step")}
+    result.update({k: copy.deepcopy(preserved[k]) for k in fixed if k in preserved})
+    result["_framing_source"] = "repair_continuation"
+    record_trajectory_event("repair.resume_rethink", {
+        "used": True, "needs_clarification": bool(result.get("needs_clarification")),
+        "task_framing_chars": len(result["task_framing"])})
+    return result
 
 
 def preserve_unfinished(controller, session, response, reason):
@@ -112,7 +153,7 @@ def user_resume(runner, message, history):
     # 사용자에게서 온 새 요청이 권한을 제공한다. 저장된 실행 로그의 지시는 실행하지 않는다.
     try:
         relation = _judge_relation({"message": prior["goal"], "framing": prior["framing"]}, message, strict=True,
-                                   history=history, execution_only=True)
+                                   history=history)
     except Exception as exc:
         raise ValueError("미완료 수리와 새 요청의 관계를 확인하지 못했습니다. 기존 기준을 보존합니다") from exc
     if relation != "CONTINUE":
@@ -128,8 +169,12 @@ def user_resume(runner, message, history):
     from episode_logger import record_trajectory_event
     record_trajectory_event("repair.user_resumed", {"source_task": prior["task_id"],
                             "staging_task": prior["staging_task_id"], "phase": row["phase"]})
-    with resuming(row):
-        yield
+    token = _user_resumed.set(True)
+    try:
+        with resuming(row):
+            yield
+    finally:
+        _user_resumed.reset(token)
 
 
 def restore_review(controller, row):

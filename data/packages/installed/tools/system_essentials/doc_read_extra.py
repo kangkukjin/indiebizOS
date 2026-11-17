@@ -172,6 +172,15 @@ def _hwp_para_text(payload: bytes) -> str:
             out.append("\n")
         elif c == 13 or c < 32:
             pass
+        elif 0xD800 <= c <= 0xDBFF and i + 1 < n and 0xDC00 <= codes[i + 1] <= 0xDFFF:
+            # UTF-16 서로게이트 쌍은 한 글자다(한컴 전용 글머리·번호 기호처럼 기본 평면 밖의 글자).
+            # 반쪽씩 글자로 만들면 뒤에서 UTF-8 로 바꾸지 못해 읽기 전체가 실패한다
+            # (에피소드 6192: 나라장터 제안요청서 한 편에 113곳).
+            out.append(chr(0x10000 + ((c - 0xD800) << 10) + (codes[i + 1] - 0xDC00)))
+            i += 2
+            continue
+        elif 0xD800 <= c <= 0xDFFF:
+            out.append("�")   # 짝 없는 반쪽 — 글자가 아니다. 있었다는 자리만 남긴다
         else:
             out.append(chr(c))
         i += 1

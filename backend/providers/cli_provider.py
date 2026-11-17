@@ -1429,8 +1429,9 @@ class CliSubprocessProvider(BaseProvider):
         return headers
 
     def _build_env(self) -> Dict[str, str]:
-        """subprocess에 전달할 env — 기본은 상속 환경 + 신원. 인증은 서브클래스가 덧쓴다."""
-        env = os.environ.copy()
+        """subprocess에 전달할 env — 상속 환경(모델 공급자 키 제외) + 신원. 인증은 서브클래스가 덧쓴다."""
+        from model_resolver import without_provider_keys
+        env = without_provider_keys(os.environ)   # CLI 의 자기 셸이 이 환경을 그대로 받는다
         env.update(self._identity_env())
         from common.spill import DISPLAY_MCP_OUTPUT_TOKENS
         env.setdefault("MAX_MCP_OUTPUT_TOKENS", str(DISPLAY_MCP_OUTPUT_TOKENS))

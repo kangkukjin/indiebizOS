@@ -1,66 +1,20 @@
-"""Current-request criteria survive framing inheritance and reach final evaluation."""
+"""직전 규정의 기록 — 옛 추천·복구 문맥이 기록에 섞이지 않는다. 규정 계승은 2026-11-17 없앴다."""
 import json
 
 import boot_paths  # noqa: F401
 import pytest
 import framing_inheritance as fi
-from supervisor_handoff import criteria_contract
-
-
-@pytest.mark.parametrize('mode', ['followup', 'repeat'])
-def test_patch_replaces_structured_criteria_used_by_evaluation(monkeypatch, mode):
-    previous = {'framing': {'achievement_criteria': '소재 제작',
-                           'criteria': [{'text': '이미지 세 장', 'user_quote': '', 'fallback': ''}]}}
-    patch = {'achievement_criteria': '반응 검토', 'criteria': [
-        {'text': '결측일을 밝히고 KPI 판정', 'user_quote': 'KPI 판정', 'fallback': '미측정 명시'}]}
-    seen = []
-    def answer(prompt, system_prompt, role):
-        seen.append(json.loads(prompt))
-        return json.dumps(patch, ensure_ascii=False)
-    monkeypatch.setattr(fi, '_oneshot', answer)
-    result = fi._patch(previous, 'KPI 판정', mode)
-    contract = criteria_contract('KPI 판정', {**previous['framing'], **result})
-    assert seen[0]['framing']['criteria'] == previous['framing']['criteria']
-    assert len(contract['criteria']) == 1
-    assert contract['criteria'][0]['text'] == '결측일을 밝히고 KPI 판정'
-    assert contract['criteria'][0]['fallback'] == '미측정 명시'
-    assert contract['criteria'][0]['source'] == 'consciousness'
-
-
-@pytest.mark.parametrize('patch', [{'criteria': [{'text': 3}]}])
-def test_followup_missing_or_invalid_criteria_declines(monkeypatch, patch):
-    monkeypatch.setattr(fi, '_oneshot', lambda *a: json.dumps(patch))
-    with pytest.raises(ValueError):
-        fi._patch({'framing': {}}, '조건 변경', 'followup')
-
-
-def test_unchanged_repeat_preserves_criteria(monkeypatch):
-    monkeypatch.setattr(fi, '_oneshot', lambda *a: '{}')
-    assert fi._patch({'framing': {'criteria': [{'text': 'same'}]}}, 'same', 'repeat') == {}
 
 
 @pytest.mark.parametrize('key', ['capability_focus', 'ibl_focus'])
-@pytest.mark.parametrize('patch', [{}, {'capability_focus': {'highlight_actions': 'malformed'}},
-                                 {'ibl_focus': {'hint': '새 의존 관계', 'highlight_actions': [7]}}])
-def test_old_saved_recommendations_do_not_enter_patch_or_merged_framing(monkeypatch, tmp_path, key, patch):
-    from copy import deepcopy
-    previous = {'message': '주기 요청', 'framing': {
-        'task_framing': '기간 비교', 'achievement_criteria': '근거 보존',
-        'criteria': [{'text': '근거 보존', 'user_quote': '', 'fallback': ''}],
-        key: {'hint': '기존 의존 관계', 'highlight_actions': ['self:read']}}}
-    original = deepcopy(previous)
-    monkeypatch.setattr(fi, '_candidate', lambda *a: ('repeat', previous))
-    inputs = []
-    def reply(prompt, *args):
-        inputs.append(json.loads(prompt))
-        return json.dumps(patch)
-    monkeypatch.setattr(fi, '_oneshot', reply)
-    result = fi._inherit(None, '주기 요청', [], lambda *a: None)
-    expected = '새 의존 관계' if 'ibl_focus' in patch else '기존 의존 관계'
-    assert result['capability_focus'] == {'hint': expected}
-    assert 'highlight_actions' not in json.dumps(inputs) and 'ibl_focus' not in json.dumps(inputs)
-    assert result['criteria'] == original['framing']['criteria'] and previous == original
-    assert 'highlight_actions' not in json.dumps(fi._storable(previous['framing']))
+def test_old_saved_recommendations_do_not_enter_the_record(key):
+    """기록에는 옛 추천 액션 목록이 남지 않는다 — 기록을 읽는 쪽(의식의 계획 후보, 수리 재개)에 흘러가지 않게."""
+    framing = {'task_framing': '기간 비교', 'achievement_criteria': '근거 보존',
+               'criteria': [{'text': '근거 보존', 'user_quote': '', 'fallback': ''}],
+               key: {'hint': '기존 의존 관계', 'highlight_actions': ['self:read']}}
+    stored = fi._storable(framing)
+    assert 'highlight_actions' not in json.dumps(stored) and 'ibl_focus' not in stored
+    assert stored['capability_focus'] == {'hint': '기존 의존 관계'}
 
 
 def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path, monkeypatch):
@@ -81,6 +35,7 @@ def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path,
 
 
 def test_recovery_prefix_cannot_replace_new_user_request(monkeypatch, tmp_path):
+    """복구 문맥이 앞에 붙어도 기록에 남는 요청은 사용자의 원문이다. 규정은 의식이 새로 쓴다."""
     from dialogue_continuation import _execute
     from test_framing_inheritance_2026_10_07 import Runner, _remember
     from thread_context import actor_context
@@ -89,15 +44,7 @@ def test_recovery_prefix_cannot_replace_new_user_request(monkeypatch, tmp_path):
     _remember(runner, '업데이트하다 중단했다', achieved=False)
     request = '다시 확인해 보고 완성해줘.'
     augmented = '이전 실행 복구 관측\n' * 1000 + '[이번 사용자 요청]\n' + request
-    seen = []
-
-    def answer(prompt, system_prompt, role):
-        seen.append(json.loads(prompt))
-        return 'CONTINUE' if role == 'classify' else json.dumps({
-            'task_framing': request, 'achievement_criteria': '실제 동작 확인',
-            'criteria': [{'text': '실제 동작 확인', 'user_quote': request, 'fallback': ''}]})
-
-    monkeypatch.setattr(fi, '_oneshot', answer)
+    monkeypatch.setattr(fi, '_oneshot', lambda *a: pytest.fail('경량 모델이 규정에 불렸다'))
 
     def execute(prompt, history):
         framing = runner._run_consciousness_or_reuse(prompt, history)
@@ -106,9 +53,7 @@ def test_recovery_prefix_cannot_replace_new_user_request(monkeypatch, tmp_path):
 
     with actor_context(agent_id='agent_t', task_id='new'):
         result = list(_execute(execute, augmented, [{'role': 'user', 'content': '이어서'}], request))
-    assert runner.calls == 0
-    assert len(seen) == 2 and all(row['new_message'] == request for row in seen)
-    assert result[0]['criteria'][0]['text'] == '실제 동작 확인'
+    assert runner.calls == 1 and result[0]['task_framing'] == '새 규정'
     assert fi._load('agent_t')['last']['message'] == request
     # 바깥에서 같은 표식을 쓴 사용자 메시지는 그 자체가 원문이다.
     from dialogue_continuation import recall_query

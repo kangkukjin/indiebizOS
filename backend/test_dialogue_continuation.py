@@ -274,7 +274,8 @@ def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_p
     def unexpected_model(*args, **kwargs):
         pytest.fail('정정 통합 시험에서 실제 모델 경계로 진입했습니다')
 
-    # 후속 구간의 규정 계승과 최종 검수도 모델 경계다. 본문·전달·기록은 실제 경로다.
+    # 최종 검수는 모델 경계다. 본문·전달·기록은 실제 경로다. 후속 구간도 의식이 새로 규정한다 —
+    # 규정 계승(관계 판정 뒤 경량 모델이 고쳐 쓰기)은 2026-11-17 없앴으므로 관계 판정은 불리지 않는다.
     monkeypatch.setattr('consciousness_agent.oneshot_ai_call', relation)
     monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
     monkeypatch.setattr('consciousness_agent._resolve_oneshot_provider', unexpected_model)
@@ -300,7 +301,7 @@ def test_pipeline_handles_steering_after_model_final_and_preserves_history(tmp_p
         events = list(runner.cognitive_stream('보고서 작성', []))
     assert len(requests) == 2
     assert len(evaluations) == 2
-    assert len(relations) == 1
+    assert len(relations) == 0
     assert '제목만 변경' in requests[1]['message_content']
     assert '처음 답' in requests[1]['message_content']
     assert [e['content'] for e in events if e['type'] == 'final'] == ['수정된 답']

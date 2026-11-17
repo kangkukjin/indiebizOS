@@ -565,6 +565,18 @@ class CodexProvider(CliSubprocessProvider):
             return body
         return f"{head}\n\n---\n\n{body}"
 
+    @staticmethod
+    def _shell_policy_args() -> List[str]:
+        """Codex 자기 셸의 환경 정책 — 모델 공급자의 과금 키를 그 셸에서 뺀다.
+
+        기동 환경에서 빼는 것(`_build_env`)만으로는 모자란다. Codex 의 셸은 사용자 셸의 스냅숏으로 변수를
+        다시 얻어서, 기동 환경에 없는 `ANTHROPIC_API_KEY` 가 사용자의 셸 설정을 거쳐 셸에 다시 보였다
+        (2026-11-17 실제 CLI 0.166 로 확인: 이 옵션을 주면 사라지고 `JAVA_HOME` 같은 나머지는 남는다).
+        왜 빼는지는 model_resolver.without_provider_keys. 이름 목록도 같은 공급자 카탈로그에서 온다.
+        """
+        from model_resolver import provider_env_vars
+        return ["-c", "shell_environment_policy.exclude=" + json.dumps(sorted(provider_env_vars()))]
+
     def _build_command(
         self,
         mcp_config_path: Optional[str] = None,
@@ -613,6 +625,7 @@ class CodexProvider(CliSubprocessProvider):
         # 사용자의 config.toml 에 있는 notify 훅(데스크톱 알림 클라이언트)은 백엔드 호출마다
         # 튀어나오면 안 된다 — 우리 서브프로세스에서만 끈다(사용자 파일은 안 건드림).
         cmd += ["-c", "notify=[]"]
+        cmd += self._shell_policy_args()
         # web_search 는 기존 검색·원문 보존 연결을 사용하도록 비활성화 (TOOL_POLICY 참조)
         # ★키가 두 벌이다(2026-09-13 실측): 옛 codex 는 `tools.web_search`, 0.153.4(ChatGPT.app 동봉,
         #   09-09 갱신)는 최상위 `web_search="disabled"` 만 읽고 옛 키는 --strict-config 에서도 말없이

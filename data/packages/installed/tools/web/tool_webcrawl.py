@@ -229,6 +229,16 @@ _META_CHARSET_RE = re.compile(
     rb'<meta[^>]{0,200}?charset\s*=\s*["\']?\s*([a-zA-Z0-9_\-:.]+)', re.I)
 # 서버가 명시해도 CJK 페이지에선 못 믿는 값 — HTTP 기본값이라 "미선언"과 사실상 같다.
 _WEAK_CHARSETS = {"iso-8859-1", "latin-1", "latin1", "ascii", "us-ascii"}
+def _unescape_u(text: str) -> str:
+    """`\\uXXXX` 이스케이프를 글자로 편다. 두 칸짜리 글자(서로게이트 쌍)는 한 글자로 합친다.
+
+    코드 단위마다 글자로 바꾸기만 하면 쌍이 반쪽 둘로 남아, 그 글자가 든 주소는 UTF-8 로 바꿀 수 없다
+    (HWP 읽기가 같은 꼴로 실패했다, 2026-11-17). 짝 없는 반쪽은 대체 문자가 된다.
+    """
+    flat = re.sub(r'\\{1,2}u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), text)
+    return flat.encode('utf-16', 'surrogatepass').decode('utf-16', 'replace')
+
+
 _BOMS = ((b'\xef\xbb\xbf', 'utf-8-sig'), (b'\xff\xfe', 'utf-16'), (b'\xfe\xff', 'utf-16'))
 
 
@@ -814,8 +824,7 @@ def _resolve_google_news(url: str) -> str | None:
         # 응답은 JSON-in-JSON 이고 URL 안의 = & 등이 \\u003d 꼴로 이스케이프돼 있다 —
         # 풀지 않으면 정규식이 백슬래시에서 끊겨 `?idxno` 까지만 남는다
         # (2026-08-21 ep1339·1258 등 7일간 gnews 발 크롤 17건 전멸의 실체).
-        body = re.sub(r'\\{1,2}u([0-9a-fA-F]{4})',
-                      lambda m: chr(int(m.group(1), 16)), r.text)
+        body = _unescape_u(r.text)
         # 정밀 패턴 우선, 실패 시 비-구글 URL 스캔 폴백
         m2 = re.search(r'garturlres\\",\\"(https?://[^\\"]+)', body)
         if m2:

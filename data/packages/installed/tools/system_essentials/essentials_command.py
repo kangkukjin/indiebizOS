@@ -98,13 +98,18 @@ def render_held(held, timeout, structured=False):
                            'output': output.strip(), 'error': f"명령이 끝까지 실행되지 못했습니다: {state}",
                            **({'cleanup': held['cleanup']} if held.get('cleanup') else {})}, ensure_ascii=False)
     preflight = held.get('preflight') or {}
+    # 명령이 끝날 때 살아 있던 하위 프로세스를 몸이 함께 끝냈으면 그 사실을 결과에 싣는다. 말하지 않으면 낸 쪽은
+    # 백그라운드로 띄운 일이 계속 도는 줄 안다(에피소드 6192: 죽은 평가를 280초 기다렸다).
+    left = held.get('left_behind') or {}
     if structured:
         return json.dumps({**shape, 'success': code == 0, 'executed': True, 'state': state, 'exit_code': code,
-                           'output': output.strip(),
+                           'output': output.strip(), **({'left_behind': left} if left else {}),
                            **({'preflight': preflight, 'diagnostics': held.get('diagnostics')}
                               if preflight.get('status') == 'unsupported' else {})}, ensure_ascii=False)
     if code:
         output += f"\n[exit code: {code}]"
+    if left.get('note'):
+        output = output.rstrip() + f"\n[{left['note']}]"
     # Preserve the successful text contract; unsupported coverage is explicit.
     if preflight.get('status') == 'unsupported':
         return json.dumps({'success': code == 0, 'executed': True, 'exit_code': code, 'output': output.strip(),

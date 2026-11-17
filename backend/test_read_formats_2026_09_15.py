@@ -51,6 +51,22 @@ def test_hwp_para_text_skips_controls():
     assert dre_mod._hwp_para_text(payload) == "가\t나다"
 
 
+def test_hwp_para_text_joins_surrogate_pairs():
+    """기본 평면 밖의 글자(한컴 전용 글머리·번호 기호 등)는 UTF-16 에서 두 칸을 쓴다. 반쪽씩 글자로 만들면
+    결과를 UTF-8 로 바꾸지 못해 읽기 전체가 실패했다(에피소드 6192: 제안요청서 한 편에 113곳)."""
+    mark = "\U000F02B1"                      # 실제 문서에 있던 한컴 전용 번호 기호
+    high, low = struct.unpack("<2H", mark.encode("utf-16-le"))
+    codes = [ord("가"), high, low, ord("나"), 0xD83D, ord("다"), 0xDC00, 13]   # 쌍 하나, 짝 없는 반쪽 둘
+    text = dre_mod._hwp_para_text(struct.pack(f"<{len(codes)}H", *codes))
+    assert text == "가" + mark + "나\ufffd다\ufffd"
+    text.encode("utf-8")                     # 반쪽이 남아 있으면 여기서 UnicodeEncodeError
+    # 문단·표 블록까지 올라가도 같다
+    blocks = []
+    dre_mod._hwp_section_blocks(_para(mark + " 과업개요", 0), blocks)
+    assert blocks == [{"type": "paragraph", "text": mark + " 과업개요"}]
+    json.dumps(blocks, ensure_ascii=False).encode("utf-8")
+
+
 def test_hwp_section_blocks_paragraphs_and_table():
     T = dre_mod
     data = b"".join([

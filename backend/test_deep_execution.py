@@ -221,6 +221,36 @@ def test_keep_at_the_last_round_stays_silent(tmp_path, monkeypatch, scope):
     assert len(seen) == 3 and controller.pending is None
     assert work(controller, 3, 1)[0]["success"] is True
 
+KEEP_WITH_POINTS = ("1. 같은 길이다\n2. 입력 출처 예비: 얻는 것 빈 입력 방지 / 드는 것 호출 4회 / 뒤집을 관측 전문 낭독\n"
+                    "3. 회의록 Q&A는 과업의 어느 항목에 쓰이는가?\nNEXT: 정답 세트가 나오면 돌아온다\n"
+                    "VERDICT: KEEP — 예비 출처와 Q&A 대체는 지금 길 위에서 조정하면 된다")
+
+
+def test_keep_still_carries_the_branches_and_questions(tmp_path, monkeypatch, scope):
+    """에피소드 6192: 의식이 새 갈래와 질문을 적고 '계속'으로 판정했는데 실행자는 사유 한 줄만 받았다.
+    판정이 무엇이든 의식이 적은 갈래와 질문은 실행자에게 간다. 없어진 끝 확인을 약속하는 문장도 없다."""
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    script(monkeypatch, {"reflect": ["길", KEEP_WITH_POINTS]})
+    work(controller, 1, 2)
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "요구를 확인했다"}))
+    assert told["verdict"] == "KEEP" and "지금 길로 계속한다" in told["content"]
+    assert "입력 출처 예비" in told["content"] and "회의록 Q&A는 과업의 어느 항목에 쓰이는가?" in told["content"]
+    assert "모두 마쳤다. 끝까지 진행한다." in told["content"] and "확인받는다" not in told["content"]
+    assert "NEXT:" not in told["content"] and "VERDICT:" not in told["content"]
+
+
+def test_harness_delivers_a_last_round_keep_that_has_points(tmp_path, monkeypatch, scope):
+    """실행자가 돌아오지 않아 하네스가 대신 되돌아본 마지막 차례의 '계속'도, 전할 갈래·질문이 있으면 전한다."""
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP_WITH_POINTS]})
+    work(controller, 1, 2)
+    assert de.reflect(controller, de._state(controller)) is True
+    assert controller.pending and "회의록 Q&A는 과업의 어느 항목에 쓰이는가?" in json.dumps(controller.pending, ensure_ascii=False)
+    assert de._has_points(KEEP) is False and de._has_points(KEEP_WITH_POINTS) is True
+    assert de._has_points("**2.** 없음.\n**3.** 실행자에게 물을 것: 없음") is False
+    assert de._has_points("형식을 벗어난 판단 글") is True      # 읽지 못하면 전한다
+
+
 def fail_on(controller, numbers, body):
     """정해 둔 차례의 호출만 실패 결과를 돌려주게 한다."""
     plain = controller._execute

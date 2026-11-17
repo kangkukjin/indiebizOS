@@ -450,7 +450,14 @@ class CognitivePipelineMixin:
         from component_continuation import is_task as component_parent
         parent_resume = component_parent(continuation)
         # 인계에는 이미 목표·규정·증거가 있다. 재개마다 새 연상/분류를 하지 않는다.
-        recall = None if continuation else self._associate(
+        # 사용자의 말로 이은 수리는 예외다: 의식이 지금 상태에서 남은 일을 새로 규정하므로 연상을 하고,
+        # 실행자에게도 같은 상태를 사실로 건넨다(repair_resume.rethink, 2026-11-17).
+        from repair_resume import user_resumed
+        rethinking = bool(continuation) and not parent_resume and user_resumed()
+        if rethinking:
+            from repair_continuation import state_text
+            extra_role = (extra_role + "\n\n" if extra_role else "") + state_text(continuation)
+        recall = None if continuation and not rethinking else self._associate(
             message, history=history, action_hint=action_hint, deep=(force_role != "forage"))
         hippo_score, top_code = (recall.reflex.score, recall.reflex.code) if recall else (0, "")
         if cancel_check and cancel_check():
@@ -990,8 +997,9 @@ class CognitivePipelineMixin:
             # ★백그라운드 실행 — 증류가 스트림 종료·에피소드 END 를 붙잡지 않게
             # (ep889: 증류 꼬리 6분이 턴을 물고 있었다). 컨텍스트 동반은 래퍼가 처리.
             if not force_role:
-                # 규정 계승 저장(2026-10-07) — 이 턴의 유효 규정(재규정됐으면 그 판)을 자아별로 적는다.
-                # 다음 턴의 후속·정기 계승 재료. 실패해도 턴을 깨지 않는다.
+                # 직전 규정 기록 — 이 턴의 유효 규정(재규정됐으면 그 판)을 자아별로 적는다. 읽는 곳은 의식의
+                # 계획 작성(최근 연구계획 후보)과 수리 재개다. 규정을 물려 쓰는 계승은 2026-11-17 없앴다.
+                # 실패해도 턴을 깨지 않는다.
                 if consciousness_output:
                     try:
                         from framing_inheritance import remember as _fi_remember
@@ -1000,7 +1008,7 @@ class CognitivePipelineMixin:
                                       else consciousness_output)
                         _fi_remember(self, message, _effective, completed=_response_completed)
                     except Exception as exc:
-                        print(f"[규정계승] 저장 실패: {type(exc).__name__}: {exc}")
+                        print(f"[규정기록] 저장 실패: {type(exc).__name__}: {exc}")
                 if _response_completed:
                     self._after_response_async(
                         message, final_content,

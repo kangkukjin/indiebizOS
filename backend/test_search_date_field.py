@@ -39,6 +39,15 @@ def naver_tool():
     return _load("date_guard_naver_tool", "tool_naver_search.py")
 
 
+def test_gnews_unescape_joins_surrogate_pairs():
+    """`\\uXXXX` 를 코드 단위마다 글자로 바꾸면 두 칸짜리 글자가 반쪽 둘로 남아 그 주소를 UTF-8 로 못 바꾼다
+    (HWP 읽기가 같은 꼴로 실패했다, 2026-11-17)."""
+    crawl = _load("date_guard_webcrawl", "tool_webcrawl.py")
+    out = crawl._unescape_u(r'https://example.com/a?x\u003d1\\u0026y\u003d2 \ud83d\ude00 \ud83d end')
+    assert out == 'https://example.com/a?x=1&y=2 \U0001F600 \ufffd end'
+    out.encode('utf-8')
+
+
 def test_D1_gnews_rfc2822_to_iso(web_handler):
     out = web_handler._rfc2822_iso("Wed, 26 Aug 2026 15:23:00 GMT")
     assert out.get("date", "").startswith("2026-08-26")

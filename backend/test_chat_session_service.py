@@ -206,3 +206,66 @@ def test_snapshot_does_not_adopt_unowned_todos(chat, invalid):
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+# ── 세션 크기 (2026-11-17, docs/REMAINING_REPAIRS_DESIGN_2026_11_17.md 3절) ───────────────────────────────
+
+@pytest.fixture
+def sizes(tmp_path, monkeypatch):
+    """실행자 CLI 세션의 크기 기록을 시험 폴더로 옮긴다. (공급자 이름 → 기록) 을 적는 함수를 돌려준다."""
+    import providers.cli_provider as cli
+    monkeypatch.setattr(cli, '_data_dir', lambda: tmp_path / 'cli')
+    stores = {store.prefix: store for store in cli._SESSION_STORES}
+    return lambda provider, record: stores[provider].save_sizes(record)
+
+
+def test_snapshot_carries_the_size_of_the_sessions_cli_session(chat, sizes):
+    """대화창 머리에 보이는 숫자 = 그 대화 세션의 실행자 CLI 세션 크기(마지막 라운드의 문맥 토큰)."""
+    store, client = chat
+    sid = store.create()['id']
+    assert client.get(f'/chat-sessions/{sid}').json()['context'] is None      # 턴이 없는 새 세션에는 없다
+    sizes('claude_code', {f'system_ai@session:{sid}#aaaa1111': 240000,
+                          f'system_ai@session:{sid}@rehearsal#aaaa1111': 999,         # 예행 세션은 세지 않는다
+                          f'system_ai@session:{sid}x#aaaa1111': 777,                  # 다른 대화 세션
+                          f'system_ai@session:{sid}@revision:2#aaaa1111': 5000})      # 되감은 뒤의 세션
+    assert client.get(f'/chat-sessions/{sid}').json()['context'] == {'tokens': 240000, 'provider': 'claude_code'}
+    assert service.context_size(store, sid, 2) == {'tokens': 5000, 'provider': 'claude_code'}
+    assert service.context_size(store, sid, 3) is None                         # 되감은 직후에는 아직 세션이 없다
+    assert 'context' in client.get(f'/chat-sessions/{sid}?before=1').json()    # 옛 대화를 읽는 요청에는 싣지 않는다
+    assert client.get(f'/chat-sessions/{sid}?before=1').json()['context'] is None
+
+
+def test_size_follows_the_cli_session_the_conversation_used_last(chat, sizes):
+    """도구 정책이 바뀌면 열쇠 끝의 지문이 바뀌어 한 대화 세션에 열쇠가 여럿 남는다. 방금 쓴 것을 따른다."""
+    store, client = chat
+    sid = store.create()['id']
+    old, new = f'system_ai@session:{sid}#old00000', f'system_ai@session:{sid}#new00000'
+    sizes('claude_code', {new: 670000, old: 250000})
+    sizes('codex', {f'system_ai@session:{sid}#cdx00000': 60000})
+    binding = sessions.Binding(store.path, sid, store.owner)
+    with sessions.scope(binding):
+        sessions.note_cli_session('claude_code', new)
+        assert service.context_size(store, sid) == {'tokens': 670000, 'provider': 'claude_code'}
+        sessions.note_cli_session('codex', f'system_ai@session:{sid}#cdx00000')   # 실행자를 바꿔 한 턴 돌렸다
+        assert service.context_size(store, sid) == {'tokens': 60000, 'provider': 'codex'}
+        sessions.note_cli_session('claude_code', f'system_ai@session:{sid}@rehearsal#new00000')   # 예행은 적지 않는다
+        sessions.note_cli_session('claude_code', 'system_ai@session:other#new00000')              # 남의 세션도
+        assert sessions.cli_session_note(store.path, sid)['provider'] == 'codex'
+    # 세션을 초기화하면 가리키던 기록이 지워진다 — 표식이 남아 있어도 옛 크기를 보이지 않는다
+    sizes('codex', {})
+    sizes('claude_code', {})
+    assert service.context_size(store, sid) is None
+
+
+def test_recording_a_size_leaves_the_note_beside_the_conversation(chat, sizes):
+    import providers.cli_provider as cli
+    store, client = chat
+    sid = store.create()['id']
+    from types import SimpleNamespace
+    provider = SimpleNamespace(_store=next(s for s in cli._SESSION_STORES if s.prefix == 'claude_code'))
+    record = lambda key, size: cli.CliSubprocessProvider._record_context_size(provider, key, size)
+    with sessions.scope(sessions.Binding(store.path, sid, store.owner)):
+        record(f'system_ai@session:{sid}#abcd0000', 123456)
+        record(f'system_ai@session:{sid}#abcd0000', 0)                       # 재지 못한 크기는 적지 않는다
+    assert client.get(f'/chat-sessions/{sid}').json()['context'] == {'tokens': 123456, 'provider': 'claude_code'}
+    record('agent_without_conversation', 5)                                  # 대화 세션에 묶이지 않은 호출도 깨지지 않는다

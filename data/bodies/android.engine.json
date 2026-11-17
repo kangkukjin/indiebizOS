@@ -160,7 +160,7 @@
     "cognition/final_evaluator",
     "cognition/fixture_sweeps",
     "cognition/forage_consolidation",
-    "cognition/framing_inheritance",
+    "cognition/framing_record",
     "cognition/goal_evaluator",
     "cognition/guide_audit",
     "cognition/guide_downscale",

@@ -17,6 +17,61 @@ def user_resumed():
     return bool(_user_resumed.get()) and bool(current())
 
 
+# ── 재개 판정 ───────────────────────────────────────────────────────────────
+# 사용자의 새 말이 멈춘 수리의 실행을 잇는 말인가. 2026-11-17 까지 framing_inheritance 에 있었다 — 쓰는 곳은
+# 여기뿐이다.
+
+_RELATION_PROMPT = "repair_resume_relation_prompt.md"
+_prompt_cache: dict = {}
+
+
+def _prompt(name: str) -> str:
+    from runtime_utils import get_base_path
+    path = Path(get_base_path()) / "data" / "common_prompts" / name
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return ""
+    cached = _prompt_cache.get(name)
+    if cached and cached[0] == mtime:
+        return cached[1]
+    text = path.read_text(encoding="utf-8")
+    _prompt_cache[name] = (mtime, text)
+    return text
+
+
+def _oneshot(prompt: str, system_prompt: str, role: str) -> str:
+    from consciousness_agent import oneshot_ai_call
+    raw = oneshot_ai_call(prompt, system_prompt=system_prompt, role=role)
+    return raw if isinstance(raw, str) else ""
+
+
+def judge_resume(previous: dict, message: str, *, strict=False, history=None) -> str:
+    """새 메시지가 멈춘 수리의 실행을 잇는 말인가 — CONTINUE / NEW 한 단어. 규정을 고치지 않는다.
+
+    의식 축의 모델이 판정한다(2026-11-17, 사용자 판정: 수리야말로 중요하니 의식이 판단한다). 그 전에는 분류
+    축의 경량 모델이 답했다 — CONTINUE 한 단어가 옛 완료 기준과 수리 권한을 되살리는데도. 최대 기어에서도
+    분류 축은 경량이라, 이 판정을 그 축에 두면 늘 경량 모델이 답한다. 어긋난 답은 strict 면 오류, 아니면 NEW.
+    """
+    import json
+    from history_excerpt import conversation_excerpt
+    system_prompt = _prompt(_RELATION_PROMPT)
+    if not system_prompt:
+        if strict:
+            raise ValueError("관계 판정 프롬프트가 없습니다")
+        return "NEW"
+    body = json.dumps({
+        "previous_message": (previous.get("message") or "")[:800],
+        "previous_framing": ((previous.get("framing") or {}).get("task_framing") or "")[:700],
+        "new_message": (message or "")[:1500],
+        "conversation_history": conversation_excerpt(history, 8000),
+    }, ensure_ascii=False)
+    answer = _oneshot(body, system_prompt, "consciousness").strip().upper()
+    if strict and answer not in {"CONTINUE", "NEW"}:
+        raise ValueError("관계 판정 응답을 확인하지 못했습니다")
+    return "CONTINUE" if answer == "CONTINUE" else "NEW"
+
+
 def rethink(runner, message, history, memory, preserved):
     """사용자의 말로 이은 수리는 의식이 지금 상태에서 남은 일을 새로 규정한다. 완료 기준은 보존된 것 그대로다.
 
@@ -39,7 +94,11 @@ def rethink(runner, message, history, memory, preserved):
         return preserved
     # 사용자가 승인한 것과 권한은 의식이 바꾸지 못한다. 최종 평가도 인계의 기준 계약을 쓴다(감독이 복원).
     fixed = ("criteria", "achievement_criteria", "needs_repair", "_repair_policy", "independent_review")
-    result = {k: v for k, v in fresh.items() if k not in fixed and k not in ("deep_execution", "first_step")}
+    # 사본에서 일하는 동안(정본 반영 전)에는 심층실행이 돈다 — 의식이 적은 첫 걸음과, 사용자가 이 말에 붙인
+    # 단계를 그대로 둔다. 정본에 반영된 뒤에는 되돌아보기가 없으므로 버린다(deep_execution.turn_plan).
+    from repair_continuation import before_canonical
+    turn_only = () if before_canonical(current()) else ("deep_execution", "first_step")
+    result = {k: v for k, v in fresh.items() if k not in fixed and k not in turn_only}
     result.update({k: copy.deepcopy(preserved[k]) for k in fixed if k in preserved})
     result["_framing_source"] = "repair_continuation"
     record_trajectory_event("repair.resume_rethink", {
@@ -72,6 +131,10 @@ def preserve_unfinished(controller, session, response, reason):
            "project_id": config.get("_project_id", ""), "agent_id": config.get("id") or controller.owner,
            "system_ai": bool(config.get("_is_system_ai")), "episode_id": controller.episode_id,
            "authorized_origin": "user", "retry_at": None}
+    from deep_execution import record as deep_record
+    deep = deep_record(controller)  # 되돌아본 횟수와 작업 메모 — 사용자가 이 수리를 이을 때 남은 횟수를 잇는다
+    if deep:
+        row["deep"] = deep
     row.pop("resume_task_id", None)
     row.pop("resume_message", None)
     save(row)
@@ -106,7 +169,7 @@ def user_resume(runner, message, history):
     if (current() or get_task_origin() != "user" or not is_owner()):
         yield
         return
-    from framing_inheritance import _load, agent_key, _judge_relation, _age_s, FOLLOWUP_MAX_AGE_S
+    from framing_record import _load, agent_key, _age_s, RECENT_WINDOW_S
     saved = _load(agent_key(runner))
     last = saved.get("last") or {}
     # An explicit task key selects an existing task in this conversation; it is
@@ -146,14 +209,14 @@ def user_resume(runner, message, history):
     eligible = (prior and prior.get("status") == "blocked" and prior.get("authorized_origin") == "user"
                 and prior.get("agent_id") == get_current_agent_id()
                 and prior.get("project_id", "") == config.get("_project_id", "")
-                and (explicit or _age_s(last) <= FOLLOWUP_MAX_AGE_S) and prior.get("criteria_contract"))
+                and (explicit or _age_s(last) <= RECENT_WINDOW_S) and prior.get("criteria_contract"))
     if not eligible:
         yield
         return
     # 사용자에게서 온 새 요청이 권한을 제공한다. 저장된 실행 로그의 지시는 실행하지 않는다.
     try:
-        relation = _judge_relation({"message": prior["goal"], "framing": prior["framing"]}, message, strict=True,
-                                   history=history)
+        relation = judge_resume({"message": prior["goal"], "framing": prior["framing"]}, message, strict=True,
+                                history=history)
     except Exception as exc:
         raise ValueError("미완료 수리와 새 요청의 관계를 확인하지 못했습니다. 기존 기준을 보존합니다") from exc
     if relation != "CONTINUE":
@@ -279,7 +342,7 @@ def review_stream(runner, controller, row, cancel_check=None):
     channel = None
     try:
         issue_grant(agent_id=controller.owner, task_id=controller.task, reason=row["goal"])
-        runner._refresh_execution_prompt(row["goal"], framing, "",
+        runner._refresh_execution_prompt(row["goal"], framing, "", repair=True,
                                          extra_role="보존된 검수 재개. 평가가 지적한 결함만 보완하세요.")
         restore_review(controller, row)
         channel = open_turn(key, runner, row["goal"], [], "", framing, repair=True,

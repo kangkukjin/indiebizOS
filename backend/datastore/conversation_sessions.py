@@ -92,6 +92,40 @@ def state_directory(binding):
     return Path(binding.db_path).parent / "conversation_state" / binding.session_id
 
 
+CLI_SESSION_FILE = "cli_session.json"
+
+
+def note_cli_session(provider, key):
+    """이 대화 세션이 방금 쓴 CLI 세션이 어느 공급자의 어느 열쇠인지 대화 세션 곁에 적는다.
+
+    대화창이 세션 크기를 보일 때 읽는다(chat_session_service.context_size). 크기 자체는 공급자의 크기
+    기록(`data/<공급자>_session_sizes.json`)이 정본이고, 여기에는 가리키는 표식만 둔다 — 한 대화 세션에
+    열쇠가 여럿 남을 수 있어(도구 정책이 바뀌면 열쇠 끝의 지문이 바뀐다) 어느 것이 지금 것인지 알아야 한다.
+    예행 턴은 제 세션을 따로 쓰므로 적지 않는다. 대화 세션에 묶이지 않은 호출도 적지 않는다.
+    """
+    binding = current()
+    if not binding or not key or "@rehearsal" in key or ("@session:" + binding.session_id) not in key:
+        return
+    path = state_directory(binding) / CLI_SESSION_FILE
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp = path.with_suffix(".tmp")
+        temp.write_text(json.dumps({"provider": provider, "key": key, "at": time.time()}, ensure_ascii=False),
+                        encoding="utf-8")
+        temp.replace(path)
+    except OSError:
+        pass  # 표식을 못 적어도 턴은 간다. 대화창은 크기 기록에서 찾아 본다
+
+
+def cli_session_note(db_path, session_id):
+    try:
+        note = json.loads((Path(db_path).parent / "conversation_state" / session_id / CLI_SESSION_FILE)
+                          .read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return note if isinstance(note, dict) and isinstance(note.get("key"), str) else None
+
+
 @contextmanager
 def scope(binding):
     token = _current.set(binding)

@@ -214,14 +214,23 @@ def test_failure_details_survive_adapter():
     assert exc.value.details['stage'] == 'semantic'
 
 
-def test_direct_repair_does_not_call_planning_model(monkeypatch):
+def test_user_repair_tag_goes_to_the_planning_model(monkeypatch):
+    """#repair 를 붙인 사용자 요청도 의식이 규정한다(2026-11-17 사용자 판정 — 사용자가 수리로 판정한 것은 무의식이
+    판정한 것과 같다). 그 전에는 의식을 부르지 않고 요청문을 그대로 기준으로 썼다. 요청문을 그대로 쓰는 규정은
+    업무 도중의 한정 수리(task_repair)에만 남았다."""
     from cognitive_consciousness import CognitiveConsciousnessMixin
     import thread_context
     monkeypatch.setattr(thread_context, 'get_task_origin', lambda: 'user')
-    monkeypatch.setattr('cognitive_consciousness.CognitiveConsciousnessMixin._run_consciousness', lambda *a: pytest.fail('planning model'))
+    calls = []
+    def planning(self, message, history, memory='', repair=False, **kw):
+        calls.append(repair)
+        return {'task_framing': '영어 상태 표시의 원인을 찾아 고친다', 'criteria': [{'text': '상태가 한국어로 보인다'}]}
+    monkeypatch.setattr('cognitive_consciousness.CognitiveConsciousnessMixin._run_consciousness', planning)
     result = CognitiveConsciousnessMixin()._run_consciousness_or_reuse('#repair 영어 상태 표시 수정', [], repair=True)
-    assert result['_repair_policy'] == 2
-    assert result['criteria'][0]['text'] == '#repair 영어 상태 표시 수정'
+    assert calls == [True]
+    assert result['_repair_policy'] == 2 and result['_framing_source'] == 'fresh_consciousness'
+    assert result['criteria'][0]['text'] == '상태가 한국어로 보인다'
+    assert policy.direct_framing('고쳐')['_framing_source'] == 'repair_execution'      # 한정 수리의 규정은 그대로
 
 
 def test_deferred_success_closes_without_new_executor(consumer, tmp_path, monkeypatch):

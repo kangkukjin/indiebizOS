@@ -3,6 +3,8 @@ import type { ChatMessage, ToolActivity, TodoItem, QuestionItem, PlanModeState }
 /** 저장/전송 방식만 교체한다. 입력·첨부·표시·복사·도구 패널은 ChatView가 소유한다. */
 export interface ChatSession {
   title?: string;
+  /** 실행자 CLI 세션의 크기 — 마지막 라운드의 문맥 토큰. CLI 세션이 없으면(API 공급자·새 세션) 비어 있다. */
+  contextTokens?: number;
   messages: ChatMessage[];
   loading: boolean;
   canSteer?: boolean;

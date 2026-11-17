@@ -22,8 +22,19 @@
   확인했다. 14번 불려 입력 211만 토큰을 쓰고 보완 요구는 1번이었으며, 하는 일은 평가와 겹쳤다.
   평가는 목표와 최종 결과만 받는다.)
 
+- 자기수리 턴에도 돈다 — 의식이 새로 규정한 수리가 사본에서 일하는 동안(정본 반영 전)에만. 적용을
+  예약한 뒤와 정본에 반영된 뒤에는 청하지 않는다. 하네스가 자동으로 잇는 수리 턴과 업무 도중의 한정
+  수리에는 없다. 사용자의 말로 이은 수리는 의식이 그 자리에서 다시 규정하므로 그것이 되돌아보기이고,
+  남은 횟수만 이어 쓴다. 횟수와 작업 메모는 수리 인계 기록에 실려 재기동을 넘는다(record).
+  (2026-11-17 사용자 채택, docs/REMAINING_REPAIRS_DESIGN_2026_11_17.md 1절.)
+- 이 턴에 몇 번 도는지는 turn_plan 하나가 정한다. 감독도 실행자 안내도 그 값을 쓴다. 사용자가 주문한
+  단계가 돌지 않으면 그 사실을 실행자에게 한 문장으로 알리고 사건 deep.not_applied 를 남긴다.
+  (그 전에는 안내는 규정만 보고 하네스는 수리 권한까지 봐서, 수리 턴의 실행자가 "돌아가 방향을 받는다"는
+  안내를 받고 돌아오면 "이 턴에는 되돌아보기가 없다"를 받았다.)
+
 끄려면 world_pulse_config.json 의 conscious_supervisor.deep_execution.enabled 를 false 로 둔다.
 """
+import copy
 import json
 import re
 import threading
@@ -68,32 +79,118 @@ def settings(config=None):
     return {**DEFAULTS, **own, **_file_settings()}
 
 
-def depth_of(framing, cfg):
-    """단계 = 사용자의 주문(의식이 옮겨 적은 수), 없으면 THINK 기본값. 꺼져 있으면 0."""
-    if not cfg["enabled"] or not isinstance(framing, dict) or not framing:
-        return 0
-    if framing.get("needs_clarification") or str(framing.get("_framing_source", "")).startswith("repair"):
-        return 0
-    ordered = framing.get("deep_execution")
+def ordered_depth(framing):
+    """사용자가 이 턴에 주문한 단계(의식이 옮겨 적은 수). 주문이 없으면 None."""
+    ordered = (framing or {}).get("deep_execution")
     if isinstance(ordered, str) and ordered.strip().isdigit():
         ordered = int(ordered.strip())
     if isinstance(ordered, (int, float)) and not isinstance(ordered, bool) and ordered >= 0:
         return int(ordered)  # 주문한 만큼. 여기서 줄이면 사용자는 줄어든 것을 알 길이 없다
+    return None
+
+
+def depth_of(framing, cfg):
+    """의식이 새로 규정한 일의 단계 = 사용자의 주문, 없으면 기본값. 꺼져 있으면 0.
+
+    규정 출처가 repair 로 시작하면(수리 인계, 업무 도중의 한정 수리) 0 이다. 사용자의 말로 이은 수리가
+    남은 횟수를 잇는 것은 turn_plan 이 인계 기록을 보고 정한다.
+    """
+    if not cfg["enabled"] or not isinstance(framing, dict) or not framing:
+        return 0
+    if framing.get("needs_clarification") or str(framing.get("_framing_source", "")).startswith("repair"):
+        return 0
+    ordered = ordered_depth(framing)
+    if ordered is not None:
+        return ordered
     if framing.get("deep_research"):
         return 0  # 심층연구는 지금의 방식 그대로 둔다
     return int(cfg["default_depth"])
 
 
-def execution_block(framing):
-    """실행자에게 전하는 안내. 단계가 없으면 빈 문자열이다."""
+NO_PLAN = {"depth": 0, "done": 0, "ordered": False, "memo": [], "asked": 0, "unmet": 0, "why": ""}
+
+
+def handoff_facts():
+    """이어받은 수리 턴의 사실. 이어받은 수리가 아니면 None.
+
+    인계 기록과 '사용자의 말로 이었다'는 표식은 턴을 여는 스레드의 문맥에 있다. 감시 스레드나 도구 재진입
+    스레드에서는 보이지 않을 수 있어, 감독은 configure 때 한 번 읽어 정해 둔다(prepare).
+    """
     try:
-        depth = depth_of(framing, settings())
+        from component_continuation import is_task
+        from repair_continuation import before_canonical, current
+        row = current()
+        if not row or is_task(row):
+            return None
+        from repair_resume import user_resumed
+        carried = row.get("deep") if isinstance(row.get("deep"), dict) else {}
+        return {"resumed": user_resumed(), "copy_stage": before_canonical(row),
+                "depth": int(carried.get("depth") or 0), "done": int(carried.get("done") or 0),
+                "ordered": bool(carried.get("ordered")), "memo": list(carried.get("memo") or [])}
+    except Exception:
+        return None
+
+
+def turn_plan(framing, cfg, *, repair=False, handoff=None):
+    """이 턴에 되돌아보기가 몇 번 도는가. 감독(_state)과 실행자 안내(execution_block)가 이 함수 하나를 쓴다.
+
+    repair = 이 턴에 수리 권한이 있는가. handoff = 이어받은 수리의 사실(handoff_facts).
+    돌려주는 것: depth 이 일이 받은 단계 전체(앞선 턴에서 한 것 포함) / done 앞선 턴에서 이미 한 수 /
+    ordered 그 단계가 사용자의 주문인가 / memo 앞선 턴의 작업 메모 행 / asked·unmet·why 사용자가 주문한
+    단계 가운데 이 턴에 돌지 않는 것과 그 이유. 이 턴에 도는 횟수는 depth - done 이다.
+    """
+    if not cfg["enabled"] or not isinstance(framing, dict) or not framing or framing.get("needs_clarification"):
+        return dict(NO_PLAN)
+    source = str(framing.get("_framing_source", ""))
+    order = ordered_depth(framing)
+    if handoff is not None or source == "repair_continuation":
+        facts = handoff or {}
+        done, memo = int(facts.get("done") or 0), list(facts.get("memo") or [])
+        left = max(0, int(facts.get("depth") or 0) - done)
+        resumed, copy_stage = bool(facts.get("resumed")), bool(facts.get("copy_stage"))
+        if repair and resumed and copy_stage:
+            # 사용자의 말로 이은 수리, 정본 반영 전. 의식이 방금 지금 상태에서 다시 규정했으므로 그것이
+            # 되돌아보기다 — 기본 1단계를 새로 얹지 않고 남은 횟수만 잇는다. 그 말에 단계를 붙였으면 그 단계다.
+            if order is not None:
+                return {**NO_PLAN, "depth": done + order, "done": done, "ordered": True, "memo": memo}
+            return {**NO_PLAN, "depth": done + left, "done": done, "ordered": bool(facts.get("ordered")), "memo": memo}
+        if order is not None and resumed:
+            asked, unmet = order, order
+        elif facts.get("ordered") and left:
+            asked, unmet = int(facts["depth"]), left
+        else:
+            return dict(NO_PLAN)
+        why = ("하네스가 자동으로 잇는 수리 턴이다" if not resumed else
+               "정본에 반영된 뒤의 수리 턴이다" if not copy_stage else "수리 권한이 없는 턴이다")
+        return {**NO_PLAN, "done": done, "asked": asked, "unmet": unmet, "why": why}
+    if source.startswith("repair"):
+        # 업무 도중의 한정 수리(repair_execution). 의식 없이 요청문을 규정으로 쓰는 한 걸음이다.
+        return {**NO_PLAN, "asked": order or 0, "unmet": order or 0, "why": "업무 도중의 한정 수리다"}
+    return {**NO_PLAN, "depth": depth_of(framing, cfg), "ordered": order is not None}
+
+
+def execution_block(framing, *, repair=False, plan=None):
+    """실행자에게 전하는 안내. 이 턴에 도는 단계가 없으면 빈 문자열이다.
+
+    사용자가 주문한 단계가 이 턴에 돌지 않으면 그 사실 한 문장을 돌려준다. 보고하라는 말은 붙이지 않는다 —
+    사실을 받은 실행자가 판단한다. plan 은 감독이 이미 정해 둔 것이 있을 때 건넨다(턴 도중의 재규정).
+    """
+    try:
+        if plan is None:
+            plan = turn_plan(framing, settings(), repair=repair, handoff=handoff_facts())
     except Exception:
         return ""
+    depth = plan["depth"] - plan["done"]
     if depth <= 0:
+        if plan["unmet"]:
+            earlier = f" 앞선 턴에서 {plan['done']}번 되돌아봤다." if plan["done"] else ""
+            return (f"사용자가 심층실행 {plan['asked']}단계를 주문했다.{earlier} "
+                    f"이 턴에는 되돌아보기가 없다 — {plan['why']}.")
         return ""
     first = str((framing or {}).get("first_step") or "").strip()
     lines = [f"심층실행 {depth}단계: 실행 도중 {depth}번, 정해진 지점에서 방향 담당자에게 돌아가 방향을 다시 받는다."]
+    if plan["done"]:
+        lines.append(f"이 수리는 앞선 턴에서 되돌아보기를 {plan['done']}번 마쳤다. 남은 {depth}번을 이 턴에서 잇는다.")
     if first:
         lines.append("첫 걸음(내부 제안): " + json.dumps({"source": "consciousness", "field": "first_step",
                                                          "text": first}, ensure_ascii=False))
@@ -187,18 +284,93 @@ KEEP=지금 길로 계속한다. SWITCH=다른 길로 옮기거나 새 갈래를
 
 # ── 상태와 작업 메모 ────────────────────────────────────────────────────────────
 
+def prepare(controller):
+    """감독이 configure 때 턴을 여는 스레드에서 한 번 부른다. 이 턴의 단계를 정해 둔다.
+
+    인계 기록은 그 스레드의 문맥에 있다. 상태(_state)는 감시 스레드나 도구 재진입 스레드에서 처음 만들어질 수
+    있으므로 거기서 다시 읽지 않는다.
+    """
+    try:
+        plan = turn_plan(controller.framing, settings(getattr(controller, "config", None)),
+                         repair=bool(getattr(controller, "repair_granted", False)), handoff=handoff_facts())
+    except Exception:
+        plan = dict(NO_PLAN)
+    controller._deep_plan = plan
+    if plan["unmet"]:
+        try:
+            controller.log("deep.not_applied", role="harness", ordered=plan["asked"], done=plan["done"],
+                           unmet=plan["unmet"], reason=plan["why"])
+        except Exception:
+            pass  # 기록을 못 남겨도 턴은 간다
+    return plan
+
+
 def _state(controller):
     state = getattr(controller, "_deep", None)
     if state is None:
         cfg = settings(getattr(controller, "config", None))
-        eligible = (getattr(controller, "enabled", False) and not getattr(controller, "repair_granted", False)
+        plan = getattr(controller, "_deep_plan", None)
+        if plan is None:
+            plan = turn_plan(controller.framing, cfg, repair=bool(getattr(controller, "repair_granted", False)))
+        eligible = (getattr(controller, "enabled", False)
                     and getattr(controller, "request_intent", "task") == "task")
-        state = controller._deep = {"cfg": cfg, "depth": depth_of(controller.framing, cfg) if eligible else 0,
-                                    "done": 0, "last_calls": 0, "next": "", "memo": [],
-                                    "nudged_at": None, "busy": threading.Event()}
-        if state["depth"]:
-            controller.log("deep.started", role="harness", depth=state["depth"], ceilings=cfg["ceilings"])
+        state = controller._deep = {
+            "cfg": cfg, "depth": plan["depth"] if eligible else 0, "done": plan["done"] if eligible else 0,
+            "ordered": plan["ordered"], "last_calls": 0, "next": "",
+            # 앞선 턴의 되돌아보기. 그 판단은 그 턴에서 이미 전했거나 그 턴과 함께 끝났다
+            "memo": [{**row, "answered": True, "carried": True} for row in plan["memo"]] if eligible else [],
+            "nudged_at": None, "busy": threading.Event(), "past_copy_logged": False}
+        if state["depth"] > state["done"]:
+            controller.log("deep.started", role="harness", depth=state["depth"], done=state["done"],
+                           ceilings=cfg["ceilings"])
     return state
+
+
+def past_copy(controller):
+    """이 턴이 사본 단계를 지났는가 — 적용을 예약했거나, 수리 권한이 있는 턴이 정본에 반영한 뒤다.
+
+    지났으면 되돌아보기를 청하지 않는다. 청하면 하네스가 실행자의 다음 도구 호출을 세우는데, 적용 예약과
+    재기동 사이에 호출을 세우면 수리 절차가 꼬일 수 있다. 정본에 반영된 뒤에는 수리 도구가 활성 확인만
+    받으므로 바꿀 방향이 없다. 단계를 읽지 못하면 지난 것으로 본다(세우지 않는 쪽이 안전하다).
+    """
+    if getattr(controller, "apply_scheduled", None):
+        return True
+    if not getattr(controller, "repair_granted", False):
+        return False
+    try:
+        from repair_continuation import before_canonical
+        return not before_canonical(getattr(controller, "repair_continuation", None), task=controller.task)
+    except Exception:
+        return True
+
+
+def _note_past_copy(controller, state):
+    """사본 단계를 지나 남은 되돌아보기가 돌지 않는다. 사용자가 주문한 단계였으면 한 번 남긴다."""
+    if state["past_copy_logged"]:
+        return
+    state["past_copy_logged"] = True
+    if state["ordered"] and state["depth"] > state["done"]:
+        controller.log("deep.not_applied", role="harness", ordered=state["depth"], done=state["done"],
+                       unmet=state["depth"] - state["done"], reason="적용을 예약했거나 정본에 반영된 뒤다")
+
+
+def record(controller):
+    """수리 인계 기록에 실을 것 — 이 일이 받은 단계, 지금까지 한 되돌아보기 수, 작업 메모.
+
+    되돌아보기 상태는 메모리에 있고, 수리는 적용하면서 백엔드를 재기동해 이어지는 턴이 새 감독으로 시작한다.
+    싣지 않으면 사용자가 그 수리를 이을 때 처음부터 다시 센다. 이 턴에 심층실행이 없었으면(하네스가 자동으로
+    잇는 턴) 앞선 기록을 그대로 넘긴다.
+    """
+    try:
+        state = _state(controller)
+    except Exception:
+        state = None
+    if state and state["depth"] > 0:
+        return {"depth": state["depth"], "done": state["done"], "ordered": bool(state["ordered"]),
+                "memo": [{k: v for k, v in row.items() if k not in ("answered", "carried")}
+                         for row in state["memo"]]}
+    previous = (getattr(controller, "repair_continuation", None) or {}).get("deep")
+    return copy.deepcopy(previous) if isinstance(previous, dict) else None
 
 
 @contextmanager
@@ -237,6 +409,8 @@ def memo_text(state, framing):
                       "사유: " + row["failed"]]
             continue
         writer = "실행자가 적음" if row["by"] == "executor" else "실행자가 돌아오지 않아 하네스가 적음"
+        if row.get("carried"):
+            writer += ", 앞선 턴"
         lines += ["", f"## 되돌아보기 {row['round']}/{state['depth']} (도구 호출 {row['calls']}회 뒤, {writer})",
                   "알게 된 것:", row["learned"], "", "다시 생각한 것:", row["rethink"], "",
                   f"판정: {row['verdict']} — {row['reason']}", row["judgment"], "다음 지점: " + (row["next"] or "(정하지 않음)")]
@@ -435,6 +609,10 @@ def checkpoint(controller, payload):
     stated = str((payload or {}).get("progress") or "").strip()
     if state["depth"] <= 0:
         return reply(checkpoint=False, directive="이 턴에는 되돌아보기가 없다. 그대로 진행한다.")
+    if state["done"] < state["depth"] and past_copy(controller):
+        _note_past_copy(controller, state)
+        return reply(checkpoint=False,
+                     directive="적용을 예약했거나 정본에 반영된 뒤다. 이 뒤로는 되돌아보기가 없다. 그대로 진행한다.")
     if not learned:
         return reply(checkpoint=False, reason="evidence 에 지금까지 알게 된 것을 적어야 한다")
     with controller.review_lock:  # 하네스의 대신 되돌아보기·중간검토가 끝나기를 기다린다
@@ -483,6 +661,9 @@ def tick(controller):
             return False
         calls = controller.store.cost["execution_calls"]
         if calls - state["last_calls"] < _ceiling(state["cfg"], state["done"]):
+            return False
+        if past_copy(controller):
+            _note_past_copy(controller, state)
             return False
         if state["nudged_at"] is None:
             nudge(controller, state, calls)   # 모델을 부르지 않는다. 실행자가 직접 적어 오게 한다
@@ -553,7 +734,8 @@ def reflect(controller, state):
         return False
     state["busy"].set()  # run_tool 이 이 동안 실행자의 다음 도구 호출을 붙잡는다
     try:
-        if controller.finalizing or controller.cancelled() or state["done"] >= state["depth"]:
+        if (controller.finalizing or controller.cancelled() or state["done"] >= state["depth"]
+                or past_copy(controller)):
             return False
         _drop_own_notice(controller)  # 청해 둔 것은 걷는다. 이제 대신 되돌아본다
         row = _round(controller, state, note=None, by="harness")

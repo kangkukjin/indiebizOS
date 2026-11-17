@@ -382,6 +382,13 @@ class Supervisor:
                  evaluation_enabled=self.evaluation_enabled,
                  framing_source=(framing or {}).get("_framing_source", "unobserved"),
                  evidence=self.store.evidence(framing or {}))
+        from deep_execution import prepare as deep_prepare
+        deep_prepare(self)  # 심층실행: 이 턴에 몇 번 되돌아볼지 이 스레드에서 정해 둔다(인계 기록이 여기 있다)
+
+    def deep_record(self):
+        """수리 인계 기록에 실을 심층실행의 횟수와 작업 메모(repair_continuation 이 부른다)."""
+        from deep_execution import record
+        return record(self)
 
     def prepare_repair(self, repo, session, verify, candidate):
         from repair_readiness import prepare
@@ -418,7 +425,8 @@ class Supervisor:
                         self.executor_paused, self.phase = paused, phase
                         self._reframing = False
             self.log("premise.challenged", role="execution", input=self.store.evidence(payload), result=self.store.evidence(env))
-            return render_for_executor(env)
+            # 심층실행 안내는 이 턴에 이미 정한 단계로 쓴다(재규정이 규정 출처를 바꿔도 단계는 그대로다).
+            return render_for_executor(env, deep_plan=getattr(self, "_deep_plan", None))
         except Exception as exc:
             return json.dumps({"revised": False, "reason": str(exc)}, ensure_ascii=False)
 
@@ -787,7 +795,7 @@ class Supervisor:
                 }, prepare=lambda framing: apply_revision_plan(
                     framing, notice["framing_update"], notice.get("research_topic"),
                     self.project_path, self.cancelled))
-                notice["instruction"] = render_for_executor(env)
+                notice["instruction"] = render_for_executor(env, deep_plan=getattr(self, "_deep_plan", None))
                 if correction:
                     notice["instruction"] += "\n" + correction["instruction"]
             except (ValueError, OSError, RuntimeError) as exc:

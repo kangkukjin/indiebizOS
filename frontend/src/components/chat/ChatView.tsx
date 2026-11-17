@@ -1,7 +1,7 @@
 import * as __uiTools from '../../i18n/ui';
 import * as React from 'react';
 import { ChatDisplay } from './ChatDisplay';
-import { ConversationActions, conversationLabel } from './ConversationHeader';
+import { ConversationActions, SessionContextSize, conversationLabel } from './ConversationHeader';
 import { checkRemoteSession, isRemotePhoneLayout } from '../../lib/remote-session';
 /**
  * ChatView - 통합 채팅 컴포넌트
@@ -16,12 +16,11 @@ import type { ChatSession } from './ChatSession';
 import { historyDay, HistoryDate } from './SessionHistory';
 import { claimGrimoireOwner, newGrimoireToken, onGrimoireSelection } from './grimoire-relay';
 import { SessionWorkspace } from './SessionWorkspace';
-import { Bot, Loader2, X, RefreshCw, History, RotateCw, BookOpen } from 'lucide-react';
+import { Bot, Loader2, X, RefreshCw, History, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
 import type { Agent } from '../../types';
-import { isCliProvider } from '../../types';
 import { CameraPreview } from '../CameraPreview';
 import { MessageBubble } from './MessageBubble';
 import { SystemAIChatHistoryDialog } from '../launcher-components/dialogs/SystemAIChatHistoryDialog';
@@ -222,45 +221,6 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
   };
 
   const agentLabel = (chatTarget.type === 'session' ? chatTarget.title : agentName) || (isAppMaker ? '앱메이커' : '시스템 AI');
-
-  // provider 추적 — Claude Code일 때만 세션 재시작 버튼 노출.
-  // 시스템 AI는 status API에서, 프로젝트 에이전트는 agent 객체에서 직접.
-  const [systemAiProvider, setSystemAiProvider] = useState<string | null>(null);
-  useEffect(() => {
-    if (!isAgent && !session) {
-      api.getSystemAIStatus().then(s => setSystemAiProvider(s.provider)).catch(() => {});
-    }
-  }, [isAgent]);
-  const currentProvider = isAgent
-    ? chatTarget.agent.ai?.provider
-    : systemAiProvider;
-  const showResetSessionButton = !session && isCliProvider(currentProvider);
-
-  const handleResetSession = async () => {
-    try {
-      const result = isAgent
-        ? await api.resetAgentSession(projectId!, agentId!)
-        : await api.resetSystemAISession(isAppMaker ? "appmaker" : "system_ai");
-      const ok = (result as { ok?: boolean }).ok !== false;
-      console.log('[ChatView] 세션 재시작:', result);
-      setMessages(prev => [...prev, {
-        id: `reset-${Date.now()}`,
-        role: 'assistant',
-        content: ok
-          ? `↻ ${result.message || '세션 매핑 정리 결과를 받았습니다.'}`
-          : `↻ 세션 재시작 실패: ${(result as { error?: string }).error || '알 수 없는 오류'}`,
-        timestamp: new Date(),
-      }]);
-    } catch (e) {
-      console.error('[ChatView] 세션 재시작 실패:', e);
-      setMessages(prev => [...prev, {
-        id: `reset-error-${Date.now()}`,
-        role: 'assistant',
-        content: `↻ 세션 재시작 실패: ${(e as Error).message}`,
-        timestamp: new Date(),
-      }]);
-    }
-  };
 
   // ── WebSocket 연결 ──
 
@@ -1001,7 +961,7 @@ export function useChatHost({ chatTarget, layout = 'fullpage', show = true, onCl
     fileAttachments.clearAttachments();
   };
 
-  return { __uiTools, React, ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, scrollTopRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant };
+  return { __uiTools, React, ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, SessionContextSize, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, scrollTopRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant };
 }
 
 export type ChatDisplayBindings = ReturnType<typeof useChatHost>;

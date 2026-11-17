@@ -27,7 +27,7 @@ def test_focus_drift_is_detected_in_all_entry_shapes(tmp_path, source):
 
 def test_current_consumers_are_covered_and_match_the_producer():
     assert {p.name for p in check.CONSUMER_FILES} >= {
-        'reframe.py', 'supervisor_runtime.py', 'member_runner.py', 'framing_inheritance.py', 'consciousness_agent.py'}
+        'reframe.py', 'supervisor_runtime.py', 'member_runner.py', 'framing_record.py', 'consciousness_agent.py'}
     assert check.load_producer_schema()[1] == {'hint'}
     assert check.main() == 0
 

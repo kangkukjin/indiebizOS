@@ -6,6 +6,12 @@ VERSION = 2
 
 
 def direct_framing(message):
+    """업무 도중에 시작되는 한정 수리(task_repair.request)의 규정 — 실행자가 낸 수리 요청문이 그대로 과제와 기준이다.
+
+    사용자의 수리 요청에는 쓰지 않는다. 수리 판정을 받은 사용자 요청은 #repair 를 붙였든 무의식이 판정했든
+    의식이 규정한다(2026-11-17 사용자 판정, data/decisions.yaml `repair-always-framed-by-consciousness`).
+    그 전에는 #repair 가 붙은 사용자 요청도 이 함수로 갔다.
+    """
     return {"_repair_policy": VERSION, "_framing_source": "repair_execution",
             "needs_repair": True, "task_framing": message,
             "criteria": [{"text": message, "user_quote": message, "verification_phase": "workspace"}],

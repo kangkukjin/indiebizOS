@@ -12,6 +12,8 @@ interface Steering { id: string; instruction: string; timestamp: string; request
 interface SteeringRequest { message: string; turn_id: string; request_id: string }
 interface Snapshot {
  revision?: number;
+ /** 실행자 CLI 세션의 크기(마지막 라운드의 문맥 토큰). CLI 세션이 없으면 null */
+ context?: { tokens: number; provider?: string } | null;
  steering?: Steering[];
  messages: { id: string; role: string; content: string; timestamp: string; images: string[]; evaluation?: ChatMessage['evaluation'] }[];
  panels?: { todo?: {todos?: TodoItem[]; session_id?: string; turn_id?: string; revision?: number}; question?: {status?:string;questions?:QuestionItem[]}; plan_mode?: PlanModeState };
@@ -96,7 +98,7 @@ export function useConversationSession(id: string, target: SessionTarget, active
   const kept = interim.filter(m => !(final?.content && final.content.includes(m.content)));
   if (running || lastAssistant < 0) shown.push(...kept); else shown.splice(lastAssistant, 0, ...kept);
  }
- return { messages:shown,
+ return { messages:shown, contextTokens:snapshot?.context?.tokens,
   loading:sending || running, canSteer:running && !sending, streamingContent:running ? snapshot?.turn?.stream_content : '',
   // 새 요청 접수/첨부 처리 중에는 아직 이전 턴의 snapshot이 남아 있다.
   toolHistory:running ? tools : [], thinkingText:running ? thinking : '', todos:sending && !running ? [] : todos, questions, planMode:snapshot?.panels?.plan_mode,

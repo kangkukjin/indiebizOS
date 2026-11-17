@@ -68,7 +68,7 @@ def test_execution_usage_settles_before_turn_finalization(turn, monkeypatch, ter
     runner._collect_thread_tool_calls = lambda *a, **kw: None
     monkeypatch.setattr('supervision_bus.current', lambda: None)
     monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
-    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr('framing_record.remember', lambda *a, **kw: None)
     monkeypatch.setattr(episode_logger, 'record_trajectory_event',
                         lambda kind, data: charges.append(data) if kind == 'model.usage' else None)
 
@@ -160,7 +160,7 @@ def test_failure_history_does_not_reopen_or_replace_executor_answer(turn, monkey
     runner._after_response_async = lambda *a, **kw: None
     monkeypatch.setattr('supervision_bus.current', lambda: None)
     monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
-    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr('framing_record.remember', lambda *a, **kw: None)
     monkeypatch.setattr('consciousness_agent.system_ai_call',
                         lambda *a, **kw: pytest.fail('선택하지 않은 평가 호출'))
 
@@ -207,7 +207,7 @@ def test_pipeline_reviews_recovered_task_without_second_execution(turn, supervis
     supervisor.runner = runner
     monkeypatch.setattr('supervision_bus.current', lambda: supervisor)
     monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
-    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr('framing_record.remember', lambda *a, **kw: None)
     evaluations = []
 
     def evaluate(prompt, **kw):
@@ -267,7 +267,7 @@ def test_reframed_request_reaches_real_pipeline_evaluation_and_next_turn(turn, s
     monkeypatch.setattr('supervision_bus.current', lambda: supervisor)
     monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
     remembered, evaluated, reviews = [], [], []
-    monkeypatch.setattr('framing_inheritance.remember', lambda r, message, framing, **kw: remembered.append(framing))
+    monkeypatch.setattr('framing_record.remember', lambda r, message, framing, **kw: remembered.append(framing))
     monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **kw:
         reviews.append(kw['phase']) or json.dumps({'status': 'REWORK', 'reason': '관측에 맞게 문제 변경', **update}))
     def evaluate(prompt, **kwargs):
@@ -299,7 +299,7 @@ def test_repair_executor_recovers_in_same_stream_with_grant_and_owner_lock(tmp_p
     monkeypatch.setattr('supervision_bus.current', lambda: None)
     monkeypatch.setattr('system_ai_core._switch_to_role', lambda *a: None)
     monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
-    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr('framing_record.remember', lambda *a, **kw: None)
     def adopt(guard, runner, message, response, *args, **kwargs):
         yield from ()
         return response

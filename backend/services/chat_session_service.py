@@ -152,6 +152,7 @@ def snapshot(store, sid, before=None):
     from conversation_sessions import Binding, state_directory
     import json
     state_dir = state_directory(Binding(store.path, sid, store.owner))
+    result["context"] = context_size(store, sid, result["revision"]) if before is None else None
     result["steering"] = steering_history(store, sid) if not result.get("revision") else []
     result["panels"] = {}
     for name in ("todo", "question", "plan_mode"):
@@ -168,6 +169,23 @@ def snapshot(store, sid, before=None):
         except (OSError, ValueError):
             pass
     return result
+
+
+def context_size(store, sid, revision=0):
+    """이 대화 세션의 실행자 CLI 세션 크기 — 마지막 라운드의 문맥 토큰. 대화창 머리에 숫자로 보인다.
+
+    CLI 세션을 이어 쓰는 공급자(Claude Code·Codex)만 해당한다. 그런 세션이 없으면(API 공급자, 아직 턴이 없는
+    새 세션, 세션 초기화·되감기 직후) None 이고 화면에 아무것도 보이지 않는다. 문턱도 자동 판단도 없다 —
+    크기를 사실로 보여 줄 뿐이고, 새로 여는 것은 사용자가 "새 세션"으로 한다
+    (docs/REMAINING_REPAIRS_DESIGN_2026_11_17.md 3절, 2026-11-17 사용자 결정).
+    """
+    try:
+        from conversation_sessions import cli_session_note
+        from providers import session_context_size
+        suffix = "@session:" + sid + ("@revision:" + str(revision) if revision else "")
+        return session_context_size(suffix, cli_session_note(store.path, sid))
+    except Exception:
+        return None  # 크기를 못 읽어도 대화창은 열린다
 
 
 def _progress_view(raw):

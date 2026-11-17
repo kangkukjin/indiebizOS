@@ -699,8 +699,13 @@ def internal_plan_field(field: str, text: str) -> str:
                       ensure_ascii=False)
 
 
-def compile_user_command(user_message: str, consciousness_output: dict) -> str:
-    """현재 규정을 중심 명령으로 전달한다. 원문은 목적·조건·권한의 근거다."""
+def compile_user_command(user_message: str, consciousness_output: dict, *,
+                         repair: bool = False, deep_plan: dict = None) -> str:
+    """현재 규정을 중심 명령으로 전달한다. 원문은 목적·조건·권한의 근거다.
+
+    repair = 이 턴에 수리 권한이 있는가. deep_plan = 감독이 이미 정해 둔 심층실행 단계(턴 도중의 재규정).
+    둘 다 심층실행 안내가 하네스와 같은 단계를 말하게 하려는 것이다(deep_execution.turn_plan).
+    """
     from consciousness_agent import project_framing
     co = project_framing(consciousness_output) or {}
 
@@ -749,9 +754,10 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if research:
         aug.append(research)
 
-    # 심층실행(기본 꺼짐): 단계가 있으면 첫 걸음과 되돌아보기를 실행자에게 알린다.
+    # 심층실행(기본 켜짐): 이 턴에 도는 단계가 있으면 첫 걸음과 되돌아보기를 실행자에게 알린다.
+    # 사용자가 주문한 단계가 돌지 않는 턴이면 그 사실 한 문장을 알린다.
     from deep_execution import execution_block as deep_execution_block
-    deep = deep_execution_block(co)
+    deep = deep_execution_block(co, repair=repair, plan=deep_plan)
     if deep:
         aug.append(deep)
 

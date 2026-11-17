@@ -159,12 +159,13 @@ class CognitivePipelineMixin:
 
     def _refresh_execution_prompt(
         self, message, consciousness_output=None, execution_memory="",
-        *, extra_role=None, allowed_set=None,
+        *, extra_role=None, allowed_set=None, repair=False,
     ):
         """상주 러너의 초기 사전을 재사용하지 않고 이 턴의 활성 사전을 모델에 전달한다.
 
         안정/가변 분리는 유지한다. 같은 활성 집합이면 같은 prefix이며, 저장고 이동은
         다음 턴부터 소개 분량을 줄인다. 턴 사유 AI/provider만 갱신해 진행 중인 턴은 보존한다.
+        repair = 이 턴에 수리 권한이 있는가(심층실행 안내가 하네스와 같은 단계를 말하게 한다).
         """
         if self.config.get("_is_system_ai"):
             role = self._load_role()
@@ -185,7 +186,7 @@ class CognitivePipelineMixin:
             self.ai._provider.system_prompt = stable
         if consciousness_output:
             from prompt_builder import compile_user_command
-            message = compile_user_command(message, consciousness_output)
+            message = compile_user_command(message, consciousness_output, repair=repair)
         return f"{dynamic}\n\n{message}" if dynamic else message
 
     # ── 턴 사유 AI 뷰 (2026-08-31) ────────────────────────────────────────────
@@ -630,6 +631,7 @@ class CognitivePipelineMixin:
         augmented_message = self._refresh_execution_prompt(
             message, consciousness_output, execution_memory,
             extra_role=extra_role, allowed_set=allowed_set,
+            repair=(_repair_granted_task is not None),
         )
 
         # 히스토리 편집 (명시적 빈 요약은 비움, 판단 부재만 원본 유지)
@@ -1002,7 +1004,7 @@ class CognitivePipelineMixin:
                 # 실패해도 턴을 깨지 않는다.
                 if consciousness_output:
                     try:
-                        from framing_inheritance import remember as _fi_remember
+                        from framing_record import remember as _fi_remember
                         _effective = (_reframe_channel.current
                                       if _reframe_channel is not None and _reframe_channel.revised
                                       else consciousness_output)

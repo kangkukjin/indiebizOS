@@ -6,7 +6,7 @@
 
 1) THINK 는 어떤 경우에도 의식이 새로 규정한다 — 같은 문장을 되풀이해도, 직전 과제에 이어지는 말이어도.
    경량 모델은 한 번도 불리지 않는다.
-2) 계승 함수는 모듈에 없다(되살아나면 이 검사가 잡는다).
+2) 계승 함수는 기록 모듈(framing_record, 옛 framing_inheritance)에 없다(되살아나면 이 검사가 잡는다).
 3) 직전 규정의 기록은 남는다 — 권한·과제 연결은 벗기고, 문장별 기록 수는 묶인다.
 4) `[task:…] 완료.` 는 CONTEXT_UPDATE 결정론 단서. "[task:…] 주간 재조사" 는 아니다.
 """
@@ -17,7 +17,8 @@ import boot_paths  # noqa: F401
 import pytest
 
 import consciousness_agent
-import framing_inheritance as fi
+import cognitive_consciousness
+import framing_record as fi
 from cognitive_consciousness import CognitiveConsciousnessMixin
 from thread_context import actor_context, set_goal_eval_outcome, clear_goal_eval_outcome
 
@@ -109,10 +110,10 @@ def test_remember_keeps_only_framing_and_is_bounded(monkeypatch):
 
 def test_delegation_report_is_context_update():
     r = Runner()
-    assert fi.is_delegation_report("[task:task_sysai_df5005c0] 완료.\n`/x/task_receipts.md`를 읽었고")
-    assert fi.is_delegation_report("[task:task_1] 완료")
-    assert not fi.is_delegation_report("[task:task_8de006c2] 주간 재조사: 지난 조사 뒤 바뀐 파일")
-    assert not fi.is_delegation_report("완료. 다음은?")
+    assert cognitive_consciousness.is_delegation_report("[task:task_sysai_df5005c0] 완료.\n`/x/task_receipts.md`를 읽었고")
+    assert cognitive_consciousness.is_delegation_report("[task:task_1] 완료")
+    assert not cognitive_consciousness.is_delegation_report("[task:task_8de006c2] 주간 재조사: 지난 조사 뒤 바뀐 파일")
+    assert not cognitive_consciousness.is_delegation_report("완료. 다음은?")
     assert r._decide_request_type("[task:task_sysai_df5005c0] 완료.\n결과입니다", 0.0, "") == ("CONTEXT_UPDATE", None)
 
 

@@ -6,7 +6,7 @@ import pytest
 import boot_paths  # noqa: F401
 import repair_resume as resume
 import repair_continuation as journal
-import framing_inheritance as framing
+import framing_record as framing
 from test_repair_workspace_completion import setup  # noqa: F401
 
 
@@ -27,7 +27,7 @@ def unfinished(setup, monkeypatch):
     (wt / 'a.txt').write_text('completed partial work')
     resume.preserve_unfinished(controller, sess, 'not delivered', 'C2 unmet')
     framing._save('owner', {'last': {'task_id': sess['key'], 'at': datetime.now().isoformat()}, 'repeat': {}})
-    monkeypatch.setattr(framing, '_judge_relation', lambda *a, **kw: 'CONTINUE')
+    monkeypatch.setattr(resume, 'judge_resume', lambda *a, **kw: 'CONTINUE')
     return root, wt, st, sess, controller
 
 
@@ -86,11 +86,45 @@ def test_user_resumed_repair_is_reframed_from_its_present_state_with_criteria_fi
     assert [c['text'] for c in out['criteria']] == ['build', 'deliver without changing key']
     assert out['_repair_policy'] == 2 and out['_framing_source'] == 'repair_continuation'
     assert out['independent_review'] is True and 'needs_repair' not in out
-    assert 'deep_execution' not in out and 'first_step' not in out
+    # 사본에서 일하는 동안에는 심층실행이 돈다 — 의식이 적은 첫 걸음과 사용자가 이 말에 붙인 단계를 둔다
+    assert out['deep_execution'] == 3 and out['first_step'] == '처음부터 다시 조사'
     assert out['assumptions'] == ['사본이 그대로 있다']
     assert ('repair.resume_rethink', {'used': True, 'needs_clarification': False,
                                       'task_framing_chars': len(out['task_framing'])}) in events
     assert not resume.user_resumed()            # 표식은 그 턴 밖으로 나가지 않는다
+
+
+def test_resume_after_canonical_apply_drops_the_step_order_and_first_step(unfinished, monkeypatch):
+    """정본에 반영된 뒤에는 되돌아보기가 없다 — 의식이 적은 단계 주문과 첫 걸음을 실행자에게 넘기지 않는다."""
+    root, wt, st, sess, controller = unfinished
+    monkeypatch.setattr('episode_logger.record_trajectory_event', lambda kind, data=None: None)
+    runner = _Runner(controller.runner.config, {'task_framing': '활성 확인만 남았다', 'deep_execution': 3,
+                                                'first_step': '활성 상태를 본다'})
+    message = '수리를 완료해줘'
+    with resume.user_resume(runner, message, [{'role': 'user', 'content': controller.message}]):
+        st._save_session(str(root), {**st.read_session(str(root), journal.current()['staging_task_id']),
+                                     'status': 'applied'})
+        assert not journal.before_canonical(journal.current())
+        out = runner.reuse(message, [], '', repair=True)
+    assert out['task_framing'] == '활성 확인만 남았다'
+    assert 'deep_execution' not in out and 'first_step' not in out
+
+
+def test_handoff_record_carries_the_reflection_count_and_drops_turn_only_fields(unfinished, monkeypatch):
+    """되돌아본 횟수와 작업 메모는 인계 기록에 실린다. 주문 단계와 첫 걸음은 받은 턴의 것이라 물려주지 않는다."""
+    root, wt, st, sess, controller = unfinished
+    deep = {'depth': 5, 'done': 2, 'ordered': True, 'memo': [{'round': 1, 'by': 'executor', 'calls': 3}]}
+    controller.deep_record = lambda: deep
+    controller.framing = {**controller.framing, 'deep_execution': 5, 'first_step': '재현한다'}
+    monkeypatch.setattr('deep_execution.record', lambda c: c.deep_record())
+    row = resume.preserve_unfinished(controller, st.read_session(str(root), sess['key']), 'again', 'C2 unmet')
+    assert row['deep'] == deep and journal.read(controller.task)['deep'] == deep
+    row = {**row, 'resume_task_id': 'next', 'resume_message': 'build and deliver'}
+    with journal.resuming(row):
+        inherited = journal.inherited_framing('build and deliver')
+    assert 'deep_execution' not in inherited and 'first_step' not in inherited
+    assert journal._deep_record(SimpleNamespace(), row) == deep        # 감독이 내주지 않으면 앞선 기록을 넘긴다
+    assert journal._deep_record(controller, {'deep': {'depth': 1}}) == deep
 
 
 @pytest.mark.parametrize('answer', [None, {'task_framing': '  '}, RuntimeError('의식 모델 오프라인')])
@@ -165,7 +199,7 @@ def test_unrelated_or_unauthorized_request_cannot_inherit(unfinished, monkeypatc
     root, wt, st, sess, controller = unfinished
     history = ['previous']
     if change == 'new':
-        monkeypatch.setattr(framing, '_judge_relation', lambda *a, **kw: 'NEW')
+        monkeypatch.setattr(resume, 'judge_resume', lambda *a, **kw: 'NEW')
     elif change == 'foreign_agent':
         monkeypatch.setattr('thread_context.get_current_agent_id', lambda: 'other')
     elif change == 'foreign_project':
@@ -182,7 +216,7 @@ def test_unrelated_or_unauthorized_request_cannot_inherit(unfinished, monkeypatc
 
 def test_relation_failure_does_not_silently_replace_original_criteria(unfinished, monkeypatch):
     *_, controller = unfinished
-    monkeypatch.setattr(framing, '_judge_relation', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('offline')))
+    monkeypatch.setattr(resume, 'judge_resume', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('offline')))
     with pytest.raises(ValueError, match='기존 기준'):
         with resume.user_resume(controller.runner, '#repair 계속', ['previous']):
             pytest.fail('new execution')
@@ -190,10 +224,10 @@ def test_relation_failure_does_not_silently_replace_original_criteria(unfinished
 
 
 def test_strict_relation_rejects_empty_model_output(monkeypatch):
-    monkeypatch.setattr(framing, '_prompt', lambda *a: 'relation')
-    monkeypatch.setattr(framing, '_oneshot', lambda *a: '')
+    monkeypatch.setattr(resume, '_prompt', lambda *a: 'relation')
+    monkeypatch.setattr(resume, '_oneshot', lambda *a: '')
     with pytest.raises(ValueError, match='응답'):
-        framing._judge_relation({'message': 'prior'}, '#repair continue', strict=True)
+        resume.judge_resume({'message': 'prior'}, '#repair continue', strict=True)
 
 
 @pytest.mark.parametrize('history', [['previous'], []])
@@ -244,8 +278,8 @@ def test_resume_relation_requires_execution_intent_and_keeps_history(monkeypatch
     def model(body, prompt, role):
         seen.append((body, prompt, role))
         return 'NEW'
-    monkeypatch.setattr(framing, '_oneshot', model)
-    assert framing._judge_relation({'message': 'repair'}, '지금 상태는?', strict=True,
+    monkeypatch.setattr(resume, '_oneshot', model)
+    assert resume.judge_resume({'message': 'repair'}, '지금 상태는?', strict=True,
         history=[{'role': 'user', 'content': 'original work'}]) == 'NEW'
     body, prompt, role = seen[0]
     assert role == 'consciousness'

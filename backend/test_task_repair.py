@@ -330,7 +330,7 @@ def test_runtime_ownership_does_not_include_authority_and_completion(path):
     'backend/boot_paths.py', 'backend/base/component_registry.py',
     'backend/datastore/repair_root.py', 'backend/cognition/cognitive_consciousness.py',
     'backend/cognition/consciousness_agent.py', 'backend/cognition/prompt_builder.py',
-    'backend/cognition/reframe.py', 'backend/cognition/framing_inheritance.py'])
+    'backend/cognition/reframe.py', 'backend/cognition/framing_record.py'])
 def test_host_implementation_can_be_repaired_through_restart(path):
     from program_boundary import describe
     assert repair.eligible(path)

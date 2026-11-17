@@ -3,7 +3,7 @@ import type { ChatDisplayBindings } from './ChatView';
 
 /** Only presentation: the persistent ChatPane owns state, streams and callbacks. */
 export function renderChatDisplay(bindings: ChatDisplayBindings) {
-  const { ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, RotateCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, scrollTopRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResetSession, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, showResetSessionButton, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant } = bindings;
+  const { ActionGrimoire, BookOpen, Bot, CameraPreview, ChatInputArea, ConversationActions, SessionContextSize, Fragment, History, HistoryDate, Loader2, MessageBubble, PlanModePanel, QuestionPanel, ReactMarkdown, RefreshCw, SystemAIChatHistoryDialog, TodoPanel, ToolHistoryPanel, X, active, agentLabel, conversationLabel, currentToolLabel, datedHistory, dialogRef, fileAttachments, followRef, scrollTopRef, grimoireOpen, handleApprovePlan, handleCancel, handleClear, handleDragStart, handleKeyDown, handleRejectPlan, handleResizeStart, handleSubmitAnswer, headerActions, headerItems, historyDay, input, inputRef, isAgent, isDialog, isDragging, isLoading, isResizing, messages, messagesEndRef, messagesScrollRef, onClose, openGrimoire, planMode, position, questionStatus, questions, readingOlder, remarkGfm, resizeDirection, selectedAction, sendMessage, session, setGrimoireOpen, setInput, setReadingOlder, setSelectedAction, setShowHistory, show, showHistory, size, streamingContent, thinkingText, titleBarInset, todos, toolHistory, variant } = bindings;
   // ── 렌더링: 다이얼로그 모드 가시성 체크 ──
 
   if (isDialog && !show) return null;
@@ -37,6 +37,7 @@ export function renderChatDisplay(bindings: ChatDisplayBindings) {
           </div>
         </div>
         <div aria-label="대화 세션 메뉴" className={`flex items-center gap-1 shrink-0 whitespace-nowrap${isDialog ? '' : ' no-drag'}`}>
+          <SessionContextSize tokens={session?.contextTokens} />
           <ConversationActions items={{ ...headerItems, older: (session?.hasOlder && <button disabled={readingOlder} onClick={async () => {
             if (readingOlder) return;
             setReadingOlder(true);
@@ -54,12 +55,6 @@ export function renderChatDisplay(bindings: ChatDisplayBindings) {
             <BookOpen size={14} className="hidden sm:block" />{conversationLabel('dictionary')}
           </button>) }} />
           {headerActions}
-          {/* Claude Code 세션 재시작 (Claude Code provider일 때만) */}
-          {showResetSessionButton && (
-            <button onClick={handleResetSession} className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-gray-200' : 'hover:bg-[#DDD5C8]'}`} title="Claude Code 새 세션 시작 (누적 컨텍스트 끊기)">
-              <RotateCw size={16} className={isDialog ? 'text-gray-500' : 'text-[#6B5B4F]'} />
-            </button>
-          )}
           {/* 히스토리/초기화 (시스템 AI일 때) */}
           {!isAgent && !session && (
             <>

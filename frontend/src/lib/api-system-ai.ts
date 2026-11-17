@@ -292,13 +292,6 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         '/system-ai/onboarding/dismiss', { method: 'POST' });
     },
 
-    async resetSystemAISession(role: "system_ai" | "appmaker" = "system_ai") {
-      return client.request<{ ok: boolean; message?: string; error?: string }>(
-        `/system-ai/reset-session?role=${role}`,
-        { method: 'POST' }
-      );
-    },
-
     // ============ 시스템 AI 프롬프트 템플릿 ============
 
     async getPromptTemplates() {

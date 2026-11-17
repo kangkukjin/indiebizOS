@@ -3,7 +3,7 @@ import json
 
 import boot_paths  # noqa: F401
 import pytest
-import framing_inheritance as fi
+import framing_record as fi
 
 
 @pytest.mark.parametrize('key', ['capability_focus', 'ibl_focus'])
@@ -18,7 +18,7 @@ def test_old_saved_recommendations_do_not_enter_the_record(key):
 
 
 def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path, monkeypatch):
-    from test_framing_inheritance_2026_10_07 import Runner, _remember, _calls
+    from test_think_always_fresh_framing import Runner, _remember, _calls
     from thread_context import actor_context
     monkeypatch.setattr(fi, "_store_root", lambda: tmp_path)
     runner = Runner()
@@ -37,14 +37,14 @@ def test_legacy_approval_requires_reframing_instead_of_assumed_success(tmp_path,
 def test_recovery_prefix_cannot_replace_new_user_request(monkeypatch, tmp_path):
     """복구 문맥이 앞에 붙어도 기록에 남는 요청은 사용자의 원문이다. 규정은 의식이 새로 쓴다."""
     from dialogue_continuation import _execute
-    from test_framing_inheritance_2026_10_07 import Runner, _remember
+    from test_think_always_fresh_framing import Runner, _remember
     from thread_context import actor_context
     monkeypatch.setattr(fi, '_store_root', lambda: tmp_path)
     runner = Runner()
     _remember(runner, '업데이트하다 중단했다', achieved=False)
     request = '다시 확인해 보고 완성해줘.'
     augmented = '이전 실행 복구 관측\n' * 1000 + '[이번 사용자 요청]\n' + request
-    monkeypatch.setattr(fi, '_oneshot', lambda *a: pytest.fail('경량 모델이 규정에 불렸다'))
+    monkeypatch.setattr('repair_resume._oneshot', lambda *a: pytest.fail('경량 모델이 규정에 불렸다'))
 
     def execute(prompt, history):
         framing = runner._run_consciousness_or_reuse(prompt, history)

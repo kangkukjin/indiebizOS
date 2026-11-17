@@ -3,7 +3,7 @@ import json
 
 import boot_paths  # noqa: F401
 import pytest
-import framing_inheritance as fi
+import repair_resume
 from test_conscious_supervisor import supervisor  # noqa: F401
 
 CORRECTION = '외부 타이머로 해결하니 내장 타이머는 필요 없다. 분리 물세척을 원한다.'
@@ -17,8 +17,8 @@ def test_intervening_correction_reaches_the_relation_judge(monkeypatch):
     """관계 판정(수리 재개가 쓴다)은 직전 기록의 요청만이 아니라 그 사이 사용자 정정까지 본다."""
     previous = {'message': HISTORY[0]['content'], 'framing': {'task_framing': '내장 타이머 추천'}}
     seen = []
-    monkeypatch.setattr(fi, '_oneshot', lambda body, prompt, role: seen.append(json.loads(body)) or 'CONTINUE')
-    assert fi._judge_relation(previous, '다른 것을 더 찾아봐.', history=HISTORY) == 'CONTINUE'
+    monkeypatch.setattr(repair_resume, '_oneshot', lambda body, prompt, role: seen.append(json.loads(body)) or 'CONTINUE')
+    assert repair_resume.judge_resume(previous, '다른 것을 더 찾아봐.', history=HISTORY) == 'CONTINUE'
     assert len(seen) == 1 and CORRECTION in json.dumps(seen[0], ensure_ascii=False)
 
 

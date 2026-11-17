@@ -285,8 +285,11 @@ def accept_revision(ch, update, revision, prepare=None):
         return env
 
 
-def render_for_executor(env: dict) -> str:
-    """실행자가 도구 결과로 읽을 본문 — 새 규정을 명령 어조로."""
+def render_for_executor(env: dict, deep_plan: dict = None) -> str:
+    """실행자가 도구 결과로 읽을 본문 — 새 규정을 명령 어조로.
+
+    deep_plan = 감독이 이 턴에 정해 둔 심층실행 단계(deep_execution.prepare). 있으면 그 단계로 안내를 쓴다.
+    """
     if not env.get("revised"):
         return json.dumps({"revised": False, "reason": env.get("reason", ""),
                            "directive": env.get("directive", ""),
@@ -302,7 +305,7 @@ def render_for_executor(env: dict) -> str:
         lines.append("★멈춤: 이 문제는 사용자 확인 없이는 진행할 수 없다. 더 실행하지 말고, 지금까지 확인한 "
                      "사실을 짧게 정리한 뒤 다음 질문으로 응답을 마무리하라:\n" + out["clarification_question"].strip())
     from prompt_builder import compile_user_command
-    lines.append(compile_user_command(env.get("user_message", ""), out))
+    lines.append(compile_user_command(env.get("user_message", ""), out, deep_plan=deep_plan))
     if out.get("_repair_declared_mid_turn"):
         lines.append("재규정은 전역 수리 권한을 발급하지 않는다. 원래 목적을 유지하며 다른 명령·도구·지역 함수·Script로 "
                      "계속하라. 등록된 순수 변환 부품은 현재 사용자 업무의 파일 수정→self:patch apply로 한정 수리할 수 있다. "

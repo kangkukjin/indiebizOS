@@ -66,6 +66,34 @@ def save(row, base=None):
     return row
 
 
+def before_canonical(row=None, task=None, base=None):
+    """이 수리가 아직 사본에서 일하는 단계인가(정본에 반영하기 전). 적용을 예약한 뒤와 반영된 뒤는 아니다.
+
+    row = 인계 기록(없으면 이 턴에서 시작한 수리), task = 기록이 없을 때 사본의 열쇠가 되는 작업.
+    사본이 아직 만들어지지 않았으면(수리 턴의 조사 구간) 정본 반영 전이다. 사본 기록을 읽지 못하면 아니라고 본다.
+    """
+    row = row or {}
+    task = row.get("staging_task_id") or row.get("task_id") or task
+    try:
+        session = staging_session(task, base) if task else None
+    except (OSError, ValueError):
+        return False
+    status = (session or {}).get("status")
+    if status is None:
+        return not row.get("applied") and row.get("phase") in (None, "execution")
+    return status == "staging"
+
+
+def _deep_record(controller, previous=None):
+    """심층실행의 횟수와 작업 메모(재기동을 넘겨 사용자가 이을 때 남은 횟수를 잇는다). 감독이 내준다."""
+    record = getattr(controller, "deep_record", None)
+    try:
+        value = record() if callable(record) else None
+    except Exception:
+        value = None
+    return value if isinstance(value, dict) else (previous or {}).get("deep")
+
+
 @contextmanager
 def resuming(row):
     token = _current.set(row)
@@ -117,6 +145,9 @@ def inherited_framing(message):
     framing["_framing_source"] = "repair_continuation"
     # 초안은 이미 실행된 계획이다. 재개할 때 다시 실행할 지시로 공급하지 않는다.
     framing.pop("imagined_ibl", None)
+    # 심층실행의 주문 단계와 첫 걸음은 그것을 받은 턴의 것이다. 받은 단계와 한 횟수는 기록의 deep 에 따로 있다.
+    framing.pop("deep_execution", None)
+    framing.pop("first_step", None)
     return framing
 
 
@@ -179,6 +210,9 @@ def defer(controller, response, base=None):
            "agent_id": config.get("id") or controller.owner,
            "system_ai": bool(config.get("_is_system_ai")),
            "episode_id": controller.episode_id, "authorized_origin": "user"}
+    deep = _deep_record(controller, previous)
+    if deep:
+        row["deep"] = deep
     save(row, base)
     if previous:
         save({**previous, "status": "continued", "child_task_id": task}, base)
@@ -387,6 +421,9 @@ def review_checkpoint(controller, packet, snapshot, base=None):
                staging_task_id=staging_task, verification_records=controller.verifications.records,
                framing=controller.framing, store=str(controller.store.directory),
                response=controller.store.text, retry_at=time.time() + 60)
+    deep = _deep_record(controller, row)
+    if deep:
+        row["deep"] = deep
     save(row, base)
     controller._review_row = row
     return row

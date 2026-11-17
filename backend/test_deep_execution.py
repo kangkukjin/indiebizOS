@@ -34,7 +34,7 @@ def scope():
     tc.restore(previous)
 
 
-def make(tmp_path, monkeypatch, scope, deep=FAST, framing=None, stream=None):
+def make(tmp_path, monkeypatch, scope, deep=FAST, framing=None, stream=None, repair=False):
     monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: pytest.fail("시험의 실제 모델 호출 금지"))
     tc.set_current_agent_id("worker")
     tc.set_current_task_id("task-deep-test")
@@ -51,7 +51,7 @@ def make(tmp_path, monkeypatch, scope, deep=FAST, framing=None, stream=None):
     runner = SimpleNamespace(ai=ai)
     controller = Supervisor(runner, "목표 원문", [], "worker", "task-deep-test",
                             {"tick_s": 1000, "deep_execution": deep}, directory=tmp_path / "store")
-    controller.configure(framing or {"task_framing": "문제", "first_step": "먼저 현황을 본다"})
+    controller.configure(framing or {"task_framing": "문제", "first_step": "먼저 현황을 본다"}, repair=repair)
     controller.calls = calls
     scope.append(controller)
     return runner, controller
@@ -396,7 +396,7 @@ def test_decision_is_read_from_the_shapes_the_model_actually_writes():
 
 
 def test_order_and_first_step_belong_to_their_turn():
-    from framing_inheritance import STRIP_ALWAYS
+    from framing_record import STRIP_ALWAYS
     assert "deep_execution" in STRIP_ALWAYS and "first_step" in STRIP_ALWAYS
 
 
@@ -440,3 +440,185 @@ def test_real_pipeline_ends_without_calling_consciousness_again(tmp_path, monkey
     assert finals == ["초안"] and saved == finals                  # 실행자의 응답이 그대로 한 번 나간다
     assert len(requests) == 1 and seen == []                       # 실행자를 다시 잇지 않고 의식도 부르지 않는다
     assert not hasattr(de, "final_check") and "final_check" not in de.DEFAULTS
+
+
+# ── 자기수리 턴 (2026-11-17, docs/REMAINING_REPAIRS_DESIGN_2026_11_17.md 1절) ─────────────────────
+
+FRESH_REPAIR = {"task_framing": "고친다", "first_step": "고장 난 곳을 재현한다",
+                "_framing_source": "fresh_consciousness", "_repair_policy": 2}
+HANDOFF = {"task_framing": "이어서 고친다", "_framing_source": "repair_continuation", "_repair_policy": 2,
+           "criteria": [{"text": "고쳐진다"}]}
+EARLIER = {"round": 1, "by": "executor", "calls": 7, "learned": "원인은 캐시였다", "rethink": "캐시를 비우는 길",
+           "verdict": "KEEP", "reason": "그대로 간다", "judgment": "1. 같은 길이다", "next": "고친 뒤"}
+
+
+def logged(controller, kind):
+    lines = (controller.store.directory / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    return [row for row in map(json.loads, lines) if row.get("kind") == kind]
+
+
+def copy_session(task, status):
+    """수리 사본의 기록. status: staging(사본에서 일하는 중)·apply_scheduled·applied."""
+    import repair_continuation as journal
+    path = journal.state_root() / "repair_sessions" / (journal.key(task) + ".json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"key": task, "status": status}), encoding="utf-8")
+
+
+def resumed_turn(row, by_user):
+    """이어받은 수리 턴의 문맥. by_user=사용자의 말로 이었는가(아니면 하네스가 자동으로 이은 턴)."""
+    from contextlib import contextmanager
+    import repair_continuation as journal
+    import repair_resume
+
+    @contextmanager
+    def scope():
+        token = repair_resume._user_resumed.set(by_user)
+        try:
+            with journal.resuming(row):
+                yield
+        finally:
+            repair_resume._user_resumed.reset(token)
+    return scope()
+
+
+def test_one_function_decides_the_turns_reflections():
+    cfg = de.settings({})
+    plan = lambda framing, **kw: de.turn_plan(framing, cfg, **kw)
+    left = lambda framing, **kw: (lambda p: p["depth"] - p["done"])(plan(framing, **kw))
+    # 의식이 새로 규정한 일은 수리 권한이 있든 없든 같다
+    assert left({"task_framing": "x"}) == left(FRESH_REPAIR, repair=True) == 1
+    assert left({**FRESH_REPAIR, "deep_execution": 4}, repair=True) == 4
+    # 하네스가 자동으로 잇는 수리 턴과 업무 도중의 한정 수리에는 없다
+    auto = {"resumed": False, "copy_stage": True, "depth": 1, "done": 0, "ordered": False, "memo": []}
+    assert plan(HANDOFF, repair=True, handoff=auto) == de.NO_PLAN
+    assert plan(HANDOFF, repair=True) == de.NO_PLAN                       # 인계 기록을 읽지 못해도 0
+    assert left({"task_framing": "x", "_framing_source": "repair_execution"}, repair=True) == 0
+    # 사용자의 말로 이은 수리, 정본 반영 전: 남은 횟수만 잇는다(기본 1단계를 새로 얹지 않는다)
+    mine = {**auto, "resumed": True}
+    assert left(HANDOFF, repair=True, handoff=mine) == 1
+    assert left(HANDOFF, repair=True, handoff={**mine, "done": 1}) == 0
+    assert left(HANDOFF, repair=True, handoff={**mine, "depth": 0}) == 0   # 심층실행 전의 수리 기록
+    five = plan(HANDOFF, repair=True, handoff={**mine, "depth": 5, "done": 2, "ordered": True, "memo": [EARLIER]})
+    assert (five["depth"], five["done"], five["ordered"], five["memo"]) == (5, 2, True, [EARLIER])
+    # 그 말에 단계를 붙였으면 그 단계다. 차례 번호는 앞선 턴에서 잇는다
+    more = plan({**HANDOFF, "deep_execution": 2}, repair=True, handoff={**mine, "depth": 5, "done": 5, "ordered": True})
+    assert (more["depth"], more["done"], more["ordered"], more["unmet"]) == (7, 5, True, 0)
+    # 정본에 반영된 뒤에는 사용자의 말로 이어도 없다
+    after = plan({**HANDOFF, "deep_execution": 2}, repair=True, handoff={**mine, "copy_stage": False})
+    assert (after["depth"], after["asked"], after["unmet"]) == (0, 2, 2) and "정본에 반영된 뒤" in after["why"]
+    off = {**cfg, "enabled": False}
+    assert de.turn_plan({**FRESH_REPAIR, "deep_execution": 4}, off, repair=True) == de.NO_PLAN
+
+
+def test_fresh_repair_turn_gets_the_same_guidance_as_the_harness_runs(tmp_path, monkeypatch, scope):
+    """의식이 새로 규정한 수리 턴은 사본에서 일하는 동안 THINK 와 같이 돈다 — 안내와 하네스가 같은 단계를 말한다.
+    (그 전: 실행자는 "심층실행 1단계 … 돌아가 방향을 다시 받는다"를 받고, 돌아오면 "이 턴에는 되돌아보기가
+    없다"를 받았다. 안내는 규정만 보고 하네스는 수리 권한까지 봤다.)"""
+    runner, controller = make(tmp_path, monkeypatch, scope, framing=FRESH_REPAIR, repair=True)
+    block = de.execution_block(FRESH_REPAIR, repair=True)
+    assert block == de.execution_block(FRESH_REPAIR) and block.startswith("심층실행 1단계")  # THINK 와 글자까지 같다
+    seen = script(monkeypatch, {"reflect": ["길 하나", KEEP]})
+    work(controller, 1, 1)
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "고장이 재현됐다"}))
+    assert told["checkpoint"] is True and told["round"] == "1/1" and len(seen) == 2
+    assert logged(controller, "deep.started")[0]["depth"] == 1 and not logged(controller, "deep.not_applied")
+
+
+def test_reflection_is_not_asked_once_the_copy_stage_is_over(tmp_path, monkeypatch, scope):
+    """적용을 예약한 뒤와 정본에 반영된 뒤에는 돌아오라고 청하지 않는다(청하면 실행자의 다음 호출이 선다)."""
+    runner, controller = make(tmp_path, monkeypatch, scope, framing={**FRESH_REPAIR, "deep_execution": 3}, repair=True)
+    seen = script(monkeypatch, {"reflect": ["길 하나", KEEP]})
+    copy_session(controller.task, "staging")
+    work(controller, 1, 1)
+    one = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "사본에서 고쳤다"}))
+    assert one["round"] == "1/3"
+    for status in ("apply_scheduled", "applied"):
+        copy_session(controller.task, status)
+        work(controller, 2, 6)
+        controller.tick()
+        assert controller.pending is None and controller._deep["nudged_at"] is None
+        told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "적용했다"}))
+        assert told["checkpoint"] is False and "정본에 반영된 뒤" in told["directive"]
+    assert len(seen) == 2                                                  # 의식을 더 부르지 않았다
+    rows = logged(controller, "deep.not_applied")                          # 주문한 단계가 남았다는 사실은 한 번 남는다
+    assert len(rows) == 1 and (rows[0]["ordered"], rows[0]["done"], rows[0]["unmet"]) == (3, 1, 2)
+    copy_session(controller.task, "staging")                               # 적용이 물려 사본으로 돌아오면 다시 돈다
+    work(controller, 8, 1)
+    controller.tick()
+    assert de._own_pending(controller) == "nudge"
+
+
+def test_scheduled_apply_stops_reflections_in_any_turn(tmp_path, monkeypatch, scope):
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    script(monkeypatch, {})
+    controller.apply_scheduled = {"task_repair": "child"}   # 업무 도중의 한정 수리를 예약하고 턴을 닫는 중이다
+    work(controller, 1, 6)
+    controller.tick()
+    assert controller.pending is None and not de.reflect(controller, de._state(controller))
+
+
+def test_automatic_repair_turn_says_so_when_ordered_steps_do_not_run(tmp_path, monkeypatch, scope):
+    """하네스가 자동으로 잇는 수리 턴에는 되돌아보기가 없다. 사용자가 주문한 단계가 남았으면 그 사실을 알린다.
+    (주문이 반영되지 않았는데 그 사실이 남지 않던 것 — 같은 날의 단계 상한 5, 규정 계승과 같은 부류.)"""
+    row = {"task_id": "prior", "staging_task_id": "prior", "phase": "apply", "applied": True,
+           "deep": {"depth": 5, "done": 2, "ordered": True, "memo": [EARLIER]}}
+    with resumed_turn(row, by_user=False):
+        block = de.execution_block(HANDOFF, repair=True)
+        runner, controller = make(tmp_path, monkeypatch, scope, framing=HANDOFF, repair=True)
+    assert block == ("사용자가 심층실행 5단계를 주문했다. 앞선 턴에서 2번 되돌아봤다. "
+                     "이 턴에는 되돌아보기가 없다 — 하네스가 자동으로 잇는 수리 턴이다.")
+    rows = logged(controller, "deep.not_applied")
+    assert len(rows) == 1 and (rows[0]["ordered"], rows[0]["done"], rows[0]["unmet"]) == (5, 2, 3)
+    script(monkeypatch, {})
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "확인했다"}))
+    assert told["checkpoint"] is False and "되돌아보기가 없다" in told["directive"]
+    assert controller.deep_record() == row["deep"]            # 이 턴이 쓰지 않은 기록은 그대로 다음으로 넘어간다
+    # 주문이 없던 수리(기본 1단계)는 아무 말도 붙지 않고 사건도 없다
+    plain = {**row, "deep": {"depth": 1, "done": 0, "ordered": False, "memo": []}}
+    with resumed_turn(plain, by_user=False):
+        assert de.execution_block(HANDOFF, repair=True) == ""
+        assert de.prepare(SimpleNamespace(framing=HANDOFF, repair_granted=True, config={}))["unmet"] == 0
+
+
+def test_user_resumed_repair_continues_the_count_and_reads_the_earlier_memo(tmp_path, monkeypatch, scope):
+    """되돌아본 횟수와 작업 메모는 인계 기록에 실려 재기동을 넘는다. 사용자가 이으면 남은 횟수만 이어 쓴다."""
+    row = {"task_id": "prior", "staging_task_id": "prior", "phase": "execution",
+           "deep": {"depth": 3, "done": 1, "ordered": True, "memo": [EARLIER]}}
+    copy_session("prior", "staging")
+    framing = {**HANDOFF, "first_step": "남은 검사를 돌린다"}
+    with resumed_turn(row, by_user=True):
+        block = de.execution_block(framing, repair=True)
+        runner, controller = make(tmp_path, monkeypatch, scope, framing=framing, repair=True)
+    assert block.startswith("심층실행 2단계") and "앞선 턴에서 되돌아보기를 1번 마쳤다" in block
+    assert "남은 검사를 돌린다" in block and not logged(controller, "deep.not_applied")
+    seen = script(monkeypatch, {"reflect": ["길 하나", KEEP, "길 둘", KEEP]})
+    work(controller, 1, 1)
+    two = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "검사가 통과했다"}))
+    assert two["round"] == "2/3" and "남은 되돌아보기 1번" in two["content"]
+    assert "원인은 캐시였다" in seen[0][1] and "앞선 턴" in seen[0][1]      # 앞선 턴의 되돌아보기를 메모에서 읽는다
+    carried = controller.deep_record()
+    assert (carried["depth"], carried["done"], carried["ordered"]) == (3, 2, True)
+    assert [r["round"] for r in carried["memo"]] == [1, 2]
+    assert all("answered" not in r and "carried" not in r for r in carried["memo"])
+    json.dumps(carried)                                                    # 인계 기록(JSON)에 그대로 실린다
+    # 다 쓴 수리를 이으면 다시 규정한 것이 곧 되돌아보기다 — 안내도 하네스도 0
+    with resumed_turn({**row, "deep": {**row["deep"], "done": 3}}, by_user=True):
+        assert de.execution_block(framing, repair=True) == ""
+    # 정본에 반영된 뒤에 이으면서 단계를 붙였으면 돌지 않는다는 사실을 알린다
+    copy_session("prior", "applied")
+    with resumed_turn({**row, "applied": True, "phase": "verify_remaining"}, by_user=True):
+        said = de.execution_block({**framing, "deep_execution": 2}, repair=True)
+    assert said.startswith("사용자가 심층실행 2단계를 주문했다.") and "정본에 반영된 뒤의 수리 턴이다" in said
+
+
+def test_reframed_guidance_keeps_the_turns_own_depth(tmp_path, monkeypatch, scope):
+    """턴 도중의 재규정은 규정 출처를 바꾼다. 안내의 심층실행 단계는 이 턴에 정해 둔 것을 그대로 쓴다."""
+    from reframe import render_for_executor
+    row = {"task_id": "prior", "staging_task_id": "prior", "phase": "apply", "applied": True}
+    with resumed_turn(row, by_user=False):
+        runner, controller = make(tmp_path, monkeypatch, scope, framing=HANDOFF, repair=True)
+    revised = {"task_framing": "다시 규정한 수리", "first_step": "다시 본다", "_framing_source": "fresh_consciousness_revision"}
+    text = json.loads(render_for_executor({"revised": True, "output": revised, "user_message": "고쳐줘"},
+                                          deep_plan=controller._deep_plan))["content"]
+    assert "다시 규정한 수리" in text and "심층실행" not in text

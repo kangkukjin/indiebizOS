@@ -1,56 +1,42 @@
-"""직전 규정의 기록과, 그 기록을 쓰는 두 자리 — 규정 계승은 없앴다(2026-11-17).
+"""직전 규정의 기록 — 턴이 끝날 때 그 턴의 유효 규정을 자아별로 적는다.
 
-있던 것(2026-10-07~11-17): THINK 턴이 '같은 과제의 후속'이거나 같은 문장의 정기 실행이면 의식을 깨우지
-않고, 직전 규정을 경량 모델이 고쳐 써서 실행자에게 넘겼다(의식 호출 약 1분·10만 토큰을 아끼려는 것).
-없앤 이유(사용자 판정, 에피소드 6192): 시제품 제작 요청이 직전 조사의 후속으로 판정돼 92분짜리 과제의
-규정을 경량 모델이 7.7초에 새로 썼고, 사용자가 주문한 심층실행 10단계는 옮겨 적을 칸이 없어 1단계로
-돌았다. **THINK 판정이면 의식이 새로 규정한다.** 되살리지 말 것 — data/decisions.yaml
-`think-always-fresh-framing`.
-
-남은 것
-- 직전 규정의 기록(`remember`·`_load`): 턴이 끝날 때 그 턴의 유효 규정을 자아별로 적는다. 읽는 곳은
-  ① 의식의 계획 작성 — 같은 대화의 최근 연구계획을 후보 자료로 본다(관련성은 의식이 판단)
-  ② 수리 재개 — 사용자의 말이 미완료 수리 작업을 가리키는지 찾는다(`repair_resume.user_resume`).
-- 관계 판정(`_judge_relation`): 수리 재개만 쓴다 — 미완료 수리의 실행을 잇는 말인지 한 단어로. 규정을
-  고치지 않는다. 의식 축의 모델이 답한다(경량 모델에게 맡기지 않는다).
-- 위임 완료 통지 판별(`is_delegation_report`): 무의식 분기의 결정론 단서.
+읽는 곳
+- 의식의 계획 작성(`cognitive_consciousness._run_consciousness`): 같은 대화의 최근 연구계획을 후보 자료로
+  본다. 관련성은 의식이 판단한다.
+- 수리 재개(`repair_resume.user_resume`): 사용자의 말이 미완료 수리 작업을 가리키는지 찾는다.
 
 기록의 원칙: 권한은 남기지 않는다(needs_repair·_repair_policy 는 벗긴다). 심층실행의 주문 단계와 첫
 걸음은 그 턴의 것이라 남기지 않는다.
 
+이 기록을 물려 쓰는 '규정 계승'은 없다. 2026-10-07~11-17 에는 THINK 턴이 '같은 과제의 후속'이거나 같은
+문장의 정기 실행이면 의식을 깨우지 않고 직전 규정을 경량 모델이 고쳐 써서 실행자에게 넘겼다(의식 호출
+약 1분·10만 토큰을 아끼려는 것). 에피소드 6192 에서 시제품 제작 요청이 직전 조사의 후속으로 판정돼
+92분짜리 과제의 규정을 경량 모델이 7.7초에 새로 썼고, 사용자가 주문한 심층실행 10단계는 옮겨 적을 칸이
+없어 1단계로 돌았다. **THINK 판정이면 의식이 새로 규정한다.** 되살리지 말 것 — data/decisions.yaml
+`think-always-fresh-framing`.
+
+모듈 이름은 2026-11-17 까지 framing_inheritance 였다. 계승이 없어진 뒤 남은 세 가지 일을 맡은 곳으로
+나눴다: 기록은 여기, 수리 재개 판정은 repair_resume.judge_resume, 위임 완료 통지 판별은
+cognitive_consciousness.is_delegation_report.
+
 저장소 = data/system_ai_state/framing_inherit/<agent>.json — 자아별 한 파일(last + 문장별 최근 REPEAT_KEEP 건).
+폴더 이름은 옛 이름 그대로다. 바꾸면 쌓인 기록을 옮기는 절차와 백업이 필요한데 얻는 것이 없다.
 """
 import hashlib
-import json
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from history_excerpt import conversation_excerpt
 from consciousness_agent import project_framing
 
-FOLLOWUP_MAX_AGE_S = 24 * 3600        # 직전 기록을 '최근 것'으로 보는 창 — 그보다 오래되면 읽지 않는다
+RECENT_WINDOW_S = 24 * 3600           # 직전 기록을 '최근 것'으로 보는 창 — 그보다 오래되면 읽지 않는다
 REPEAT_KEEP = 40                      # 자아별 문장 기록 보존 수
 
 # 저장본에서 벗기는 키 — 권한·턴 전용 표식
 STRIP_ALWAYS = ("needs_repair", "_repair_policy", "_framing_source", "_inherited_from",
                 "deep_execution", "first_step",  # 심층실행의 주문 단계와 첫 걸음은 그 턴의 것이다
                 "scope", "pursuit_id", "title", "goal_criteria", "pursuit_reason", "detach_pursuit")
-
-_RELATION_PROMPT = "repair_resume_relation_prompt.md"
-_prompt_cache: dict = {}
-
-_DELEGATION_REPORT_RE = re.compile(r"^\s*\[task:[^\]\n]+\]\s*완료\.?(\s|$)")
-
-
-def is_delegation_report(message: str) -> bool:
-    """위임받은 에이전트의 완료 통지(`[task:…] 완료.`) — 사실 통보이지 새 요청이 아니다.
-
-    agent_communication._send_to_system_ai 가 만드는 형식 그대로. 같은 접두의 다른 문장
-    ("[task:…] 주간 재조사: …")은 작업 지시라 해당하지 않는다.
-    """
-    return bool(_DELEGATION_REPORT_RE.match(message or ""))
 
 
 # ── 저장소 ─────────────────────────────────────────────────────────────────
@@ -156,50 +142,3 @@ def remember(runner, message: str, framing: dict, *, completed: bool = True) -> 
     data["repeat"][_message_hash(message)] = record
     _save(key, data)
     return record
-
-
-# ── 관계 판정 (수리 재개 전용) ─────────────────────────────────────────────
-
-def _prompt(name: str) -> str:
-    from runtime_utils import get_base_path
-    path = Path(get_base_path()) / "data" / "common_prompts" / name
-    try:
-        mtime = path.stat().st_mtime
-    except OSError:
-        return ""
-    cached = _prompt_cache.get(name)
-    if cached and cached[0] == mtime:
-        return cached[1]
-    text = path.read_text(encoding="utf-8")
-    _prompt_cache[name] = (mtime, text)
-    return text
-
-
-def _oneshot(prompt: str, system_prompt: str, role: str) -> str:
-    from consciousness_agent import oneshot_ai_call
-    raw = oneshot_ai_call(prompt, system_prompt=system_prompt, role=role)
-    return raw if isinstance(raw, str) else ""
-
-
-def _judge_relation(previous: dict, message: str, *, strict=False, history=None) -> str:
-    """새 메시지가 멈춘 수리의 실행을 잇는 말인가 — CONTINUE / NEW 한 단어. 수리 재개만 쓴다.
-
-    의식 축의 모델이 판정한다(2026-11-17, 사용자 판정: 수리야말로 중요하니 의식이 판단한다). 그 전에는 분류
-    축의 경량 모델이 답했다 — CONTINUE 한 단어가 옛 완료 기준과 수리 권한을 되살리는데도. 최대 기어에서도
-    분류 축은 경량이라, 이 판정을 그 축에 두면 늘 경량 모델이 답한다. 어긋난 답은 strict 면 오류, 아니면 NEW.
-    """
-    system_prompt = _prompt(_RELATION_PROMPT)
-    if not system_prompt:
-        if strict:
-            raise ValueError("관계 판정 프롬프트가 없습니다")
-        return "NEW"
-    body = json.dumps({
-        "previous_message": (previous.get("message") or "")[:800],
-        "previous_framing": ((previous.get("framing") or {}).get("task_framing") or "")[:700],
-        "new_message": (message or "")[:1500],
-        "conversation_history": conversation_excerpt(history, 8000),
-    }, ensure_ascii=False)
-    answer = _oneshot(body, system_prompt, "consciousness").strip().upper()
-    if strict and answer not in {"CONTINUE", "NEW"}:
-        raise ValueError("관계 판정 응답을 확인하지 못했습니다")
-    return "CONTINUE" if answer == "CONTINUE" else "NEW"

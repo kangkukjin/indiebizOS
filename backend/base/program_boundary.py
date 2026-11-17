@@ -102,7 +102,7 @@ RESTART_MODULES = {
     'prompt_builder': 'agent instructions',
     'prompt_composition': 'agent instructions',
     'reframe': 'goal revision',
-    'framing_inheritance': 'previous framing record',
+    'framing_record': 'previous framing record',
     'final_evaluator': 'completion criteria',
     'supervisor_handoff': 'goal ownership',
     'consciousness': 'goal ownership',

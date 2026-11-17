@@ -118,7 +118,7 @@ def test_pipeline_preserves_provider_full_history_and_recall(binding, monkeypatc
     runner._after_response_async = lambda *a, **kw: None
     monkeypatch.setattr('supervision_bus.current', lambda: None)
     monkeypatch.setattr('unified_distill.capture_model', lambda *a: None)
-    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr('framing_record.remember', lambda *a, **kw: None)
 
     def adopt(guard, runner, message, response, *args, **kwargs):
         yield from ()

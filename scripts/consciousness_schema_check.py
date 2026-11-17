@@ -43,7 +43,7 @@ CONSUMER_FILES = [
     ROOT / "backend" / "cognition" / "cognitive_consciousness.py",
     ROOT / "backend" / "cognition" / "cognitive_eval.py",
     ROOT / "backend" / "cognition" / "consciousness_agent.py",
-    ROOT / "backend" / "cognition" / "framing_inheritance.py",
+    ROOT / "backend" / "cognition" / "framing_record.py",
     ROOT / "backend" / "cognition" / "reframe.py",
     ROOT / "backend" / "cognition" / "supervisor_runtime.py",
     ROOT / "backend" / "cognition" / "member_runner.py",

@@ -18,7 +18,7 @@ IndieBiz OS Core
 """
 
 from .base import BaseProvider
-from .cli_provider import CliSubprocessProvider, clear_sessions_for_agent
+from .cli_provider import CliSubprocessProvider, clear_sessions_for_agent, session_context_size
 from .anthropic import AnthropicProvider
 from .openai import OpenAIProvider
 from .gemini import GeminiProvider

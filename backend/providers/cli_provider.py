@@ -282,116 +282,8 @@ def ensure_mcp_bridge_config() -> Optional[Path]:
 # 저장하고 다음 호출에 재사용한다. 프로바이더마다 파일이 갈리는 이유는 세션 id 의
 # 발급자가 다르기 때문 — 한 파일에 섞으면 claude 세션 id 를 codex 에 먹이게 된다.
 
-_SESSION_STORES: List["CliSessionStore"] = []
-
-
-class CliSessionStore:
-    """`data/<prefix>_sessions.json` · `data/<prefix>_session_sizes.json` 한 쌍.
-
-    생성만 하면 전역 목록에 등록되어 `clear_sessions_for_agent()`(프로바이더 무관
-    '새 대화')가 이 저장소도 함께 비운다 — 새 CLI 프로바이더를 추가할 때 UI 리셋
-    배선을 따로 기억하지 않아도 되도록.
-    """
-
-    def __init__(self, prefix: str, label: str):
-        self.prefix = prefix
-        self.label = label
-        _SESSION_STORES.append(self)
-
-    # --- 경로 ---
-    def map_path(self) -> Path:
-        return _data_dir() / f"{self.prefix}_sessions.json"
-
-    def size_path(self) -> Path:
-        return _data_dir() / f"{self.prefix}_session_sizes.json"
-
-    # --- 공통 입출력 ---
-    @staticmethod
-    def _load(path: Path) -> Dict[str, Any]:
-        if not path.exists():
-            return {}
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return data if isinstance(data, dict) else {}
-        except (json.JSONDecodeError, OSError):
-            return {}
-
-    def _save(self, path: Path, m: Dict[str, Any], what: str):
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(m, f, ensure_ascii=False, indent=2)
-        except OSError as e:
-            print(f"[{self.label}] {what} 저장 실패: {e}")
-
-    # --- 세션 매핑 ---
-    def load_map(self) -> Dict[str, str]:
-        return self._load(self.map_path())
-
-    def save_map(self, m: Dict[str, str]):
-        self._save(self.map_path(), m, "세션 매핑")
-
-    def clear_agent(self, session_key: str):
-        """특정 agent의 세션 매핑 제거. UI '새 대화' 등에서 호출.
-
-        ★접두 스윕: 프로바이더가 세션 키를 파생시켜 쓸 수 있다(예: codex 는 시스템 프롬프트
-        해시를 `키#해시` 로 붙인다 — CodexProvider._get_session_key 참조). 호출부는 그
-        파생을 모르고 평범한 registry_key 를 넘기므로, 정확히 같은 키 + `키#…` 파생분을
-        함께 지운다. 안 그러면 '새 대화'가 파생 키를 못 찾아 옛 스레드가 살아남는다.
-        """
-        return self._clear(self.map_path(), session_key)
-
-    def _clear(self, path, session_key):
-        # 초기화는 실패를 삼키는 캐시 읽기/쓰기를 사용하지 않는다.
-        from restart_protocol import atomic_json
-        try:
-            mapping = json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            return 0
-        if not isinstance(mapping, dict):
-            raise ValueError("세션 저장소가 객체가 아닙니다")
-        victims = [k for k in mapping if k == session_key or k.startswith(session_key + "#")]
-        if victims:
-            atomic_json(path, {k: v for k, v in mapping.items() if k not in victims})
-            observed = json.loads(path.read_text(encoding="utf-8"))
-            if any(k in observed for k in victims):
-                raise OSError("세션 매핑 삭제 후 재독 불일치")
-        return len(victims)
-
-    # --- 컨텍스트 크기 ---
-    def load_sizes(self) -> Dict[str, int]:
-        return self._load(self.size_path())
-
-    def save_sizes(self, m: Dict[str, int]):
-        self._save(self.size_path(), m, "세션 크기")
-
-    def record_size(self, session_key: str, size: int):
-        """직전 턴의 실측 컨텍스트 토큰 수를 기록 (다음 턴 리셋 판단용)."""
-        if not session_key or size <= 0:
-            return
-        m = self.load_sizes()
-        m[session_key] = int(size)
-        self.save_sizes(m)
-
-    def clear_size(self, session_key: str):
-        return self._clear(self.size_path(), session_key)
-
-
-def clear_sessions_for_agent(session_key: str):
-    """해당 세션과 파생 키만 제거하고 재독한 결과를 반환한다. 다른 세션·기록은 유지한다."""
-    removed, errors = 0, []
-    for store in _SESSION_STORES:
-        try:
-            removed += store.clear_agent(session_key) or 0
-            store.clear_size(session_key)
-        except Exception as exc:
-            errors.append(f"{store.label}: {exc}")
-    message = ("CLI 세션 매핑을 제거했습니다. 다음 호출은 새 컨텍스트로 시작합니다."
-               if removed else "제거할 CLI 세션 매핑이 없습니다.")
-    return {"ok": not errors, "key": session_key, "removed": removed,
-            "message": message if not errors else "세션 매핑 정리를 완료하지 못했습니다.",
-            "error": "; ".join(errors)}
+from .cli_sessions import (  # noqa: E402,F401 — 세션 저장소(분리된 모듈)의 재수출
+    CliSessionStore, _SESSION_STORES, clear_sessions_for_agent, session_context_size)
 
 
 class CliSubprocessProvider(BaseProvider):
@@ -575,6 +467,18 @@ class CliSubprocessProvider(BaseProvider):
     def _mcp_bridge_release(self, handle: Optional[str]) -> None:
         """임시 핸들 정리 (temp 파일 삭제 등)."""
         return None
+
+    def _record_context_size(self, session_key: str, size: int):
+        """세션 크기를 적고, 대화 세션 곁에 '이 대화가 방금 쓴 CLI 세션'의 표식도 남긴다(대화창이 크기를 보인다)."""
+        self._store.record_size(session_key, size)
+        prefix = getattr(self._store, "prefix", "")
+        if not prefix or not session_key or not size or size <= 0:
+            return
+        try:
+            from conversation_sessions import note_cli_session
+            note_cli_session(prefix, session_key)
+        except Exception:
+            pass  # 표식을 못 적어도 턴은 간다
 
     def _should_reset_session(self, prev_size: int) -> tuple:
         """명시적 커스텀 크기 리셋의 호환 경로. 기본(None)은 CLI 자체 압축만 사용한다.
@@ -858,7 +762,7 @@ class CliSubprocessProvider(BaseProvider):
                     # (_measure_context_size 참조 — 저장값은 '지난 턴 끝'의 추정이다).
                     measured = self._measure_context_size(resume_session_id)
                     if measured:
-                        self._store.record_size(session_key_val, measured)
+                        self._record_context_size(session_key_val, measured)
                     prev_size = int(
                         measured or self._store.load_sizes().get(session_key_val) or 0)
                     do_reset, why = self._should_reset_session(prev_size)
@@ -1186,7 +1090,7 @@ class CliSubprocessProvider(BaseProvider):
                         )
                     # 컨텍스트 크기 기록 — resume 세션은 매 턴 성장하므로 id 변동과 무관하게
                     # 매번 갱신해 다음 턴 리셋 판단의 최신 값을 유지한다.
-                    self._store.record_size(session_key_val, self._last_context_size)
+                    self._record_context_size(session_key_val, self._last_context_size)
                 break
         finally:
             cancel_channel(self._completion_channel)

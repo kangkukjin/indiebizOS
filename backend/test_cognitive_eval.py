@@ -184,7 +184,7 @@ def test_failed_evaluation_reaches_pipeline_final_as_incomplete(tmp_path, monkey
         is_ready=True, process=lambda **kw: {'task_framing': kw['user_message'],
                                             'achievement_criteria': 'CSV와 PDF 파일이 존재',
                                             'independent_review': True}))
-    monkeypatch.setattr('framing_inheritance._oneshot', lambda *a, **kw: pytest.fail('예상하지 않은 모델 호출'))
+    monkeypatch.setattr('repair_resume._oneshot', lambda *a, **kw: pytest.fail('예상하지 않은 모델 호출'))
     monkeypatch.setattr('capability_guard.judge_once', lambda *a, **kw: pytest.fail('예상하지 않은 모델 호출'))
 
     def execute(message_content, history=None, **kwargs):

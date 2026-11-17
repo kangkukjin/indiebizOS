@@ -15,6 +15,18 @@ from typing import Optional, Dict, Any
 from consciousness_agent import FramingContractError, ConsciousnessCallSkipped, project_framing
 
 
+_DELEGATION_REPORT_RE = re.compile(r"^\s*\[task:[^\]\n]+\]\s*완료\.?(\s|$)")
+
+
+def is_delegation_report(message: str) -> bool:
+    """위임받은 에이전트의 완료 통지(`[task:…] 완료.`) — 사실 통보이지 새 요청이 아니다. 무의식 분기의 결정론 단서.
+
+    agent_communication._send_to_system_ai 가 만드는 형식 그대로. 같은 접두의 다른 문장
+    ("[task:…] 주간 재조사: …")은 작업 지시라 해당하지 않는다.
+    """
+    return bool(_DELEGATION_REPORT_RE.match(message or ""))
+
+
 # ============================================================
 # SESSION_RESET 핸들러 (모듈 레벨 — call site에서 직접 호출)
 # ============================================================
@@ -59,15 +71,15 @@ class CognitiveConsciousnessMixin:
             # 하네스가 자동으로 잇는 턴은 보존된 규정 그대로다 — repair_resume.rethink.
             from repair_resume import rethink
             return project_framing(rethink(self, user_message, history, execution_memory, inherited))
-        # 명시적인 수리는 실행자가 직접 조사·검사한다. #think는 기존 의식을 유지한다.
+        # 수리 판정을 받은 일은 누가 판정했든 의식이 어떻게 고칠지 규정한다. 사용자가 #repair 를 붙인 것은
+        # 무의식이 수리로 판정한 것과 같다(2026-11-17 사용자 판정, data/decisions.yaml
+        # `repair-always-framed-by-consciousness`). 그 전(2026-10-03~)에는 #repair 가 붙으면 의식 없이 요청문을
+        # 그대로 과제와 완료 기준으로 썼다. 의식을 부르지 않는 것은 위의 자동 이어가기(보존된 규정대로 하는 일)와,
+        # 이 함수를 거치지 않는 업무 도중의 한정 수리(task_repair — repair_policy.direct_framing)다.
         from thread_context import get_task_origin
-        if (repair and get_task_origin() == "user" and re.search(r"(?i)#repair\b", user_message)
-                and not re.search(r"(?i)#think\b", user_message)):
-            from repair_policy import direct_framing
-            return project_framing(direct_framing(user_message))
         # THINK 판정이면 의식이 새로 규정한다. 직전 규정을 물려받아 경량 모델이 고쳐 쓰던 '규정 계승'
         # (후속 턴·같은 문장의 정기 실행, 2026-10-07)은 2026-11-17 사용자 판정으로 없앴다 — 되살리지 말 것
-        # (data/decisions.yaml `think-always-fresh-framing`, 사정은 framing_inheritance.py 머리말).
+        # (data/decisions.yaml `think-always-fresh-framing`, 사정은 framing_record.py 머리말).
         # 수리 재개는 repair_continuation 이 따로 잇는다(위).
         result = project_framing(self._run_consciousness(user_message, history, execution_memory, repair=repair))
         if result:
@@ -131,9 +143,9 @@ class CognitiveConsciousnessMixin:
                 previous_plan = research_topic['receipt']
             elif previous_plan is None and history and not repair:
                 # 같은 대화 신원의 최근 계획은 후보 자료다. 관련성은 현재 요청을 읽는 의식이 판단한다.
-                from framing_inheritance import _load, agent_key, _age_s, FOLLOWUP_MAX_AGE_S
+                from framing_record import _load, agent_key, _age_s, RECENT_WINDOW_S
                 last = _load(agent_key(self)).get("last") or {}
-                if _age_s(last) <= FOLLOWUP_MAX_AGE_S:
+                if _age_s(last) <= RECENT_WINDOW_S:
                     previous_plan = (last.get("framing") or {}).get("_research_plan")
             result = agent.process(
                 user_message=user_message,
@@ -290,7 +302,6 @@ class CognitiveConsciousnessMixin:
             return "REPAIR", None
         # 위임받은 에이전트의 완료 통지(`[task:…] 완료.`)는 사실 통보다 — 분류기가 THINK 로 올려
         # 의식 29초+상태 조회 5라운드를 돌던 자리(ep4388, 2026-10-07). 통보 범위(turn_scope)로 처리.
-        from framing_inheritance import is_delegation_report
         if is_delegation_report(message):
             print("[무의식] 분류: CONTEXT_UPDATE (결정론 단서 — 위임 완료 통지)")
             return "CONTEXT_UPDATE", None

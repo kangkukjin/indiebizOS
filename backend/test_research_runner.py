@@ -308,9 +308,9 @@ def test_research_plan_routing_ignores_initial_toggle_but_keeps_explicit_tags(mo
 
 
 def test_research_never_uses_24_hour_framing_cache_or_silent_fallback(monkeypatch):
-    import framing_inheritance
+    import framing_record
     from consciousness_agent import FramingContractError
-    assert not hasattr(framing_inheritance, 'inherit')   # 규정 계승은 2026-11-17 없앴다
+    assert not hasattr(framing_record, 'inherit')   # 규정 계승은 2026-11-17 없앴다
     runner = research_runner.ResearchRunner.__new__(research_runner.ResearchRunner)
     monkeypatch.setattr(runner, '_run_consciousness', lambda *a: {'task_framing': '계획 유지'})
     assert runner._run_consciousness_or_reuse('설명', [])['task_framing'] == '계획 유지'

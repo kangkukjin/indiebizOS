@@ -270,7 +270,7 @@ def test_real_pipeline_resumes_as_execute_without_classifier_or_red_grant(env, m
     monkeypatch.setattr('red_grant.issue_grant', lambda **kw: pytest.fail('RED 권한 발급 금지'))
     monkeypatch.setattr('supervision_bus.current', lambda: None)
     monkeypatch.setattr('unified_distill.capture_model', lambda r: None)
-    monkeypatch.setattr('framing_inheritance.remember', lambda *a, **kw: None)
+    monkeypatch.setattr('framing_record.remember', lambda *a, **kw: None)
     with journal.resuming(row), r.turn_ai_scope():
         events = list(r._cognitive_stream_body(row['goal'], row['history'], extra_role=cc.context(row)))
     assert not [e for e in events if e['type'] == 'error'], events

@@ -253,8 +253,11 @@ Claude Code 실행자는 에이전트·대화마다 CLI 세션을 이어 쓴다(
    (`frontend/src/components/chat/SessionWorkspace.tsx`, 이름은 `frontend/surfaces/shared/conversation.json`)을
    누르면 새 대화 세션이 만들어지고, CLI 세션의 열쇠가 `에이전트@session:<대화 세션 id>`라서
    (`cli_provider._get_session_key`) 실행자의 CLI 세션도 빈 채로 새로 시작한다. 앞의 대화는 히스토리에 제
-   CLI 세션과 함께 남는다. 세션 작업대가 없는 대화창에는 같은 대화를 유지한 채 CLI 세션만 비우는 버튼이 따로
-   있다(`ChatDisplayView.tsx`의 "Claude Code 새 세션 시작" → `reset-session`). 없는 것은 **크기를 볼 곳**이다.
+   CLI 세션과 함께 남는다. 코드에는 같은 대화를 유지한 채 CLI 세션만 비우는 버튼도 남아 있지만
+   (`ChatDisplayView.tsx`의 "Claude Code 새 세션 시작" → `reset-session`) **화면에 나오지 않는다**. 세션이 없는
+   대화창에서만 보이게 돼 있는데(`ChatView.tsx`의 `showResetSessionButton = !session && …`), 세션 작업대가
+   들어온 2026-10-15(`b765137a`) 뒤로는 모든 대화창이 세션을 갖는다. 죽은 코드이고, 프런트의
+   `resetAgentSession`·`resetSystemAISession`도 그 버튼만 부른다. 없는 것은 **크기를 볼 곳**이다.
    사용자는 지금 대화의 세션이 얼마나 큰지 모른 채 이어 쓴다(6192는 첫 라운드 입력이 약 24만 토큰인 세션에서 시작해 67만이 됐다).
    "새 세션" 버튼 곁이나 대화 머리에 그 대화 세션의 크기(마지막 라운드의 문맥 토큰,
    `data/claude_code_session_sizes.json`에 이미 적힌다)를 보인다. 문턱도 자동 판단도 넣지 않는다. 어디에

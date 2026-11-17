@@ -49,8 +49,10 @@
   why: >
     안 쓰이는 어휘의 원인은 대개 모델이 몰라서(회상·설명 부족)이지 무가치해서가 아니다.
     빈도 기준 정리는 결정화 사다리를 거꾸로 태운다.
-  keywords: [스위치화, 사용 빈도, 저사용, 안 쓰는 액션, 어휘 정리, 은퇴 기준, usage frequency]
-  source: "사용자 판정 (Claude Code 세션 2026-08)"
+    2026-11-14 재확인: 프롬프트에 상시 실리는 목록(손발 목록·가이드 목차 등)을 '쓰임 기록이
+    없다'는 이유로 줄이자는 권고도 철회됐다 — 기록이 없는 것이지 안 쓰이는 것이 아니다.
+  keywords: [스위치화, 사용 빈도, 저사용, 안 쓰는 액션, 어휘 정리, 은퇴 기준, usage frequency, 상시 목록, 목록 줄이기, 쓰임 기록, 프롬프트 다이어트]
+  source: "사용자 판정 (Claude Code 세션 2026-08), 상시 목록 재확인 2026-11-14 (Claude Code 세션)"
   status: active
 
 - id: verdict-scope-two-kinds
@@ -67,23 +69,29 @@
 - id: anti-vocab-proliferation
   date: 2026-07
   verdict: 채택
-  ruling: "새 낱말의 기본 답 = 아니오 — [self:script] 로 얼려라 (반-어휘-증식)"
+  ruling: "새 낱말의 기본 답 = 아니오 — [self:script] 로 얼려라 (반-어휘-증식). 기존 액션에 op 를 더하는 것도 어휘 증식이다"
   why: >
     새 기능이 필요할 때 1급 어휘 추가는 마지막 수단. 먼저 기존 어휘 조합, 다음 script 결정화,
     빈도가 증명했을 때만 승격(결정화 사다리).
-  keywords: [새 액션, 새 어휘, 낱말 추가, 어휘 추가, 액션 추가, 1급 승격, new action]
-  source: "CLAUDE.md 개발 원칙 5 (사용자 확정)"
+    2026-09-14 보충: op 는 굴절이라 증식이 아니라고 스스로 판정하지 말 것 — op 신설도 사전 항목
+    추가이고 판정은 사용자 몫이다. 주인용 관리·관찰 화면은 런처 UI 가 기존 HTTP API 를 직접
+    읽으면 된다(어휘를 거쳐야 하는 것은 AI 가 부를 능력일 때뿐).
+  keywords: [새 액션, 새 어휘, 낱말 추가, 어휘 추가, 액션 추가, 1급 승격, new action, op 신설, op 추가, 새 op, 관리 화면]
+  source: "CLAUDE.md 개발 원칙 5 (사용자 확정), op 신설 포함 = 사용자 판정 2026-09-14 (docs/IBL_VOCABULARY_CANDIDATES_2026_09_15_B.md 머리말에 기록)"
   status: active
 
 - id: no-concrete-ibl-in-guides
   date: 2026-08-27
   verdict: 채택
-  ruling: "가이드에 구체 IBL 문장 금지 — 원리·경계·'직접 조합하라'만. 좋은 조합의 통로=해마"
+  ruling: "가이드에 그대로 실행될 완성 처방 문장 금지 — 원리·경계·'직접 조합하라'. 자리표 골격 예시(재컴파일 출발점)는 허용(08-30 개정)"
   why: >
     가이드에 적힌 문장은 처방으로 굳는다. 문장은 진화해야 하고, 좋은 조합은 가이드가 아니라
     해마(증류)가 흔적으로 배운다. ("가이드에 초안 문장을 구체적으로 담지 마 — 그러면 그렇게 하게 된다.")
-  keywords: [가이드, 예시 문장, 초안 문장, 템플릿, 코드 블록, guide, 처방]
-  source: "사용자 교정 2026-08-27 (changelog)"
+    2026-08-30 개정: 전면 금지가 아니라 형식의 문제다. 배관을 회상하지 못한 주행이 같은 일을
+    수십 번의 미세 호출로 다시 조립한 실측 뒤, 보고서 가이드에 자리표 골격 + '고쳐 쓰는 것이
+    정상' 규칙 + 실행 예산·정지 조건을 넣었다. 금지되는 것은 그대로 실행될 완성 초안이다.
+  keywords: [가이드, 예시 문장, 초안 문장, 템플릿, 코드 블록, guide, 처방, 골격, 자리표, 재컴파일]
+  source: "사용자 교정 2026-08-27 (changelog, 커밋 9798f8a9), 개정 2026-08-30 (커밋 53f6b135)"
   status: active
 
 - id: public-content-user-authored
@@ -135,3 +143,346 @@
   source: "사용자 판정 (Claude Code 세션 2026-08)"
   status: active
   scent: false
+
+# ── 2026-11-17 보충 — 9~11월 판정 ─────────────────────────────────────────────
+# 8월 29일 뒤로 등재가 끊겨 있던 것을 커밋·설계 문서·세션 기록에서 대조해 채웠다.
+# source 에 적힌 커밋·문서는 저장소에서 실재를 확인한 것이다. "Claude Code 세션"만 적힌
+# 항목은 저장소에 근거 문장이 없어 세션 기록에 기대는 것이다.
+
+- id: model-portable-optimization
+  date: 2026-09-02
+  verdict: 채택
+  ruling: "속도·토큰 최적화는 모델을 바꿔도 살아남아야 한다 — 특정 모델·공급자의 버릇에 맞춘 튜닝 금지"
+  why: >
+    특정 모델의 추론 방식·캐시·토큰 속도에 맞춘 상수는 모델을 바꾸는 날 조용히 결과를 깎는다.
+    값은 모델과 함께 낡고, 작업의 모양에 걸린 구조(차선·관문)는 남는다. 추론 예산도 모델 등급이
+    아니라 차선(EXECUTE/THINK/REPAIR)에 걸고 공급자가 번역한다. 2026-09-04 같은 취지 재확인:
+    설정은 다른 공급자에서도 문제가 없어야 한다.
+  keywords: [최적화, 튜닝, 모델 교체, 모델 독립, 공급자, 프로바이더, 추론 예산, 토큰 절감, 속도 개선]
+  source: "사용자 원칙 2026-09-02·09-04 (Claude Code 세션), 관련 커밋 521121ee"
+  status: active
+
+- id: ai-work-not-fixed-program
+  date: 2026-09-03
+  verdict: 채택
+  ruling: "AI 가 할 일을 고정 프로그램(파서·고정 스키마·선택기·앱 손잡이)으로 만들지 않는다 — 지침 + 어휘 입구 + 입구 앱이면 충분"
+  why: >
+    하네스는 AI 를 자동화하는 것이 아니라 AI 에게 판단을 맡기고 기억·어휘·입구를 준다. 형식과
+    도구를 미리 정하면 자료가 정할 형식을 코드가 정하게 되고, AI 가 필요할 때 스크립트를 짜서
+    등록하는 결정화 사다리를 사람이 미리 깔아 버린다. 같은 날 세 번 교정됐다: 자동 주입 선택기
+    폐지, 폴더 조사 스크립트·원장·유형별 추출기 폐기, 싼 관측 도구도 미리 짜지 않음.
+    설계 전에 물을 것 = "이 코드가 하는 일을 AI 가 지침만 읽고 할 수 있는가".
+  keywords: [파서, 고정 스키마, 선택기, 추출기, 고정 프로그램, 조사 스크립트, 관련성 점수, 전용 도구]
+  source: "사용자 판정 2026-09-03 (커밋 26b489bb, docs/FOLDER_SURVEY_HANDOFF.md)"
+  status: active
+
+- id: no-automatic-forage-injection
+  date: 2026-09-03
+  verdict: 기각
+  ruling: "포식 기억은 프롬프트에 자동 주입하지 않는다 — '필요하면 보라' 한 문장 + 어휘 입구. 예외는 프로젝트 에이전트의 자기 폴더 기억"
+  why: >
+    항상 주입은 기억이 적을 때의 설계다. 기억이 많아지면 무엇을 넣을지가 관련성 판단이 되고,
+    그 판단을 점수·구절 목록으로 코드에 옮기는 것은 AI 가 할 일을 코드가 하는 것이다. 회상은
+    판단이 아니라 데이터 접근(장소를 주면 그 자리의 기억 전부)이어야 한다.
+    예외(2026-09-05): 프로젝트 폴더의 포식 문서는 그 프로젝트 에이전트의 안정 프롬프트에 통째로
+    실린다 — 폴더가 하나로 고정이라 고를 판단이 없으므로 이 판정과 충돌하지 않는다.
+  keywords: [자동 주입, 기억 주입, 포식 기억, forage, 선택기, 항상 주입, project_memory, 프롬프트에 넣]
+  source: "사용자 판정 2026-09-03 (커밋 7b463775), 프로젝트 에이전트 예외 2026-09-05 (커밋 fe76871f)"
+  status: active
+
+- id: forage-memory-is-private
+  date: 2026-09-03
+  verdict: 채택
+  ruling: "포식 기억·폴더 조사 산출물·개인 사전은 개인정보 — 저장소 밖에 두고, 문서·changelog·커밋 메시지에도 그 내용을 옮기지 않는다"
+  why: >
+    세계의 명사는 데이터다. 산문(문서·changelog·커밋 메시지·코드 주석)은 기제만 적는다. 편수·
+    폴더 이름·제목·질의어는 그 사람의 삶이다. 예시는 중립 낱말로 쓰고, 개인 명사는 로컬 목록과
+    관문(scripts/check_private_nouns.py)이 잡는다. 이미 올라간 것은 역사를 다시 쓰지 않고 새
+    커밋으로 지운다.
+  keywords: [개인정보, 개인 명사, 포식 기억, 조사 산출물, 볼륨 라벨, 폴더 이름, 커밋 메시지, changelog, private]
+  source: "사용자 판정 2026-09-03 (커밋 9b31b5e1, scripts/check_private_nouns.py)"
+  status: active
+
+- id: notebook-document-is-unit
+  date: 2026-09-04
+  verdict: 채택
+  ruling: "노트북은 문서가 단위 — 수백 자 조각으로 부수지 않는다. 카드가 지도이고, 답할 때는 골라서 통째로 읽는다"
+  why: >
+    자료가 많다고 짧은 조각으로 부수면 문맥과 조각 사이의 논리가 사라져 특정 문서를 소개하는
+    일조차 못 한다. 조각은 위치 색인으로만 쓰고, 문서 하나가 단위다.
+  keywords: [notebook, 노트북, 청크, chunk, RAG, 문서 단위]
+  source: "사용자 판정 2026-09-04 (커밋 39585b0f)"
+  status: active
+  scent: false
+
+- id: no-frozen-workflow-for-reports
+  date: 2026-09-05
+  verdict: 기각
+  ruling: "반복 보고서를 얼린 워크플로로 돌리는 것은 거부 — 목표는 새 과제에도 통하는 즉석 IBL 조합 능력"
+  why: >
+    "반복 보고서를 얼린 워크플로로 돌리는 건 항상 거부한다. 창의적으로 IBL 을 조합하는 능력이
+    없으면 새 과제에서 결국 비효율적이다." 워크플로로 얼려 왕복을 줄이는 것은 발전이 아니고,
+    보고 싶은 것은 에이전트가 즉석에서 문장을 지어내는 것이다(2026-09-04). 이름 붙은 배관이
+    있어도 모델이 스스로 판단해 불러야 한다. 가지 문서의 '주행' 절도 얼린 워크플로가 아니라
+    용례다(커밋 de0c1a55).
+  keywords: [워크플로, workflow, 얼리기, 고정 배관, 보고서 자동화, 파이프라인 고정, 왕복 줄이기, 스위치처럼]
+  source: "사용자 원칙 2026-09-05 (docs/IBL_STATIC_TYPECHECK_HANDOFF.md 에 인용), 2026-09-04 (Claude Code 세션)"
+  status: active
+
+- id: think-gate-one-shot-or-multi-step
+  date: 2026-11-16
+  verdict: 채택
+  ruling: "THINK 기준 = 한 방에 끝나는가 / 여러 단계로 일하는가. 찾아서 대화로 알려 주는 조회·소개·추천·요약은 EXECUTE, 애매하면 EXECUTE"
+  why: >
+    이 기준은 세 번 움직였다. 2026-08-10 '장기·위험만 THINK' → 2026-09-06 '여러 단계로 일하면
+    THINK, 애매하면 THINK'(분석·비교·전망·다출처 조사가 EXECUTE 로 빠지던 것을 되돌림) →
+    2026-11-16 개정(축은 그대로): 검색이 여러 번이어도 찾아서 대화로 전하면 끝나는 일은
+    EXECUTE, 애매하면 EXECUTE. THINK 는 산출물(보고서·문서·파일·화면) 제작, 여러 갈래 조사의
+    종합 판단, 위험한 일에 남긴다. 사용자가 심층실행·심층연구를 주문했으면 내용이 조회여도
+    THINK. 다시 움직이려면 이 순서를 먼저 볼 것.
+  keywords: [THINK, EXECUTE, 무의식 분류, 각성 기준, 의식 호출, 숙고, THINK 게이트, 판정 남발]
+  source: "사용자 판정 2026-09-06 (커밋 b4eb8cd6), 개정 2026-11-16 (커밋 29418c7c)"
+  status: active
+  scent: false
+
+- id: execute-lane-reasoning-on
+  date: 2026-09-06
+  verdict: 채택
+  ruling: "실행 모델은 추론을 켠 것이 기본 — EXECUTE 차선의 추론을 꺼서 아끼지 않는다"
+  why: >
+    EXECUTE 는 '의식이 문제를 다시 규정할 필요 없음'이라는 판정이지 '추론이 필요 없음'이라는
+    판정이 아니다. 09-02 의 EXECUTE 추론 끄기는 가벼운 반사급 턴의 실측을 차선 전체로 넓힌
+    것이었다. 보고서 품질은 전부 추론이 켜진 채의 것이었다.
+  keywords: [추론 끄기, thinking off, lane_reasoning, 추론 예산, EXECUTE 추론]
+  source: "사용자 판정 2026-09-06 (커밋 521121ee)"
+  status: active
+  scent: false
+
+- id: tool-install-needs-approval
+  date: 2026-09-06
+  verdict: 채택
+  ruling: "몸 밖 도구는 필요하면 설치 승인을 요청한다 — 완전 자동 설치는 하지 않는다"
+  why: >
+    세상에 이미 있는 도구를 찾아 쓰게 하되 설치는 주인의 허락을 거친다([self:install_lib] 의
+    확인·승인 흐름, 조종실 승인 판). 당시 함께 둔 도구 지도 가이드는 2026-10-22 에 은퇴했고
+    승인 흐름은 남아 있다.
+  keywords: [자동 설치, 설치 승인, install_lib, pip install, 라이브러리 설치, 도구 설치, 세상의 도구]
+  source: "사용자 판정 2026-09-06 (커밋 bb6e92c3)"
+  status: active
+  scent: false
+
+- id: idioms-are-vocabulary
+  date: 2026-09-07
+  verdict: 채택
+  ruling: "상시 소개되는 관용구 = 어휘 — 에피소드마다 자동 증류·자동 작명하지 않는다. 등록은 사람이 부정기로, 후보는 빈도로 캐지 말고 설계해서 준다"
+  why: >
+    "그런 관용구는 실질적으로 어휘나 마찬가지야. 자주 쓰는 관용구가 어휘라는 것은 그 숫자를
+    마구 늘려서는 안 된다는 거야." 상시 소개되는 관용구는 매 턴 비용을 내므로 어휘와 같은 규율을
+    받는다. 등록 통로는 scripts/register_idiom.py 하나. 후보를 실행 원장의 빈도로 캐는 방법은
+    기각됐다 — 힌트에 있어서 자주 쓰인 것일 수 있어(노출이 빈도를 만든다) 순환이다. 무엇이
+    유용한지는 지식으로 설계해서 주고, 언제 어떻게 쓰는지를 프롬프트에 적는다. 가치 기준은
+    어떤 일에든 들일 수 있는 도메인 중립 표현.
+  keywords: [관용구, idiom, 자동 증류, 자동 작명, 관용구 증류, 관용구 후보, always_on, 빈도 측정]
+  source: "사용자 판정 2026-09-07 (커밋 96a0c69a, scripts/register_idiom.py)"
+  status: active
+
+- id: execution-map-injection-removed
+  date: 2026-09-17
+  verdict: 기각
+  ruling: "실행기억 지도(execution_map)는 프롬프트에 자동 주입하지 않는다 — 가이드 목차(guide_map)만 남긴다. 내부 활용은 유지"
+  why: >
+    실행기억은 해마가 자동으로 연상하고 IBL 문법도 주입되므로 지도를 매 턴 실을 필요가 없다.
+    다만 그 지도는 가이드의 유일한 목차를 겸하고 있어 목차는 남겼다 — 목차까지 빼면 가이드를
+    읽지 않아 보고서가 반토막 나던 일이 되풀이된다. 주입을 줄일 때는 그 블록이 겸하던 다른
+    기능을 먼저 셀 것.
+  keywords: [execution_map, 실행기억 지도, 실행 지도, guide_map, 가이드 목차, 지도 주입, 방법 지도]
+  source: "사용자 판정 2026-09-17 (커밋 14180cfa)"
+  status: active
+  scent: false
+
+- id: memory-recall-common-base
+  date: 2026-09-18
+  verdict: 채택
+  ruling: "기억들의 회상은 최소한의 공통 기반 위에 놓는다 — 차이는 의미상 필요하거나 성능으로 입증된 것만 남긴다"
+  why: >
+    "네 기억을 최소한의 공통 기반 위에 놓고, 차이는 의미상 필요하거나 성능으로 입증된 것만
+    유지한다." 같은 원리로 작동하는 부분은 구현까지 공유하고, 공통 기반으로 옮긴 책임은 기존
+    코드에서 없앤다(양쪽에 남기면 통합이 아니다). 고르는 방식은 블로그 방식을 따른다
+    (2026-09-17 설계).
+  keywords: [회상 통합, 공통 기반, 기억별 구현, 회상 경로, 트리 기억, associative recall, 조립 지점]
+  source: "사용자 판정 2026-09-18 (docs/ASSOCIATIVE_RECALL_COMMON_FLOW_2026_09_18.md, docs/TREE_MEMORY_RECALL_COMMON_DESIGN_2026_09_17.md)"
+  status: active
+  scent: false
+
+- id: forage-locus-is-address
+  date: 2026-09-18
+  verdict: 채택
+  ruling: "포식 기억의 열쇠는 주소(장소)다 — 주소 없는 기억은 받지 않는다. 주인 모델은 은퇴, 포식 브라우저는 개인화 없이 무상태 검색"
+  why: >
+    포식 기억의 계약은 '장소를 주면 그 장소의 기억 전부'다. 장소가 열쇠가 아닌 기억(주인에 관한
+    사실·방법·절차)이 포식에 들어가면 다른 기억과 중복된다. 수리 판정은 그 파일의 절대 경로에,
+    장소 없는 일반 교훈은 가이드 제안 큐로 보낸다.
+  keywords: [포식 기억, forage, locus, 주인 모델, owner_model, 포식 브라우저, 주소 없는 기억]
+  source: "사용자 판정 2026-09-18 (커밋 0c401bcc, docs/FORAGE_MEMORY_AUDIT_2026_09_18.md)"
+  status: active
+  scent: false
+
+- id: evidence-spill-ttl-7-days
+  date: 2026-10-04
+  verdict: 채택
+  ruling: "도구 증거·감독 기록(스필 하위 트리)은 7일 뒤 지운다"
+  why: >
+    걷는 경로가 없어 9월 중순부터 한없이 쌓이고 있었다(실측 수 GB). 일일 유지보수 번들에서만
+    지운다(디스크 순회라 비동기 경로에서 부르지 않는다).
+  keywords: [증거 보존, tool_evidence, 감독 기록, spill, TTL, 디스크 누적, 보존 기간]
+  source: "사용자 판정 2026-10-04 (커밋 53453b21)"
+  status: active
+  scent: false
+
+- id: app-composition-over-count
+  date: 2026-10-05
+  verdict: 채택
+  ruling: "앱 개수보다 앱의 구성이 중요하다 — 앱은 공통 기반 위에 계기 선언 1장 + 관용구 + 가이드로 짓는다"
+  why: >
+    코딩·문서·시트 앱이 서비스를 먼저 짓고 어휘를 포장지로 씌운 꼴이 되어 있었다. 앱을 만들면서
+    필요해진 것은 공통 기반으로 내리고, 앱마다 따로 짓지 않는다. 세 앱의 재구성은 공통 기반
+    목록이 끝난 뒤에 한다.
+  keywords: [앱 구성, 앱 추가, 새 앱, 계기 선언, 공통 기반, 앱 재구성, app foundation]
+  source: "사용자 판정 2026-10-05 (docs/APP_COMPOSITION_ON_IBL_PLAN_2026_10_05.md, docs/APP_COMMON_FOUNDATION_GAPS_2026_10_05.md)"
+  status: active
+  scent: false
+
+- id: document-app-is-binnote-face
+  date: 2026-10-05
+  verdict: 채택
+  ruling: "문서 앱 = 빈노트의 얼굴 + 형식별 엔진 — 빈노트는 문서 앱에 흡수되어 은퇴"
+  why: "큰 캔버스·상단 열기/저장·하단 AI 한 줄이라는 빈노트의 얼굴을 문서 앱의 얼굴로 삼고, 형식마다 엔진을 붙인다."
+  keywords: [문서 앱, 빈노트, binnote, 문서 편집기, 문서 엔진]
+  source: "사용자 결정 2026-10-05 (커밋 ca4a96a1, docs/DOCUMENT_APP_ON_BINNOTE_PLAN_2026_10_05.md)"
+  status: active
+  scent: false
+
+- id: spreadsheet-browser-grid-engine
+  date: 2026-10-07
+  verdict: 채택
+  ruling: "시트 앱 = 엑셀 얼굴 + IBL 몸 — 기본 엔진은 브라우저 안 격자 엔진, ONLYOFFICE 는 보조"
+  why: "시트 앱을 IBL 기반으로 다시 짓고 화면은 윈도우 엑셀처럼 한다. 기본 엔진을 브라우저 격자 엔진으로 바꾸고 ONLYOFFICE 를 보조로 내리는 것을 승인."
+  keywords: [시트 앱, 스프레드시트 앱, ONLYOFFICE, Univer, 격자 엔진]
+  source: "사용자 승인 2026-10-07 (커밋 c92e3647, docs/SPREADSHEET_APP_ON_IBL_PLAN_2026_10_07.md)"
+  status: active
+  scent: false
+
+- id: ibl-scope-private-seams
+  date: 2026-10-09
+  verdict: 채택
+  ruling: "IBL 은 Python 이 하는 일을 전부 대체하려는 언어가 아니다 — 사적 어휘와의 이음새에서만. 순수 계산은 [self:script]·Python 몫"
+  why: >
+    순수 계산(통계·그림 렌더·문자열 변환)은 Python 생태계가 이미 최적이고, 그것을 IBL 로 다시
+    쓰면 단계 비용만 늘어난다. IBL 의 값은 사적 어휘(내 파일·원장·기억·도구·위임)와 닿는
+    이음새에 있다 — 영수증·재사용·검사·회상이 거기서 생긴다. 그래서 'Python 사용 비율'은 결함
+    지표가 아니고, 새 낱말 후보도 이음새 어휘만이다.
+  keywords: [Python 대체, 파이썬, 순수 계산, 통계 어휘, 이음새, 언어 압력, IBL 범위, script]
+  source: "사용자 정정 2026-10-09 (Claude Code 세션)"
+  status: active
+
+- id: executor-no-harness-private-files
+  date: 2026-10-20
+  verdict: 채택
+  ruling: "하네스가 실행자로 띄우는 Claude Code 턴에 사용자 하네스 전용 파일(작업 폴더 바깥의 CLAUDE.md·자동 기억)을 싣지 않는다"
+  why: >
+    그 파일들은 사람이 Claude Code 로 이 저장소를 개발할 때 쓰는 바깥 뷰이지 시스템의 일부가
+    아니다. 프로젝트 에이전트·시스템 AI 실행 턴에 실리는 것은 의도되지 않은 누출이었다. 의도된
+    지침은 작업 폴더 자신의 것뿐이다. 전 분기에서 설정 출처를 비우고 자동 기억을 끈다.
+  keywords: [CLAUDE.md, 자동 기억, auto memory, MEMORY.md, setting-sources, 지침 누출, 실행자 지침, 바깥 기억]
+  source: "사용자 판정 2026-10-20 (커밋 27c509b1, docs/AGENT_INSTRUCTION_LEAK_AUDIT_2026_10_20.md)"
+  status: active
+  scent: false
+
+- id: claim-evidence-check-removed
+  date: 2026-11-07
+  verdict: 기각
+  ruling: "최종 단계의 주장–근거(인용) 대조 검수는 뺐다 — 최종 평가는 사용자 목표와 최종 결과의 비교만. '미구현'이 아니라 있다가 뺀 것"
+  why: >
+    평가에 근거물을 계속 모으는 일은 새로운 연구에 가깝다. 대조 검수가 계속 퇴짜를 놓으면서
+    전달 결함이 새 연구와 재검수로 커졌다. 2026-11-16 재확인: 사실 대조를 거듭하면 사소한 사실
+    때문에 보고서 전체를 계속 다시 쓰게 된다 — 보고서에서 가장 중요한 것은 가장 중요한 주장이다.
+    질문 원장에 근거를 붙일 때의 원문 일치 검사는 이 판정과 별개로 남아 있다.
+  keywords: [주장 근거, 인용 검수, 사실 대조, 팩트체크, citation, 근거 대조, 검수 단계, 최종 평가, 퇴짜, REWORK]
+  source: "사용자 결정 2026-11-07 (커밋 980e15c3, docs/FINAL_GOAL_RESULT_COMPARISON_2026_11_07.md), 재확인 2026-11-16 (Claude Code 세션)"
+  status: active
+
+- id: hippocampus-tie-keeps-previous
+  date: 2026-11-11
+  verdict: 채택
+  ruling: "해마 재학습 결과가 보류이고 런타임 대조가 동률이면 채택하지 않고 직전 모델을 유지한다"
+  why: "패턴 공간 수치가 올라도 런타임에서 얻은 것과 잃은 것이 같으면 바꿀 이유가 없다. 2026-11-11 재학습은 이 판정으로 직전 모델로 복구했다."
+  keywords: [해마 재학습, 재학습 채택, 모델 채택, runtime_ab, 동률, 직전 모델]
+  source: "사용자 판정 2026-11-11 (커밋 c3b33d15, docs/REMOTE_EXECUTION_CONTINUITY_REPAIR_DESIGN_2026_11_11.md)"
+  status: active
+  scent: false
+
+- id: limb-unit-is-hardware
+  date: 2026-11-11
+  verdict: 채택
+  ruling: "손발의 단위는 하드웨어 하나 — 한 기기 안의 프로세스·등록·권한 분리를 목록·대상 이름·AI 소개에 드러내지 않는다"
+  why: >
+    "하드웨어 하나에 헬퍼가 하나고 기능이 그 안에 다 포함되어야지." 권한 분리 때문에 프로세스와
+    열쇠가 둘이 되는 것은 안쪽 사정이다. 안에서는 나눠 두되 주인과 AI 가 보는 단위는 기기
+    하나로 두고, 분배는 허브가 한다.
+  keywords: [손발 목록, 헬퍼, 기기 등록, 관리 서비스, 손발 단위, 한 PC, limb, helper]
+  source: "사용자 원칙 2026-11-11 (helper/README.md '한 PC, 손발 하나', changelog 2026-11-11)"
+  status: active
+  scent: false
+
+- id: registered-body-default-door
+  date: 2026-11-12
+  verdict: 채택
+  ruling: "등록 기기에 IndieBiz OS 가 있으면 그 몸에 IBL 문장으로 요청하는 것이 기본 통로 — 원격 위임 방식은 규칙이 아니라 상대 능력의 사실로 판단하게 한다"
+  why: >
+    축은 둘이다. 관계 — 원격 하드웨어로 등록된 기기는 중앙이 전권을 가지므로 승인이 필요 없다
+    (등록되지 않은 두 몸 사이의 요청은 승인이 필요하며 별개 문제). 상대의 몸 — IndieBiz OS 가
+    없으면 헬퍼로 직접 조작하고, 있으면 그쪽에 요청해 그쪽이 실행한다. '이럴 땐 중앙에서 하라'
+    같은 규칙을 가이드에 적으면 가능성을 좁힌다 — 상대가 스스로 할 수 있는 것을 사실로 알려 주고
+    판단은 AI 에게 맡긴다.
+  keywords: [원격 위임, 원격 하드웨어, 등록 기기, 헬퍼 조작, 중앙에서, 위임 규칙, 손발에게]
+  source: "사용자 결정 2026-11-12 (커밋 c5b254e1, docs/INDIEBIZ_BODY_AS_LIMB_DESIGN_2026_10_13.md)"
+  status: active
+  scent: false
+
+- id: prompt-sentence-judged-by-behavior
+  date: 2026-11-12
+  verdict: 채택
+  ruling: "프롬프트·가이드 문장이 중복인지는 읽어서가 아니라 넣은 판과 뺀 판의 행동을 비교해 판정한다 — 사용자 판정으로 들어온 문장은 이력부터 본다"
+  why: >
+    2026-09-06 에 의식 프롬프트에 넣은 원칙 문장들이 2026-11-07 개편에서 문구째 빠졌고,
+    2026-11-12 전후 시험에서 그 문장이 있을 때만 해당 행동이 나와 복원했다. 상식처럼 보이는
+    문장이 먼저 잘린다 — 모델은 그 상식을 알지만 묻지 않으면 쓰지 않는다. '없다'고 말하기 전에
+    낱말을 바꿔 찾고 git log -S 로 이력을 본다.
+  keywords: [프롬프트 정리, 프롬프트 다이어트, 문장 삭제, 중복 문장, 프롬프트 압축, 가이드 압축, 문구 정리, 군더더기]
+  source: "사용자 판정 2026-11-12 (커밋 3d8fb764)"
+  status: active
+
+- id: no-redistill-missed-turns
+  date: 2026-11-14
+  verdict: 기각
+  ruling: "증류가 죽어 있던 기간(2026-10-31~수리 시점)의 턴은 다시 증류하지 않는다 — 앞으로의 기억에만 집중"
+  why: "\"지나간 것은 내버려 두고 앞으로의 기억에만 집중한다.\" 옛 기록은 검사에서 읽기 전용 재생으로만 쓴다."
+  keywords: [재증류, 놓친 턴, 소급 증류, 일괄 증류, 과거 에피소드 증류, backfill]
+  source: "사용자 결정 2026-11-14 (docs/MEMORY_REPAIR_PLAN_2026_11_14.md 12절)"
+  status: active
+  scent: false
+
+- id: deep-execution-depth-by-human
+  date: 2026-11-15
+  verdict: 채택
+  ruling: "심층실행: THINK 는 말이 없으면 1단계, 단계는 사람이 주문한다 — 깊이를 AI·하네스가 정하지 않는다. 끝내기 전 확인은 두지 않고, 단계에 상한을 두지 않는다"
+  why: >
+    얼마나 깊이 탐색할지는 AI 혼자 정할 일이 아니라 THINK·EXECUTE 분기의 일이자 사람의 일이다.
+    사람이 주문하면 시간을 들여 최상의 답을 구하라는 뜻이고, 아니면 너무 투자하지 말라는 뜻이다.
+    핵심은 더 넓은 가능성 공간을 탐색하되 낭비를 줄이는 것 — 실행 도중 의식이 돌아와 되돌아본다.
+    2026-11-16: 끝내기 전 확인은 없앴다(실행 기록 전체를 읽는 비용에 비해 보완 요구가 거의
+    없었고 하는 일이 평가와 겹쳤다). 결과를 볼 필요가 있으면 선택된 독립 검토(평가)가 본다.
+    2026-11-17: 설계에 없던 단계 상한을 구현에서 걷어냈다. 남은 미결 넷은 설계 문서 9절.
+  keywords: [심층실행, deep execution, 되돌아보기, 끝 확인, 끝내기 전 확인, 감독 개입, 자동 깊이, 단계 상한, max_depth]
+  source: "사용자 설계 2026-11-15·결정 2026-11-16 (docs/DEEP_EXECUTION_DESIGN_2026_11_15.md 1절·9절, 커밋 ab482f6c·37596681·ce7a87ae)"
+  status: active

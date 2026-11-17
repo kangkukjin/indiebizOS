@@ -350,15 +350,17 @@ def test_real_boundary_returns_instruction_before_side_effect(supervisor, monkey
     assert supervisor.reviews == 1
 
 
-def test_silent_active_tool_wakes_supervisor_without_new_log(supervisor, monkeypatch):
+def test_silent_active_tool_does_not_wake_supervisor_by_elapsed_time(supervisor, monkeypatch):
+    """도구가 조용히 오래 돈다는 것만으로는 의식을 부르지 않는다(2026-11-17, 에피소드 6178). 경과 시간은 일하는
+    명령과 서 있는 명령을 가르지 못한다. 살아 있는지는 몸이 쥔 명령의 신호로 실행자가 본다. 뒤 작업(job)의
+    기록이 멈춘 경우는 지금처럼 job_stalled 로 본다."""
     calls = []
     monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw:
                         calls.append(kw["phase"]) or verdict(c, "CONTINUE"))
     supervisor._start("slow_voice_job", {})
     supervisor.tick(supervisor.last_progress + 181)
-    assert calls == ["review"]
-    supervisor.tick(supervisor.last_progress + 182)
-    assert calls == ["review"]  # 짧은 재검토 간격에는 모델 호출 안 함
+    supervisor.tick(supervisor.last_progress + 3600)
+    assert calls == [] and supervisor.trigger == ""
 
 
 def test_manager_observation_does_not_trigger_recursive_review(supervisor):
@@ -1088,3 +1090,38 @@ def test_reframe_restores_control_and_rejects_late_results(supervisor, outcome):
     assert supervisor.framing['task_framing'] == ('더 최근 사용자 규정' if outcome == 'changed' else old['task_framing'])
     assert not supervisor.executor_paused and not supervisor._reframing
     assert supervisor.phase == 'execute'
+
+
+def test_native_call_held_for_an_instruction_is_not_an_executor_failure(supervisor, monkeypatch):
+    """CLI는 실행 전 훅이 돌기 전에 시작을 알린다. 훅이 지시를 전하며 세운 호출은 실행이 아니다.
+
+    (2026-11-17, 에피소드 6176: 하네스가 세운 Bash 호출이 실패로 세어지고 의식이 도구 문제로 읽었다.
+    API·MCP 통로는 같은 경우 호출을 기록하지 않는다.)
+    """
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: trigger_verdict(c, "원인을 먼저 확인"))
+    supervisor.observe_native({"type": "tool_start", "id": "t1", "name": "Bash", "input": {"command": "false"}})
+    supervisor.observe_native({"type": "tool_result", "id": "t1", "result": "Exit code 1", "is_error": True})
+    assert supervisor.failures == 1
+    supervisor.review("tool_stalled")
+    supervisor.observe_native({"type": "tool_start", "id": "t2", "name": "Bash", "input": {"command": "ls"}})
+    notice = supervisor.boundary()  # 실행 전 훅이 받아 가는 자리
+    assert notice and notice["id"]
+    blocked = ("PreToolUse:Bash hook error: [hook]: [의식 개입 — 이 도구는 아직 실행되지 않았습니다] "
+               + json.dumps(notice, ensure_ascii=False))
+    supervisor.observe_native({"type": "tool_result", "id": "t2", "result": blocked, "is_error": True})
+
+    assert supervisor.failures == 1 and supervisor.trigger != "repeated_failure"
+    assert not supervisor.active
+    summary = supervisor.store.cost_summary(1)
+    assert summary["execution_calls"] == 1 and summary["execution_failures"] == 1
+    assert [row["is_error"] for row in supervisor.store.tool_index(limit=10)] == [True]  # 의식이 받는 한 일 목록
+    events = [json.loads(line) for line in (supervisor.store.directory / "events.jsonl").read_text().splitlines()]
+    held = [event for event in events if event["kind"] == "tool.held"]
+    assert len(held) == 1 and held[0]["notice_id"] == notice["id"] and held[0]["name"] == "Bash"
+
+    # 하네스가 전한 지시를 싣지 않은 훅 오류는 그대로 실패다
+    supervisor.observe_native({"type": "tool_start", "id": "t3", "name": "Bash", "input": {"command": "ls"}})
+    supervisor.observe_native({"type": "tool_result", "id": "t3", "is_error": True,
+                               "result": "PreToolUse:Bash hook error: 감독 통로를 확인하지 못해 이번 도구는 실행하지 않았습니다"})
+    assert supervisor.failures == 2
+    assert supervisor.store.cost_summary(1)["execution_failures"] == 2

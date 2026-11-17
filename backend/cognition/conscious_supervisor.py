@@ -130,6 +130,7 @@ class Supervisor:
         self.final_images = None
         self.content_artifacts = []
         self._native = {}
+        self._delivered = deque(maxlen=8)  # 실행 경계에서 방금 전한 지시의 id — 그 지시로 선 호출을 알아본다
         self._bridge_pending = {}
         self._execute = getattr(runner.ai, "_custom_execute_tool", None)
         if self._execute is None:
@@ -162,6 +163,19 @@ class Supervisor:
         self._framing_channel.closed = True
         unregister(self)
         self.log("turn.closed", role="harness", reviews=self.reviews, tools=self.tools_used)
+        held = list(getattr(self, "_held_commands", ()))
+        if held:
+            # 제한 시간이 지나도 명령을 죽이지 않으므로, 실행자가 두고 간 턴 수명의 명령은 턴과 함께 끝낸다.
+            # 대화에 묶인 세션은 워커가 턴 상태를 보고 스스로 끝내지만, 묶이지 않은 실행에서는 이 길뿐이다.
+            # 접수증의 공통 취소를 쓴다(이미 끝난 것은 아무 일도 하지 않는다). 턴 종료를 붙잡지 않게 따로 돈다.
+            def end():
+                import task_receipts
+                for ref in held:
+                    try:
+                        task_receipts.cancel(ref)
+                    except Exception:
+                        continue
+            threading.Thread(target=end, name=f"held-commands-{self.turn_id[:8]}", daemon=True).start()
         # 모델/원격 도구를 기다리느라 사용자 턴 종료를 붙잡지 않는다. 늦은 판정은 폐기된다.
 
     def cancelled(self):
@@ -548,6 +562,11 @@ class Supervisor:
                 evidence_summary = detail.get('evidence_summary') or {}
             except (TypeError, ValueError):
                 detail, evidence_summary = {}, {}
+            held = detail.get("task_ref") if detail.get("timed_out") else None
+            if (isinstance(held, dict) and held.get("kind") == "process" and held.get("task_id")
+                    and (call.get("_payload") or {}).get("lifetime", "task") == "task"):
+                # 몸이 쥔 명령이 아직 돌고 있다 — 턴 수명이면 턴이 끝날 때 함께 끝낼 것으로 적어 둔다.
+                self.__dict__.setdefault("_held_commands", []).append(dict(held))
             self.recent.append(self.log("tool.finished", id=key, name=call.get("name"), evidence=ref,
                                         visual_evidence=visual_call.get('visual_evidence', []),
                                         is_error=error, observation="missing_read" if observation else "",
@@ -588,8 +607,6 @@ class Supervisor:
             if self.repeats == 1 and not error and not job_observation:
                 self.last_progress = time.monotonic()
                 self.exec_revision += 1  # 시작 예고·실패·같은 status 반복은 진척이 아니다.
-                if self.trigger == "tool_stalled":
-                    self.trigger = ""
             if self.failures >= 2 or self.repeats >= 3:
                 if self.repeats >= 3 and self.failures < 2 and self.trigger != "unchanged_repeat":
                     self.log("tool.repeat_detected", role="harness", period=period,
@@ -709,8 +726,36 @@ class Supervisor:
         elif event.get("type") == "tool_result":
             key = self._native.pop(event.get("id") or name, None)
             if key:
-                self._finish(key, event.get("result", event.get("content", "")), event.get("is_error", False),
+                result = event.get("result", event.get("content", ""))
+                notice_id = event.get("is_error") and self._delivered_in(result)
+                if notice_id:
+                    self._held(key, result, notice_id)
+                    return
+                self._finish(key, result, event.get("is_error", False),
                              unknown=bool(event.get('transport_error')), images=event.get('images'))
+
+    def _delivered_in(self, result):
+        """이 결과가 하네스가 전한 지시를 싣고 있으면 그 지시의 id. 실행 전 훅은 지시를 그대로 내보낸다."""
+        text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, default=str)
+        with self.lock:
+            return next((ident for ident in self._delivered if ident in text), None)
+
+    def _held(self, key, result, notice_id):
+        """CLI 네이티브 도구가 실행 전 훅에서 하네스의 지시를 받고 섰다. 실행이 아니므로 실패가 아니다.
+
+        API·MCP 통로(run_tool)는 같은 경우 호출을 시작으로도 기록하지 않는다. CLI 는 훅이 돌기 전에
+        시작부터 알려 오므로 여기서 닫는다. 연속 실패 수·반복 관측·복구 원장·실패 집계에 넣지 않는다.
+        (2026-11-17, 에피소드 6176: 심층실행이 돌아오라고 청하며 세운 Bash 호출이 실패 4건 중 1건으로
+        세어졌고, 되돌아보던 의식이 "훅이 Bash를 막았다, Read로 읽으라"고 도구 문제로 읽었다.)
+        """
+        from execution_situation import current as current_situation, active_call_id
+        situation = current_situation()
+        if situation and not active_call_id():
+            situation.tool_held(key, result)
+        with self.lock:
+            call = self.active.pop(key, {})
+            self.recent.append(self.log("tool.held", role="harness", id=key, name=call.get("name"),
+                                        notice_id=notice_id, evidence=self.store.evidence(result)))
 
     def boundary(self):
         if self.cancelled():
@@ -754,6 +799,8 @@ class Supervisor:
             notice = refresh_notice(self, notice)
         if notice:
             self.log("instruction.delivered", role="harness", instruction=notice)
+            if notice.get("id"):
+                self._delivered.append(str(notice["id"]))
         return notice
 
     def _discover_jobs(self, value):
@@ -819,14 +866,13 @@ class Supervisor:
                         self.trigger = "job_failed"
                 elif observed["stalled_s"] >= observed.get("stall_after_s", self.config["stall_s"]) and observed["phase"] != "complete":
                     self.trigger = "job_stalled"
-            # 모델의 긴 작성 시간은 방금 시작한 도구의 정체 시간이 아니다.
-            # 병렬로 새 호출이 시작돼도 오래 멈춘 기존 호출의 시계는 유지한다.
-            active_since = min((call["started"] for call in self.active.values()), default=now)
-            if self.active and now - max(self.last_progress, active_since) >= self.config["stall_s"]:
-                self.trigger = self.trigger or "tool_stalled"
             # 경과 시간만으로는 개입할 근거가 없다. 정상 진행·모델의 답변 작성은
-            # 그대로 두고 실패·반복·실행 중 정체 또는 명시적 이정표만 검토한다.
+            # 그대로 두고 실패·반복·뒤 작업의 정체 또는 명시적 이정표만 검토한다.
             # 구 설정의 long_task_s가 남아 있어도 시간 기반 감독은 재활성화하지 않는다.
+            # 도구가 오래 돈다는 것만으로 의식을 부르던 방아쇠(tool_stalled, 180초)는 없앴다(2026-11-17):
+            # 일하는 중인 명령과 서 있는 명령을 가르지 못해 최근 201턴의 11번이 모두 "계속"이었고, 턴당 2번뿐인 검토를
+            # 정상 작업에 써 버려 진짜 멈춤은 아무도 보지 않았다(에피소드 6178). 명령이 살아 있는지는
+            # 몸이 쥔 명령의 신호로 실행자가 직접 본다(docs/BODY_HELD_COMMANDS_DESIGN_2026_11_17.md 4.7).
             trigger = self.trigger
         if trigger:
             self.review(trigger)

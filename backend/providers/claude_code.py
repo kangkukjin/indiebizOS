@@ -370,6 +370,53 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     EAGER_BUILTIN_TOOLS = [t for t in EAGER_TOOLS if not t.startswith("mcp__")]
     REPAIR_COMMAND_TOOL = "mcp__indiebizos__run_command"
 
+    # ── 셸의 문(2026-11-17, docs/BODY_HELD_COMMANDS_DESIGN_2026_11_17.md 4.6) ──
+    # 자기 Bash는 명령이 끝날 때까지 모델을 붙잡는다(`--print`에서 최대 10분, 그동안 아무도 명령을 보지
+    # 못한다 — 에피소드 6178). 'body'(기본)는 Bash를 내리고 몸의 셸(run_command)을 준다: 명령은 몸이 쥐고,
+    # 끝나거나 제한 시간이 지나면 살아 있다는 신호와 함께 돌아온다. 'native'는 예전 그대로다.
+    # 고르는 곳: data/world_pulse_config.json 의 {"executor": {"claude_code_shell": "native"}}.
+    NATIVE_SHELL_TOOLS = ("Bash", "BashOutput", "KillShell")
+    BODY_SHELL_POLICY = (
+        "\n셸 명령 도구의 정확한 이름은 `mcp__indiebizos__run_command` 다(Bash 도구는 없다). "
+        "명령은 사용자의 셸과 그 PATH로 돌고, cwd로 위치를 정한다(호출 사이에 cd·변수는 이어지지 않는다). "
+        "timeout(초, 기본 60·최대 300) 안에 끝나면 출력이 그대로 오고, 끝나지 않으면 명령을 계속 돌린 채 "
+        "task_ref와 그때까지의 출력, signs(시작 뒤 초·마지막 출력 뒤 초·쓴 CPU 초·살아 있는 프로세스·입력 통로 "
+        "상태)가 온다. 그 뒤는 `[self:task]{op:\"wait\"|\"status\"|\"cancel\", ref:task_ref}`로 기다리거나 본다. "
+        "명령의 입력 통로는 닫혀 있다 — 입력을 주고받을 프로세스는 mode:\"session\"으로 시작한다."
+    )
+
+    @classmethod
+    def shell_door(cls) -> str:
+        """'body' 또는 'native'. 설정 파일이 없거나 읽히지 않으면 'body'."""
+        try:
+            from world_pulse import PULSE_CONFIG_PATH
+            raw = json.loads(PULSE_CONFIG_PATH.read_text(encoding="utf-8"))
+            value = (raw.get("executor") or {}).get("claude_code_shell")
+        except (OSError, ValueError, ImportError):
+            value = None
+        return "native" if value == "native" else "body"
+
+    def _body_shell(self) -> bool:
+        """이 턴의 실행자가 몸의 셸을 쓰는가 — 문이 'body'이고, 몸의 셸이 기대는 감독 작업대가 이 턴에 있다."""
+        if self.shell_door() != "body" or getattr(self, "agent_role", "execution") == "consciousness":
+            return False
+        # 도구 표면이 따로 정해진 턴(응답 보완·코딩 프로필·자료실 전용 조사·승인된 수리)은 그 표면을 따른다.
+        if getattr(self, "restricted_response_repair", False) or getattr(self, "execution_profile", "") == "coding":
+            return False
+        from research_context import library_only
+        from repair_context import active as repair_active
+        if library_only() or repair_active():
+            return False
+        agent = getattr(self, "agent_id", None)
+        if not agent:
+            return False
+        from supervision_bus import current as supervisor_current
+        return bool(supervisor_current(agent, self._current_task_id()))
+
+    def tool_policy(self) -> str:
+        policy = self.TOOL_POLICY
+        return policy + self.BODY_SHELL_POLICY if policy and self._body_shell() else policy
+
     # 명시적으로 차단할 도구 — 우회 로드되더라도 호출 거부됨.
     # AskUserQuestion: indiebizOS UI 미연결, 응답 채널 없음 → IBL [user:ask] 사용.
     # 웹 획득은 기존 원문 보존·검색 연결을 사용한다. 로컬 파일·셸은 별도로 제한하지 않는다.
@@ -473,6 +520,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         blob = ("|".join(cls.EAGER_TOOLS) + "||" + "|".join(cls.DISALLOWED_TOOLS) + "||" + cls.TOOL_POLICY
                 + "||hook:supervision"
                 + "||repair-owner-only:" + cls.REPAIR_COMMAND_TOOL
+                + "||shell-door:" + cls.shell_door() + ":" + hashlib.md5(cls.BODY_SHELL_POLICY.encode("utf-8")).hexdigest()[:6]
                 # 2026-10-20: 설정 소스 없음·자동 기억 차단. resume 세션은 첫 요청의 시스템 프롬프트
                 # 기록본과 옛 instructions attachment 를 압축 전까지 재생하므로 키를 갈아 fresh 로 보낸다.
                 + "||setting-sources:none;auto-memory:off")
@@ -564,20 +612,25 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         # → _build_env 의 CLAUDE_CODE_DISABLE_AUTO_MEMORY.
         cmd += ["--setting-sources", ""]
         if not (tools_mode or supervisor_role or response_repair or repair_mode or research_library):
+            body_shell = self._body_shell()
+            keep = lambda name: not (body_shell and name in self.NATIVE_SHELL_TOOLS)
             cmd += [
                 # 내장 도구 집합 자체를 좁힌다 → ToolSearch 소멸 + MCP eager (위 docstring)
-                "--tools", ",".join(self.EAGER_BUILTIN_TOOLS),
-                # 권한: 내장 + MCP IBL 브리지
-                "--allowed-tools", ",".join(self.EAGER_TOOLS),
+                "--tools", ",".join(t for t in self.EAGER_BUILTIN_TOOLS if keep(t)),
+                # 권한: 내장 + MCP IBL 브리지 (+ 몸의 셸)
+                "--allowed-tools", ",".join([t for t in self.EAGER_TOOLS if keep(t)]
+                                            + ([self.REPAIR_COMMAND_TOOL] if body_shell else [])),
                 # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
-                "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),
+                "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS
+                                               + ([] if keep("Bash") else list(self.NATIVE_SHELL_TOOLS))),
                 # 네이티브 호출도 감독 경계에 연결한다 + 이 턴 발화 언어를 CLI 자체 스위치로(L84-3)
                 "--settings", json.dumps(self._turn_settings(), ensure_ascii=False),
             ]
 
         # allowed-tools is permission, not an MCP schema allowlist. Explicitly
-        # hide this server tool wherever /repair/command would reject the role.
-        if not repair_executor or tools_mode:
+        # hide this server tool wherever /ibl/command would reject the role.
+        normal_executor = not (tools_mode or supervisor_role or response_repair or repair_mode or research_library)
+        if not (repair_executor or normal_executor and self._body_shell()) or tools_mode:
             if "--disallowed-tools" in cmd:
                 index = cmd.index("--disallowed-tools") + 1
                 cmd[index] += "," + self.REPAIR_COMMAND_TOOL
@@ -603,7 +656,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cmd += ["--append-system-prompt-file", system_prompt_file]
         else:
             cmd += ["--append-system-prompt",
-                    (self.system_prompt or "") + ("" if tools_mode or supervisor_role else self.TOOL_POLICY)]
+                    (self.system_prompt or "") + ("" if tools_mode or supervisor_role else self.tool_policy())]
 
         # MCP 브리지 (IBL execute_ibl 등) — 도구 없는 원샷은 브리지도 안 세운다(프로세스 기동 비용)
         if mcp_config_path and tools_mode is None:

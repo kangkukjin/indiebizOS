@@ -33,8 +33,17 @@ def dispatch(agent_id, task_id, payload, boundary=False, repair_command=False):
                 return {"active": True, "instruction": supervisor.boundary()}
             if repair_command:
                 from repair_context import active
-                if agent_id != supervisor.owner or not active():
-                    return {"success": False, "error": "승인된 수리 실행자만 사본 명령을 실행할 수 있습니다"}
+                if agent_id != supervisor.owner:
+                    return {"success": False, "error": "이 턴의 실행자만 명령을 실행할 수 있습니다"}
+                if not active():
+                    # CLI 실행자의 평소 셸(docs/BODY_HELD_COMMANDS_DESIGN_2026_11_17.md 4.6·4.8).
+                    # 지금까지 자기 Bash로 하던 일과 같은 범위다: 승인 절차를 새로 걸지 않고, 사용자의 셸과
+                    # PATH로 돈다. 문이 닫혀 있으면(설정 native) 예전처럼 수리 실행자만 쓴다.
+                    from providers.claude_code import ClaudeCodeProvider
+                    from research_context import library_only
+                    if ClaudeCodeProvider.shell_door() != "body" or library_only():
+                        return {"success": False, "error": "승인된 수리 실행자만 사본 명령을 실행할 수 있습니다"}
+                    payload = {**payload, "approved": True, "_door": "cli"}
                 from system_tools import execute_tool
                 result = supervisor.run_tool("run_command", payload, lambda: execute_tool(
                     "run_command", payload, supervisor.project_path,
@@ -92,7 +101,8 @@ async def situation(req: Request):
                                    req.payload.get('edited_file'))
 
 
-@router.post("/repair/command")
+@router.post("/command")
+@router.post("/repair/command")   # 이미 떠 있는 CLI 세션의 옛 주소
 async def repair_command(req: Request):
     return await asyncio.to_thread(dispatch, req.agent_id, req.task_id, req.payload,
                                    repair_command=True)

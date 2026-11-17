@@ -191,3 +191,105 @@ def test_session_shell_identity_and_execution_diagnostics(active, tmp_path):
     assert 'SHELL_EXIT_NONZERO' in situation_context('executor', 'situation-test')['context']
     with pytest.raises(ValueError, match='request_id'):
         start('echo session-error >&2; exit 7', tmp_path, db=db, shell='bash', request_id='dialect')
+
+
+# ── 몸이 쥐는 명령(hold) — docs/BODY_HELD_COMMANDS_DESIGN_2026_11_17.md ──
+
+def _cancel(tid, db):
+    value = query(tid, db=db)
+    if value['state'] in ('queued', 'running'):
+        query(tid, db=db, op='control', action='cancel', request_id='test-cancel', generation=value['generation'])
+        deadline = time.time() + 8
+        while value['state'] in ('queued', 'running') and time.time() < deadline:
+            value = query(tid, db=db, wait_ms=200)
+    return value
+
+
+def test_hold_returns_a_finished_command_with_streams_and_exit_code(tmp_path):
+    from process_sessions import hold
+    db = CodingStore(tmp_path / 'store')
+    done = hold('echo out; echo err >&2; exit 3', tmp_path, db=db, timeout=10, shell='sh')
+    assert done['state'] == 'failed' and done['exit_code'] == 3
+    assert done['stdout'] == 'out\n' and done['stderr'] == 'err\n'
+    assert 'signs' not in done  # 끝난 명령에는 살아 있다는 신호가 없다
+
+
+def test_hold_comes_back_without_killing_and_reports_life_signs(tmp_path):
+    """제한 시간이 지나면 기다리던 쪽만 돌아온다. 명령은 계속 돌고, 일하는 중인지 서 있는지를 가를 사실이 온다."""
+    from process_sessions import hold
+    db = CodingStore(tmp_path / 'store')
+    idle = hold(f'{shlex.quote(sys.executable)} -u -c "import time; print(1, flush=True); time.sleep(60)"',
+                tmp_path, db=db, timeout=3, shell='sh')
+    busy = hold(f'{shlex.quote(sys.executable)} -c "\nwhile True: pass"', tmp_path, db=db, timeout=3, shell='sh')
+    try:
+        assert idle['state'] == 'running' and idle['exit_code'] is None and idle['stdout'] == '1\n'
+        assert idle['task_ref']['kind'] == 'process'
+        signs = idle['signs']
+        assert signs['stdin'] == 'closed' and signs['output_seen'] is True
+        assert 2 <= signs['quiet_s'] <= 10 and signs['running_s'] >= 2
+        assert any('python' in name.lower() for name in signs['processes'])
+        assert signs['cpu_s'] < 1                                    # 자고 있는 프로세스는 CPU를 쓰지 않았다
+        assert busy['state'] == 'running' and busy['signs']['output_seen'] is False
+        assert busy['signs']['cpu_s'] > 1 and busy['signs']['cpu_quiet_s'] < 3   # 도는 프로세스는 방금까지 썼다
+        # 돌아온 뒤에도 같은 손잡이로 이어서 본다
+        again = query(idle['task_ref']['task_id'], db=db, cursor=idle['cursor'], wait_ms=200)
+        assert again['state'] == 'running' and again['signs']['running_s'] >= signs['running_s']
+    finally:
+        assert _cancel(idle['task_ref']['task_id'], db)['state'] == 'cancelled'
+        assert _cancel(busy['task_ref']['task_id'], db)['state'] == 'cancelled'
+
+
+def test_held_command_starts_with_input_closed(tmp_path):
+    """에피소드 6178의 명령 꼴: 잘못 든 `cat`이 열린 입력을 기다리며 섰다. 닫고 시작하면 바로 지나간다."""
+    from process_sessions import hold
+    db = CodingStore(tmp_path / 'store')
+    done = hold('cat >> /dev/null; echo passed', tmp_path, db=db, timeout=10, shell='sh')
+    assert done['state'] == 'succeeded' and done['stdout'] == 'passed\n'
+    # 입력을 주고받을 세션은 지금처럼 열려 있다
+    live = start('cat', tmp_path, db=db, shell='sh', yield_ms=300)
+    try:
+        assert live['state'] == 'running' and live['capabilities']['input'] is True
+        assert query(live['task_ref']['task_id'], db=db)['signs']['stdin'] == 'open'
+    finally:
+        _cancel(live['task_ref']['task_id'], db)
+
+
+def test_hold_uses_the_users_shell_path_when_asked(tmp_path, monkeypatch):
+    import process_sessions
+    db = CodingStore(tmp_path / 'store')
+    monkeypatch.setattr(process_sessions, '_USER_SHELL', {'value': ('sh', '/indiebiz-user-bin:/usr/bin:/bin')})
+    asked = process_sessions.hold('echo "$PATH"', tmp_path, db=db, timeout=10, user=True)
+    plain = process_sessions.hold('echo "$PATH"', tmp_path, db=db, timeout=10, shell='sh')
+    assert asked['stdout'].startswith('/indiebiz-user-bin:')
+    assert '/indiebiz-user-bin' not in plain['stdout']
+
+
+def test_held_commands_do_not_pile_up_records(tmp_path, monkeypatch):
+    """명령마다 세션이 생기므로, 결과를 다 돌려준 세션은 곧바로 거두고 손잡이를 넘긴 세션은 수명 뒤에 거둔다."""
+    import process_sessions
+    db = CodingStore(tmp_path / 'store')
+    done = process_sessions.hold('echo done', tmp_path, db=db, timeout=10, shell='sh')
+    assert done['state'] == 'succeeded'
+    assert db.list('process_session') == []
+    assert not any((db.root / 'processes').iterdir())
+
+    handed = process_sessions.hold(f'{shlex.quote(sys.executable)} -c "import time; time.sleep(60)"',
+                                   tmp_path, db=db, timeout=1, shell='sh')
+    tid = handed['task_ref']['task_id']
+    assert handed['state'] == 'running' and [row['id'] for row in db.list('process_session')] == [tid]
+    assert _cancel(tid, db)['state'] == 'cancelled'
+    monkeypatch.setitem(process_sessions._SWEEP, 'at', 0.0)
+    assert process_sessions._sweep(db) == 0                      # 방금 끝난 것은 아직 볼 수 있다
+    assert [row['id'] for row in db.list('process_session')] == [tid]
+    monkeypatch.setitem(process_sessions._SWEEP, 'at', 0.0)
+    assert process_sessions._sweep(db, now=time.time() + 86400 + 60) == 1
+    assert db.list('process_session') == [] and not (db.root / 'processes' / tid).exists()
+
+    # 입력을 주고받는 세션(start)은 쓸지 않는다
+    live = start('cat', tmp_path, db=db, shell='sh', yield_ms=200)
+    try:
+        monkeypatch.setitem(process_sessions._SWEEP, 'at', 0.0)
+        assert process_sessions._sweep(db, now=time.time() + 86400 * 3) == 0
+        assert [row['id'] for row in db.list('process_session')] == [live['task_ref']['task_id']]
+    finally:
+        _cancel(live['task_ref']['task_id'], db)

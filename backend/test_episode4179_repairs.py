@@ -65,19 +65,19 @@ def test_unrelated_ibl_success_keeps_failure_guidance(supervisor, monkeypatch, c
     assert supervisor.boundary()['findings'][0]['instruction'] == 'repair original source'
 
 
-def test_tool_stall_clock_excludes_prior_model_authoring(supervisor, monkeypatch):
+def test_long_running_tool_alone_does_not_summon_a_review(supervisor, monkeypatch):
+    """도구가 오래 돈다는 것만으로는 의식을 부르지 않는다(2026-11-17). 일하는 중인지 서 있는지는 경과 시간으로
+    가릴 수 없고, 턴당 검토 횟수를 정상 작업에 쓰면 진짜 멈춤을 볼 몫이 남지 않는다(에피소드 6178)."""
     seen = []
     monkeypatch.setattr(supervisor, 'review', lambda reason: seen.append(reason))
     supervisor.config.update(stall_s=180, long_task_s=10000)
     key = supervisor._start('execute_ibl', {'code': 'render'})
     started = supervisor.active[key]['started']
     supervisor.last_progress = started - 300
-    supervisor.tick(started + 19)
-    assert not seen
-    # A newly started parallel call cannot hide an older stalled call.
     supervisor._start('execute_ibl', {'code': 'other'})
     supervisor.tick(started + 181)
-    assert seen == ['tool_stalled']
+    supervisor.tick(started + 3600)
+    assert not seen and supervisor.trigger == ''
 
 
 def test_failed_large_inputs_are_referenced_with_types_and_without_retyping(boundary, tmp_path):

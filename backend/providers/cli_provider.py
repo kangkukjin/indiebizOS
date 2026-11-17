@@ -442,6 +442,10 @@ class CliSubprocessProvider(BaseProvider):
     # 문자열이라 서브클래스가 각자 쓴다(공용 프롬프트는 손대지 않는다).
     TOOL_POLICY = ""
 
+    def tool_policy(self) -> str:
+        """이 턴에 실을 도구 정책 글. 실행자별로 문(도구 표면)에 따라 달라질 수 있다."""
+        return self.TOOL_POLICY
+
     @staticmethod
     def _is_overloaded_error(text: str) -> bool:
         """일시적 서버 과부하 에러인지 판정 (대소문자 무시).
@@ -1296,7 +1300,7 @@ class CliSubprocessProvider(BaseProvider):
         """
         # 도구 없는 원샷에는 도구 정책(차단 네이티브→IBL 안내)이 무의미 — 싣지 않는다
         text = (self.system_prompt or "") + ("" if getattr(self, "no_tools", False)
-               or getattr(self, "agent_role", "execution") == "consciousness" else self.TOOL_POLICY)
+               or getattr(self, "agent_role", "execution") == "consciousness" else self.tool_policy())
         safe = re.sub(
             r"[^A-Za-z0-9_.-]", "_",
             str(self.agent_id or self.agent_name or "default"),

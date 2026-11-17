@@ -40,6 +40,13 @@ class Worker:
         self.stopping = False
         self.execution_stack = None
         self.reaper = None
+        self.released = False
+        self.input_fd = None
+        self.input_bytes = 0
+        self.last_output_at = None
+        self.cpu_total = None      # 프로세스 무리가 쓴 CPU 초(누적)
+        self.cpu_moved_at = None   # 그 값이 마지막으로 늘어난 시각
+        self.cpu_sampled_at = 0.0
 
     def save(self):
         with self.lock:
@@ -56,6 +63,7 @@ class Worker:
                     continue
                 if not data: break
                 with self.condition:
+                    self.last_output_at = time.time()
                     self.events.append({'start': self.end, 'stream': stream, 'data': base64.b64encode(data).decode()})
                     self.end += len(data)
                     while self.events and self.end - self.events[0]['start'] > MAX_OUTPUT:
@@ -88,10 +96,15 @@ class Worker:
 
     def launch(self):
         command = self.meta['argv']
-        env = {k: v for k, v in os.environ.items()
-               if not any(s in k.upper() for s in ('TOKEN', 'API_KEY', 'SECRET', 'PASSWORD'))
-               and not k.startswith(('INDIEBIZ', 'GIT_'))}
-        env.update(TMPDIR=str(self.directory), PYTHONDONTWRITEBYTECODE='1', TERM='xterm-256color')
+        if self.meta.get('environment') == 'inherit':
+            env = dict(os.environ)
+            if self.meta.get('path'):
+                env['PATH'] = self.meta['path']
+        else:
+            env = {k: v for k, v in os.environ.items()
+                   if not any(s in k.upper() for s in ('TOKEN', 'API_KEY', 'SECRET', 'PASSWORD'))
+                   and not k.startswith(('INDIEBIZ', 'GIT_'))}
+            env.update(TMPDIR=str(self.directory), PYTHONDONTWRITEBYTECODE='1', TERM='xterm-256color')
         execution = self.meta.get('execution')
         if execution:
             from contextlib import ExitStack
@@ -131,10 +144,18 @@ class Worker:
             self.input_fd = self.master
         else:
             kwargs.update({'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == 'nt' else {'start_new_session': True})
-            self.proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+            # 입력을 주고받지 않는 명령은 입력 통로를 닫고 시작한다 — 입력을 기다리는 프로그램이 곧바로
+            # '입력 끝'을 받는다(2026-11-17, 에피소드 6178: 명령에 잘못 든 `cat`이 열린 통로를 19분 기다렸다).
+            closed = self.meta.get('stdin') == 'closed'
+            self.proc = subprocess.Popen(command, stdin=subprocess.DEVNULL if closed else subprocess.PIPE,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
             readers = [('stdout', self.proc.stdout.fileno()), ('stderr', self.proc.stderr.fileno())]
-            self.input_fd = self.proc.stdin.fileno()
-        os.set_blocking(self.input_fd, False)
+            if closed:
+                self.stdin_closed = True
+            else:
+                self.input_fd = self.proc.stdin.fileno()
+        if self.input_fd is not None:
+            os.set_blocking(self.input_fd, False)
         threads = []
         for stream, fd in readers:
             thread = threading.Thread(target=self.output, args=(stream, fd), daemon=True)
@@ -162,7 +183,53 @@ class Worker:
         with self.condition:
             while self.end <= cursor and self.meta['state'] == 'running' and time.monotonic() < deadline:
                 self.condition.wait(deadline - time.monotonic())
-            return snapshot(self.meta, self.events, self.end, cursor, limit)
+            value = snapshot(self.meta, self.events, self.end, cursor, limit)
+            running = self.meta['state'] == 'running'
+        if running:
+            value['signs'] = self.signs()
+        return value
+
+    def sample(self):
+        """프로세스 무리가 쓴 CPU 초와 살아 있는 프로세스 이름. 재는 것뿐이고 판정하지 않는다."""
+        try:
+            import psutil
+            root = psutil.Process(self.proc.pid)
+            members = [root] + root.children(recursive=True)
+        except Exception:
+            return None
+        total, names = 0.0, []
+        for member in members:
+            try:
+                times = member.cpu_times()
+                # 살아 있는 프로세스 자신의 몫 + 이미 끝나 거둔 자식의 몫(OS가 주는 만큼).
+                total += times.user + times.system + getattr(times, 'children_user', 0.0) + getattr(times, 'children_system', 0.0)
+                names.append(member.name())
+            except Exception:
+                continue
+        now = time.time()
+        with self.lock:
+            if self.cpu_total is None or total > self.cpu_total + 0.005:
+                self.cpu_moved_at = now
+            self.cpu_total = total if self.cpu_total is None else max(self.cpu_total, total)
+            self.cpu_sampled_at = now
+        return list(reversed(names))[:8]
+
+    def signs(self):
+        """살아 있다는 신호 — 명령이 일하는 중인지 서 있는지를 가를 사실. 임계값도 판정도 없다."""
+        names = self.sample()
+        now = time.time()
+        started = self.meta.get('started_at') or now
+        with self.lock:
+            value = {'running_s': round(now - started, 1),
+                     'quiet_s': round(now - (self.last_output_at or started), 1),
+                     'output_seen': self.last_output_at is not None,
+                     'stdin': 'closed' if self.stdin_closed else 'open',
+                     'stdin_bytes': self.input_bytes}
+            if names is not None:
+                value.update(cpu_s=round(self.cpu_total or 0.0, 2),
+                             cpu_quiet_s=round(now - (self.cpu_moved_at or started), 1),
+                             processes=names)
+        return value
 
     def control(self, request):
         rid = request.get('request_id')
@@ -193,6 +260,7 @@ class Worker:
                 if len(data) > MAX_INPUT: raise ValueError('입력은 64KiB 이하입니다')
                 try:
                     count = os.write(self.input_fd, data)
+                    self.input_bytes += count
                     result.update(delivery='delivered' if count == len(data) else 'partial', bytes_written=count)
                 except BlockingIOError:
                     result.update(accepted=False, delivery='backpressure', bytes_written=0)
@@ -200,6 +268,8 @@ class Worker:
                 if self.master is not None:
                     os.write(self.master, b'\x04')
                     result.update(delivery='delivered', note='PTY VEOF 전달; 파이프 close와 다릅니다')
+                elif self.stdin_closed:
+                    result.update(delivery='delivered', note='입력 통로는 이미 닫혀 있습니다')
                 else:
                     self.proc.stdin.close(); self.stdin_closed = True
                     result['delivery'] = 'delivered'
@@ -232,7 +302,13 @@ class Worker:
                 if not hmac.compare_digest(str(req.get('token', '')), self.meta['token']):
                     raise PermissionError('프로세스 연결 인증 실패')
                 if req.get('generation') != self.meta['generation']: raise ValueError('프로세스 generation 불일치')
-                out = self.snapshot(req) if req['op'] == 'status' else self.control(req)
+                if req['op'] == 'release':
+                    # 끝난 명령의 결과를 맡긴 쪽이 다 받았다. 30초를 더 머물지 않는다.
+                    if self.meta['state'] == 'running': raise ValueError('실행 중인 프로세스는 놓을 수 없습니다')
+                    self.released = True
+                    out = {'released': True}
+                else:
+                    out = self.snapshot(req) if req['op'] == 'status' else self.control(req)
                 conn.sendall(json.dumps({'success': True, **out}).encode() + b'\n')
             except Exception as exc:
                 conn.sendall(json.dumps({'success': False, 'error': str(exc)}).encode() + b'\n')
@@ -263,7 +339,9 @@ class Worker:
                         self.cancelled = True; self.terminate()
                 if time.time() - self.meta['created_at'] > self.meta.get('ttl', 86400) and self.meta['state'] == 'running':
                     self.cancelled = True; self.terminate()
-                if self.meta.get('ended_at') and time.time() - self.meta['ended_at'] > 30: break
+                if self.meta.get('ended_at') and (self.released or time.time() - self.meta['ended_at'] > 30): break
+                if self.meta['state'] == 'running' and time.time() - self.cpu_sampled_at >= 2:
+                    self.sample()
                 try: conn, _ = listener.accept()
                 except socket.timeout: continue
                 threading.Thread(target=self.handle, args=(conn,), daemon=True).start()

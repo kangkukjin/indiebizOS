@@ -80,7 +80,11 @@ def test_depth_comes_only_from_route_default_and_user_order():
     assert de.depth_of({"task_framing": "x"}, cfg) == 1
     assert de.depth_of({"task_framing": "x", "deep_execution": 3}, cfg) == 3  # 사용자가 시킨 단계
     assert de.depth_of({"task_framing": "x", "deep_execution": "2"}, cfg) == 2
-    assert de.depth_of({"task_framing": "x", "deep_execution": 9}, cfg) == 5  # 상한
+    assert de.depth_of({"task_framing": "x", "deep_execution": 9}, cfg) == 9  # 줄이지 않는다
+    assert de.depth_of({"task_framing": "x", "deep_execution": "10"}, cfg) == 10
+    assert "max_depth" not in cfg
+    # 돌아오라고 청하는 간격은 적힌 값까지 늘고, 그 뒤 차례는 마지막 값에 머문다(끝없이 벌어지지 않는다)
+    assert [de._ceiling(cfg, index) for index in (0, 1, 2, 3, 9)] == [16, 24, 32, 32, 32]
     assert de.depth_of({"task_framing": "x", "deep_execution": 0}, cfg) == 0  # 하지 말라는 주문
     assert de.depth_of({"task_framing": "x", "deep_execution": None}, cfg) == 1
     assert de.depth_of({"task_framing": "x", "deep_execution": True}, cfg) == 1  # 참/거짓은 주문이 아니다
@@ -216,6 +220,42 @@ def test_keep_at_the_last_round_stays_silent(tmp_path, monkeypatch, scope):
     assert de.reflect(controller, de._state(controller)) is True
     assert len(seen) == 3 and controller.pending is None
     assert work(controller, 3, 1)[0]["success"] is True
+
+def fail_on(controller, numbers, body):
+    """정해 둔 차례의 호출만 실패 결과를 돌려주게 한다."""
+    plain = controller._execute
+    controller._execute = lambda name, payload, **kw: (
+        {"success": False, "error": body} if payload.get("n") in numbers else plain(name, payload, **kw))
+
+
+def test_failed_call_carries_what_it_actually_returned(tmp_path, monkeypatch, scope):
+    """'실패' 표시만 보면 일부만 실패한 호출이 통째로 실패로 읽힌다(에피소드 6142)."""
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    fail_on(controller, {2}, "Exit code 1 ## 7. 유지할 것과 바꿀 것 " + "본문 " * 300 + "(eval):2: ==== not found")
+    seen = script(monkeypatch, {"reflect": ["길", KEEP]})
+    work(controller, 1, 3)
+    controller.reframe({"kind": "checkpoint", "evidence": "알게 된 것"})
+    first, second = seen[0][1], seen[1][1]
+    assert "유지할 것과 바꿀 것" not in first                          # 첫 걸음은 한 일을 보지 않는다
+    listed = second.split("[지금까지 한 일")[1].split("[실행자가 다음에 하려는 것]")[0]
+    assert "도구 호출 3회, 그중 실패 1회" in listed and "결과의 일부는 돌아왔을 수 있어" in listed
+    line = listed.split("[2] inspect 실패")[1].split("[3] inspect")[0]
+    assert "유지할 것과 바꿀 것" in line and "==== not found" in line  # 돌아온 내용의 앞과 원인이 적힌 끝
+    assert len(line) < 500                                            # 전문이 아니라 발췌다
+    assert listed.count("결과 ") == 1                                 # 성공한 호출의 결과는 싣지 않는다
+
+
+def test_failure_excerpts_stay_within_one_budget(tmp_path, monkeypatch, scope):
+    runner, controller = make(tmp_path, monkeypatch, scope, deep={**FAST, "ceilings": [50], "failure_budget": 500})
+    fail_on(controller, set(range(1, 7)), "원인 " * 400)
+    seen = script(monkeypatch, {"reflect": ["길", KEEP]})
+    work(controller, 1, 6)
+    controller.reframe({"kind": "checkpoint", "evidence": "알게 된 것"})
+    listed = seen[1][1].split("[지금까지 한 일")[1].split("[실행자가 다음에 하려는 것]")[0]
+    assert listed.count(" — 앞: ") == 2 and listed.count("(싣지 않음)") == 4   # 가까운 실패부터 싣고 나머지는 크기만
+    assert "(싣지 않음)" in listed.split("[1] inspect 실패")[1].split("[2] inspect")[0]
+    assert " — 앞: " in listed.split("[6] inspect 실패")[1]
+
 
 def test_no_stop_directive_exists():
     assert de.parse_verdict("VERDICT: CUT — 이 갈래를 그만둔다") == ("KEEP", "")

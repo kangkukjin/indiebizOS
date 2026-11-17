@@ -419,10 +419,15 @@ async def run_command(command: str, timeout: Annotated[int, Field(ge=1, le=300)]
                       approved: bool = False, ctx: Context = None, cwd: str = None,
                       mode: str = None, io: str = None, yield_ms: int = None,
                       request_id: str = None, lifetime: str = None, shell: str = None):
-    """승인된 수리의 대상에서 명령을 실행합니다. cwd는 위치이며 권한을 넓히지 않습니다.
-    사용자 파일은 정본 프로젝트, 몸의 구현은 사본에서 실행합니다. 긴 실행은 mode=session으로
-    접수하고 기존 self:task status/control로 관측·제어합니다. 수리는 lifetime=task입니다.
-    일반 작업·무그랜트·다른 실행자는 거절됩니다. timeout은 초(최대 300)입니다.
+    """셸 명령을 실행합니다. 명령은 몸이 쥐고 돌립니다.
+
+    timeout(초, 최대 300) 안에 끝나면 출력이 그대로 옵니다. 끝나지 않으면 명령을 죽이지 않고 계속 돌린 채
+    task_ref와 그때까지의 출력, signs(시작 뒤 초·마지막 출력 뒤 초·쓴 CPU 초·살아 있는 프로세스·입력 통로
+    상태)가 돌아옵니다. 그 뒤는 execute_ibl의 [self:task]{op:"wait"|"status"|"cancel", ref:task_ref}로
+    기다리거나 봅니다. 명령의 입력 통로는 닫혀 있습니다. 입력을 주고받을 프로세스는 mode="session"
+    (또는 io="pty")으로 시작하고 [self:task]{op:"control"}로 다룹니다.
+    cwd는 위치이며 권한을 넓히지 않습니다. 호출 사이에 셸 상태(cd·변수)는 이어지지 않습니다.
+    승인된 수리에서는 사용자 파일은 정본 프로젝트, 몸의 구현은 사본에서 실행하며 lifetime=task입니다.
     """
     agent, _, task, _ = _http_identity(ctx)
     req = {"agent_id": agent or DEFAULT_AGENT_ID, "task_id": task or DEFAULT_TASK_ID,
@@ -430,11 +435,37 @@ async def run_command(command: str, timeout: Annotated[int, Field(ge=1, le=300)]
     req['payload'].update({k: v for k, v in dict(cwd=cwd, mode=mode, io=io, yield_ms=yield_ms,
                             request_id=request_id, lifetime=lifetime, shell=shell).items() if v is not None})
     raw = await anyio.to_thread.run_sync(
-        lambda: _post_backend("/ibl/repair/command", req, timeout + 10))
+        lambda: _post_backend("/ibl/command", req, timeout + 40))
     from ibl_result_transport import tool_result_is_error
     from mcp.types import CallToolResult, TextContent
+    shown = _command_text(raw)
+    if shown is not None:
+        return CallToolResult(isError=shown[1], content=[TextContent(type="text", text=_trim_for_agent(shown[0]))])
     return CallToolResult(isError=tool_result_is_error(raw), content=[
         TextContent(type="text", text=_trim_for_agent(raw))])
+
+
+def _command_text(raw):
+    """몸이 쥔 명령의 봉투(shape='command')를 실행자가 읽을 글자로 편다 — (글, 실패 여부). 다른 봉투는 None.
+
+    출력은 셸이 낸 글자 그대로 준다(JSON 문자열로 감싸면 줄바꿈·따옴표가 모두 이스케이프된다). 끝난 명령은
+    출력 뒤에 종료 코드를, 아직 도는 명령은 출력 뒤에 접수증과 살아 있다는 신호를 붙인다.
+    """
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(value, dict) or value.get("shape") != "command":
+        return None
+    output = value.get("output") or ""
+    if value.get("timed_out"):
+        status = {k: value[k] for k in ("state", "task_ref", "generation", "cursor", "signs", "note") if k in value}
+        return (output + "\n\n" if output else "") + "[아직 실행 중] " + json.dumps(status, ensure_ascii=False), False
+    if value.get("state") in ("succeeded", "failed"):
+        code = value.get("exit_code")
+        text = output + (f"\n[exit code: {code}]" if code else "")
+        return text or "(명령어가 출력 없이 완료됨)", not value.get("success")
+    return json.dumps({k: v for k, v in value.items() if k != "shape"}, ensure_ascii=False), True
 
 
 @mcp.tool()

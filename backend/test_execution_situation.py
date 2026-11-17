@@ -333,3 +333,16 @@ if __name__ == '__main__':
     import sys
     import pytest
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_held_call_closes_without_a_failure_or_a_result(situation):
+    """실행 전에 세워진 호출(감독 지시 전달)은 복구할 실패가 아니고 돌아온 결과도 아니다."""
+    from recovery_observation import configure, pending
+    configure(situation)
+    situation.tool_started('call', 'Bash', {'command': 'ls'})
+    situation.tool_held('call', '[의식 개입 — 이 도구는 아직 실행되지 않았습니다] {"id": "n1"}')
+    assert pending(situation.recovery_view()) == []
+    assert 'call' not in situation.call_inputs
+    row = next(r for r in situation.snapshot()['observations'] if r['latest']['facet'] == 'execution')
+    assert row['latest']['value']['state'] == 'held'
+    assert row['latest']['value']['effect'] == 'not_started'

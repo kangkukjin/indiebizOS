@@ -134,3 +134,56 @@ def test_process_message_stream_records_turn_message_before_build(monkeypatch):
     provider._client = None          # 초기화 전 조기 반환 경로 — 턴 상태 초기화는 그보다 먼저다
     list(provider.process_message_stream(KO_T1, history=[]))
     assert provider._turn_message == KO_T1
+
+
+def _normal_command(monkeypatch, *, door, supervised):
+    monkeypatch.setattr('repair_context.active', lambda: False)
+    monkeypatch.setattr('research_context.library_only', lambda: False)
+    monkeypatch.setattr('supervision_bus.current', lambda *a, **kw: object() if supervised else None)
+    monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: door))
+    provider = ClaudeCodeProvider(api_key='', model='test', system_prompt='test')
+    provider._binary_path = 'claude'
+    provider.agent_role = 'execution'
+    provider.agent_id = 'worker'
+    cmd = provider._build_command(mcp_config_path='/tmp/example.json')
+    pick = lambda flag: cmd[cmd.index(flag) + 1].split(',')
+    return provider, pick('--tools'), pick('--allowed-tools'), pick('--disallowed-tools')
+
+
+def test_body_door_replaces_native_shell_with_the_body_shell(monkeypatch):
+    """자기 Bash는 명령이 끝날 때까지 모델을 붙잡는다. 기본 문은 Bash를 내리고 몸의 셸을 준다(에피소드 6178)."""
+    provider, tools, allowed, denied = _normal_command(monkeypatch, door='body', supervised=True)
+    for native in ClaudeCodeProvider.NATIVE_SHELL_TOOLS:
+        assert native not in tools and native not in allowed and native in denied
+    assert COMMAND in allowed and COMMAND not in denied
+    assert {'Read', 'Write', 'Edit', 'Grep'} <= set(tools)          # 바로 끝나는 도구는 그대로다
+    assert ClaudeCodeProvider.BODY_SHELL_POLICY in provider.tool_policy()
+
+
+@pytest.mark.parametrize('door,supervised', [('native', True), ('body', False)])
+def test_native_shell_stays_when_the_door_is_native_or_the_turn_has_no_workbench(monkeypatch, door, supervised):
+    """몸의 셸은 감독 작업대를 거쳐 닿는다. 작업대가 없는 턴과 'native' 설정에서는 예전 그대로다."""
+    provider, tools, allowed, denied = _normal_command(monkeypatch, door=door, supervised=supervised)
+    assert 'Bash' in tools and 'Bash' in allowed and 'Bash' not in denied
+    assert COMMAND not in allowed and COMMAND in denied
+    assert ClaudeCodeProvider.BODY_SHELL_POLICY not in provider.tool_policy()
+
+
+def test_changing_the_door_starts_a_fresh_cli_session(monkeypatch):
+    """이어 가던 세션은 옛 도구 목록과 안내를 기억한다. 문이 바뀌면 세션 키가 달라져야 한다."""
+    monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: 'body'))
+    body = ClaudeCodeProvider.tool_policy_fingerprint()
+    monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: 'native'))
+    assert ClaudeCodeProvider.tool_policy_fingerprint() != body
+
+
+def test_shell_door_reads_the_setting_and_defaults_to_body(tmp_path, monkeypatch):
+    import json
+    import world_pulse
+    path = tmp_path / 'world_pulse_config.json'
+    monkeypatch.setattr(world_pulse, 'PULSE_CONFIG_PATH', path)
+    assert ClaudeCodeProvider.shell_door() == 'body'                 # 파일 없음
+    path.write_text(json.dumps({'executor': {'claude_code_shell': 'native'}}))
+    assert ClaudeCodeProvider.shell_door() == 'native'
+    path.write_text(json.dumps({'executor': {'claude_code_shell': 'anything-else'}}))
+    assert ClaudeCodeProvider.shell_door() == 'body'

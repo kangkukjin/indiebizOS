@@ -85,6 +85,10 @@ class CodingStore:
             raise ValueError("존재하지 않는 코딩 대상: " + key)
         return json.loads(row[0])
 
+    def delete(self, kind, key):
+        with self.connect() as conn:
+            conn.execute("DELETE FROM objects WHERE kind=? AND id=?", (kind, key))
+
     def list(self, kind):
         with self.connect() as conn:
             return [json.loads(r[0]) for r in conn.execute(

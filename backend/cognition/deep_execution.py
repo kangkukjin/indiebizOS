@@ -34,12 +34,16 @@ from contextlib import contextmanager
 DEFAULTS = {
     "enabled": True,          # THINK 로 간 일은 말이 없어도 1단계다
     "default_depth": 1,
-    "max_depth": 5,
-    "ceilings": [16, 24, 32],  # 지난 되돌아보기 뒤 이만큼 호출이 지나도 돌아오지 않으면 돌아오라고 청한다
+    # 단계의 상한은 두지 않는다. 사용자가 시킨 수가 곧 단계다(설계 4.1).
+    "ceilings": [16, 24, 32],  # 지난 되돌아보기 뒤 이만큼 호출이 지나도 돌아오지 않으면 돌아오라고 청한다.
+                               # 넷째부터는 마지막 값을 그대로 쓴다
     "grace": 8,                # 청한 뒤에도 이만큼 더 지나면 하네스가 실행 기록으로 대신 되돌아본다
     "hold_s": 150,            # 하네스가 대신 되돌아보는 동안 실행자의 다음 도구 호출을 붙잡는 상한
     "result_chars": 2500,     # 하네스가 '알게 된 것'을 적을 때 호출 결과마다 보는 앞부분
     "trace_chars": 90000,
+    "failure_head": 150,      # 실패로 표시된 호출이 실제로 돌려준 것의 앞
+    "failure_tail": 110,      # … 과 끝(원인 문구는 흔히 끝에 있다)
+    "failure_budget": 2600,   # 한 번의 되돌아보기에 붙이는 실패 결과의 합. 넘으면 오래된 실패는 크기만 적는다
 }
 
 _cache = {"mtime": None, "value": {}}
@@ -74,7 +78,7 @@ def depth_of(framing, cfg):
     if isinstance(ordered, str) and ordered.strip().isdigit():
         ordered = int(ordered.strip())
     if isinstance(ordered, (int, float)) and not isinstance(ordered, bool) and ordered >= 0:
-        return int(min(ordered, cfg["max_depth"]))
+        return int(ordered)  # 주문한 만큼. 여기서 줄이면 사용자는 줄어든 것을 알 길이 없다
     if framing.get("deep_research"):
         return 0  # 심층연구는 지금의 방식 그대로 둔다
     return int(cfg["default_depth"])
@@ -164,6 +168,7 @@ R2 = """방금 알게 된 것만 놓고 문제를 다시 생각했다([다시 �
 {r1}
 
 [지금까지 한 일 — 도구 호출 {k}회, 그중 실패 {errors}회]
+'실패'는 그 호출이 오류로 끝났다는 표시다. 결과의 일부는 돌아왔을 수 있어, 실패한 호출에는 실제로 돌아온 결과의 앞과 끝을 붙였다.
 {actions}
 
 [실행자가 다음에 하려는 것]
@@ -214,7 +219,7 @@ def _turn_context(controller):
 
 def _ceiling(cfg, index):
     gaps = cfg["ceilings"] or DEFAULTS["ceilings"]
-    return gaps[index] if index < len(gaps) else gaps[-1] * 2 ** (index - len(gaps) + 1)
+    return gaps[min(index, len(gaps) - 1)]
 
 
 def memo_text(state, framing):
@@ -259,11 +264,47 @@ def _result_text(controller, ref, limit):
         return ""
 
 
+def _failure_returned(controller, ref, head, tail):
+    """실패로 표시된 호출이 실제로 돌려준 것의 앞과 끝. 읽지 못하면 빈 문자열."""
+    try:
+        text = controller.store.read_evidence(ref["id"], 0, None)["text"]
+    except Exception:
+        return ""
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+    if len(text) <= head + tail:
+        return f"결과 {len(text)}자: {text}"
+    return f"결과 {len(text)}자 — 앞: {text[:head]} … 끝: {text[-tail:]}"
+
+
+def _failures_returned(controller, cfg, rows):
+    """실패한 호출마다 붙일 결과 발췌. 가까운 실패부터 예산을 쓰고, 예산이 다하면 크기만 적는다.
+
+    (2026-11-16, 에피소드 6142: 한 일 목록에는 '실패' 표시와 입력 앞부분만 있었다. 한 명령에 묶인 두
+    읽기 가운데 뒤쪽만 실패한 호출을 의식이 세 번의 되돌아보기에서 "읽기 실패"로 짚었고, 마지막
+    판정의 주된 근거가 됐다. 실제로는 앞쪽 읽기가 돌아와 있었고 원인 문구는 결과의 끝에 있었다.)
+    """
+    head, tail, budget = int(cfg["failure_head"]), int(cfg["failure_tail"]), int(cfg["failure_budget"])
+    returned = {}
+    for index in range(len(rows), 0, -1):
+        row = rows[index - 1]
+        if not row.get("is_error"):
+            continue
+        ref = row.get("result") or {}
+        text = _failure_returned(controller, ref, head, tail) if budget > 0 else ""
+        budget -= len(text)
+        returned[index] = text or f"결과 {ref.get('chars', '?')}자(싣지 않음)"
+    return returned
+
+
 def trace_of(controller, cfg, *, per_result=None):
-    """(호출 수, 실패 수, 결과를 담은 기록, 한 줄씩의 목록). per_result=0 이면 결과를 읽지 않는다."""
+    """(호출 수, 실패 수, 결과를 담은 기록, 한 줄씩의 목록).
+
+    per_result=0 이면 기록에 결과를 싣지 않는다. 한 줄씩의 목록에는 실패한 호출의 결과 앞·끝만 붙는다.
+    """
     rows = controller.store.tool_index(limit=400)
     k = len(rows)
     per = max(600, min(cfg["result_chars"], cfg["trace_chars"] // max(k, 1))) if per_result is None else per_result
+    returned = _failures_returned(controller, cfg, rows)
     full, brief = [], []
     for index, row in enumerate(rows, 1):
         name = str(row.get("name", "")).rsplit("__", 1)[-1]
@@ -272,7 +313,8 @@ def trace_of(controller, cfg, *, per_result=None):
         if per:
             full.append(f"[{index}] {name}{failed}\n  입력: {given}\n"
                         f"  결과(앞 {per}자): {_clip(_result_text(controller, row.get('result') or {}, per + 200), per)}")
-        brief.append(f"[{index}] {name}{failed} — {_clip(given, 110)}")
+        brief.append(f"[{index}] {name}{failed} — {_clip(given, 110)}"
+                     + (f"\n    {returned[index]}" if index in returned else ""))
     return k, sum(bool(r.get("is_error")) for r in rows), "\n".join(full), "\n".join(brief)
 
 

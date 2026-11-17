@@ -24,7 +24,11 @@ def directory(task_id, db=None):
     return (db or store()).root / 'processes' / task_id
 
 
-def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='task', db=None, sandbox=True, shell=None):
+def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='task', db=None, sandbox=True, shell=None,
+          stdin='open', environment=None, path=None):
+    """stdin='closed'는 입력 통로를 닫고 시작한다(pipe 전용). environment='inherit'는 이 프로세스의 환경을
+    걸러 내지 않고 물려준다. path는 그 환경의 PATH를 바꾼다. 셋 다 몸의 셸 문(`hold`)이 쓰는 값이고,
+    기본값은 지금까지의 세션과 같다."""
     from runtime_utils import expand_body_path
     cwd = str(Path(expand_body_path(cwd)).resolve(strict=True))
     check(cwd, write=True)
@@ -36,6 +40,9 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
             raise PermissionError('실행 문맥 밖 cwd')
     if io not in ('pipe', 'pty') or lifetime not in ('task', 'session'):
         raise ValueError('io=pipe/pty, lifetime=task/session')
+    if stdin not in ('open', 'closed') or environment not in (None, 'inherit'):
+        raise ValueError('stdin=open/closed, environment=inherit')
+    closed = stdin == 'closed' and io == 'pipe'
     if not isinstance(command, str) or not command.strip(): raise ValueError('command 필수')
     if io == 'pty' and os.name == 'nt': raise ValueError('로컬 PTY 미지원: resident terminal을 사용하세요')
     from file_changes import attribution, validate_attribution
@@ -44,6 +51,8 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
     db = db or store()
     signature = fingerprint({'command': command, 'cwd': cwd, 'io': io, 'lifetime': lifetime, 'owner': owner,
                              **({'shell': shell} if shell is not None else {}),
+                             **({'stdin': 'closed'} if closed else {}),
+                             **({'environment': environment} if environment else {}),
                              **({'execution': execution} if execution else {})})
     with db.lock('process-start'):
         if request_id:
@@ -69,9 +78,16 @@ def start(command, cwd, *, io='pipe', request_id=None, yield_ms=1000, lifetime='
         row = {'id': task_id, 'command': command, 'cwd': cwd, 'io': io, 'argv': argv, 'preflight': preflight,
                'lifetime': lifetime, 'attribution': owner, 'request_id': request_id, 'signature': signature,
                'generation': secrets.token_hex(16), 'token': secrets.token_hex(32), 'created_at': time.time(),
-               'state': 'queued', 'capabilities': {'input': True, 'eof': True, 'interrupt': True, 'cancel': True,
+               'state': 'queued', 'capabilities': {'input': not closed, 'eof': not closed, 'interrupt': True, 'cancel': True,
                                                 'resize': io == 'pty', 'io': io, 'sandbox': sandbox,
                                                 'restart_reconnect': True, 'output_retention_bytes': 1048576}}
+        if closed:
+            row['stdin'] = 'closed'
+        if environment:
+            row['environment'] = environment
+            row['held'] = True     # hold가 시작한 세션 — 끝나면 기록을 거둔다(_forget·_sweep)
+            if path:
+                row['path'] = str(path)
         if execution:
             row['execution'] = execution
         write_json(folder / 'session.json', row)
@@ -96,6 +112,144 @@ def receipt(row, db, yield_ms):
     observed = query(row['id'], db=db, wait_ms=min(max(int(yield_ms), 0), 30000))
     return {**T.receipt('process', row['id']), **observed, 'preflight': row.get('preflight'),
             'task_ref': T.ref('process', row['id']), 'accepted': True}
+
+
+HOLD_OUTPUT_BYTES = 1048576   # 세션이 보존하는 출력과 같은 크기
+
+
+_USER_SHELL = {}
+
+
+def user_shell():
+    """(셸 이름, PATH) — 사용자가 터미널에서 쓰는 셸과 그 셸이 평소 갖는 PATH. POSIX 전용, 없으면 (None, None).
+
+    CLI 실행자의 자기 셸은 사용자의 셸 환경에서 돌았다(Claude Code는 대화형 셸의 스냅숏, Codex는 로그인 셸).
+    백엔드는 앱이 준 좁은 PATH로 뜨므로, 같은 명령이 몸의 셸에서도 같은 도구를 찾게 PATH만 가져온다.
+    값은 비밀이 아니라 세션 기록에 남겨도 된다. 프로세스당 한 번 잰다.
+    """
+    if os.name == 'nt':
+        return None, None
+    if 'value' not in _USER_SHELL:
+        name, found = None, None
+        try:
+            import pwd
+            import re
+            executable = pwd.getpwuid(os.getuid()).pw_shell
+            if Path(executable).name in ('sh', 'bash', 'zsh'):
+                name = Path(executable).name
+                # 프로필이 화면에 쓰는 글과 섞이지 않게 표식 사이의 값만 읽는다.
+                done = subprocess.run([executable, '-l', '-i', '-c', 'printf "\\n__INDIEBIZ_PATH__%s__END__\\n" "$PATH"'],
+                                      stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                      timeout=20, text=True, start_new_session=True)
+                match = re.search(r'__INDIEBIZ_PATH__(.*?)__END__', done.stdout, re.S)
+                found = match.group(1).strip() if match and match.group(1).strip() else None
+        except Exception:
+            pass
+        _USER_SHELL['value'] = (name, found)
+    return _USER_SHELL['value']
+
+
+def hold(command, cwd, *, timeout=60, shell=None, lifetime='task', request_id=None, user=False, db=None):
+    """명령을 몸이 쥐고, 끝나거나 timeout(초)이 지나면 돌아온다. 시간이 지나도 명령은 죽이지 않는다.
+
+    길지 짧을지를 미리 고르지 않게 하는 문이다(docs/BODY_HELD_COMMANDS_DESIGN_2026_11_17.md 4.2).
+    돌려주는 것: state, exit_code(끝났으면), stdout·stderr(처음부터 지금까지), task_ref·generation·cursor
+    (이어서 `[self:task]`로 볼 손잡이), signs(아직 돌고 있으면 살아 있다는 신호), preflight·diagnostics.
+    구문 검사에서 막힌 명령은 start의 거절 봉투를 그대로 돌려준다(accepted 없음).
+    입력 통로는 닫고 시작하고, 환경은 걸러 내지 않으며, 샌드박스를 씌우지 않는다 — 지금까지의 동기 실행과
+    같은 범위다. 입력을 주고받을 세션은 start를 쓴다. user=True면 셸을 지정하지 않았을 때 사용자의 셸과
+    그 PATH로 돈다(CLI 실행자의 자기 셸이 돌던 조건).
+    """
+    db = db or store()
+    path = None
+    if user:
+        name, path = user_shell()
+        shell = shell or name
+    value = start(command, cwd, io='pipe', request_id=request_id, yield_ms=0, lifetime=lifetime, db=db,
+                  sandbox=False, shell=shell, stdin='closed', environment='inherit', path=path)
+    if not value.get('accepted'):
+        return value
+    task_id, receipt_fields = value['task_ref']['task_id'], {k: value[k] for k in ('task_ref', 'preflight') if k in value}
+    deadline = time.monotonic() + max(0.0, float(timeout))
+    streams, size, cursor = {'stdout': [], 'stderr': [], 'combined': []}, 0, 0
+    while True:
+        for row in value.get('output') or []:
+            if size < HOLD_OUTPUT_BYTES:
+                streams.setdefault(row.get('stream') or 'stdout', []).append(row.get('text', ''))
+                size += len(row.get('text', ''))
+        cursor = value.get('cursor', cursor)
+        active = value['state'] in ('queued', 'running')
+        if not active and not value.get('has_more'):
+            break
+        left = deadline - time.monotonic()
+        if active and left <= 0:
+            break
+        value = query(task_id, db=db, cursor=cursor, limit_bytes=262144,
+                      wait_ms=int(min(max(left, 0.0), 30.0) * 1000) if active else 0)
+    if not active:
+        _forget(task_id, db)   # 결과를 다 돌려준다 — 손잡이를 넘기지 않은 세션은 남길 것이 없다
+    _sweep(db)
+    return {**receipt_fields, 'state': value['state'], 'exit_code': value.get('exit_code'),
+            'generation': value.get('generation'), 'cursor': cursor, 'gap': value.get('gap'),
+            'stdout': ''.join(streams['stdout'] + streams['combined']), 'stderr': ''.join(streams['stderr']),
+            'truncated': size >= HOLD_OUTPUT_BYTES,
+            **({k: value[k] for k in ('signs', 'diagnostics', 'cleanup', 'error') if k in value}),
+            'accepted': True}
+
+
+def _forget(task_id, db):
+    """끝난 세션의 기록과 폴더를 지운다. 워커에게 먼저 물러나라고 알린다."""
+    folder = directory(task_id, db)
+    try:
+        meta = json.loads((folder / 'session.json').read_text())
+        with socket.create_connection(('127.0.0.1', meta['port']), timeout=1) as conn:
+            conn.settimeout(3)
+            conn.sendall(json.dumps({'op': 'release', 'generation': meta['generation'], 'token': meta['token']}).encode() + b'\n')
+            conn.makefile('rb').readline(65536)
+    except (OSError, KeyError, ValueError):
+        pass   # 워커가 이미 없으면 지울 것만 남았다
+    db.delete('process_session', task_id)
+    import shutil
+    shutil.rmtree(folder, ignore_errors=True)   # 워커가 아직 파일을 쥔 몸(Windows)에서는 _sweep이 마저 지운다
+
+
+_SWEEP = {'at': 0.0}
+SWEEP_EVERY_S = 600
+
+
+def _sweep(db, now=None):
+    """쥔 명령의 묵은 기록을 거둔다. 손잡이를 넘긴 채(제한 시간에 돌아옴) 끝난 세션은 세션 수명(ttl)만큼
+    남겼다가 지우고, 기록 없이 남은 폴더도 지운다. 명령마다 세션이 생기므로 거두지 않으면 끝없이 쌓인다
+    (2026-11-17: 재기동마다 쌓인 바이트코드 캐시 111GB가 같은 꼴이었다)."""
+    now = time.time() if now is None else now
+    if now - _SWEEP['at'] < SWEEP_EVERY_S:
+        return 0
+    _SWEEP['at'] = now
+    removed, known = 0, set()
+    for row in db.list('process_session'):
+        known.add(row['id'])
+        if not row.get('held'):
+            continue
+        try:
+            meta = json.loads((directory(row['id'], db) / 'session.json').read_text())
+        except (OSError, ValueError):
+            meta = {'ended_at': row.get('created_at', 0)}   # 폴더가 없는 기록 — 볼 것이 남지 않았다
+        ended = meta.get('ended_at')
+        if ended and now - ended > meta.get('ttl', 86400):
+            _forget(row['id'], db)
+            known.discard(row['id'])
+            removed += 1
+    root = db.root / 'processes'
+    if root.is_dir():
+        import shutil
+        for folder in root.iterdir():
+            try:
+                if folder.is_dir() and folder.name not in known and now - folder.stat().st_mtime > 120:
+                    shutil.rmtree(folder, ignore_errors=True)
+                    removed += 1
+            except OSError:
+                continue
+    return removed
 
 
 def query(task_id, *, db=None, op='status', **params):

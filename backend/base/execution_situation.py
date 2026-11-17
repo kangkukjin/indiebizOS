@@ -460,6 +460,17 @@ class Situation:
         if self.on_result and not unknown:
             self.on_result(result, ref, key)
 
+    @optional_observation
+    def tool_held(self, key, result):
+        """시작을 알린 호출이 실행 전에 섰다(감독 지시 전달). 결과도 실패도 아니므로 복구 원장에 올리지 않는다."""
+        ref = self.evidence(result)
+        self.result_sources.pop(key, None)
+        name, payload = self.call_inputs.pop(key, ('', {}))
+        self.feedback('tool_finished', key=key, name=name, payload=payload, unknown=False)
+        self.observe({'kind': 'call', 'id': key}, 'execution',
+                     {'state': 'held', 'effect': 'not_started', 'result_ref': ref},
+                     source='tool', source_cursor=1, source_ref=ref, call_id=key, observed_at=time.time())
+
     def observe_native(self, event):
         name = event.get('name') or event.get('tool') or ''
         if name.startswith('mcp__indiebizos__') or name in {'execute_ibl', 'supervision'}:

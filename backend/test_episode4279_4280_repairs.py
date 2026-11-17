@@ -97,7 +97,21 @@ def test_repair_command_requires_owner_and_grant_and_preserves_context(superviso
         return '{"success":true,"verification":{"status":"passed"}}'
     monkeypatch.setattr('system_tools.execute_tool', execute)
     monkeypatch.setattr('repair_context.active', lambda: False)
+    # 승인된 수리가 아닌 턴: 셸의 문이 native면 예전처럼 거절, 자료실 전용 조사도 거절.
+    from providers.claude_code import ClaudeCodeProvider
+    monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: 'native'))
     assert not api_supervision.dispatch('worker', supervisor.task, {'command': 'test'}, repair_command=True)['success']
+    monkeypatch.setattr(ClaudeCodeProvider, 'shell_door', classmethod(lambda cls: 'body'))
+    monkeypatch.setattr('research_context.library_only', lambda: True)
+    assert not api_supervision.dispatch('worker', supervisor.task, {'command': 'test'}, repair_command=True)['success']
+    monkeypatch.setattr('research_context.library_only', lambda: False)
+    assert not calls
+    # 문이 body면 평소 실행자의 셸이다(2026-11-17). 자기 Bash와 같은 범위: 승인 절차를 걸지 않고 사용자의 셸로 돈다.
+    assert api_supervision.dispatch('worker', supervisor.task, {'command': 'test'}, repair_command=True)['success']
+    assert calls == [('run_command', {'command': 'test', 'approved': True, '_door': 'cli'},
+                      supervisor.project_path, 'worker', supervisor.task)]
+    assert supervisor.store.cost['execution_calls'] == 1
+    calls.clear()
     monkeypatch.setattr('repair_context.active', lambda: True)
     assert not api_supervision.dispatch(supervisor.supervisor_id, supervisor.task, {'command': 'test'}, repair_command=True)['success']
     assert not api_supervision.dispatch('unknown', supervisor.task, {'command': 'test'}, repair_command=True)['success']
@@ -106,7 +120,7 @@ def test_repair_command_requires_owner_and_grant_and_preserves_context(superviso
     result = api_supervision.dispatch('worker', supervisor.task, {'command': 'test'}, repair_command=True)
     assert result['success']
     assert calls == [('run_command', {'command': 'test'}, supervisor.project_path, 'worker', supervisor.task)]
-    assert supervisor.store.cost['execution_calls'] == 1
+    assert supervisor.store.cost['execution_calls'] == 2
     assert tc.snapshot() == before
 
 
@@ -121,8 +135,9 @@ def test_mcp_repair_command_carries_identity_and_failure(monkeypatch):
     result = asyncio.run(m.run_command('node --test tests.mjs', timeout=120))
     assert result.isError
     assert 'no repair grant' in result.content[0].text
-    assert seen == [('/ibl/repair/command', {'agent_id': 'worker', 'task_id': 'repair-task',
-                    'payload': {'command': 'node --test tests.mjs', 'timeout': 120, 'approved': False}}, 130)]
+    # 돌려주는 시간(timeout) + 남은 출력을 거두는 여유. 명령은 timeout에 죽지 않고, 기다리던 쪽만 돌아온다.
+    assert seen == [('/ibl/command', {'agent_id': 'worker', 'task_id': 'repair-task',
+                    'payload': {'command': 'node --test tests.mjs', 'timeout': 120, 'approved': False}}, 160)]
 
 
 def test_claude_repair_exposes_guarded_command_without_native_shell(monkeypatch):

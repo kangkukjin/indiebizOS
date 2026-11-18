@@ -256,7 +256,7 @@ R1 = """실행자가 한 구간을 마쳤다. 아래는 그때까지 알게 된 
 R2 = """방금 알게 된 것만 놓고 문제를 다시 생각했다([다시 생각한 것]). 이제 실행자가 지금까지 한 일의 목록과 실행자가 다음에 하려는 것을 본다. 작업은 끝나지 않았고 실행자는 계속 일한다.
 실행자를 감싸지도 깎지도 말고 판정한다. 이미 쓴 노력은 돌아오지 않으니 앞으로의 노력만 본다.
 실행자가 하고 있는 일을 그만두라고 지시하지 않는다. 그 일이 무엇에 쓰이는지는 실행자가 더 잘 안다. 값이 의심되면 질문으로 적는다.
-이번이 되돌아보기 {round}번째이고 모두 {depth}번이다.
+이번이 되돌아보기 {round}번째이고 모두 {depth}번이다.{last_note}
 
 [사용자 요청 원문]
 {message}
@@ -276,10 +276,21 @@ R2 = """방금 알게 된 것만 놓고 문제를 다시 생각했다([다시 �
 2. 옮기거나 새로 열 갈래: 있으면 항목마다 얻는 것 / 추가로 드는 것(도구 호출 수·시간의 대략) / 이 판단을 뒤집을 관측. 실행자가 어차피 하게 될 일은 적지 않는다. 없으면 '없음'.
 3. 실행자에게 물을 것: 값이 의심되는 일이 있으면 "이 일은 무엇에 쓰이는가" 꼴의 질문으로 적는다. 없으면 '없음'.
 마지막 두 줄은 반드시 아래 형식으로 끝낸다.
-NEXT: 실행자가 무엇까지 확인하고 다시 돌아오면 되는지 한 문장
+NEXT: {next_rule}
 VERDICT: KEEP 또는 SWITCH 또는 WRAP — 이유 한 문장
 KEEP=지금 길로 계속한다. SWITCH=다른 길로 옮기거나 새 갈래를 연다. WRAP=더 해도 이득이 작으니 한계를 밝히고 마무리한다.
 """
+
+# R2 의 NEXT 줄에 적을 것. 실행자가 다시 돌아오는 차례와 돌아오지 않는 차례는 물을 것이 다르다.
+# (2026-11-18, 에피소드 6220: 지문은 마지막 차례에도 "무엇까지 확인하고 다시 돌아오면 되는지"를 물었고, 의식은
+# 그 줄에 "전달문에 설계 완성과 납품 완성의 구분 … 을 명시했는지 확인하면 된다"를 적었다. 하네스는 마지막
+# 차례와 WRAP 에서 그 줄을 버렸다 — 실행자는 받지 못했고 최종 답변에 그 한계들이 빠졌다. 운영 기록의
+# 되돌아보기 89번 가운데 53번에서 이 줄이 버려졌다.)
+NEXT_RETURN = ("실행자가 무엇까지 확인하고 다시 돌아오면 되는지 한 문장. "
+               "WRAP 으로 판정하면 돌아올 지점 대신 실행자가 끝내기 전에 확인할 것을 적는다")
+NEXT_CLOSING = "실행자가 끝내기 전에 확인할 것 한 문장. 없으면 '없음'"
+LAST_NOTE = " 마지막 차례라 이 답 뒤로 실행자는 다시 돌아오지 않는다."   # 형식 줄이 아니라 머리 문장에 붙인다
+# (형식 줄에 이 사정을 같이 적었더니 의식이 그 문장까지 NEXT 에 옮겨 적었다 — 2026-11-18 예행 task_sysai_bd75233e.)
 
 
 # ── 상태와 작업 메모 ────────────────────────────────────────────────────────────
@@ -538,7 +549,9 @@ def _round(controller, state, *, note, by, stated=""):
                                              by="실행자가 적음" if by == "executor" else "하네스가 실행 기록에서 적음"))
         judgment = _ask(controller, R2.format(message=controller.message, r1=rethink, k=k, errors=errors,
                                               actions=actions or "(아직 없음)", stated=stated or "(적지 않음)",
-                                              round=state["done"], depth=state["depth"]))
+                                              round=state["done"], depth=state["depth"],
+                                              last_note=LAST_NOTE if state["done"] >= state["depth"] else "",
+                                              next_rule=NEXT_CLOSING if state["done"] >= state["depth"] else NEXT_RETURN))
     except Exception as exc:
         # 이루어지지 않은 차례를 메모에 남긴다. 다음 되돌아보기가 이 사실을 읽는다.
         state["memo"].append({"round": state["done"], "by": by, "calls": k, "failed": str(exc)})
@@ -559,6 +572,11 @@ def _round(controller, state, *, note, by, stated=""):
     return row
 
 
+def _nothing(text):
+    """'없음'으로 읽히는 한 줄인가(빈 줄 포함)."""
+    return re.sub(r"[\s*.:·\-—'\"]", "", str(text or "")) in ("", "없음", "없다")
+
+
 def _has_points(judgment):
     """판단 본문에 실행자에게 전할 갈래나 질문이 있는가. 둘 다 '없음'이라고 읽힐 때만 없다고 본다.
 
@@ -567,17 +585,27 @@ def _has_points(judgment):
     found = dict(re.findall(r"^\s*\**\s*([23])\s*[.)]\s*\**\s*(.*)$", judgment or "", flags=re.M))
     if set(found) != {"2", "3"}:
         return bool((judgment or "").strip())
-    empty = lambda text: re.sub(r"[\s*.:·\-—'\"]", "", text.split(":", 1)[-1]) in ("", "없음", "없다")
-    return not (empty(found["2"]) and empty(found["3"]))
+    return not (_nothing(found["2"].split(":", 1)[-1]) and _nothing(found["3"].split(":", 1)[-1]))
+
+
+def _closing(row, state):
+    """이 답 뒤로 실행자가 돌아오지 않는 차례(마지막 차례·WRAP)에 의식이 적은 '끝내기 전에 확인할 것'. 없으면 빈 문자열."""
+    ends = row["verdict"] == "WRAP" or row["round"] >= state["depth"]
+    return "" if not ends or _nothing(row["next"]) else str(row["next"]).strip()
 
 
 def _guidance(row, state):
-    """실행자가 읽을 본문 — 판단, 의식이 적은 갈래와 질문, 다음 지점, 남은 횟수.
+    """실행자가 읽을 본문 — 판단, 의식이 적은 갈래와 질문, 다음 지점(또는 끝내기 전에 확인할 것), 남은 횟수.
 
     판단 본문(가고 있는 길·옮기거나 새로 열 갈래·실행자에게 물을 것)은 판정이 무엇이든 붙인다. 처음에는
     '계속'이면 사유 한 줄만 보냈다 — 에피소드 6192 에서 의식이 새 갈래 둘과 질문 둘을 적고 "그것은 지금 길
     위에서 조정하면 된다"며 '계속'으로 판정했는데, 실행자는 그 둘이 무엇인지 받지 못했다. 값이 의심되는 일은
     질문으로 전한다는 설계(4.5)와도 어긋났다.
+
+    의식이 마지막 줄(NEXT)에 적은 것은 차례가 무엇이든 전한다. 실행자가 다시 돌아오는 차례에는 '다음 지점'으로,
+    돌아오지 않는 차례(마지막 차례·WRAP)에는 '끝내기 전에 확인할 것'으로. 처음에는 돌아올 차례가 없다는 이유로
+    마지막 차례와 WRAP 에서 그 줄을 버렸는데, 의식은 바로 그 줄에 최종 전달문이 밝혀야 할 것을 적고 있었다
+    (에피소드 6220·6221).
     """
     left = state["depth"] - row["round"]
     head = {"KEEP": "지금 길로 계속한다.",
@@ -587,12 +615,15 @@ def _guidance(row, state):
              + (f" 이유: {row['reason']}" if row["reason"] else "")]
     if row["judgment"] and (row["verdict"] != "KEEP" or _has_points(row["judgment"])):
         lines.append(row["judgment"])
-    if row["verdict"] != "WRAP":
-        if left > 0:
-            lines.append("다음 지점: " + (row["next"] or "다음 구간에서 새로 알게 된 것이 생겼을 때")
-                         + f" — 거기에 닿으면 reframe 도구를 kind=\"checkpoint\" 로 다시 부른다(남은 되돌아보기 {left}번).")
-        else:
+    if row["verdict"] != "WRAP" and left > 0:
+        lines.append("다음 지점: " + ("다음 구간에서 새로 알게 된 것이 생겼을 때" if _nothing(row["next"]) else row["next"])
+                     + f" — 거기에 닿으면 reframe 도구를 kind=\"checkpoint\" 로 다시 부른다(남은 되돌아보기 {left}번).")
+    else:
+        if row["verdict"] != "WRAP":
             lines.append("되돌아보기를 모두 마쳤다. 끝까지 진행한다.")
+        closing = _closing(row, state)
+        if closing:
+            lines.append("끝내기 전에 확인할 것: " + closing)
     lines.append("이 판단은 지금 상태에 비춰 확인한다. 따르지 않으면 최종 보고에 이유를 적는다.")
     return "\n".join(lines)
 
@@ -741,8 +772,9 @@ def reflect(controller, state):
         row = _round(controller, state, note=None, by="harness")
         if controller.cancelled() or controller.finalizing:
             return True
-        if row["verdict"] == "KEEP" and state["done"] >= state["depth"] and not _has_points(row["judgment"]):
-            return True  # 바꿀 것도, 전할 갈래·질문도, 다시 돌아올 지점도 없다. 실행자가 뒤늦게 돌아오면 그때 이 판단을 답으로 준다
+        if (row["verdict"] == "KEEP" and state["done"] >= state["depth"] and not _has_points(row["judgment"])
+                and not _closing(row, state)):
+            return True  # 바꿀 것도, 전할 갈래·질문도, 끝내기 전에 확인할 것도 없다. 실행자가 뒤늦게 돌아오면 그때 이 판단을 답으로 준다
         notice = _notice(controller, state, finding_id=f"deep-{row['round']}", review=row["round"],
                          reason=(f"심층실행 되돌아보기 {row['round']}/{state['depth']} — "
                                  "돌아오지 않아 실행 기록으로 대신 되돌아봤다"),

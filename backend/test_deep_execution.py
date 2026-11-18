@@ -16,6 +16,7 @@ FAST = {"ceilings": [2, 2, 2], "grace": 2, "hold_s": 2}
 SWITCH = ("1. 합성음을 다듬는 길이다\n2. 음원 후보 조사: 얻는 것 실제 음악 / 드는 것 호출 5회 / 뒤집을 관측 접근 제한\n"
           "3. 없음\nNEXT: 후보 두 개의 이용 조건을 확인하면 돌아온다\nVERDICT: SWITCH — 음원부터 찾아본다")
 KEEP = "1. 같은 길이다\n2. 없음\n3. 없음\nNEXT: 초안이 나오면 돌아온다\nVERDICT: KEEP — 그대로 간다"
+KEEP_LAST = "1. 같은 길이다\n2. 없음\n3. 없음\nNEXT: 없음\nVERDICT: KEEP — 그대로 간다"   # 마지막 차례, 확인할 것 없음
 
 
 @pytest.fixture(autouse=True)
@@ -203,10 +204,10 @@ def test_executor_returning_after_being_asked_uses_its_own_note(tmp_path, monkey
 def test_executor_arriving_after_harness_substitute_gets_that_judgment(tmp_path, monkeypatch, scope):
     """에피소드 6110: 하네스가 먼저 대신 되돌아본 뒤 실행자가 스스로 돌아왔다. 거절하지 않고 그 판단을 답으로 준다."""
     runner, controller = make(tmp_path, monkeypatch, scope)
-    seen = script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP]})
+    seen = script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP_LAST]})
     work(controller, 1, 2)
     assert de.reflect(controller, de._state(controller)) is True      # 한 번뿐인 되돌아보기를 하네스가 썼다
-    assert controller.pending is None                                 # 마지막 차례의 '계속'은 따로 전달하지 않는다
+    assert controller.pending is None                                 # 전할 것이 없는 마지막 차례의 '계속'은 따로 전달하지 않는다
     told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "공식 안내와 포스터를 확인했다"}))
     assert told["checkpoint"] is True and told["round"] == "1/1" and told["verdict"] == "KEEP"
     assert "지금 길로 계속한다" in told["content"] and len(seen) == 3  # 모델을 다시 부르지 않는다
@@ -215,7 +216,7 @@ def test_executor_arriving_after_harness_substitute_gets_that_judgment(tmp_path,
 
 def test_keep_at_the_last_round_stays_silent(tmp_path, monkeypatch, scope):
     runner, controller = make(tmp_path, monkeypatch, scope)
-    seen = script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP]})
+    seen = script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP_LAST]})
     work(controller, 1, 2)
     assert de.reflect(controller, de._state(controller)) is True
     assert len(seen) == 3 and controller.pending is None
@@ -622,3 +623,59 @@ def test_reframed_guidance_keeps_the_turns_own_depth(tmp_path, monkeypatch, scop
     text = json.loads(render_for_executor({"revised": True, "output": revised, "user_message": "고쳐줘"},
                                           deep_plan=controller._deep_plan))["content"]
     assert "다시 규정한 수리" in text and "심층실행" not in text
+
+
+# ── 마지막 차례의 '끝내기 전에 확인할 것' (2026-11-18, 에피소드 6220) ─────────────────────────────────
+
+WRAP_WITH_CLOSING = ("1. 완성안을 전달하는 길에 있다\n2. 없음\n3. 없음\n"
+                     "NEXT: 전달문에 설계 완성과 납품 완성의 구분, 문항은 계획 234개·완성 예시 6개라는 사실을 명시했는지 확인하면 된다.\n"
+                     "VERDICT: WRAP — 추가 제작보다 완성안과 검증 한계를 정확히 전달하는 편의 이득이 크다")
+KEEP_WITH_CLOSING = "1. 같은 길이다\n2. 없음\n3. 없음\nNEXT: 표의 합계가 본문 수치와 같은지 확인한다\nVERDICT: KEEP — 그대로 간다"
+
+
+def test_last_round_carries_what_to_confirm_before_finishing(tmp_path, monkeypatch, scope):
+    """에피소드 6220: 의식은 6/6 의 마지막 줄에 "전달문에 … 을 명시했는지 확인하면 된다"고 적었는데, 하네스는
+    마지막 차례와 WRAP 에서 그 줄을 버렸다. 실행자는 받지 못했고 최종 답변에 그 한계들이 빠졌다."""
+    runner, controller = make(tmp_path, monkeypatch, scope, framing={"task_framing": "문제", "deep_execution": 2})
+    seen = script(monkeypatch, {"reflect": ["길 하나", KEEP, "길 둘", WRAP_WITH_CLOSING]})
+    work(controller, 1, 1)
+    one = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "첫 결과"}))
+    assert "다음 지점: 초안이 나오면 돌아온다" in one["content"] and "끝내기 전에 확인할 것" not in one["content"]
+    work(controller, 2, 1)
+    two = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "완성했다"}))
+    assert two["verdict"] == "WRAP" and "한계를 밝히고 마무리한다" in two["content"]
+    assert "끝내기 전에 확인할 것: 전달문에 설계 완성과 납품 완성의 구분" in two["content"]
+    assert "계획 234개·완성 예시 6개" in two["content"] and "다음 지점" not in two["content"]
+    assert "NEXT:" not in two["content"] and "VERDICT:" not in two["content"]
+    # 지문은 차례에 맞게 묻는다 — 돌아오는 차례에는 돌아올 지점을, 마지막 차례에는 끝내기 전에 확인할 것을
+    first_r2, last_r2 = seen[1][1], seen[3][1]
+    assert de.NEXT_RETURN in first_r2 and de.NEXT_CLOSING not in first_r2 and de.LAST_NOTE not in first_r2
+    assert de.NEXT_CLOSING in last_r2 and "다시 돌아오면 되는지" not in last_r2
+    assert "모두 2번이다." + de.LAST_NOTE in last_r2      # 마지막이라는 사정은 형식 줄이 아니라 머리 문장에 있다
+
+
+def test_last_round_keep_also_delivers_the_closing_check(tmp_path, monkeypatch, scope):
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    script(monkeypatch, {"reflect": ["길", KEEP_WITH_CLOSING]})
+    work(controller, 1, 1)
+    told = json.loads(controller.reframe({"kind": "checkpoint", "evidence": "표를 만들었다"}))
+    assert told["round"] == "1/1" and "되돌아보기를 모두 마쳤다. 끝까지 진행한다." in told["content"]
+    assert "끝내기 전에 확인할 것: 표의 합계가 본문 수치와 같은지 확인한다" in told["content"]
+    # 확인할 것이 '없음'이면 그 줄은 붙지 않는다
+    state = {"depth": 1}
+    row = {"round": 1, "verdict": "KEEP", "reason": "그대로", "judgment": "1. 같은 길\n2. 없음\n3. 없음", "next": "없음."}
+    assert "끝내기 전에 확인할 것" not in de._guidance(row, state)
+    assert "끝내기 전에 확인할 것" not in de._guidance({**row, "next": ""}, state)
+    # 돌아올 차례가 남은 WRAP 도 실행자가 끝내려는 차례다 — 의식이 적은 것을 그대로 전한다
+    early = de._guidance({**row, "verdict": "WRAP", "next": "남은 한계를 보고에 적었는지 본다"}, {"depth": 3})
+    assert "끝내기 전에 확인할 것: 남은 한계를 보고에 적었는지 본다" in early and "다음 지점" not in early
+
+
+def test_harness_substitute_delivers_a_last_round_closing_check(tmp_path, monkeypatch, scope):
+    """실행자가 돌아오지 않아 하네스가 대신 되돌아본 마지막 차례도, 끝내기 전에 확인할 것이 있으면 전한다."""
+    runner, controller = make(tmp_path, monkeypatch, scope)
+    script(monkeypatch, {"reflect": ["알게 된 것", "길", KEEP_WITH_CLOSING]})
+    work(controller, 1, 2)
+    assert de.reflect(controller, de._state(controller)) is True
+    assert controller.pending and "끝내기 전에 확인할 것: 표의 합계가 본문 수치와 같은지 확인한다" in json.dumps(
+        controller.pending, ensure_ascii=False)

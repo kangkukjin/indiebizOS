@@ -214,6 +214,22 @@ def test_unrelated_or_unauthorized_request_cannot_inherit(unfinished, monkeypatc
     assert not st.read_session(str(root), sess['key']).get('reused_by')
 
 
+@pytest.mark.parametrize('named', [False, True])
+def test_discarded_workspace_leaves_nothing_to_resume(unfinished, monkeypatch, named):
+    """폐기된 사본의 멈춘 수리는 이을 것이 없다 — 후속 말은 새 요청이고 관계 판정도 부르지 않는다.
+
+    에피소드 6230 뒤처리(2026-11-18): 사본을 폐기한 뒤에도 인계 기록은 blocked 로 남아, 24시간 안에
+    이어 달라는 말이 오면 '이전 수리의 현재 소유권·단계를 확인해야 합니다'로 턴이 서게 되어 있었다.
+    """
+    root, wt, st, sess, controller = unfinished
+    st._save_session(str(root), {**st.read_session(str(root), sess['key']), 'status': 'discarded'})
+    monkeypatch.setattr(resume, 'judge_resume', lambda *a, **kw: pytest.fail('이을 것이 없는데 관계를 판정했다'))
+    message = (sess['key'] + ' 수리를 완료해줘') if named else '수리를 완료해줘'
+    with resume.user_resume(controller.runner, message, ['previous']):
+        assert journal.current() is None and not resume.user_resumed()
+    assert not st.read_session(str(root), sess['key']).get('reused_by')
+
+
 def test_relation_failure_does_not_silently_replace_original_criteria(unfinished, monkeypatch):
     *_, controller = unfinished
     monkeypatch.setattr(resume, 'judge_resume', lambda *a, **kw: (_ for _ in ()).throw(RuntimeError('offline')))

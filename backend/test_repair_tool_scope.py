@@ -730,7 +730,11 @@ def test_bound_execution_maintains_tests_in_the_same_candidate(repair):
 
 @pytest.mark.parametrize("owner", [True, False])
 def test_noncore_repair_pipeline_reaches_registration_apply_and_commit(repair, monkeypatch, owner):
-    """The old needs_repair:false branch stranded this same executor at apply."""
+    """사용자가 #repair 로 정한 수리는 의식이 needs_repair:false 라 해도 적용까지 간다.
+
+    옛 false 분기(~2026-11-03)는 이 실행자를 apply 에서 세웠다. 분류가 추측한 수리만 의식이
+    바로잡는다(program_boundary.repair_declined) — 사용자가 정한 길은 그대로다.
+    """
     import associative_recall
     import red_grant
     import thread_context as tc
@@ -748,7 +752,7 @@ def test_noncore_repair_pipeline_reaches_registration_apply_and_commit(repair, m
         project_path = repo
         _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ('REPAIR', None)
-        _tag_override = lambda *a: None
+        _tag_override = lambda *a: 'REPAIR'
         _run_consciousness_or_reuse = lambda *a, **kw: framing
         _consciousness_clarification = lambda *a: None
         _extract_achievement_criteria = lambda *a: ''
@@ -795,7 +799,7 @@ def test_noncore_repair_pipeline_reaches_registration_apply_and_commit(repair, m
     token = execution_turn._current.set(execution_turn.Binding(runner, 'worker', 'script-repair'))
     try:
         with tc.actor_context(agent_id='worker', task_id='script-repair', origin='user'):
-            events = list(runner._cognitive_stream_body('코어 수정 없이 스크립트 수리를 완료해줘', []))
+            events = list(runner._cognitive_stream_body('#repair 코어 수정 없이 스크립트 수리를 완료해줘', []))
             assert not [e for e in events if e['type'] == 'error'], events
             assert red_grant.active_grant(task_id='script-repair') is None
     finally:

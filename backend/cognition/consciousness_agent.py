@@ -478,8 +478,10 @@ class ConsciousnessAgent:
         # 두는 이유: 캐시 prefix 를 안 깨고, 수리가 아닌 턴이 수리 규칙을 읽지 않는다.
         if repair_doctrine:
             parts.append(
-                "<repair_doctrine note=\"이 턴은 시스템 자체 코드를 바꿀 수 있는 수리 턴이다. "
-                "task_framing·criteria 를 이 규칙으로 쓴다.\">\n"
+                # 분류가 틀렸으면 의식이 needs_repair:false 로 바로잡는다(program_boundary.repair_declined).
+                "<repair_doctrine note=\"이 요청은 시스템 자체 코드를 바꾸는 수리로 분류되어 왔다. "
+                "프로그램 사본 작업이 필요하면 task_framing·criteria 를 이 규칙으로 쓴다. "
+                "필요 없으면 needs_repair:false 로 답하고 일반 업무로 규정한다.\">\n"
                 f"{repair_doctrine}\n"
                 "</repair_doctrine>"
             )

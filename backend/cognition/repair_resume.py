@@ -209,7 +209,10 @@ def user_resume(runner, message, history):
     eligible = (prior and prior.get("status") == "blocked" and prior.get("authorized_origin") == "user"
                 and prior.get("agent_id") == get_current_agent_id()
                 and prior.get("project_id", "") == config.get("_project_id", "")
-                and (explicit or _age_s(last) <= RECENT_WINDOW_S) and prior.get("criteria_contract"))
+                and (explicit or _age_s(last) <= RECENT_WINDOW_S) and prior.get("criteria_contract")
+                # 폐기된 사본에는 이을 것이 없다. 후속 말은 새 요청이다 — 관계 판정을 불러 놓고
+                # 아래의 '소유권·단계 확인' 오류로 턴을 세우지 않는다(에피소드 6230 뒤처리, 2026-11-18).
+                and session.get("status") != "discarded")
     if not eligible:
         yield
         return

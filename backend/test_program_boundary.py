@@ -259,3 +259,17 @@ def test_test_sources_can_be_added_edited_and_removed(path):
     for before, after in [(None, {'sha': 'new'}), ({'sha': 'old'}, {'sha': 'new'}), ({'sha': 'old'}, None)]:
         result = change(path, before, after)
         assert result['route'] == 'workspace' and result['kind'] == 'test'
+
+
+def test_only_a_classifier_guess_is_corrected_by_an_explicit_false():
+    """분류가 추측한 수리만 의식의 명시적 false 로 일반 업무가 된다(에피소드 6230)."""
+    from program_boundary import repair_declined
+    assert repair_declined({'needs_repair': False})
+    # 사용자가 정한 길과 이미 열려 이어지는 수리는 false 여도 유지한다.
+    assert not repair_declined({'needs_repair': False}, user_chosen=True)
+    assert not repair_declined({'needs_repair': False}, resumed=True)
+    # 명시된 False 만 정정이다 — 필드 없음·다른 값·의식 실패는 분류를 따른다.
+    for framing in ({'needs_repair': True}, {}, {'needs_repair': None}, {'needs_repair': 'false'},
+                    {'needs_repair': 0}, None):
+        assert not repair_declined(framing)
+

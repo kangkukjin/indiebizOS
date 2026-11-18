@@ -19,11 +19,27 @@ FILE_CONTENT_ROOTS = ('docs', 'data/guides', 'data/system_docs', 'outputs', 'dat
 def repair_requested(request_type, framing=None):
     """A repair route supplies a workspace; it never authorizes protected core.
 
-    A model's false 'needs_repair' used to revoke an already requested repair
-    merely because scripts needed no core edit. Actual deltas, not this hint,
-    determine publication and completion receipts.
+    'needs_repair' says whether program copy work is needed, not whether core
+    changes. THINK plus true opens this route late; the reverse correction is
+    repair_declined. Actual deltas, not this hint, determine publication and
+    completion receipts.
     """
     return request_type == 'REPAIR' or bool((framing or {}).get('needs_repair'))
+
+
+def repair_declined(framing, *, user_chosen=False, resumed=False):
+    """분류가 수리로 본 새 요청을 의식이 '프로그램 사본 작업이 필요 없다'고 바로잡았는가.
+
+    분류는 문장 몇 줄을 본 추측이고 의식은 전체 맥락을 본다. 2026-11-03 까지 같은 자리에 있던
+    분기는 needs_repair 를 '코어 변경 여부'로 읽어 정당한 비코어 수리의 권한을 없앴고(#5778),
+    그래서 false 가 경로를 못 바꾸게 막았다. 그 뒤로는 분류가 틀리면 되돌릴 길이 없었다(에피소드
+    6230: 프로젝트 산출물 제작이 수리 사본에 갇혀 한 줄도 쓰지 못했다). 지금의 false 는 '일반
+    프로그램 사본 작업이 필요 없다'는 뜻이므로 분류의 추측만 바로잡는다. 사용자가 #repair 로 정한
+    길과 이미 열려 이어지는 수리는 false 여도 유지한다. 명시된 False 만 정정이다 — 필드가 없거나
+    의식이 실패했으면 분류를 따른다.
+    """
+    return (not user_chosen and not resumed
+            and isinstance(framing, dict) and framing.get('needs_repair') is False)
 
 
 def guidance():
@@ -38,7 +54,8 @@ def guidance():
         '일반 프로그램(backend 모듈·frontend·scripts·도구 패키지·data/scripts·개인 사전)은 '
         '공통 소유권 판정에 따라 사본 수정→관련 검사→self:patch apply→활성 확인·각인으로 수리한다. '
         'needs_repair는 이 프로그램 사본 작업의 필요 여부이며 코어 변경 여부가 아니다. '
-        'REPAIR로 시작한 사용자 요청은 needs_repair:false여도 이 경로를 유지한다. '
+        '분류가 수리로 본 새 요청은 의식이 needs_repair:false로 답하면 수리 사본·권한을 열지 않고 일반 업무로 진행한다. '
+        '사용자가 #repair로 지정했거나 멈춘 수리를 잇는 턴은 false여도 이 경로를 유지한다. '
         '관용구 등 관리 정의만 개정하면 소유 API의 검증·판본 저장·새 호출로 완료한다. '
         'route=file인 문서·업무 원장은 정본 경로의 일반 파일·원장 도구로 편집하고 운영 조회로 확인한다. '
         '수리 턴이나 재개 중에도 이 파일들을 코드 사본으로 옮기거나 patch apply를 요구하지 않는다. '

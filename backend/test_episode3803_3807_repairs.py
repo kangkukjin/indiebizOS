@@ -14,12 +14,13 @@ from test_conscious_supervisor import verdict
 
 
 @pytest.mark.parametrize("repair,tag,origin,expected", [
-    (False, None, "user", True), (False, "REPAIR", "user", True),
-    (True, None, "user", True), (None, None, "user", True),
+    (False, None, "user", False),  # 분류의 추측은 의식이 바로잡는다(2026-11-18, 에피소드 6230)
+    (False, "REPAIR", "user", True),  # 사용자가 #repair 로 정한 길은 false 여도 유지
+    (True, None, "user", True), (None, None, "user", True),  # 필드 없음은 정정이 아니다
     ("false", None, "user", True), (True, None, "scheduler", False),
 ])
-def test_noncore_hint_preserves_requested_repair(supervisor, monkeypatch,
-                                                        repair, tag, origin, expected):
+def test_consciousness_corrects_only_a_classified_repair(supervisor, monkeypatch,
+                                                         repair, tag, origin, expected):
     from agent_pipeline import CognitivePipelineMixin
     import thread_context as tc
     grants, switches, traces = [], [], []
@@ -55,7 +56,9 @@ def test_noncore_hint_preserves_requested_repair(supervisor, monkeypatch,
     assert not [e for e in events if e["type"] == "error"], events
     assert bool(grants) is expected
     assert ("system_repair" in switches) is expected
-    assert not [d for k, d in traces if d.get('reason') == 'consciousness_rejected_core_repair']
+    corrected = [d for k, d in traces if d.get('reason') == 'consciousness_corrected_classification']
+    assert bool(corrected) is (repair is False and tag is None)
+    assert all(d["request_type"] == "THINK" and d["previous_request_type"] == "REPAIR" for d in corrected)
 
 
 def test_repair_rounds_include_unique_responses_but_not_supervision():

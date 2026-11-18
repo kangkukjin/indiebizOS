@@ -548,9 +548,22 @@ class CognitivePipelineMixin:
                                                                     repair=True)
             from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
             _origin = get_task_origin()
+            from program_boundary import repair_declined
             # REPAIR grants an isolated program workspace, never protected core.
-            # A false model hint must not strand an authorized non-core repair.
-            if _origin == "user" and utterance_author != "agent":
+            if repair_declined(consciousness_output, user_chosen=self._tag_override(message) == "REPAIR",
+                               resumed=bool(continuation)):
+                # 분류의 오판은 전체 맥락을 본 의식이 바로잡는다(2026-11-18 사용자 판정, 에피소드 6230).
+                # 수리 사본·그랜트·모델 전환 없이 THINK 로 간다. 방금 세운 규정을 그대로 쓴다.
+                # 사용자가 #repair 로 정한 길과 이어지는 수리는 여기 오지 않는다(repair_declined).
+                request_type = "THINK"
+                consciousness_output.pop("_repair_policy", None)
+                record_trajectory_event("cognition.route", {
+                    "request_type": "THINK", "previous_request_type": "REPAIR",
+                    "reason": "consciousness_corrected_classification",
+                    "force_role": "", "intent": "task",
+                })
+                print("[의식] 분류 정정: REPAIR → THINK — 프로그램 사본 작업 불필요(needs_repair:false)")
+            elif _origin == "user" and utterance_author != "agent":
                 original_provider = _switch_to_role(self, "system_repair")
                 from red_grant import issue_grant
                 _g_task = get_current_task_id()
